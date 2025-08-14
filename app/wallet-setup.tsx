@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -11,21 +11,28 @@ import {
   Platform,
   Linking,
   Modal,
+  Clipboard,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, Download, ArrowLeft, Check, QrCode } from 'lucide-react-native';
+import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
 import QRScanner from '@/components/QRScanner';
+import * as bip39 from 'bip39';
 
 export default function WalletSetupScreen() {
-  const { theme, createWallet, importWallet } = useWallet();
+  const { theme, importWallet } = useWallet();
   const [mode, setMode] = useState<'select' | 'create' | 'import'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
   const [selectedColor, setSelectedColor] = useState('#8B5CF6');
   const [isLoading, setIsLoading] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [wordCount, setWordCount] = useState<12 | 24>(12);
+  const [generatedMnemonic, setGeneratedMnemonic] = useState('');
+  const [showWordCountDropdown, setShowWordCountDropdown] = useState(false);
+  const [hasStoredPhrase, setHasStoredPhrase] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
 
   const walletColors = [
     '#8B5CF6', // Purple
@@ -55,9 +62,45 @@ export default function WalletSetupScreen() {
     }
   };
 
+  const generateNewMnemonic = React.useCallback(() => {
+    const strength = wordCount === 12 ? 128 : 256; // 128 bits = 12 words, 256 bits = 24 words
+    const newMnemonic = bip39.generateMnemonic(strength);
+    setGeneratedMnemonic(newMnemonic);
+  }, [wordCount]);
+
+  useEffect(() => {
+    if (mode === 'create') {
+      generateNewMnemonic();
+    }
+  }, [mode, generateNewMnemonic]);
+
+  const copyToClipboard = async () => {
+    if (Platform.OS === 'web') {
+      try {
+        await navigator.clipboard.writeText(generatedMnemonic);
+        Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+      } catch {
+        Alert.alert('Error', 'Failed to copy to clipboard');
+      }
+    } else {
+      Clipboard.setString(generatedMnemonic);
+      Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+    }
+  };
+
   const handleCreateWallet = async () => {
     if (!walletName.trim()) {
       Alert.alert('Error', 'Please enter a wallet name');
+      return;
+    }
+
+    if (!hasStoredPhrase) {
+      Alert.alert('Error', 'Please confirm that you have securely stored your recovery phrase');
+      return;
+    }
+
+    if (!acceptedTerms) {
+      Alert.alert('Error', 'Please accept the Terms to continue');
       return;
     }
 
@@ -72,7 +115,7 @@ export default function WalletSetupScreen() {
 
     setIsLoading(true);
     try {
-      await createWallet(walletName.trim(), selectedColor);
+      await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
@@ -193,18 +236,65 @@ export default function WalletSetupScreen() {
     <ScrollView style={styles.content}>
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => setMode('select')}
+        onPress={() => {
+          Alert.alert(
+            'Back Warning',
+            'Going back will lose your current recovery phrase. Are you sure?',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Go Back', style: 'destructive', onPress: () => setMode('select') }
+            ]
+          );
+        }}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
       </TouchableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Create New Wallet
+          Your Recovery Phrase
         </Text>
-        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Enter a name and select a color for your new Bitcoin wallet
-        </Text>
+        <View style={styles.wordCountSelector}>
+          <TouchableOpacity
+            style={[styles.wordCountButton, { 
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border
+            }]}
+            onPress={() => setShowWordCountDropdown(!showWordCountDropdown)}
+          >
+            <Text style={[styles.wordCountText, { color: theme.colors.text }]}>
+              {wordCount} words
+            </Text>
+            <ChevronDown color={theme.colors.text} size={16} />
+          </TouchableOpacity>
+          {showWordCountDropdown && (
+            <View style={[styles.dropdown, { 
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border
+            }]}>
+              <TouchableOpacity
+                style={[styles.dropdownItem, wordCount === 12 && { backgroundColor: theme.colors.primary + '20' }]}
+                onPress={() => {
+                  setWordCount(12);
+                  setShowWordCountDropdown(false);
+                }}
+              >
+                <Text style={[styles.dropdownText, { color: theme.colors.text }]}>12 words</Text>
+                {wordCount === 12 && <Check color={theme.colors.primary} size={16} />}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dropdownItem, wordCount === 24 && { backgroundColor: theme.colors.primary + '20' }]}
+                onPress={() => {
+                  setWordCount(24);
+                  setShowWordCountDropdown(false);
+                }}
+              >
+                <Text style={[styles.dropdownText, { color: theme.colors.text }]}>24 words</Text>
+                {wordCount === 24 && <Check color={theme.colors.primary} size={16} />}
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
       </View>
 
       <View style={styles.form}>
@@ -240,6 +330,84 @@ export default function WalletSetupScreen() {
           ))}
         </View>
 
+        <Text style={[styles.label, { color: theme.colors.text }]}>
+          Recovery Phrase
+        </Text>
+        <View style={[styles.mnemonicContainer, { 
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border
+        }]}>
+          <View style={styles.mnemonicGrid}>
+            {generatedMnemonic.split(' ').map((word, index) => (
+              <View key={index} style={[styles.wordItem, { backgroundColor: theme.colors.background }]}>
+                <Text style={[styles.wordNumber, { color: theme.colors.textSecondary }]}>
+                  {index + 1}
+                </Text>
+                <Text style={[styles.wordText, { color: theme.colors.text }]}>
+                  {word}
+                </Text>
+              </View>
+            ))}
+          </View>
+          <TouchableOpacity
+            style={[styles.copyButton, { backgroundColor: theme.colors.primary }]}
+            onPress={copyToClipboard}
+          >
+            <Copy color="white" size={16} />
+            <Text style={styles.copyButtonText}>Copy</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={[styles.backupWarning, { 
+          backgroundColor: theme.colors.error + '20',
+          borderColor: theme.colors.error
+        }]}>
+          <AlertTriangle color={theme.colors.error} size={20} />
+          <View style={styles.warningContent}>
+            <Text style={[styles.warningTitle, { color: theme.colors.error }]}>
+              Backup Warning: Final Step
+            </Text>
+            <Text style={[styles.warningText, { color: theme.colors.text }]}>
+              This is the only time you will see your recovery phrase. Write it down and store it in a safe, offline location. If you lose this phrase, you will lose access to your funds forever.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.checkboxContainer}>
+          <TouchableOpacity
+            style={[styles.checkbox, { borderColor: theme.colors.border }]}
+            onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
+          >
+            {hasStoredPhrase && (
+              <Check color={theme.colors.primary} size={16} />
+            )}
+          </TouchableOpacity>
+          <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
+            I have securely stored my recovery phrase
+          </Text>
+        </View>
+
+        <View style={styles.checkboxContainer}>
+          <TouchableOpacity
+            style={[styles.checkbox, { borderColor: theme.colors.border }]}
+            onPress={() => setAcceptedTerms(!acceptedTerms)}
+          >
+            {acceptedTerms && (
+              <Check color={theme.colors.primary} size={16} />
+            )}
+          </TouchableOpacity>
+          <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
+            I accept the{' '}
+            <Text 
+              style={[styles.termsLink, { color: theme.colors.primary }]}
+              onPress={() => openLink('https://www.bitsleuth.ai/terms-of-service')}
+            >
+              Terms
+            </Text>
+            .
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={[styles.submitButton, { 
             backgroundColor: theme.colors.primary,
@@ -249,7 +417,7 @@ export default function WalletSetupScreen() {
           disabled={isLoading}
         >
           <Text style={styles.submitButtonText}>
-            {isLoading ? 'Creating...' : 'Create Wallet'}
+            {isLoading ? 'Creating...' : 'Confirm'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -572,5 +740,134 @@ const styles = StyleSheet.create({
   helpLinkText: {
     fontSize: 16,
     textDecorationLine: 'underline',
+  },
+  wordCountSelector: {
+    alignItems: 'center',
+    marginTop: 16,
+    position: 'relative',
+  },
+  wordCountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    gap: 8,
+  },
+  wordCountText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dropdown: {
+    position: 'absolute',
+    top: 40,
+    left: 0,
+    right: 0,
+    borderWidth: 1,
+    borderRadius: 8,
+    zIndex: 1000,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  dropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  dropdownText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  mnemonicContainer: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 16,
+    gap: 16,
+  },
+  mnemonicGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  wordItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    borderRadius: 6,
+    minWidth: '30%',
+    gap: 6,
+  },
+  wordNumber: {
+    fontSize: 12,
+    fontWeight: '500',
+    minWidth: 16,
+  },
+  wordText: {
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+  },
+  copyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  copyButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  backupWarning: {
+    flexDirection: 'row',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+    marginTop: 8,
+  },
+  warningContent: {
+    flex: 1,
+    gap: 4,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  warningText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 12,
+    marginTop: 16,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderWidth: 2,
+    borderRadius: 4,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 2,
+  },
+  checkboxText: {
+    fontSize: 14,
+    lineHeight: 20,
+    flex: 1,
   },
 });
