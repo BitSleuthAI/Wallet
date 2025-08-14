@@ -9,9 +9,11 @@ import {
   Alert,
   ScrollView,
   Platform,
+  Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Plus, Download, ArrowLeft } from 'lucide-react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
 
 export default function WalletSetupScreen() {
@@ -20,6 +22,25 @@ export default function WalletSetupScreen() {
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  const openLink = async (url: string) => {
+    try {
+      if (Platform.OS === 'web') {
+        // On web, open in new tab
+        Linking.openURL(url);
+      } else {
+        // On mobile, use in-app browser
+        await WebBrowser.openBrowserAsync(url, {
+          presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET,
+          controlsColor: theme.colors.primary,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to open link:', error);
+      // Fallback to system browser
+      Linking.openURL(url);
+    }
+  };
 
   const handleCreateWallet = async () => {
     if (!walletName.trim()) {
@@ -82,7 +103,7 @@ export default function WalletSetupScreen() {
     <View style={styles.content}>
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Welcome to Bitcoin Wallet
+          Welcome to BitSleuth Wallet
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           Create a new wallet or import an existing one to get started
@@ -113,6 +134,26 @@ export default function WalletSetupScreen() {
             Restore wallet using your recovery phrase
           </Text>
         </TouchableOpacity>
+      </View>
+
+      <View style={styles.termsContainer}>
+        <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
+          By continuing you agree to our{' '}
+          <Text 
+            style={[styles.termsLink, { color: theme.colors.primary }]}
+            onPress={() => openLink('https://www.bitsleuth.ai/terms-of-service')}
+          >
+            Terms
+          </Text>
+          {' '}and{' '}
+          <Text 
+            style={[styles.termsLink, { color: theme.colors.primary }]}
+            onPress={() => openLink('https://www.bitsleuth.ai/privacy-policy')}
+          >
+            Privacy
+          </Text>
+          . Only public blockchain data is used.
+        </Text>
       </View>
 
       {Platform.OS === 'web' && (
@@ -346,5 +387,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  termsContainer: {
+    marginTop: 32,
+    paddingHorizontal: 16,
+  },
+  termsText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  termsLink: {
+    textDecorationLine: 'underline',
   },
 });
