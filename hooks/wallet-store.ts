@@ -96,9 +96,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [themeQuery.data]);
 
-  const createWallet = useCallback(async (name: string) => {
+  const createWallet = useCallback(async (name: string, color?: string) => {
     try {
-      const wallet = await walletService.createWallet(name);
+      const wallet = await walletService.createWallet(name, color);
       saveWalletMutation.mutate(wallet);
       return wallet;
     } catch (error) {
@@ -107,9 +107,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [saveWalletMutation.mutate]);
 
-  const importWallet = useCallback(async (name: string, mnemonic: string) => {
+  const importWallet = useCallback(async (name: string, mnemonic: string, color?: string) => {
     try {
-      const wallet = await walletService.importWallet(name, mnemonic);
+      const wallet = await walletService.importWallet(name, mnemonic, color);
       saveWalletMutation.mutate(wallet);
       return wallet;
     } catch (error) {

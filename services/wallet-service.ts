@@ -87,12 +87,12 @@ export const validateMnemonic = (mnemonic: string): boolean => {
   return bip39.validateMnemonic(mnemonic);
 };
 
-export const createWallet = async (name: string): Promise<Wallet> => {
+export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   const mnemonic = generateMnemonic();
-  return importWallet(name, mnemonic);
+  return importWallet(name, mnemonic, color);
 };
 
-export const importWallet = async (name: string, mnemonic: string): Promise<Wallet> => {
+export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   if (!validateMnemonic(mnemonic)) {
     throw new Error('Invalid mnemonic phrase');
   }
@@ -115,6 +115,7 @@ export const importWallet = async (name: string, mnemonic: string): Promise<Wall
     const wallet: Wallet = {
       id: Date.now().toString(),
       name,
+      color,
       mnemonic,
       xpub,
       addresses: [firstAddress],

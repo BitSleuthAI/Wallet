@@ -1,6 +1,7 @@
 export interface Wallet {
   id: string;
   name: string;
+  color: string;
   mnemonic: string;
   xpub: string;
   addresses: string[];

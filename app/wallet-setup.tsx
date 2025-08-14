@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, Download, ArrowLeft } from 'lucide-react-native';
+import { Plus, Download, ArrowLeft, Check } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
 
@@ -21,7 +21,17 @@ export default function WalletSetupScreen() {
   const [mode, setMode] = useState<'select' | 'create' | 'import'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
+  const [selectedColor, setSelectedColor] = useState('#8B5CF6');
   const [isLoading, setIsLoading] = useState(false);
+
+  const walletColors = [
+    '#8B5CF6', // Purple
+    '#F59E0B', // Amber
+    '#EC4899', // Pink
+    '#F97316', // Orange
+    '#10B981', // Emerald
+    '#3B82F6', // Blue
+  ];
 
   const openLink = async (url: string) => {
     try {
@@ -59,7 +69,7 @@ export default function WalletSetupScreen() {
 
     setIsLoading(true);
     try {
-      await createWallet(walletName.trim());
+      await createWallet(walletName.trim(), selectedColor);
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
@@ -90,7 +100,7 @@ export default function WalletSetupScreen() {
 
     setIsLoading(true);
     try {
-      await importWallet(walletName.trim(), mnemonic.trim());
+      await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to import wallet');
@@ -210,6 +220,23 @@ export default function WalletSetupScreen() {
           placeholderTextColor={theme.colors.textSecondary}
         />
 
+        <Text style={[styles.label, { color: theme.colors.text }]}>
+          Color
+        </Text>
+        <View style={styles.colorPicker}>
+          {walletColors.map((color) => (
+            <TouchableOpacity
+              key={color}
+              style={[styles.colorOption, { backgroundColor: color }]}
+              onPress={() => setSelectedColor(color)}
+            >
+              {selectedColor === color && (
+                <Check color="white" size={20} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <TouchableOpacity
           style={[styles.submitButton, { 
             backgroundColor: theme.colors.primary,
@@ -259,6 +286,23 @@ export default function WalletSetupScreen() {
           placeholder="My Bitcoin Wallet"
           placeholderTextColor={theme.colors.textSecondary}
         />
+
+        <Text style={[styles.label, { color: theme.colors.text }]}>
+          Color
+        </Text>
+        <View style={styles.colorPicker}>
+          {walletColors.map((color) => (
+            <TouchableOpacity
+              key={color}
+              style={[styles.colorOption, { backgroundColor: color }]}
+              onPress={() => setSelectedColor(color)}
+            >
+              {selectedColor === color && (
+                <Check color="white" size={20} />
+              )}
+            </TouchableOpacity>
+          ))}
+        </View>
 
         <Text style={[styles.label, { color: theme.colors.text }]}>
           Recovery Phrase (12 or 24 words)
@@ -422,5 +466,26 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginLeft: 8,
     fontWeight: '500',
+  },
+  colorPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 8,
+  },
+  colorOption: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
 });
