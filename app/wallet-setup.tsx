@@ -246,20 +246,23 @@ export default function WalletSetupScreen() {
     </View>
   );
 
+  const handleBackFromCreate = () => {
+    Alert.alert(
+      'Back Warning',
+      'Going back will lose your current recovery phrase. Are you sure?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Go Back', style: 'destructive', onPress: () => setMode('select') }
+      ]
+    );
+  };
+
   const renderCreateMode = () => (
     <ScrollView style={styles.content}>
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => {
-          Alert.alert(
-            'Back Warning',
-            'Going back will lose your current recovery phrase. Are you sure?',
-            [
-              { text: 'Cancel', style: 'cancel' },
-              { text: 'Go Back', style: 'destructive', onPress: () => setMode('select') }
-            ]
-          );
-        }}
+        onPress={handleBackFromCreate}
+        activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
       </TouchableOpacity>
@@ -278,40 +281,43 @@ export default function WalletSetupScreen() {
               borderColor: theme.colors.border
             }]}
             onPress={() => setShowWordCountDropdown(!showWordCountDropdown)}
+            activeOpacity={0.7}
           >
             <Text style={[styles.wordCountText, { color: theme.colors.text }]}>
               {wordCount} words
             </Text>
             <ChevronDown color={theme.colors.text} size={16} />
           </TouchableOpacity>
-          {showWordCountDropdown && (
-            <View style={[styles.dropdown, { 
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border
-            }]}>
-              <TouchableOpacity
-                style={[styles.dropdownItem, wordCount === 12 && { backgroundColor: theme.colors.primary + '20' }]}
-                onPress={() => {
-                  setWordCount(12);
-                  setShowWordCountDropdown(false);
-                }}
-              >
-                <Text style={[styles.dropdownText, { color: theme.colors.text }]}>12 words</Text>
-                {wordCount === 12 && <Check color={theme.colors.primary} size={16} />}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dropdownItem, wordCount === 24 && { backgroundColor: theme.colors.primary + '20' }]}
-                onPress={() => {
-                  setWordCount(24);
-                  setShowWordCountDropdown(false);
-                }}
-              >
-                <Text style={[styles.dropdownText, { color: theme.colors.text }]}>24 words</Text>
-                {wordCount === 24 && <Check color={theme.colors.primary} size={16} />}
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
+        {showWordCountDropdown && (
+          <View style={[styles.dropdownOverlay, { 
+            backgroundColor: theme.colors.surface,
+            borderColor: theme.colors.border
+          }]}>
+            <TouchableOpacity
+              style={[styles.dropdownItem, wordCount === 12 && { backgroundColor: theme.colors.primary + '20' }]}
+              onPress={() => {
+                setWordCount(12);
+                setShowWordCountDropdown(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dropdownText, { color: theme.colors.text }]}>12 words</Text>
+              {wordCount === 12 && <Check color={theme.colors.primary} size={16} />}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.dropdownItem, wordCount === 24 && { backgroundColor: theme.colors.primary + '20' }]}
+              onPress={() => {
+                setWordCount(24);
+                setShowWordCountDropdown(false);
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.dropdownText, { color: theme.colors.text }]}>24 words</Text>
+              {wordCount === 24 && <Check color={theme.colors.primary} size={16} />}
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <View style={styles.form}>
@@ -761,7 +767,6 @@ const styles = StyleSheet.create({
   wordCountSelector: {
     alignItems: 'center',
     marginTop: 16,
-    position: 'relative',
   },
   wordCountButton: {
     flexDirection: 'row',
@@ -776,14 +781,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  dropdown: {
-    position: 'absolute',
-    top: 40,
-    left: 0,
-    right: 0,
+  dropdownOverlay: {
+    marginTop: 8,
     borderWidth: 1,
     borderRadius: 8,
-    zIndex: 1000,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
