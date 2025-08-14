@@ -101,6 +101,16 @@ export default function WalletSetupScreen() {
 
   const renderSelectMode = () => (
     <View style={styles.content}>
+      <TouchableOpacity
+        style={styles.backToDashboardButton}
+        onPress={() => router.replace('/(tabs)')}
+      >
+        <ArrowLeft color={theme.colors.text} size={20} />
+        <Text style={[styles.backToDashboardText, { color: theme.colors.text }]}>
+          Back to Dashboard
+        </Text>
+      </TouchableOpacity>
+
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Welcome to BitSleuth Wallet
@@ -399,5 +409,18 @@ const styles = StyleSheet.create({
   },
   termsLink: {
     textDecorationLine: 'underline',
+  },
+  backToDashboardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 20,
+    marginBottom: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  backToDashboardText: {
+    fontSize: 16,
+    marginLeft: 8,
+    fontWeight: '500',
   },
 });
