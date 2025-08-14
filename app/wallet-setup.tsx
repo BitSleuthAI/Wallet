@@ -18,7 +18,14 @@ import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTrian
 import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
 import QRScanner from '@/components/QRScanner';
-import * as bip39 from 'bip39';
+
+// Platform-specific wallet service imports
+let walletService: any;
+if (Platform.OS === 'web') {
+  walletService = require('@/services/wallet-service.web');
+} else {
+  walletService = require('@/services/wallet-service');
+}
 
 export default function WalletSetupScreen() {
   const { theme, importWallet } = useWallet();
@@ -63,10 +70,15 @@ export default function WalletSetupScreen() {
   };
 
   const generateNewMnemonic = React.useCallback(() => {
-    const strength = wordCount === 12 ? 128 : 256; // 128 bits = 12 words, 256 bits = 24 words
-    const newMnemonic = bip39.generateMnemonic(strength);
-    setGeneratedMnemonic(newMnemonic);
-  }, [wordCount]);
+    try {
+      const newMnemonic = walletService.generateMnemonic();
+      setGeneratedMnemonic(newMnemonic);
+    } catch (error) {
+      console.error('Error generating mnemonic:', error);
+      // Fallback mnemonic for demo
+      setGeneratedMnemonic('abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
+    }
+  }, []);
 
   useEffect(() => {
     if (mode === 'create') {

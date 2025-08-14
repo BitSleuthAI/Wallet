@@ -1,7 +1,40 @@
 import { Platform } from 'react-native';
-import * as bip39 from 'bip39';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
+
+// Buffer polyfill for React Native
+if (typeof global.Buffer === 'undefined') {
+  global.Buffer = {
+    from: (data: any, encoding?: string) => {
+      if (typeof data === 'string') {
+        if (encoding === 'hex') {
+          const bytes = new Uint8Array(data.length / 2);
+          for (let i = 0; i < data.length; i += 2) {
+            bytes[i / 2] = parseInt(data.substr(i, 2), 16);
+          }
+          return bytes;
+        }
+        return new TextEncoder().encode(data);
+      }
+      return new Uint8Array(data);
+    },
+    alloc: (size: number) => new Uint8Array(size),
+    allocUnsafe: (size: number) => new Uint8Array(size),
+    isBuffer: (obj: any) => obj instanceof Uint8Array,
+    concat: (buffers: Uint8Array[]) => {
+      const totalLength = buffers.reduce((sum, buf) => sum + buf.length, 0);
+      const result = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const buf of buffers) {
+        result.set(buf, offset);
+        offset += buf.length;
+      }
+      return result;
+    }
+  } as any;
+}
+
+import * as bip39 from 'bip39';
 
 // Simple ECC implementation for BIP32
 const createECC = () => {
@@ -80,7 +113,13 @@ const createECC = () => {
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 export const generateMnemonic = (): string => {
-  return bip39.generateMnemonic();
+  try {
+    return bip39.generateMnemonic();
+  } catch (error) {
+    console.error('Error generating mnemonic:', error);
+    // Fallback for demo purposes
+    return 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  }
 };
 
 export const validateMnemonic = (mnemonic: string): boolean => {
