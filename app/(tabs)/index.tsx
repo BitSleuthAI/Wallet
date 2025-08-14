@@ -8,7 +8,7 @@ import {
   RefreshControl,
   SafeAreaView,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { ArrowUpRight, ArrowDownLeft, TrendingUp } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
@@ -50,6 +50,12 @@ export default function WalletScreen() {
           <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
             Create or import a wallet to get started
           </Text>
+          <TouchableOpacity
+            style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => router.push('/wallet-setup')}
+          >
+            <Text style={styles.setupButtonText}>Setup Wallet</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -346,5 +352,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     lineHeight: 24,
+    marginBottom: 32,
+  },
+  setupButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  setupButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

@@ -101,8 +101,9 @@ export const importWallet = async (name: string, mnemonic: string): Promise<Wall
     throw new Error('Wallet import is not available on web in Expo Go. Please use a mobile device.');
   }
 
-  const { BIP32Factory } = require('bip32');
-  const bip32 = BIP32Factory(createECC());
+  try {
+    const { BIP32Factory } = require('bip32');
+    const bip32 = BIP32Factory(createECC());
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const root = bip32.fromSeed(seed);
@@ -111,32 +112,42 @@ export const importWallet = async (name: string, mnemonic: string): Promise<Wall
 
   const firstAddress = await generateAddressFromXpub(xpub, 0);
 
-  const wallet: Wallet = {
-    id: Date.now().toString(),
-    name,
-    mnemonic,
-    xpub,
-    addresses: [firstAddress],
-    currentAddressIndex: 0,
-    balance: 0,
-    balanceUSD: 0,
-  };
+    const wallet: Wallet = {
+      id: Date.now().toString(),
+      name,
+      mnemonic,
+      xpub,
+      addresses: [firstAddress],
+      currentAddressIndex: 0,
+      balance: 0,
+      balanceUSD: 0,
+    };
 
-  return wallet;
+    return wallet;
+  } catch (error) {
+    console.error('Error creating wallet:', error);
+    throw new Error('Failed to create wallet. This feature requires a mobile device.');
+  }
 };
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
   if (Platform.OS === 'web') {
     throw new Error('Address derivation is not available on web in Expo Go. Please use a mobile device.');
   }
-  const { BIP32Factory } = require('bip32');
-  const bip32 = BIP32Factory(createECC());
-  const bitcoin = require('bitcoinjs-lib');
-  const node = bip32.fromBase58(xpub);
-  const child = node.derive(0).derive(index);
-  const payment = bitcoin.payments.p2wpkh({ pubkey: Buffer.from(child.publicKey) });
-  if (!payment?.address) throw new Error('Failed to derive address');
-  return payment.address as string;
+  
+  try {
+    const { BIP32Factory } = require('bip32');
+    const bip32 = BIP32Factory(createECC());
+    const bitcoin = require('bitcoinjs-lib');
+    const node = bip32.fromBase58(xpub);
+    const child = node.derive(0).derive(index);
+    const payment = bitcoin.payments.p2wpkh({ pubkey: Buffer.from(child.publicKey) });
+    if (!payment?.address) throw new Error('Failed to derive address');
+    return payment.address as string;
+  } catch (error) {
+    console.error('Error generating address:', error);
+    throw new Error('Failed to generate address. This feature requires a mobile device.');
+  }
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
@@ -153,10 +164,16 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
   if (Platform.OS === 'web') {
     throw new Error('Private key export is not available on web in Expo Go. Please use a mobile device.');
   }
-  const { BIP32Factory } = require('bip32');
-  const bip32 = BIP32Factory(createECC());
-  const seed = await bip39.mnemonicToSeed(mnemonic);
-  const root = bip32.fromSeed(seed);
-  const child = root.derivePath(`${DERIVATION_PATH}/0/${addressIndex}`);
-  return child.toWIF();
+  
+  try {
+    const { BIP32Factory } = require('bip32');
+    const bip32 = BIP32Factory(createECC());
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const child = root.derivePath(`${DERIVATION_PATH}/0/${addressIndex}`);
+    return child.toWIF();
+  } catch (error) {
+    console.error('Error getting private key:', error);
+    throw new Error('Failed to get private key. This feature requires a mobile device.');
+  }
 };

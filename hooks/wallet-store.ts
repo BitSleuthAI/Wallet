@@ -97,22 +97,37 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [themeQuery.data]);
 
   const createWallet = useCallback(async (name: string) => {
-    const wallet = await walletService.createWallet(name);
-    saveWalletMutation.mutate(wallet);
-    return wallet;
+    try {
+      const wallet = await walletService.createWallet(name);
+      saveWalletMutation.mutate(wallet);
+      return wallet;
+    } catch (error) {
+      console.error('Error creating wallet:', error);
+      throw error;
+    }
   }, [saveWalletMutation.mutate]);
 
   const importWallet = useCallback(async (name: string, mnemonic: string) => {
-    const wallet = await walletService.importWallet(name, mnemonic);
-    saveWalletMutation.mutate(wallet);
-    return wallet;
+    try {
+      const wallet = await walletService.importWallet(name, mnemonic);
+      saveWalletMutation.mutate(wallet);
+      return wallet;
+    } catch (error) {
+      console.error('Error importing wallet:', error);
+      throw error;
+    }
   }, [saveWalletMutation.mutate]);
 
   const generateNewAddress = useCallback(async () => {
     if (!currentWallet) return null;
-    const updatedWallet = await walletService.generateNewAddress(currentWallet);
-    saveWalletMutation.mutate(updatedWallet);
-    return updatedWallet.addresses[updatedWallet.addresses.length - 1];
+    try {
+      const updatedWallet = await walletService.generateNewAddress(currentWallet);
+      saveWalletMutation.mutate(updatedWallet);
+      return updatedWallet.addresses[updatedWallet.addresses.length - 1];
+    } catch (error) {
+      console.error('Error generating new address:', error);
+      throw error;
+    }
   }, [currentWallet, saveWalletMutation.mutate]);
 
   const toggleTheme = useCallback(() => {
