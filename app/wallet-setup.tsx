@@ -200,7 +200,7 @@ export default function WalletSetupScreen() {
           Create New Wallet
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Enter a name for your new Bitcoin wallet
+          Enter a name and select a color for your new Bitcoin wallet
         </Text>
       </View>
 
@@ -267,7 +267,7 @@ export default function WalletSetupScreen() {
           Import Wallet
         </Text>
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-          Enter your wallet name and recovery phrase
+          Enter your wallet name, select a color and recovery phrase
         </Text>
       </View>
 
