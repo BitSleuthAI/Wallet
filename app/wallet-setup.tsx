@@ -351,7 +351,8 @@ export default function WalletSetupScreen() {
         </Text>
         <View style={[styles.mnemonicContainer, { 
           backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border
+          borderColor: theme.colors.border,
+          minHeight: wordCount === 24 ? 300 : 200
         }]}>
           <View style={styles.mnemonicGrid}>
             {generatedMnemonic.split(' ').map((word, index) => (
