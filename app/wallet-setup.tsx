@@ -10,11 +10,13 @@ import {
   ScrollView,
   Platform,
   Linking,
+  Modal,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Plus, Download, ArrowLeft, Check, QrCode } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
+import QRScanner from '@/components/QRScanner';
 
 export default function WalletSetupScreen() {
   const { theme, createWallet, importWallet } = useWallet();
@@ -23,6 +25,7 @@ export default function WalletSetupScreen() {
   const [mnemonic, setMnemonic] = useState('');
   const [selectedColor, setSelectedColor] = useState('#8B5CF6');
   const [isLoading, setIsLoading] = useState(false);
+  const [showQRScanner, setShowQRScanner] = useState(false);
 
   const walletColors = [
     '#8B5CF6', // Purple
@@ -315,7 +318,7 @@ export default function WalletSetupScreen() {
                 if (Platform.OS === 'web') {
                   Alert.alert('Feature Not Available', 'QR scanning is not available on web. Please use the mobile app.');
                 } else {
-                  Alert.alert('Coming Soon', 'QR code scanning will be available in a future update.');
+                  setShowQRScanner(true);
                 }
               }}
             >
@@ -367,6 +370,12 @@ export default function WalletSetupScreen() {
     </ScrollView>
   );
 
+  const handleQRScan = (data: string) => {
+    console.log('QR scan result:', data);
+    setMnemonic(data);
+    setShowQRScanner(false);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -374,6 +383,17 @@ export default function WalletSetupScreen() {
       {mode === 'select' && renderSelectMode()}
       {mode === 'create' && renderCreateMode()}
       {mode === 'import' && renderImportMode()}
+      
+      <Modal
+        visible={showQRScanner}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
