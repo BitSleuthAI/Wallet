@@ -12,7 +12,7 @@ import {
   Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, Download, ArrowLeft, Check } from 'lucide-react-native';
+import { Plus, Download, ArrowLeft, Check, QrCode } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { useWallet } from '@/hooks/wallet-store';
 
@@ -304,23 +304,43 @@ export default function WalletSetupScreen() {
           ))}
         </View>
 
-        <Text style={[styles.label, { color: theme.colors.text }]}>
-          Recovery Phrase (12 or 24 words)
-        </Text>
-        <TextInput
-          style={[styles.textArea, { 
-            backgroundColor: theme.colors.surface,
-            color: theme.colors.text,
-            borderColor: theme.colors.border
-          }]}
-          value={mnemonic}
-          onChangeText={setMnemonic}
-          placeholder="Enter your recovery phrase separated by spaces"
-          placeholderTextColor={theme.colors.textSecondary}
-          multiline
-          numberOfLines={4}
-          textAlignVertical="top"
-        />
+        <View style={styles.recoveryPhraseSection}>
+          <View style={styles.recoveryPhraseHeader}>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Recovery Phrase (12 or 24 words)
+            </Text>
+            <TouchableOpacity 
+              style={[styles.scanQrButton, { borderColor: theme.colors.border }]}
+              onPress={() => {
+                if (Platform.OS === 'web') {
+                  Alert.alert('Feature Not Available', 'QR scanning is not available on web. Please use the mobile app.');
+                } else {
+                  Alert.alert('Coming Soon', 'QR code scanning will be available in a future update.');
+                }
+              }}
+            >
+              <QrCode color={theme.colors.text} size={16} />
+              <Text style={[styles.scanQrText, { color: theme.colors.text }]}>Scan QR</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput
+            style={[styles.textArea, { 
+              backgroundColor: theme.colors.surface,
+              color: theme.colors.text,
+              borderColor: theme.colors.border
+            }]}
+            value={mnemonic}
+            onChangeText={setMnemonic}
+            placeholder="Enter your recovery phrase separated by spaces"
+            placeholderTextColor={theme.colors.textSecondary}
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          <Text style={[styles.securityMessage, { color: theme.colors.textSecondary }]}>
+            We never send your recovery phrase anywhere. It only lives in your device.
+          </Text>
+        </View>
 
         <TouchableOpacity
           style={[styles.submitButton, { 
@@ -332,6 +352,15 @@ export default function WalletSetupScreen() {
         >
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Importing...' : 'Import Wallet'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.helpLinkContainer}
+          onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
+        >
+          <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
+            What is a recovery phrase?
           </Text>
         </TouchableOpacity>
       </View>
@@ -487,5 +516,41 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  recoveryPhraseSection: {
+    gap: 8,
+  },
+  recoveryPhraseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  scanQrButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderRadius: 8,
+    gap: 6,
+  },
+  scanQrText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  securityMessage: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginTop: 4,
+  },
+  helpLinkContainer: {
+    alignItems: 'center',
+    marginTop: 16,
+    paddingVertical: 8,
+  },
+  helpLinkText: {
+    fontSize: 16,
+    textDecorationLine: 'underline',
   },
 });
