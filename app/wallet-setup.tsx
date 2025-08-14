@@ -812,11 +812,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     gap: 16,
+    minHeight: 200,
   },
   mnemonicGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
+    justifyContent: 'space-between',
   },
   wordItem: {
     flexDirection: 'row',
@@ -824,7 +826,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
-    minWidth: '30%',
+    width: '48%',
     gap: 6,
   },
   wordNumber: {
