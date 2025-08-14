@@ -71,20 +71,22 @@ export default function WalletSetupScreen() {
 
   const generateNewMnemonic = React.useCallback(() => {
     try {
-      const newMnemonic = walletService.generateMnemonic();
+      const newMnemonic = walletService.generateMnemonic(wordCount === 24 ? 256 : 128);
       setGeneratedMnemonic(newMnemonic);
     } catch (error) {
       console.error('Error generating mnemonic:', error);
       // Fallback mnemonic for demo
-      setGeneratedMnemonic('abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about');
+      const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+      setGeneratedMnemonic(wordCount === 24 ? fallback24 : fallback12);
     }
-  }, []);
+  }, [wordCount]);
 
   useEffect(() => {
     if (mode === 'create') {
       generateNewMnemonic();
     }
-  }, [mode, generateNewMnemonic]);
+  }, [mode, wordCount, generateNewMnemonic]);
 
   const copyToClipboard = async () => {
     if (Platform.OS === 'web') {
@@ -264,7 +266,10 @@ export default function WalletSetupScreen() {
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
-          Your Recovery Phrase
+          Create Wallet
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+          Select 12 or 24 word generation, enter your wallet name and select a color
         </Text>
         <View style={styles.wordCountSelector}>
           <TouchableOpacity
