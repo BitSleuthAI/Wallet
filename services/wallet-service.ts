@@ -1,6 +1,7 @@
 import { Platform } from 'react-native';
 import * as bip39 from 'bip39';
 import { Wallet } from '@/types/wallet';
+import * as secp256k1 from '@noble/secp256k1';
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
@@ -27,8 +28,7 @@ export const importWallet = async (name: string, mnemonic: string): Promise<Wall
   }
 
   const { BIP32Factory } = require('bip32');
-  const ecc = require('tiny-secp256k1');
-  const bip32 = BIP32Factory(ecc);
+  const bip32 = BIP32Factory(secp256k1);
 
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const root = bip32.fromSeed(seed);
@@ -56,8 +56,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     throw new Error('Address derivation is not available on web in Expo Go. Please use a mobile device.');
   }
   const { BIP32Factory } = require('bip32');
-  const ecc = require('tiny-secp256k1');
-  const bip32 = BIP32Factory(ecc);
+  const bip32 = BIP32Factory(secp256k1);
   const bitcoin = require('bitcoinjs-lib');
   const node = bip32.fromBase58(xpub);
   const child = node.derive(0).derive(index);
@@ -81,8 +80,7 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     throw new Error('Private key export is not available on web in Expo Go. Please use a mobile device.');
   }
   const { BIP32Factory } = require('bip32');
-  const ecc = require('tiny-secp256k1');
-  const bip32 = BIP32Factory(ecc);
+  const bip32 = BIP32Factory(secp256k1);
   const seed = await bip39.mnemonicToSeed(mnemonic);
   const root = bip32.fromSeed(seed);
   const child = root.derivePath(`${DERIVATION_PATH}/0/${addressIndex}`);

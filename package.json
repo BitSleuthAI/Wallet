@@ -11,6 +11,7 @@
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
     "@nkzw/create-context-hook": "^1.1.0",
+    "@noble/secp256k1": "^2.3.0",
     "@react-native-async-storage/async-storage": "2.1.2",
     "@react-navigation/native": "^7.1.6",
     "@tanstack/react-query": "^5.83.0",
