@@ -247,14 +247,7 @@ export default function WalletSetupScreen() {
   );
 
   const handleBackFromCreate = () => {
-    Alert.alert(
-      'Back Warning',
-      'Going back will lose your current recovery phrase. Are you sure?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Go Back', style: 'destructive', onPress: () => setMode('select') }
-      ]
-    );
+    setMode('select');
   };
 
   const renderCreateMode = () => (
@@ -441,6 +434,15 @@ export default function WalletSetupScreen() {
         >
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Creating...' : 'Confirm'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.helpLinkContainer}
+          onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
+        >
+          <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
+            What is a recovery phrase?
           </Text>
         </TouchableOpacity>
       </View>
