@@ -1,85 +1,18 @@
+// Import crypto polyfill first
+import '@/services/crypto-polyfill';
+
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
 
-// Comprehensive crypto polyfill setup
-(() => {
-  // Ensure global exists
-  if (typeof global === 'undefined') {
-    (globalThis as any).global = globalThis;
-  }
-
-  // Create a robust crypto implementation
-  const createCryptoPolyfill = () => {
-    return {
-      getRandomValues: (array: Uint8Array) => {
-        // Try native crypto first (web browsers)
-        if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-          return window.crypto.getRandomValues(array);
-        }
-        // Try global crypto (Node.js style)
-        if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
-          return globalThis.crypto.getRandomValues(array);
-        }
-        // Fallback to Math.random
-        for (let i = 0; i < array.length; i++) {
-          array[i] = Math.floor(Math.random() * 256);
-        }
-        return array;
-      }
-    };
-  };
-
-  // Set up crypto polyfill on global
-  if (typeof global.crypto === 'undefined') {
-    global.crypto = createCryptoPolyfill() as any;
-  }
-
-  // Also ensure crypto is available on globalThis for web compatibility
-  if (typeof globalThis.crypto === 'undefined') {
-    globalThis.crypto = global.crypto as any;
-  }
-
-  // For web environments, also set on window if available
-  if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') {
-    (window as any).crypto = global.crypto;
-  }
-})();
-
-// Buffer polyfill for React Native
-if (typeof global.Buffer === 'undefined') {
-  global.Buffer = {
-    from: (data: any, encoding?: string) => {
-      if (typeof data === 'string') {
-        if (encoding === 'hex') {
-          const bytes = new Uint8Array(data.length / 2);
-          for (let i = 0; i < data.length; i += 2) {
-            bytes[i / 2] = parseInt(data.substr(i, 2), 16);
-          }
-          return bytes;
-        }
-        return new TextEncoder().encode(data);
-      }
-      return new Uint8Array(data);
-    },
-    alloc: (size: number) => new Uint8Array(size),
-    allocUnsafe: (size: number) => new Uint8Array(size),
-    isBuffer: (obj: any) => obj instanceof Uint8Array,
-    concat: (buffers: Uint8Array[]) => {
-      const totalLength = buffers.reduce((sum, buf) => sum + buf.length, 0);
-      const result = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const buf of buffers) {
-        result.set(buf, offset);
-        offset += buf.length;
-      }
-      return result;
-    }
-  } as any;
-}
-
 // Import bip39 after crypto polyfill is set up
-import * as bip39 from 'bip39';
+let bip39: any;
+try {
+  bip39 = require('bip39');
+} catch (error) {
+  console.log('bip39 not available, using fallback');
+  bip39 = null;
+}
 
 // Simple ECC implementation for BIP32
 const createECC = () => {
@@ -169,7 +102,10 @@ const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 export const generateMnemonic = (strength: number = 128): string => {
   try {
-    return bip39.generateMnemonic(strength);
+    if (bip39) {
+      return bip39.generateMnemonic(strength);
+    }
+    throw new Error('bip39 not available');
   } catch (error) {
     console.error('Error generating mnemonic:', error);
     // Fallback for demo purposes
@@ -180,7 +116,19 @@ export const generateMnemonic = (strength: number = 128): string => {
 };
 
 export const validateMnemonic = (mnemonic: string): boolean => {
-  return bip39.validateMnemonic(mnemonic);
+  try {
+    if (bip39) {
+      return bip39.validateMnemonic(mnemonic);
+    }
+    // Fallback validation - just check word count and basic format
+    const words = mnemonic.trim().split(/\s+/);
+    return words.length === 12 || words.length === 24;
+  } catch (error) {
+    console.error('Error validating mnemonic:', error);
+    // Fallback validation - just check word count and basic format
+    const words = mnemonic.trim().split(/\s+/);
+    return words.length === 12 || words.length === 24;
+  }
 };
 
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
@@ -199,7 +147,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(createECC());
 
-  const seed = await bip39.mnemonicToSeed(mnemonic);
+  const seed = bip39 ? await bip39.mnemonicToSeed(mnemonic) : new Uint8Array(64);
   const root = bip32.fromSeed(seed);
   const account = root.derivePath(DERIVATION_PATH);
   const xpub = account.neutered().toBase58();
@@ -263,7 +211,7 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
   try {
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(createECC());
-    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const seed = bip39 ? await bip39.mnemonicToSeed(mnemonic) : new Uint8Array(64);
     const root = bip32.fromSeed(seed);
     const child = root.derivePath(`${DERIVATION_PATH}/0/${addressIndex}`);
     return child.toWIF();

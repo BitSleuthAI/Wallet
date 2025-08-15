@@ -1,3 +1,6 @@
+// Import crypto polyfill first
+import '@/services/crypto-polyfill';
+
 import React, { useState, useEffect } from 'react';
 import {
   View,
