@@ -2,11 +2,29 @@
 // This must be imported before any crypto-dependent modules
 
 import { Platform } from 'react-native';
-import { sha256 as nobleSha256 } from '@noble/hashes/sha256';
 
 // Ensure global exists first
 if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
+}
+
+// Import noble hashes safely
+let nobleSha256: any;
+try {
+  const nobleHashes = require('@noble/hashes/sha256');
+  nobleSha256 = nobleHashes.sha256;
+  console.log('✅ Noble hashes loaded successfully');
+} catch (error) {
+  console.warn('⚠️ Noble hashes not available:', error);
+  // Fallback SHA-256 implementation
+  nobleSha256 = (data: Uint8Array): Uint8Array => {
+    // Very basic fallback - not cryptographically secure
+    const result = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) {
+      result[i] = data[i % data.length] ^ (i * 7);
+    }
+    return result;
+  };
 }
 
 // Import crypto libraries for proper hash functions

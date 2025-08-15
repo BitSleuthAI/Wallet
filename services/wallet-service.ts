@@ -3,15 +3,16 @@ import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
-import * as secp256k1 from '@noble/secp256k1';
+
+// Note: Noble secp256k1 is available as a dependency but we use tiny-secp256k1 for BIP32 compatibility
 
 // Import bip39 with better error handling
 let bip39: any;
 try {
   bip39 = require('bip39');
-  console.log('Successfully loaded bip39');
-} catch {
-  console.log('bip39 not available, using fallback');
+  console.log('✅ Successfully loaded bip39');
+} catch (error) {
+  console.warn('⚠️ bip39 not available:', error);
   bip39 = null;
 }
 
@@ -20,91 +21,11 @@ const createECC = () => {
   try {
     // Try to use tiny-secp256k1 first (preferred by BIP32)
     const tinySecp256k1 = require('tiny-secp256k1');
-    console.log('Using tiny-secp256k1 for ECC operations');
+    console.log('✅ Using tiny-secp256k1 for ECC operations');
     return tinySecp256k1;
-  } catch {
-    console.log('tiny-secp256k1 not available, using noble/secp256k1 fallback');
-    
-    // Fallback to noble/secp256k1 with BIP32-compatible interface
-    return {
-      isPrivate: (privateKey: Uint8Array): boolean => {
-        try {
-          if (privateKey.length !== 32) return false;
-          const key = secp256k1.utils.normPrivateKeyToScalar(privateKey);
-          return key > 0n && key < secp256k1.CURVE.n;
-        } catch {
-          return false;
-        }
-      },
-      isPoint: (p: Uint8Array): boolean => {
-        try {
-          secp256k1.Point.fromHex(p);
-          return true;
-        } catch {
-          return false;
-        }
-      },
-      pointFromScalar: (sk: Uint8Array): Uint8Array | null => {
-        try {
-          return secp256k1.Point.fromPrivateKey(sk).toRawBytes();
-        } catch {
-          return null;
-        }
-      },
-      pointAddScalar: (p: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
-        try {
-          const point = secp256k1.Point.fromHex(p);
-          const tweakPoint = secp256k1.Point.fromPrivateKey(tweak);
-          return point.add(tweakPoint).toRawBytes();
-        } catch {
-          return null;
-        }
-      },
-      pointMultiply: (p: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
-        try {
-          const point = secp256k1.Point.fromHex(p);
-          const scalar = secp256k1.utils.normPrivateKeyToScalar(tweak);
-          return point.multiply(scalar).toRawBytes();
-        } catch {
-          return null;
-        }
-      },
-      privateAdd: (privateKey: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
-        try {
-          const key = secp256k1.utils.normPrivateKeyToScalar(privateKey);
-          const tweakScalar = secp256k1.utils.normPrivateKeyToScalar(tweak);
-          let result = (key + tweakScalar) % secp256k1.CURVE.n;
-          const bytes = new Uint8Array(32);
-          for (let i = 31; i >= 0; i--) {
-            bytes[i] = Number(result & 0xffn);
-            result = result >> 8n;
-          }
-          return bytes;
-        } catch {
-          return null;
-        }
-      },
-      privateNegate: (privateKey: Uint8Array): Uint8Array => {
-        const key = secp256k1.utils.normPrivateKeyToScalar(privateKey);
-        let negated = secp256k1.CURVE.n - key;
-        const bytes = new Uint8Array(32);
-        for (let i = 31; i >= 0; i--) {
-          bytes[i] = Number(negated & 0xffn);
-          negated = negated >> 8n;
-        }
-        return bytes;
-      },
-      sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
-        return secp256k1.sign(hash, privateKey).toCompactRawBytes();
-      },
-      verify: (signature: Uint8Array, hash: Uint8Array, publicKey: Uint8Array): boolean => {
-        try {
-          return secp256k1.verify(signature, hash, publicKey);
-        } catch {
-          return false;
-        }
-      },
-    };
+  } catch (error) {
+    console.warn('⚠️ tiny-secp256k1 not available:', error);
+    throw new Error('ECC implementation not available. This feature requires a mobile device with proper crypto libraries.');
   }
 };
 

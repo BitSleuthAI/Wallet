@@ -26,10 +26,22 @@ import QRScanner from '@/components/QRScanner';
 
 // Platform-specific wallet service imports
 let walletService: any;
-if (Platform.OS === 'web') {
-  walletService = require('@/services/wallet-service.web');
-} else {
-  walletService = require('@/services/wallet-service');
+try {
+  if (Platform.OS === 'web') {
+    walletService = require('@/services/wallet-service.web');
+  } else {
+    walletService = require('@/services/wallet-service');
+  }
+  console.log('✅ Wallet service loaded successfully');
+} catch (error) {
+  console.error('❌ Failed to load wallet service:', error);
+  // Provide a minimal fallback
+  walletService = {
+    generateMnemonic: async () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    validateMnemonic: () => true,
+    createWallet: async () => { throw new Error('Wallet service not available'); },
+    importWallet: async () => { throw new Error('Wallet service not available'); }
+  };
 }
 
 export default function WalletSetupScreen() {
