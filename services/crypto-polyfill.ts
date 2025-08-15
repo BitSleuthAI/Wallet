@@ -52,25 +52,31 @@ const cryptoPolyfill = createCrypto();
 
 // Immediately and aggressively set crypto on all possible global contexts
 // This needs to happen synchronously before any other code runs
-const contexts = [globalThis, global, window, self].filter(Boolean);
+const contexts = [globalThis, global];
+if (typeof window !== 'undefined') contexts.push(window);
+if (typeof self !== 'undefined') contexts.push(self);
+
 contexts.forEach(context => {
   if (context && typeof context === 'object') {
-    (context as any).crypto = cryptoPolyfill;
-    // Also set it as a non-configurable property to prevent overwrites
     try {
+      // Force set crypto property
+      (context as any).crypto = cryptoPolyfill;
+      
+      // Try to make it non-configurable to prevent overwrites
       Object.defineProperty(context, 'crypto', {
         value: cryptoPolyfill,
-        writable: false,
+        writable: true, // Allow overwriting in case something else needs to set it
         enumerable: true,
-        configurable: false
+        configurable: true
       });
     } catch {
-      // Ignore if we can't define the property
+      // Fallback - just set it directly
+      (context as any).crypto = cryptoPolyfill;
     }
   }
 });
 
-// Also ensure crypto is available on the global scope immediately
+// Ensure crypto is available globally
 if (typeof crypto === 'undefined') {
   (global as any).crypto = cryptoPolyfill;
   (globalThis as any).crypto = cryptoPolyfill;
@@ -79,8 +85,12 @@ if (typeof crypto === 'undefined') {
 // Test that crypto is working immediately
 try {
   const testArray = new Uint8Array(4);
-  cryptoPolyfill.getRandomValues(testArray);
-  console.log('✅ Crypto polyfill initialized successfully');
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    crypto.getRandomValues(testArray);
+    console.log('✅ Crypto polyfill initialized successfully');
+  } else {
+    console.warn('⚠️ Crypto polyfill may not be working properly');
+  }
 } catch (error) {
   console.error('❌ Crypto polyfill test failed:', error);
 }

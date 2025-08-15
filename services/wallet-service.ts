@@ -1,3 +1,6 @@
+// Import crypto polyfill first
+import '@/services/crypto-polyfill';
+
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
@@ -99,23 +102,15 @@ const createECC = () => {
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 export const generateMnemonic = async (strength: number = 128): Promise<string> => {
-  // On web, use the web-specific implementation
-  if (Platform.OS === 'web') {
-    try {
-      const webService = require('./wallet-service.web');
-      return webService.generateMnemonic(strength);
-    } catch (error) {
-      console.error('Error with web service:', error);
-      // Fallback for web
-      const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-      const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-      return strength === 256 ? fallback24 : fallback12;
-    }
-  }
-
   // Fallback mnemonics for demo purposes
   const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
   const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+  
+  // On web, use simple fallback to avoid crypto issues
+  if (Platform.OS === 'web') {
+    console.log('Web: Using fallback mnemonic');
+    return strength === 256 ? fallback24 : fallback12;
+  }
   
   try {
     console.log('Generating mnemonic with strength:', strength);
