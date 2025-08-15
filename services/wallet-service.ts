@@ -39,6 +39,16 @@ import * as bip39 from 'bip39';
 // Simple ECC implementation for BIP32
 const createECC = () => {
   return {
+    isPrivate: (privateKey: Uint8Array): boolean => {
+      try {
+        // Check if it's a valid 32-byte private key
+        if (privateKey.length !== 32) return false;
+        const key = secp256k1.utils.normPrivateKeyToScalar(privateKey);
+        return key > 0n && key < secp256k1.CURVE.n;
+      } catch {
+        return false;
+      }
+    },
     isPoint: (p: Uint8Array): boolean => {
       try {
         secp256k1.Point.fromHex(p);
@@ -138,9 +148,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     throw new Error('Invalid mnemonic phrase');
   }
 
-  if (Platform.OS === 'web') {
-    throw new Error('Wallet import is not available on web in Expo Go. Please use a mobile device.');
-  }
+
 
   try {
     const { BIP32Factory } = require('bip32');

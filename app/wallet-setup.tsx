@@ -122,14 +122,7 @@ export default function WalletSetupScreen() {
       return;
     }
 
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Feature Not Available',
-        'Wallet creation is not available on web in Expo Go. Please open this app on a mobile device using the QR code to create or import a wallet.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+
 
     // Move to confirmation page instead of creating wallet immediately
     const words = generatedMnemonic.split(' ');
@@ -164,14 +157,7 @@ export default function WalletSetupScreen() {
       return;
     }
 
-    if (Platform.OS === 'web') {
-      Alert.alert(
-        'Feature Not Available',
-        'Wallet import is not available on web in Expo Go. Please open this app on a mobile device using the QR code to create or import a wallet.',
-        [{ text: 'OK' }]
-      );
-      return;
-    }
+
 
     setIsLoading(true);
     try {
