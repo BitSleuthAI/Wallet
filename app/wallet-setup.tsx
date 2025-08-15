@@ -352,11 +352,17 @@ export default function WalletSetupScreen() {
         <View style={[styles.mnemonicContainer, { 
           backgroundColor: theme.colors.surface,
           borderColor: theme.colors.border,
-          minHeight: wordCount === 24 ? 300 : 200
+          minHeight: wordCount === 24 ? 400 : 200
         }]}>
-          <View style={styles.mnemonicGrid}>
+          <View style={[styles.mnemonicGrid, { 
+            flexDirection: wordCount === 24 ? 'row' : 'row',
+            flexWrap: 'wrap'
+          }]}>
             {generatedMnemonic.split(' ').map((word, index) => (
-              <View key={index} style={[styles.wordItem, { backgroundColor: theme.colors.background }]}>
+              <View key={index} style={[styles.wordItem, { 
+                backgroundColor: theme.colors.background,
+                width: wordCount === 24 ? '31%' : '48%'
+              }]}>
                 <Text style={[styles.wordNumber, { color: theme.colors.textSecondary }]}>
                   {index + 1}
                 </Text>
@@ -819,7 +825,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 8,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   wordItem: {
     flexDirection: 'row',
@@ -827,8 +833,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 6,
     borderRadius: 6,
-    width: '48%',
     gap: 6,
+    marginBottom: 4,
   },
   wordNumber: {
     fontSize: 12,

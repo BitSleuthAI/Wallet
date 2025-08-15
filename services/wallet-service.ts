@@ -112,13 +112,15 @@ const createECC = () => {
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
-export const generateMnemonic = (): string => {
+export const generateMnemonic = (strength: number = 128): string => {
   try {
-    return bip39.generateMnemonic();
+    return bip39.generateMnemonic(strength);
   } catch (error) {
     console.error('Error generating mnemonic:', error);
     // Fallback for demo purposes
-    return 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+    return strength === 256 ? fallback24 : fallback12;
   }
 };
 

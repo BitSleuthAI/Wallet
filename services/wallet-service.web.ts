@@ -263,9 +263,10 @@ const getRandomBytes = (size: number): Uint8Array => {
 };
 
 // Simple mnemonic generation for web (not cryptographically secure - for demo only)
-export const generateMnemonic = (): string => {
+export const generateMnemonic = (strength: number = 128): string => {
+  const wordCount = strength === 256 ? 24 : 12;
   const words: string[] = [];
-  for (let i = 0; i < 12; i++) {
+  for (let i = 0; i < wordCount; i++) {
     const randomIndex = Math.floor(Math.random() * WORD_LIST.length);
     words.push(WORD_LIST[randomIndex]);
   }
