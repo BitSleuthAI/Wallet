@@ -1,5 +1,5 @@
 // Import crypto polyfill FIRST before any other modules
-// import '@/services/crypto-polyfill';
+import '@/services/crypto-polyfill';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";

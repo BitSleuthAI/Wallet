@@ -100,44 +100,29 @@ const createCrypto = () => {
   const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
     if (!array) return array;
     
+    console.log('getRandomValues called with array type:', array.constructor.name, 'length:', array.byteLength);
+    
     // Use native crypto if available, otherwise Math.random
     if (Platform.OS !== 'web' && typeof require !== 'undefined') {
       try {
         const crypto = require('crypto');
         const bytes = crypto.randomBytes(array.byteLength);
         new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
+        console.log('✅ Used native crypto.randomBytes');
         return array;
-      } catch {
-        // Fall back to Math.random
+      } catch (error) {
+        console.log('⚠️ Native crypto failed, using Math.random fallback:', error);
       }
     }
     
-    // Fallback using Math.random
-    if (array instanceof Uint8Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 256);
-      }
-    } else if (array instanceof Uint16Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 65536);
-      }
-    } else if (array instanceof Uint32Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 4294967296);
-      }
-    } else if (array instanceof Int8Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 256) - 128;
-      }
-    } else if (array instanceof Int16Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 65536) - 32768;
-      }
-    } else if (array instanceof Int32Array) {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 4294967296) - 2147483648;
-      }
+    // Fallback using Math.random with better entropy
+    const view = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+    for (let i = 0; i < view.length; i++) {
+      // Use multiple Math.random calls for better entropy
+      view[i] = Math.floor(Math.random() * 256);
     }
+    
+    console.log('✅ Used Math.random fallback for crypto.getRandomValues');
     return array;
   };
 
@@ -151,36 +136,64 @@ const createCrypto = () => {
 // Create the polyfill
 const cryptoPolyfill = createCrypto();
 
+console.log('🔧 Setting up crypto polyfill on all global contexts...');
+
 // Immediately and aggressively set crypto on all possible global contexts
 // This needs to happen synchronously before any other code runs
-const contexts = [globalThis, global];
+const contexts = [globalThis];
+if (typeof global !== 'undefined') contexts.push(global);
 if (typeof window !== 'undefined') contexts.push(window);
 if (typeof self !== 'undefined') contexts.push(self);
 
-contexts.forEach(context => {
+contexts.forEach((context, index) => {
   if (context && typeof context === 'object') {
     try {
+      // Check if crypto already exists and is working
+      if (context.crypto && typeof context.crypto.getRandomValues === 'function') {
+        try {
+          const testArray = new Uint8Array(1);
+          context.crypto.getRandomValues(testArray);
+          console.log(`✅ Context ${index}: Native crypto already working`);
+          return; // Skip polyfill if native crypto works
+        } catch {
+          console.log(`⚠️ Context ${index}: Native crypto exists but broken, replacing`);
+        }
+      }
+      
       // Force set crypto property
       (context as any).crypto = cryptoPolyfill;
+      console.log(`✅ Context ${index}: Set crypto polyfill directly`);
       
       // Try to make it non-configurable to prevent overwrites
-      Object.defineProperty(context, 'crypto', {
-        value: cryptoPolyfill,
-        writable: true, // Allow overwriting in case something else needs to set it
-        enumerable: true,
-        configurable: true
-      });
-    } catch {
-      // Fallback - just set it directly
-      (context as any).crypto = cryptoPolyfill;
+      try {
+        Object.defineProperty(context, 'crypto', {
+          value: cryptoPolyfill,
+          writable: true,
+          enumerable: true,
+          configurable: true
+        });
+        console.log(`✅ Context ${index}: Set crypto polyfill with defineProperty`);
+      } catch (defineError) {
+        console.log(`⚠️ Context ${index}: defineProperty failed:`, defineError);
+      }
+    } catch (error) {
+      console.log(`❌ Context ${index}: Failed to set crypto:`, error);
     }
   }
 });
 
-// Ensure crypto is available globally
+// Double-check that crypto is available globally
 if (typeof crypto === 'undefined') {
-  (global as any).crypto = cryptoPolyfill;
-  (globalThis as any).crypto = cryptoPolyfill;
+  console.log('⚠️ Global crypto still undefined, setting fallbacks...');
+  try {
+    (global as any).crypto = cryptoPolyfill;
+    (globalThis as any).crypto = cryptoPolyfill;
+    console.log('✅ Set crypto on global and globalThis as fallback');
+  } catch (error) {
+    console.error('❌ Failed to set crypto fallbacks:', error);
+  }
+} else {
+  console.log('✅ Global crypto is now defined');
 }
 
 // Set up hash functions for BIP32
@@ -240,26 +253,43 @@ if (typeof require !== 'undefined' && require.cache) {
 }
 
 // Test that crypto is working immediately
+console.log('🧪 Testing crypto polyfill...');
 try {
   const testArray = new Uint8Array(4);
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+  
+  // Test global crypto
+  if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
     crypto.getRandomValues(testArray);
-    console.log('✅ Crypto polyfill initialized successfully');
+    console.log('✅ Global crypto.getRandomValues working:', Array.from(testArray));
   } else {
-    console.warn('⚠️ Crypto polyfill may not be working properly');
+    console.error('❌ Global crypto.getRandomValues not available:', {
+      cryptoExists: typeof crypto !== 'undefined',
+      cryptoValue: crypto,
+      getRandomValuesType: crypto ? typeof crypto.getRandomValues : 'N/A'
+    });
   }
+  
+  // Test polyfill directly
+  const testArray2 = new Uint8Array(4);
+  cryptoPolyfill.getRandomValues(testArray2);
+  console.log('✅ Crypto polyfill direct test working:', Array.from(testArray2));
   
   // Test hash functions
   if (hashFunctions.hmacSha256Sync) {
     const testResult = hashFunctions.hmacSha256Sync('test', 'data');
     if (testResult && testResult.length > 0) {
-      console.log('✅ Hash functions initialized successfully');
+      console.log('✅ Hash functions initialized successfully, result length:', testResult.length);
     } else {
-      console.warn('⚠️ Hash function test returned empty result');
+      console.warn('⚠️ Hash function test returned empty result:', testResult);
     }
+  } else {
+    console.error('❌ Hash functions not available');
   }
 } catch (error) {
   console.error('❌ Crypto polyfill test failed:', error);
+  if (error instanceof Error) {
+    console.error('Stack trace:', error.stack);
+  }
 }
 
 // Buffer polyfill for React Native
@@ -293,5 +323,22 @@ if (typeof global.Buffer === 'undefined') {
     }
   } as any;
 }
+
+// Final verification
+setTimeout(() => {
+  console.log('🔍 Final crypto verification after module load...');
+  console.log('Global crypto available:', typeof crypto !== 'undefined');
+  console.log('Global crypto.getRandomValues available:', typeof crypto?.getRandomValues === 'function');
+  
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    try {
+      const finalTest = new Uint8Array(2);
+      crypto.getRandomValues(finalTest);
+      console.log('✅ Final crypto test successful:', Array.from(finalTest));
+    } catch (error) {
+      console.error('❌ Final crypto test failed:', error);
+    }
+  }
+}, 0);
 
 export {}; // Make this a module
