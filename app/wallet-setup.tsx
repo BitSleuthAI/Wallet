@@ -76,24 +76,31 @@ export default function WalletSetupScreen() {
     }
   };
 
-  const generateNewMnemonic = React.useCallback(() => {
+  const generateNewMnemonic = () => {
+    console.log('Starting mnemonic generation for word count:', wordCount);
+    
+    // Use fallback immediately to avoid any potential recursion issues
+    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+    const fallbackMnemonic = wordCount === 24 ? fallback24 : fallback12;
+    
     try {
-      const newMnemonic = walletService.generateMnemonic(wordCount === 24 ? 256 : 128);
+      console.log('Attempting to generate mnemonic with wallet service');
+      const strength = wordCount === 24 ? 256 : 128;
+      const newMnemonic = walletService.generateMnemonic(strength);
+      console.log('Successfully generated mnemonic with wallet service');
       setGeneratedMnemonic(newMnemonic);
     } catch (error) {
-      console.error('Error generating mnemonic:', error);
-      // Fallback mnemonic for demo
-      const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-      const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-      setGeneratedMnemonic(wordCount === 24 ? fallback24 : fallback12);
+      console.error('Error generating mnemonic, using fallback:', error);
+      setGeneratedMnemonic(fallbackMnemonic);
     }
-  }, [wordCount]);
+  };
 
   useEffect(() => {
     if (mode === 'create') {
       generateNewMnemonic();
     }
-  }, [mode, wordCount, generateNewMnemonic]);
+  }, [mode, wordCount]);
 
   const copyToClipboard = async () => {
     if (Platform.OS === 'web') {

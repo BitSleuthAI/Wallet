@@ -102,16 +102,22 @@ const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 export const generateMnemonic = (strength: number = 128): string => {
   try {
+    console.log('Generating mnemonic with strength:', strength);
     if (bip39) {
-      return bip39.generateMnemonic(strength);
+      const result = bip39.generateMnemonic(strength);
+      console.log('Generated mnemonic successfully');
+      return result;
     }
+    console.log('bip39 not available, using fallback');
     throw new Error('bip39 not available');
   } catch (error) {
     console.error('Error generating mnemonic:', error);
     // Fallback for demo purposes
     const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-    return strength === 256 ? fallback24 : fallback12;
+    const result = strength === 256 ? fallback24 : fallback12;
+    console.log('Using fallback mnemonic');
+    return result;
   }
 };
 

@@ -6,40 +6,24 @@ if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
 
-// Create a robust crypto implementation
-const createCryptoPolyfill = () => {
-  return {
-    getRandomValues: (array: Uint8Array) => {
-      // Try native crypto first (web browsers)
-      if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-        return window.crypto.getRandomValues(array);
-      }
-      // Try global crypto (Node.js style)
-      if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
-        return globalThis.crypto.getRandomValues(array);
-      }
-      // Fallback to Math.random
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 256);
-      }
-      return array;
+// Simple crypto implementation that avoids recursion
+const simpleCrypto = {
+  getRandomValues: (array: Uint8Array) => {
+    // Use Math.random as fallback to avoid any potential recursion
+    for (let i = 0; i < array.length; i++) {
+      array[i] = Math.floor(Math.random() * 256);
     }
-  };
+    return array;
+  }
 };
 
-// Set up crypto polyfill on global immediately
-if (typeof global.crypto === 'undefined') {
-  global.crypto = createCryptoPolyfill() as any;
+// Only set up crypto if it doesn't exist to avoid conflicts
+if (typeof global !== 'undefined' && !global.crypto) {
+  global.crypto = simpleCrypto as any;
 }
 
-// Also ensure crypto is available on globalThis for web compatibility
-if (typeof globalThis.crypto === 'undefined') {
-  globalThis.crypto = global.crypto as any;
-}
-
-// For web environments, also set on window if available
-if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') {
-  (window as any).crypto = global.crypto;
+if (typeof globalThis !== 'undefined' && !globalThis.crypto) {
+  globalThis.crypto = simpleCrypto as any;
 }
 
 // Buffer polyfill for React Native

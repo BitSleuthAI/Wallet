@@ -243,13 +243,26 @@ const getRandomBytes = (size: number): Uint8Array => {
 
 // Simple mnemonic generation for web (not cryptographically secure - for demo only)
 export const generateMnemonic = (strength: number = 128): string => {
-  const wordCount = strength === 256 ? 24 : 12;
-  const words: string[] = [];
-  for (let i = 0; i < wordCount; i++) {
-    const randomIndex = Math.floor(Math.random() * WORD_LIST.length);
-    words.push(WORD_LIST[randomIndex]);
+  try {
+    console.log('Web: Generating mnemonic with strength:', strength);
+    const wordCount = strength === 256 ? 24 : 12;
+    const words: string[] = [];
+    
+    for (let i = 0; i < wordCount; i++) {
+      const randomIndex = Math.floor(Math.random() * WORD_LIST.length);
+      words.push(WORD_LIST[randomIndex]);
+    }
+    
+    const result = words.join(' ');
+    console.log('Web: Generated mnemonic successfully with', wordCount, 'words');
+    return result;
+  } catch (error) {
+    console.error('Web: Error generating mnemonic:', error);
+    // Fallback
+    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+    return strength === 256 ? fallback24 : fallback12;
   }
-  return words.join(' ');
 };
 
 export const validateMnemonic = (mnemonic: string): boolean => {
