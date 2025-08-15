@@ -60,15 +60,21 @@ contexts.forEach(context => {
     try {
       Object.defineProperty(context, 'crypto', {
         value: cryptoPolyfill,
-        writable: true,
+        writable: false,
         enumerable: true,
-        configurable: true
+        configurable: false
       });
     } catch {
       // Ignore if we can't define the property
     }
   }
 });
+
+// Also ensure crypto is available on the global scope immediately
+if (typeof crypto === 'undefined') {
+  (global as any).crypto = cryptoPolyfill;
+  (globalThis as any).crypto = cryptoPolyfill;
+}
 
 // Test that crypto is working immediately
 try {

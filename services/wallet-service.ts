@@ -98,20 +98,6 @@ const createECC = () => {
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
-// Wait for crypto to be available
-const waitForCrypto = (): Promise<void> => {
-  return new Promise((resolve) => {
-    const checkCrypto = () => {
-      if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
-        resolve();
-      } else {
-        setTimeout(checkCrypto, 10);
-      }
-    };
-    checkCrypto();
-  });
-};
-
 export const generateMnemonic = async (strength: number = 128): Promise<string> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
@@ -127,11 +113,12 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
     }
   }
 
+  // Fallback mnemonics for demo purposes
+  const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+  const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+  
   try {
     console.log('Generating mnemonic with strength:', strength);
-    
-    // Wait for crypto to be available
-    await waitForCrypto();
     
     if (bip39) {
       console.log('Using bip39 library');
@@ -144,9 +131,6 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
   } catch (error) {
     console.error('Error generating mnemonic:', error);
     console.log('Using fallback mnemonic');
-    // Fallback for demo purposes
-    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
     const result = strength === 256 ? fallback24 : fallback12;
     console.log('Successfully generated mnemonic with wallet service');
     return result;
