@@ -1,7 +1,7 @@
 // Import crypto polyfill first
 import '@/services/crypto-polyfill';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -76,7 +76,7 @@ export default function WalletSetupScreen() {
     }
   };
 
-  const generateNewMnemonic = () => {
+  const generateNewMnemonic = useCallback(async () => {
     console.log('Starting mnemonic generation for word count:', wordCount);
     
     // Use fallback immediately to avoid any potential recursion issues
@@ -87,20 +87,20 @@ export default function WalletSetupScreen() {
     try {
       console.log('Attempting to generate mnemonic with wallet service');
       const strength = wordCount === 24 ? 256 : 128;
-      const newMnemonic = walletService.generateMnemonic(strength);
+      const newMnemonic = await walletService.generateMnemonic(strength);
       console.log('Successfully generated mnemonic with wallet service');
-      setGeneratedMnemonic(newMnemonic);
+      setGeneratedMnemonic(newMnemonic || fallbackMnemonic);
     } catch (error) {
       console.error('Error generating mnemonic, using fallback:', error);
       setGeneratedMnemonic(fallbackMnemonic);
     }
-  };
+  }, [wordCount]);
 
   useEffect(() => {
     if (mode === 'create') {
       generateNewMnemonic();
     }
-  }, [mode, wordCount]);
+  }, [mode, wordCount, generateNewMnemonic]);
 
   const copyToClipboard = async () => {
     if (Platform.OS === 'web') {
@@ -135,7 +135,11 @@ export default function WalletSetupScreen() {
 
 
     // Move to confirmation page instead of creating wallet immediately
-    const words = generatedMnemonic.split(' ');
+    const words = (generatedMnemonic || '').split(' ').filter(word => word.trim());
+    if (words.length === 0) {
+      Alert.alert('Error', 'No recovery phrase generated. Please try again.');
+      return;
+    }
     const randomPositions: number[] = [];
     
     // Generate 2 random positions based on word count
@@ -376,7 +380,7 @@ export default function WalletSetupScreen() {
             flexDirection: wordCount === 24 ? 'row' : 'row',
             flexWrap: 'wrap'
           }]}>
-            {generatedMnemonic.split(' ').map((word, index) => (
+            {(generatedMnemonic || '').split(' ').filter(word => word.trim()).map((word, index) => (
               <View key={index} style={[styles.wordItem, { 
                 backgroundColor: theme.colors.background,
                 width: wordCount === 24 ? '31%' : '48%'
