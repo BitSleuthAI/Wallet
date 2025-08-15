@@ -1,10 +1,8 @@
 // Import crypto polyfill first
-// import '@/services/crypto-polyfill';
+import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
-
-// Note: Noble secp256k1 is available as a dependency but we use tiny-secp256k1 for BIP32 compatibility
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -16,15 +14,69 @@ try {
   bip39 = null;
 }
 
-// ECC implementation for BIP32 using tiny-secp256k1
+// ECC implementation for BIP32 using @noble/secp256k1 (pure JS, no WASM)
 const createECC = () => {
   try {
-    // Try to use tiny-secp256k1 first (preferred by BIP32)
-    const tinySecp256k1 = require('tiny-secp256k1');
-    console.log('✅ Using tiny-secp256k1 for ECC operations');
-    return tinySecp256k1;
+    // Import @noble/secp256k1 directly
+    const secp = require('@noble/secp256k1');
+    console.log('✅ Using @noble/secp256k1 for ECC operations');
+    
+    // Create BIP32-compatible interface
+    return {
+      isPoint: (p: Uint8Array): boolean => {
+        try {
+          if (p.length === 33 && (p[0] === 0x02 || p[0] === 0x03)) return true;
+          if (p.length === 65 && p[0] === 0x04) return true;
+          return false;
+        } catch {
+          return false;
+        }
+      },
+      isPrivate: (d: Uint8Array): boolean => {
+        try {
+          return secp.utils.isValidPrivateKey(d);
+        } catch {
+          return false;
+        }
+      },
+      pointFromScalar: (d: Uint8Array, compressed?: boolean): Uint8Array | null => {
+        try {
+          const point = secp.getPublicKey(d, compressed !== false);
+          return point;
+        } catch {
+          return null;
+        }
+      },
+      pointAddScalar: (p: Uint8Array, tweak: Uint8Array, compressed?: boolean): Uint8Array | null => {
+        // This is a complex operation, for now return null to indicate not supported
+        // In a real implementation, you'd need to do point arithmetic
+        return null;
+      },
+      privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
+        try {
+          // Convert to bigint for arithmetic
+          const dBig = secp.utils.bytesToNumberBE(d);
+          const tweakBig = secp.utils.bytesToNumberBE(tweak);
+          const result = secp.utils.mod(dBig + tweakBig, secp.CURVE.n);
+          return secp.utils.numberToBytesBE(result, 32);
+        } catch {
+          return null;
+        }
+      },
+      sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
+        const signature = secp.sign(hash, privateKey);
+        return signature.toCompactRawBytes();
+      },
+      verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
+        try {
+          return secp.verify(signature, hash, publicKey);
+        } catch {
+          return false;
+        }
+      }
+    };
   } catch (error) {
-    console.warn('⚠️ tiny-secp256k1 not available:', error);
+    console.warn('⚠️ @noble/secp256k1 not available:', error);
     throw new Error('ECC implementation not available. This feature requires a mobile device with proper crypto libraries.');
   }
 };

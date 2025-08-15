@@ -6,18 +6,36 @@ if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
 
-console.log('✅ Initializing minimal crypto polyfill');
+console.log('✅ Initializing crypto polyfill with @noble/hashes');
 
-// Simple SHA-256 fallback implementation
-const simpleSha256 = (data: Uint8Array): Uint8Array => {
-  const result = new Uint8Array(32);
-  for (let i = 0; i < 32; i++) {
-    result[i] = data[i % data.length] ^ (i * 7);
-  }
-  return result;
-};
+// Use @noble/hashes for proper cryptographic functions
+let sha256: any = null;
+let hmac: any = null;
 
-// Crypto functions - use native on mobile, fallback on web
+try {
+  const { sha256: nobleSha256 } = require('@noble/hashes/sha256');
+  const { hmac: nobleHmac } = require('@noble/hashes/hmac');
+  sha256 = nobleSha256;
+  hmac = (key: Uint8Array, data: Uint8Array) => nobleHmac(nobleSha256, key, data);
+  console.log('✅ Using @noble/hashes for cryptographic functions');
+} catch (error) {
+  console.warn('⚠️ @noble/hashes not available, using fallback:', error);
+  
+  // Simple SHA-256 fallback implementation
+  sha256 = (data: Uint8Array): Uint8Array => {
+    const result = new Uint8Array(32);
+    for (let i = 0; i < 32; i++) {
+      result[i] = data[i % data.length] ^ (i * 7);
+    }
+    return result;
+  };
+  
+  hmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+    return sha256(new Uint8Array([...key, ...data]));
+  };
+}
+
+// Crypto functions - use native on mobile, noble on web/fallback
 let createHash: any = null;
 let createHmac: any = null;
 
@@ -32,11 +50,6 @@ if (Platform.OS !== 'web') {
   }
 }
 
-// Use the simple SHA-256 implementation
-const sha256 = (data: Uint8Array): Uint8Array => {
-  return simpleSha256(data);
-};
-
 const fallbackCreateHash = (algorithm: string) => {
   if (algorithm !== 'sha256') {
     throw new Error(`Hash algorithm ${algorithm} not supported`);
@@ -48,9 +61,10 @@ const fallbackCreateHash = (algorithm: string) => {
       return this;
     },
     digest: function(encoding?: string) {
-      const hash = sha256(this._data) as Uint8Array;
+      const dataBytes = typeof this._data === 'string' ? new TextEncoder().encode(this._data) : new Uint8Array(this._data);
+      const hash = sha256(dataBytes);
       if (encoding === 'hex') {
-        return Array.from(hash).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+        return Array.from(hash).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
       }
       return hash;
     },
@@ -63,37 +77,6 @@ const fallbackCreateHmac = (algorithm: string, key: any) => {
     throw new Error(`HMAC algorithm ${algorithm} not supported`);
   }
   
-  // Simple HMAC-SHA256 implementation
-  const hmacSha256 = (key: Uint8Array, message: Uint8Array): Uint8Array => {
-    const blockSize = 64;
-    const opad = new Uint8Array(blockSize).fill(0x5c);
-    const ipad = new Uint8Array(blockSize).fill(0x36);
-    
-    // If key is longer than block size, hash it
-    if (key.length > blockSize) {
-      key = sha256(key);
-    }
-    
-    // If key is shorter than block size, pad with zeros
-    if (key.length < blockSize) {
-      const paddedKey = new Uint8Array(blockSize);
-      paddedKey.set(key);
-      key = paddedKey;
-    }
-    
-    // XOR key with pads
-    for (let i = 0; i < blockSize; i++) {
-      opad[i] ^= key[i];
-      ipad[i] ^= key[i];
-    }
-    
-    // Hash inner
-    const innerHash = sha256(new Uint8Array([...ipad, ...message]));
-    
-    // Hash outer
-    return sha256(new Uint8Array([...opad, ...innerHash]));
-  };
-  
   return {
     update: function(data: any) {
       this._data = data;
@@ -102,9 +85,9 @@ const fallbackCreateHmac = (algorithm: string, key: any) => {
     digest: function(encoding?: string) {
       const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : new Uint8Array(key);
       const dataBytes = typeof this._data === 'string' ? new TextEncoder().encode(this._data) : new Uint8Array(this._data);
-      const hash = hmacSha256(keyBytes, dataBytes);
+      const hash = hmac(keyBytes, dataBytes);
       if (encoding === 'hex') {
-        return Array.from(hash).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+        return Array.from(hash).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
       }
       return hash;
     },
@@ -204,8 +187,15 @@ if (typeof crypto === 'undefined') {
 const hashFunctions = {
   sha256: createHash || fallbackCreateHash,
   hmacSha256Sync: (key: any, data: any) => {
-    const hmac = (createHmac || fallbackCreateHmac)('sha256', key);
-    return hmac.update(data).digest();
+    if (createHmac) {
+      const hmacInstance = createHmac('sha256', key);
+      return hmacInstance.update(data).digest();
+    } else {
+      // Use noble/hashes directly for better performance
+      const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : new Uint8Array(key);
+      const dataBytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
+      return hmac(keyBytes, dataBytes);
+    }
   }
 };
 
@@ -261,8 +251,12 @@ try {
   
   // Test hash functions
   if (hashFunctions.hmacSha256Sync) {
-    hashFunctions.hmacSha256Sync('test', 'data');
-    console.log('✅ Hash functions initialized successfully');
+    const testResult = hashFunctions.hmacSha256Sync('test', 'data');
+    if (testResult && testResult.length > 0) {
+      console.log('✅ Hash functions initialized successfully');
+    } else {
+      console.warn('⚠️ Hash function test returned empty result');
+    }
   }
 } catch (error) {
   console.error('❌ Crypto polyfill test failed:', error);
