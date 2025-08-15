@@ -2,6 +2,7 @@
 // This must be imported before any crypto-dependent modules
 
 import { Platform } from 'react-native';
+import { sha256 as nobleSha256 } from '@noble/hashes/sha256';
 
 // Ensure global exists first
 if (typeof global === 'undefined') {
@@ -23,8 +24,10 @@ try {
   console.log('Native crypto not available, using fallback');
 }
 
-// Fallback hash implementations using noble/secp256k1
-const { sha256 } = require('@noble/secp256k1/utils');
+// Use the proper SHA-256 implementation
+const sha256 = (data: Uint8Array): Uint8Array => {
+  return nobleSha256(data);
+};
 
 const fallbackCreateHash = (algorithm: string) => {
   if (algorithm !== 'sha256') {
