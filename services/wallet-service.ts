@@ -2,17 +2,49 @@ import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
 
-// Crypto polyfill for React Native
-if (typeof global.crypto === 'undefined') {
-  global.crypto = {
-    getRandomValues: (array: Uint8Array) => {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 256);
+// Comprehensive crypto polyfill setup
+(() => {
+  // Ensure global exists
+  if (typeof global === 'undefined') {
+    (globalThis as any).global = globalThis;
+  }
+
+  // Create a robust crypto implementation
+  const createCryptoPolyfill = () => {
+    return {
+      getRandomValues: (array: Uint8Array) => {
+        // Try native crypto first (web browsers)
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+          return window.crypto.getRandomValues(array);
+        }
+        // Try global crypto (Node.js style)
+        if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+          return globalThis.crypto.getRandomValues(array);
+        }
+        // Fallback to Math.random
+        for (let i = 0; i < array.length; i++) {
+          array[i] = Math.floor(Math.random() * 256);
+        }
+        return array;
       }
-      return array;
-    }
-  } as any;
-}
+    };
+  };
+
+  // Set up crypto polyfill on global
+  if (typeof global.crypto === 'undefined') {
+    global.crypto = createCryptoPolyfill() as any;
+  }
+
+  // Also ensure crypto is available on globalThis for web compatibility
+  if (typeof globalThis.crypto === 'undefined') {
+    globalThis.crypto = global.crypto as any;
+  }
+
+  // For web environments, also set on window if available
+  if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') {
+    (window as any).crypto = global.crypto;
+  }
+})();
 
 // Buffer polyfill for React Native
 if (typeof global.Buffer === 'undefined') {
@@ -46,6 +78,7 @@ if (typeof global.Buffer === 'undefined') {
   } as any;
 }
 
+// Import bip39 after crypto polyfill is set up
 import * as bip39 from 'bip39';
 
 // Simple ECC implementation for BIP32

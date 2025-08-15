@@ -1,10 +1,50 @@
 import { Wallet } from '@/types/wallet';
 
-// Simple Buffer polyfill for web
-if (typeof global === 'undefined') {
-  (globalThis as any).global = globalThis;
-}
+// Comprehensive crypto polyfill setup for web
+(() => {
+  // Ensure global exists
+  if (typeof global === 'undefined') {
+    (globalThis as any).global = globalThis;
+  }
 
+  // Create a robust crypto implementation
+  const createCryptoPolyfill = () => {
+    return {
+      getRandomValues: (array: Uint8Array) => {
+        // Try native crypto first (web browsers)
+        if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+          return window.crypto.getRandomValues(array);
+        }
+        // Try global crypto (Node.js style)
+        if (typeof globalThis.crypto !== 'undefined' && globalThis.crypto.getRandomValues) {
+          return globalThis.crypto.getRandomValues(array);
+        }
+        // Fallback to Math.random
+        for (let i = 0; i < array.length; i++) {
+          array[i] = Math.floor(Math.random() * 256);
+        }
+        return array;
+      }
+    };
+  };
+
+  // Set up crypto polyfill on global
+  if (typeof global.crypto === 'undefined') {
+    global.crypto = createCryptoPolyfill() as any;
+  }
+
+  // Also ensure crypto is available on globalThis for web compatibility
+  if (typeof globalThis.crypto === 'undefined') {
+    globalThis.crypto = global.crypto as any;
+  }
+
+  // For web environments, also set on window if available
+  if (typeof window !== 'undefined' && typeof window.crypto === 'undefined') {
+    (window as any).crypto = global.crypto;
+  }
+})();
+
+// Simple Buffer polyfill for web
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = {
     from: (data: any, encoding?: string) => {
@@ -247,18 +287,6 @@ const WORD_LIST = [
   'wrap', 'wreck', 'wrestle', 'wrist', 'write', 'wrong', 'yard', 'year', 'yellow', 'you',
   'young', 'youth', 'zebra', 'zero', 'zone', 'zoo'
 ];
-
-// Crypto polyfill for web environments
-if (typeof global.crypto === 'undefined') {
-  global.crypto = {
-    getRandomValues: (array: Uint8Array) => {
-      for (let i = 0; i < array.length; i++) {
-        array[i] = Math.floor(Math.random() * 256);
-      }
-      return array;
-    }
-  } as any;
-}
 
 // Simple random number generator for web
 const getRandomBytes = (size: number): Uint8Array => {
