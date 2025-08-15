@@ -84,15 +84,21 @@ export default function WalletSetupScreen() {
     const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
     const fallbackMnemonic = wordCount === 24 ? fallback24 : fallback12;
     
+    // Set fallback immediately to prevent undefined state
+    setGeneratedMnemonic(fallbackMnemonic);
+    
     try {
       console.log('Attempting to generate mnemonic with wallet service');
       const strength = wordCount === 24 ? 256 : 128;
       const newMnemonic = await walletService.generateMnemonic(strength);
       console.log('Successfully generated mnemonic with wallet service');
-      setGeneratedMnemonic(newMnemonic || fallbackMnemonic);
+      // Only update if we got a valid mnemonic
+      if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
+        setGeneratedMnemonic(newMnemonic);
+      }
     } catch (error) {
       console.error('Error generating mnemonic, using fallback:', error);
-      setGeneratedMnemonic(fallbackMnemonic);
+      // Fallback is already set above
     }
   }, [wordCount]);
 
@@ -135,7 +141,12 @@ export default function WalletSetupScreen() {
 
 
     // Move to confirmation page instead of creating wallet immediately
-    const words = (generatedMnemonic || '').split(' ').filter(word => word.trim());
+    if (!generatedMnemonic || typeof generatedMnemonic !== 'string') {
+      Alert.alert('Error', 'No recovery phrase generated. Please try again.');
+      return;
+    }
+    
+    const words = generatedMnemonic.split(' ').filter(word => word.trim());
     if (words.length === 0) {
       Alert.alert('Error', 'No recovery phrase generated. Please try again.');
       return;
