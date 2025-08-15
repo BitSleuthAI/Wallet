@@ -1,17 +1,124 @@
 // Crypto polyfill for React Native Web compatibility
 // This must be imported before any crypto-dependent modules
 
+import { Platform } from 'react-native';
+
 // Ensure global exists first
 if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
+
+// Import crypto libraries for proper hash functions
+let createHash: any;
+let createHmac: any;
+
+try {
+  // Try to import crypto functions for mobile
+  if (Platform.OS !== 'web') {
+    const crypto = require('crypto');
+    createHash = crypto.createHash;
+    createHmac = crypto.createHmac;
+  }
+} catch {
+  console.log('Native crypto not available, using fallback');
+}
+
+// Fallback hash implementations using noble/secp256k1
+const { sha256 } = require('@noble/secp256k1/utils');
+
+const fallbackCreateHash = (algorithm: string) => {
+  if (algorithm !== 'sha256') {
+    throw new Error(`Hash algorithm ${algorithm} not supported`);
+  }
+  
+  return {
+    update: function(data: any) {
+      this._data = data;
+      return this;
+    },
+    digest: function(encoding?: string) {
+      const hash = sha256(this._data) as Uint8Array;
+      if (encoding === 'hex') {
+        return Array.from(hash).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+      }
+      return hash;
+    },
+    _data: null as any
+  };
+};
+
+const fallbackCreateHmac = (algorithm: string, key: any) => {
+  if (algorithm !== 'sha256') {
+    throw new Error(`HMAC algorithm ${algorithm} not supported`);
+  }
+  
+  // Simple HMAC-SHA256 implementation
+  const hmacSha256 = (key: Uint8Array, message: Uint8Array): Uint8Array => {
+    const blockSize = 64;
+    const opad = new Uint8Array(blockSize).fill(0x5c);
+    const ipad = new Uint8Array(blockSize).fill(0x36);
+    
+    // If key is longer than block size, hash it
+    if (key.length > blockSize) {
+      key = sha256(key);
+    }
+    
+    // If key is shorter than block size, pad with zeros
+    if (key.length < blockSize) {
+      const paddedKey = new Uint8Array(blockSize);
+      paddedKey.set(key);
+      key = paddedKey;
+    }
+    
+    // XOR key with pads
+    for (let i = 0; i < blockSize; i++) {
+      opad[i] ^= key[i];
+      ipad[i] ^= key[i];
+    }
+    
+    // Hash inner
+    const innerHash = sha256(new Uint8Array([...ipad, ...message]));
+    
+    // Hash outer
+    return sha256(new Uint8Array([...opad, ...innerHash]));
+  };
+  
+  return {
+    update: function(data: any) {
+      this._data = data;
+      return this;
+    },
+    digest: function(encoding?: string) {
+      const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : new Uint8Array(key);
+      const dataBytes = typeof this._data === 'string' ? new TextEncoder().encode(this._data) : new Uint8Array(this._data);
+      const hash = hmacSha256(keyBytes, dataBytes);
+      if (encoding === 'hex') {
+        return Array.from(hash).map((b: number) => b.toString(16).padStart(2, '0')).join('');
+      }
+      return hash;
+    },
+    _data: null as any
+  };
+};
 
 // Enhanced crypto implementation with better random values
 const createCrypto = () => {
   const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
     if (!array) return array;
     
-    // Always use Math.random for consistency and to avoid any crypto issues
+    // Use native crypto if available, otherwise Math.random
+    if (Platform.OS !== 'web' && typeof require !== 'undefined') {
+      try {
+        const crypto = require('crypto');
+        const bytes = crypto.randomBytes(array.byteLength);
+        new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
+        return array;
+      } catch {
+        // Fall back to Math.random
+      }
+    }
+    
+    // Fallback using Math.random
     if (array instanceof Uint8Array) {
       for (let i = 0; i < array.length; i++) {
         array[i] = Math.floor(Math.random() * 256);
@@ -82,6 +189,55 @@ if (typeof crypto === 'undefined') {
   (globalThis as any).crypto = cryptoPolyfill;
 }
 
+// Set up hash functions for BIP32
+const hashFunctions = {
+  sha256: createHash || fallbackCreateHash,
+  hmacSha256Sync: (key: any, data: any) => {
+    const hmac = (createHmac || fallbackCreateHmac)('sha256', key);
+    return hmac.update(data).digest();
+  }
+};
+
+// Set hash functions globally for BIP32 - try multiple approaches
+const hashContexts = [global, globalThis];
+if (typeof window !== 'undefined') hashContexts.push(window);
+
+hashContexts.forEach(context => {
+  if (context && typeof context === 'object') {
+    try {
+      (context as any).hashes = hashFunctions;
+      
+      // Also try setting it as a property descriptor
+      Object.defineProperty(context, 'hashes', {
+        value: hashFunctions,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    } catch {
+      // Fallback - just set it directly
+      (context as any).hashes = hashFunctions;
+    }
+  }
+});
+
+// Also set it on the require cache if available
+if (typeof require !== 'undefined' && require.cache) {
+  try {
+    // Set hashes for any BIP32 modules that might be loaded
+    Object.keys(require.cache).forEach(key => {
+      if (key.includes('bip32')) {
+        const module = require.cache[key];
+        if (module && module.exports) {
+          (module.exports as any).hashes = hashFunctions;
+        }
+      }
+    });
+  } catch {
+    // Ignore errors
+  }
+}
+
 // Test that crypto is working immediately
 try {
   const testArray = new Uint8Array(4);
@@ -90,6 +246,12 @@ try {
     console.log('✅ Crypto polyfill initialized successfully');
   } else {
     console.warn('⚠️ Crypto polyfill may not be working properly');
+  }
+  
+  // Test hash functions
+  if (hashFunctions.hmacSha256Sync) {
+    hashFunctions.hmacSha256Sync('test', 'data');
+    console.log('✅ Hash functions initialized successfully');
   }
 } catch (error) {
   console.error('❌ Crypto polyfill test failed:', error);
