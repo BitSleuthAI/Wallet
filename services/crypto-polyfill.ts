@@ -15,8 +15,8 @@ const createCrypto = () => {
     if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
       try {
         return window.crypto.getRandomValues(array);
-      } catch {
-        console.warn('Native crypto failed, using fallback');
+      } catch (error) {
+        console.warn('Native crypto failed, using fallback:', error);
       }
     }
     
@@ -46,38 +46,82 @@ const createCrypto = () => {
 
 const cryptoPolyfill = createCrypto();
 
-// Set up crypto in all possible global contexts
-if (typeof globalThis !== 'undefined') {
-  if (!globalThis.crypto) {
-    globalThis.crypto = cryptoPolyfill as any;
-  } else if (!globalThis.crypto.getRandomValues) {
-    globalThis.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+// Immediately set up crypto in all possible global contexts
+// Use try-catch to handle any potential errors
+try {
+  if (typeof globalThis !== 'undefined') {
+    if (!globalThis.crypto) {
+      (globalThis as any).crypto = cryptoPolyfill;
+      console.log('Set crypto on globalThis');
+    } else if (!globalThis.crypto.getRandomValues) {
+      globalThis.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+      console.log('Set getRandomValues on globalThis.crypto');
+    }
   }
+} catch (error) {
+  console.warn('Failed to set crypto on globalThis:', error);
 }
 
-if (typeof global !== 'undefined') {
-  if (!global.crypto) {
-    global.crypto = cryptoPolyfill as any;
-  } else if (!global.crypto.getRandomValues) {
-    global.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+try {
+  if (typeof global !== 'undefined') {
+    if (!(global as any).crypto) {
+      (global as any).crypto = cryptoPolyfill;
+      console.log('Set crypto on global');
+    } else if (!(global as any).crypto.getRandomValues) {
+      (global as any).crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+      console.log('Set getRandomValues on global.crypto');
+    }
   }
+} catch (error) {
+  console.warn('Failed to set crypto on global:', error);
 }
 
-if (typeof window !== 'undefined') {
-  if (!window.crypto) {
-    window.crypto = cryptoPolyfill as any;
-  } else if (!window.crypto.getRandomValues) {
-    window.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+try {
+  if (typeof window !== 'undefined') {
+    if (!window.crypto) {
+      (window as any).crypto = cryptoPolyfill;
+      console.log('Set crypto on window');
+    } else if (!window.crypto.getRandomValues) {
+      window.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+      console.log('Set getRandomValues on window.crypto');
+    }
   }
+} catch (error) {
+  console.warn('Failed to set crypto on window:', error);
 }
 
 // Also ensure it's available on self for web workers
-if (typeof self !== 'undefined' && typeof window === 'undefined') {
-  if (!self.crypto) {
-    self.crypto = cryptoPolyfill as any;
-  } else if (!self.crypto.getRandomValues) {
-    self.crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+try {
+  if (typeof self !== 'undefined' && typeof window === 'undefined') {
+    if (!(self as any).crypto) {
+      (self as any).crypto = cryptoPolyfill;
+      console.log('Set crypto on self');
+    } else if (!(self as any).crypto.getRandomValues) {
+      (self as any).crypto.getRandomValues = cryptoPolyfill.getRandomValues;
+      console.log('Set getRandomValues on self.crypto');
+    }
   }
+} catch (error) {
+  console.warn('Failed to set crypto on self:', error);
+}
+
+// Test that crypto is available
+try {
+  const testArray = new Uint8Array(1);
+  if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
+    globalThis.crypto.getRandomValues(testArray);
+    console.log('✅ Crypto polyfill working on globalThis');
+  } else if (typeof global !== 'undefined' && (global as any).crypto && (global as any).crypto.getRandomValues) {
+    (global as any).crypto.getRandomValues(testArray);
+    console.log('✅ Crypto polyfill working on global');
+  } else if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
+    window.crypto.getRandomValues(testArray);
+    console.log('✅ Crypto polyfill working on window');
+  } else {
+    console.warn('⚠️ Crypto polyfill may not be working properly');
+  }
+} catch (error) {
+  console.error('❌ Crypto polyfill test failed:', error);
 }
 
 // Buffer polyfill for React Native

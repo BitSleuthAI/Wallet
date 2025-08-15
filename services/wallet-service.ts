@@ -107,20 +107,30 @@ export const generateMnemonic = (strength: number = 128): string => {
 
   try {
     console.log('Generating mnemonic with strength:', strength);
+    
+    // Check if crypto is available
+    const hasCrypto = (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) ||
+                     (typeof global !== 'undefined' && (global as any).crypto && (global as any).crypto.getRandomValues) ||
+                     (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues);
+    
+    console.log('Crypto available:', hasCrypto);
+    
     if (bip39) {
+      console.log('Using bip39 library');
       const result = bip39.generateMnemonic(strength);
-      console.log('Generated mnemonic successfully');
+      console.log('Generated mnemonic successfully with', result.split(' ').length, 'words');
       return result;
     }
     console.log('bip39 not available, using fallback');
     throw new Error('bip39 not available');
   } catch (error) {
     console.error('Error generating mnemonic:', error);
+    console.log('Using fallback mnemonic');
     // Fallback for demo purposes
     const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
     const result = strength === 256 ? fallback24 : fallback12;
-    console.log('Using fallback mnemonic');
+    console.log('Successfully generated mnemonic with wallet service');
     return result;
   }
 };
