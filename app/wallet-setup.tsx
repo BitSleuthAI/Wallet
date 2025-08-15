@@ -15,6 +15,7 @@ import {
   Linking,
   Modal,
   Clipboard,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle, Sparkles } from 'lucide-react-native';
@@ -490,7 +491,17 @@ export default function WalletSetupScreen() {
   );
 
   const renderImportMode = () => (
-    <ScrollView style={styles.content}>
+    <KeyboardAvoidingView 
+      style={styles.flex1}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
       <TouchableOpacity
         style={styles.backButton}
         onPress={() => setMode('select')}
@@ -600,7 +611,8 @@ export default function WalletSetupScreen() {
           </Text>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 
   const handleQRScan = (data: string) => {
@@ -748,6 +760,13 @@ export default function WalletSetupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  flex1: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   content: {
     flex: 1,
