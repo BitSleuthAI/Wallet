@@ -1,5 +1,5 @@
 // Import crypto polyfill first
-import '@/services/crypto-polyfill';
+// import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';

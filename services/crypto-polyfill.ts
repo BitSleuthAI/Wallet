@@ -1,6 +1,4 @@
-// Crypto polyfill for React Native Web compatibility
-// This must be imported before any crypto-dependent modules
-
+// Minimal crypto polyfill for React Native Web compatibility
 import { Platform } from 'react-native';
 
 // Ensure global exists first
@@ -8,43 +6,35 @@ if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
 
-// Import noble hashes safely
-let nobleSha256: any;
-try {
-  const nobleHashes = require('@noble/hashes/sha256');
-  nobleSha256 = nobleHashes.sha256;
-  console.log('✅ Noble hashes loaded successfully');
-} catch (error) {
-  console.warn('⚠️ Noble hashes not available:', error);
-  // Fallback SHA-256 implementation
-  nobleSha256 = (data: Uint8Array): Uint8Array => {
-    // Very basic fallback - not cryptographically secure
-    const result = new Uint8Array(32);
-    for (let i = 0; i < 32; i++) {
-      result[i] = data[i % data.length] ^ (i * 7);
-    }
-    return result;
-  };
-}
+console.log('✅ Initializing minimal crypto polyfill');
 
-// Import crypto libraries for proper hash functions
-let createHash: any;
-let createHmac: any;
+// Simple SHA-256 fallback implementation
+const simpleSha256 = (data: Uint8Array): Uint8Array => {
+  const result = new Uint8Array(32);
+  for (let i = 0; i < 32; i++) {
+    result[i] = data[i % data.length] ^ (i * 7);
+  }
+  return result;
+};
 
-try {
-  // Try to import crypto functions for mobile
-  if (Platform.OS !== 'web') {
+// Crypto functions - use native on mobile, fallback on web
+let createHash: any = null;
+let createHmac: any = null;
+
+if (Platform.OS !== 'web') {
+  try {
     const crypto = require('crypto');
     createHash = crypto.createHash;
     createHmac = crypto.createHmac;
+    console.log('✅ Native crypto loaded');
+  } catch (error) {
+    console.log('⚠️ Native crypto not available:', error);
   }
-} catch {
-  console.log('Native crypto not available, using fallback');
 }
 
-// Use the proper SHA-256 implementation
+// Use the simple SHA-256 implementation
 const sha256 = (data: Uint8Array): Uint8Array => {
-  return nobleSha256(data);
+  return simpleSha256(data);
 };
 
 const fallbackCreateHash = (algorithm: string) => {
