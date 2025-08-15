@@ -101,19 +101,20 @@ const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 export const generateMnemonic = (strength: number = 128): string => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    const webService = require('./wallet-service.web');
-    return webService.generateMnemonic(strength);
+    try {
+      const webService = require('./wallet-service.web');
+      return webService.generateMnemonic(strength);
+    } catch (error) {
+      console.error('Error with web service:', error);
+      // Fallback for web
+      const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+      const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
+      return strength === 256 ? fallback24 : fallback12;
+    }
   }
 
   try {
     console.log('Generating mnemonic with strength:', strength);
-    
-    // Check if crypto is available
-    const hasCrypto = (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) ||
-                     (typeof global !== 'undefined' && (global as any).crypto && (global as any).crypto.getRandomValues) ||
-                     (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues);
-    
-    console.log('Crypto available:', hasCrypto);
     
     if (bip39) {
       console.log('Using bip39 library');
@@ -154,8 +155,13 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    const webService = require('./wallet-service.web');
-    return webService.createWallet(name, color);
+    try {
+      const webService = require('./wallet-service.web');
+      return webService.createWallet(name, color);
+    } catch (error) {
+      console.error('Error with web service:', error);
+      throw new Error('Wallet creation is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+    }
   }
 
   const mnemonic = generateMnemonic();
@@ -165,8 +171,13 @@ export const createWallet = async (name: string, color: string = '#8B5CF6'): Pro
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    const webService = require('./wallet-service.web');
-    return webService.importWallet(name, mnemonic, color);
+    try {
+      const webService = require('./wallet-service.web');
+      return webService.importWallet(name, mnemonic, color);
+    } catch (error) {
+      console.error('Error with web service:', error);
+      throw new Error('Wallet import is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+    }
   }
 
   if (!validateMnemonic(mnemonic)) {

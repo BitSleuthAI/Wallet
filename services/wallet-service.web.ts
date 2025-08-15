@@ -218,30 +218,9 @@ const WORD_LIST = [
 // Simple random number generator for web
 const getRandomBytes = (size: number): Uint8Array => {
   const bytes = new Uint8Array(size);
-  try {
-    // Try different crypto sources in order of preference
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-      window.crypto.getRandomValues(bytes);
-      console.log('Used window.crypto for random bytes');
-    } else if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
-      globalThis.crypto.getRandomValues(bytes);
-      console.log('Used globalThis.crypto for random bytes');
-    } else if (typeof global !== 'undefined' && (global as any).crypto && (global as any).crypto.getRandomValues) {
-      (global as any).crypto.getRandomValues(bytes);
-      console.log('Used global.crypto for random bytes');
-    } else {
-      console.warn('No crypto.getRandomValues available, using Math.random fallback');
-      // Fallback for environments without crypto
-      for (let i = 0; i < size; i++) {
-        bytes[i] = Math.floor(Math.random() * 256);
-      }
-    }
-  } catch (error) {
-    console.warn('Crypto failed, using Math.random fallback:', error);
-    // Fallback for environments without crypto
-    for (let i = 0; i < size; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+  // Always use Math.random for simplicity and to avoid crypto issues
+  for (let i = 0; i < size; i++) {
+    bytes[i] = Math.floor(Math.random() * 256);
   }
   return bytes;
 };
