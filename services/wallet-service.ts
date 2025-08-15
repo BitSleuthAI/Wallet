@@ -1,14 +1,12 @@
-// Import crypto polyfill first
-import '@/services/crypto-polyfill';
-
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
 
-// Import bip39 after crypto polyfill is set up
+// Import bip39 with better error handling
 let bip39: any;
 try {
   bip39 = require('bip39');
+  console.log('Successfully loaded bip39');
 } catch (error) {
   console.log('bip39 not available, using fallback');
   bip39 = null;
@@ -101,6 +99,12 @@ const createECC = () => {
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 export const generateMnemonic = (strength: number = 128): string => {
+  // On web, use the web-specific implementation
+  if (Platform.OS === 'web') {
+    const webService = require('./wallet-service.web');
+    return webService.generateMnemonic(strength);
+  }
+
   try {
     console.log('Generating mnemonic with strength:', strength);
     if (bip39) {
@@ -138,27 +142,37 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 };
 
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
+  // On web, use the web-specific implementation
+  if (Platform.OS === 'web') {
+    const webService = require('./wallet-service.web');
+    return webService.createWallet(name, color);
+  }
+
   const mnemonic = generateMnemonic();
   return importWallet(name, mnemonic, color);
 };
 
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
+  // On web, use the web-specific implementation
+  if (Platform.OS === 'web') {
+    const webService = require('./wallet-service.web');
+    return webService.importWallet(name, mnemonic, color);
+  }
+
   if (!validateMnemonic(mnemonic)) {
     throw new Error('Invalid mnemonic phrase');
   }
-
-
 
   try {
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(createECC());
 
-  const seed = bip39 ? await bip39.mnemonicToSeed(mnemonic) : new Uint8Array(64);
-  const root = bip32.fromSeed(seed);
-  const account = root.derivePath(DERIVATION_PATH);
-  const xpub = account.neutered().toBase58();
+    const seed = bip39 ? await bip39.mnemonicToSeed(mnemonic) : new Uint8Array(64);
+    const root = bip32.fromSeed(seed);
+    const account = root.derivePath(DERIVATION_PATH);
+    const xpub = account.neutered().toBase58();
 
-  const firstAddress = await generateAddressFromXpub(xpub, 0);
+    const firstAddress = await generateAddressFromXpub(xpub, 0);
 
     const wallet: Wallet = {
       id: Date.now().toString(),
