@@ -26,11 +26,23 @@ export default function BiometricSetupScreen() {
 
   const checkBiometricSupport = async () => {
     try {
-      const compatible = await LocalAuthentication.hasHardwareAsync();
-      const enrolled = await LocalAuthentication.isEnrolledAsync();
-      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      console.log('Checking biometric support...');
       
-      setIsSupported(compatible && enrolled);
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      console.log('Hardware compatible:', compatible);
+      
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      console.log('Biometric enrolled:', enrolled);
+      
+      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      console.log('Supported authentication types:', supportedTypes);
+      
+      // On mobile, we should support biometric if hardware is available
+      // Even if not enrolled, we can still show the option
+      const shouldSupport = Platform.OS !== 'web' && compatible;
+      console.log('Should support biometric:', shouldSupport);
+      
+      setIsSupported(shouldSupport);
       
       if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
         setBiometricType('Face ID');
@@ -41,6 +53,8 @@ export default function BiometricSetupScreen() {
       } else {
         setBiometricType('Biometric');
       }
+      
+      console.log('Final biometric type:', supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION) ? 'Face ID' : supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT) ? 'Touch ID' : 'Biometric');
     } catch (error) {
       console.error('Error checking biometric support:', error);
       setIsSupported(false);
@@ -60,11 +74,29 @@ export default function BiometricSetupScreen() {
     setIsLoading(true);
     
     try {
+      console.log('Attempting biometric authentication...');
+      
+      // Check if biometric is enrolled before attempting authentication
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      console.log('Biometric enrolled check:', enrolled);
+      
+      if (!enrolled) {
+        Alert.alert(
+          'Biometric Not Set Up',
+          `Please set up ${biometricType} in your device settings first, then try again.`,
+          [{ text: 'OK' }]
+        );
+        setIsLoading(false);
+        return;
+      }
+      
       const result = await LocalAuthentication.authenticateAsync({
         promptMessage: `Enable ${biometricType} for wallet access`,
         cancelLabel: 'Cancel',
         fallbackLabel: 'Use PIN instead',
       });
+
+      console.log('Authentication result:', result);
 
       if (result.success) {
         setHasSetupBiometric(true);
@@ -79,6 +111,7 @@ export default function BiometricSetupScreen() {
           ]
         );
       } else {
+        console.log('Authentication failed:', result.error);
         Alert.alert(
           'Authentication Failed',
           'Biometric authentication was not successful. You can still use your PIN to access your wallet.',
@@ -239,7 +272,7 @@ export default function BiometricSetupScreen() {
               <Text style={[styles.notAvailableText, { color: theme.colors.textSecondary }]}>
                 {Platform.OS === 'web' 
                   ? 'Biometric authentication is not available on web. You can use your PIN to access your wallet.'
-                  : 'Biometric authentication is not available on this device or not set up in device settings.'
+                  : 'Biometric authentication is not available on this device. Please check that biometric authentication is set up in your device settings, then restart the app.'
                 }
               </Text>
             </View>
