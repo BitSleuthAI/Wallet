@@ -1,0 +1,388 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+  Platform,
+} from 'react-native';
+import { Stack, router } from 'expo-router';
+import { ArrowLeft, Fingerprint, Shield, Check } from 'lucide-react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { useWallet } from '@/hooks/wallet-store';
+
+export default function BiometricSetupScreen() {
+  const { theme } = useWallet();
+  const [isSupported, setIsSupported] = useState(false);
+  const [biometricType, setBiometricType] = useState<string>('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [hasSetupBiometric, setHasSetupBiometric] = useState(false);
+
+  useEffect(() => {
+    checkBiometricSupport();
+  }, []);
+
+  const checkBiometricSupport = async () => {
+    try {
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+      
+      setIsSupported(compatible && enrolled);
+      
+      if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION)) {
+        setBiometricType('Face ID');
+      } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.FINGERPRINT)) {
+        setBiometricType('Touch ID');
+      } else if (supportedTypes.includes(LocalAuthentication.AuthenticationType.IRIS)) {
+        setBiometricType('Iris');
+      } else {
+        setBiometricType('Biometric');
+      }
+    } catch (error) {
+      console.error('Error checking biometric support:', error);
+      setIsSupported(false);
+    }
+  };
+
+  const handleEnableBiometric = async () => {
+    if (!isSupported) {
+      Alert.alert(
+        'Biometric Not Available',
+        'Biometric authentication is not available on this device or not set up in device settings.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    setIsLoading(true);
+    
+    try {
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: `Enable ${biometricType} for wallet access`,
+        cancelLabel: 'Cancel',
+        fallbackLabel: 'Use PIN instead',
+      });
+
+      if (result.success) {
+        setHasSetupBiometric(true);
+        Alert.alert(
+          'Success!',
+          `${biometricType} has been enabled for your wallet.`,
+          [
+            {
+              text: 'Continue',
+              onPress: () => router.replace('/(tabs)')
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Authentication Failed',
+          'Biometric authentication was not successful. You can still use your PIN to access your wallet.',
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Biometric authentication error:', error);
+      Alert.alert(
+        'Error',
+        'There was an error setting up biometric authentication. You can still use your PIN to access your wallet.',
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSkip = () => {
+    Alert.alert(
+      'Skip Biometric Setup?',
+      'You can always enable biometric authentication later in settings. You will use your PIN to access your wallet.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Skip', 
+          onPress: () => router.replace('/(tabs)')
+        }
+      ]
+    );
+  };
+
+  const getBiometricIcon = () => {
+    if (biometricType === 'Face ID') {
+      return <Shield color={theme.colors.primary} size={64} />;
+    }
+    return <Fingerprint color={theme.colors.primary} size={64} />;
+  };
+
+  const getBiometricDescription = () => {
+    if (biometricType === 'Face ID') {
+      return 'Use Face ID to quickly and securely access your wallet without entering your PIN every time.';
+    } else if (biometricType === 'Touch ID') {
+      return 'Use Touch ID to quickly and securely access your wallet without entering your PIN every time.';
+    }
+    return 'Use biometric authentication to quickly and securely access your wallet without entering your PIN every time.';
+  };
+
+  if (hasSetupBiometric) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Stack.Screen options={{ headerShown: false }} />
+        
+        <View style={styles.content}>
+          <View style={styles.successContainer}>
+            <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Check color={theme.colors.primary} size={48} />
+            </View>
+            
+            <Text style={[styles.title, { color: theme.colors.text }]}>
+              All Set!
+            </Text>
+            
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+              Your wallet is now secured with {biometricType} and PIN protection.
+            </Text>
+            
+            <TouchableOpacity
+              style={[styles.continueButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => router.replace('/(tabs)')}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.continueButtonText}>Continue to Wallet</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => router.back()}
+        activeOpacity={0.7}
+      >
+        <ArrowLeft color={theme.colors.text} size={24} />
+      </TouchableOpacity>
+
+      <View style={styles.content}>
+        <View style={styles.header}>
+          <View style={[styles.iconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+            {getBiometricIcon()}
+          </View>
+          
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            Enable {biometricType}
+          </Text>
+          
+          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            {getBiometricDescription()}
+          </Text>
+        </View>
+
+        <View style={styles.features}>
+          <View style={styles.feature}>
+            <View style={[styles.featureIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Shield color={theme.colors.primary} size={24} />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                Enhanced Security
+              </Text>
+              <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
+                Your biometric data never leaves your device
+              </Text>
+            </View>
+          </View>
+
+          <View style={styles.feature}>
+            <View style={[styles.featureIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Fingerprint color={theme.colors.primary} size={24} />
+            </View>
+            <View style={styles.featureContent}>
+              <Text style={[styles.featureTitle, { color: theme.colors.text }]}>
+                Quick Access
+              </Text>
+              <Text style={[styles.featureDescription, { color: theme.colors.textSecondary }]}>
+                Access your wallet instantly without typing your PIN
+              </Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.actions}>
+          {isSupported ? (
+            <TouchableOpacity
+              style={[styles.enableButton, { 
+                backgroundColor: theme.colors.primary,
+                opacity: isLoading ? 0.6 : 1
+              }]}
+              onPress={handleEnableBiometric}
+              disabled={isLoading}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.enableButtonText}>
+                {isLoading ? 'Setting up...' : `Enable ${biometricType}`}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={[styles.notAvailableContainer, { 
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border
+            }]}>
+              <Text style={[styles.notAvailableText, { color: theme.colors.textSecondary }]}>
+                {Platform.OS === 'web' 
+                  ? 'Biometric authentication is not available on web. You can use your PIN to access your wallet.'
+                  : 'Biometric authentication is not available on this device or not set up in device settings.'
+                }
+              </Text>
+            </View>
+          )}
+          
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkip}
+            activeOpacity={0.7}
+          >
+            <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>
+              Skip for now
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  backButton: {
+    marginTop: 20,
+    marginLeft: 20,
+    marginBottom: 20,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 20,
+    justifyContent: 'space-between',
+  },
+  header: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  iconContainer: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  subtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    paddingHorizontal: 20,
+  },
+  features: {
+    gap: 24,
+    marginVertical: 40,
+  },
+  feature: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  featureIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  featureContent: {
+    flex: 1,
+  },
+  featureTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  featureDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  actions: {
+    paddingBottom: 40,
+    gap: 16,
+  },
+  enableButton: {
+    paddingVertical: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  enableButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  notAvailableContainer: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  notAvailableText: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  skipButton: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  skipButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+  },
+  successIcon: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 32,
+  },
+  continueButton: {
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 40,
+    minWidth: 200,
+  },
+  continueButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});

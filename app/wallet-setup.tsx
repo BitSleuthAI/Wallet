@@ -192,10 +192,10 @@ export default function WalletSetupScreen() {
       // Show confetti celebration
       setShowConfetti(true);
       
-      // Wait 2 seconds for confetti celebration, then navigate
+      // Wait 2 seconds for confetti celebration, then navigate to PIN setup
       setTimeout(() => {
         setShowConfetti(false);
-        router.replace('/(tabs)');
+        router.push('/pin-setup');
       }, 2000);
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to import wallet');
@@ -646,7 +646,7 @@ export default function WalletSetupScreen() {
       setIsLoading(true);
       try {
         await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
-        router.replace('/(tabs)');
+        router.push('/pin-setup');
       } catch (error) {
         Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
       } finally {
