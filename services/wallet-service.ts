@@ -2,6 +2,18 @@ import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 import * as secp256k1 from '@noble/secp256k1';
 
+// Crypto polyfill for React Native
+if (typeof global.crypto === 'undefined') {
+  global.crypto = {
+    getRandomValues: (array: Uint8Array) => {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    }
+  } as any;
+}
+
 // Buffer polyfill for React Native
 if (typeof global.Buffer === 'undefined') {
   global.Buffer = {

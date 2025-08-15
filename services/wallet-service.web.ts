@@ -248,11 +248,25 @@ const WORD_LIST = [
   'young', 'youth', 'zebra', 'zero', 'zone', 'zoo'
 ];
 
+// Crypto polyfill for web environments
+if (typeof global.crypto === 'undefined') {
+  global.crypto = {
+    getRandomValues: (array: Uint8Array) => {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256);
+      }
+      return array;
+    }
+  } as any;
+}
+
 // Simple random number generator for web
 const getRandomBytes = (size: number): Uint8Array => {
   const bytes = new Uint8Array(size);
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     crypto.getRandomValues(bytes);
+  } else if (typeof global.crypto !== 'undefined' && global.crypto.getRandomValues) {
+    global.crypto.getRandomValues(bytes);
   } else {
     // Fallback for environments without crypto
     for (let i = 0; i < size; i++) {
