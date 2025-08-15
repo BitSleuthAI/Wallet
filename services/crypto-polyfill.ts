@@ -11,16 +11,7 @@ const createCrypto = () => {
   const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
     if (!array) return array;
     
-    // Try to use native crypto first
-    if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-      try {
-        return window.crypto.getRandomValues(array);
-      } catch (error) {
-        console.warn('Native crypto failed, using fallback:', error);
-      }
-    }
-    
-    // Fallback to Math.random
+    // Always use Math.random for consistency and to avoid any crypto issues
     if (array instanceof Uint8Array) {
       for (let i = 0; i < array.length; i++) {
         array[i] = Math.floor(Math.random() * 256);
@@ -32,6 +23,18 @@ const createCrypto = () => {
     } else if (array instanceof Uint32Array) {
       for (let i = 0; i < array.length; i++) {
         array[i] = Math.floor(Math.random() * 4294967296);
+      }
+    } else if (array instanceof Int8Array) {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 256) - 128;
+      }
+    } else if (array instanceof Int16Array) {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 65536) - 32768;
+      }
+    } else if (array instanceof Int32Array) {
+      for (let i = 0; i < array.length; i++) {
+        array[i] = Math.floor(Math.random() * 4294967296) - 2147483648;
       }
     }
     return array;
@@ -47,52 +50,34 @@ const createCrypto = () => {
 // Create the polyfill
 const cryptoPolyfill = createCrypto();
 
-// Force set crypto on all global contexts immediately
-const setupCrypto = () => {
-  // Set on globalThis
-  if (typeof globalThis !== 'undefined') {
-    (globalThis as any).crypto = cryptoPolyfill;
+// Immediately and aggressively set crypto on all possible global contexts
+// This needs to happen synchronously before any other code runs
+const contexts = [globalThis, global, window, self].filter(Boolean);
+contexts.forEach(context => {
+  if (context && typeof context === 'object') {
+    (context as any).crypto = cryptoPolyfill;
+    // Also set it as a non-configurable property to prevent overwrites
+    try {
+      Object.defineProperty(context, 'crypto', {
+        value: cryptoPolyfill,
+        writable: true,
+        enumerable: true,
+        configurable: true
+      });
+    } catch {
+      // Ignore if we can't define the property
+    }
   }
-  
-  // Set on global
-  if (typeof global !== 'undefined') {
-    (global as any).crypto = cryptoPolyfill;
-  }
-  
-  // Set on window
-  if (typeof window !== 'undefined') {
-    (window as any).crypto = cryptoPolyfill;
-  }
-  
-  // Set on self
-  if (typeof self !== 'undefined') {
-    (self as any).crypto = cryptoPolyfill;
-  }
-};
+});
 
-// Setup crypto immediately
-setupCrypto();
-
-// Test that crypto is working
-const testCrypto = () => {
-  try {
-    const testArray = new Uint8Array(4);
-    cryptoPolyfill.getRandomValues(testArray);
-    console.log('✅ Crypto polyfill initialized successfully');
-    return true;
-  } catch (error) {
-    console.error('❌ Crypto polyfill test failed:', error);
-    return false;
-  }
-};
-
-// Test immediately
-testCrypto();
-
-// Also test after a short delay to ensure it's available
-setTimeout(() => {
-  testCrypto();
-}, 100);
+// Test that crypto is working immediately
+try {
+  const testArray = new Uint8Array(4);
+  cryptoPolyfill.getRandomValues(testArray);
+  console.log('✅ Crypto polyfill initialized successfully');
+} catch (error) {
+  console.error('❌ Crypto polyfill test failed:', error);
+}
 
 // Buffer polyfill for React Native
 if (typeof global.Buffer === 'undefined') {

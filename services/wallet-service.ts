@@ -7,7 +7,7 @@ let bip39: any;
 try {
   bip39 = require('bip39');
   console.log('Successfully loaded bip39');
-} catch (error) {
+} catch {
   console.log('bip39 not available, using fallback');
   bip39 = null;
 }
@@ -98,7 +98,21 @@ const createECC = () => {
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
-export const generateMnemonic = (strength: number = 128): string => {
+// Wait for crypto to be available
+const waitForCrypto = (): Promise<void> => {
+  return new Promise((resolve) => {
+    const checkCrypto = () => {
+      if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
+        resolve();
+      } else {
+        setTimeout(checkCrypto, 10);
+      }
+    };
+    checkCrypto();
+  });
+};
+
+export const generateMnemonic = async (strength: number = 128): Promise<string> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
     try {
@@ -115,6 +129,9 @@ export const generateMnemonic = (strength: number = 128): string => {
 
   try {
     console.log('Generating mnemonic with strength:', strength);
+    
+    // Wait for crypto to be available
+    await waitForCrypto();
     
     if (bip39) {
       console.log('Using bip39 library');
@@ -164,7 +181,7 @@ export const createWallet = async (name: string, color: string = '#8B5CF6'): Pro
     }
   }
 
-  const mnemonic = generateMnemonic();
+  const mnemonic = await generateMnemonic();
   return importWallet(name, mnemonic, color);
 };
 
