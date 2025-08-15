@@ -176,10 +176,17 @@ export default function WalletSetupScreen() {
     setIsLoading(true);
     try {
       await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
-      router.replace('/(tabs)');
+      
+      // Show confetti celebration
+      setShowConfetti(true);
+      
+      // Wait 2 seconds for confetti celebration, then navigate
+      setTimeout(() => {
+        setShowConfetti(false);
+        router.replace('/(tabs)');
+      }, 2000);
     } catch (error) {
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to import wallet');
-    } finally {
       setIsLoading(false);
     }
   };
