@@ -51,7 +51,7 @@ export default function ReceiveScreen() {
   if (!currentWallet) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Receive Bitcoin' }} />
+        <Stack.Screen options={{ title: 'Receive' }} />
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: theme.colors.text }]}>
             No wallet available
@@ -63,7 +63,7 @@ export default function ReceiveScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Receive Bitcoin' }} />
+      <Stack.Screen options={{ title: 'Receive' }} />
       
       <View style={styles.content}>
         {/* To Section */}

@@ -49,7 +49,7 @@ export default function SendScreen() {
   if (!currentWallet) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Send Bitcoin' }} />
+        <Stack.Screen options={{ title: 'Send' }} />
         <View style={styles.emptyState}>
           <Text style={[styles.emptyText, { color: theme.colors.text }]}>
             No wallet available
@@ -61,7 +61,7 @@ export default function SendScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Send Bitcoin' }} />
+      <Stack.Screen options={{ title: 'Send' }} />
       
       <View style={styles.content}>
         {/* From Section */}
