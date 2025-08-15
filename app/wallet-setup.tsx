@@ -14,8 +14,9 @@ import {
   Clipboard,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle } from 'lucide-react-native';
+import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle, Sparkles } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
+import ConfettiCannon from 'react-native-confetti-cannon';
 import { useWallet } from '@/hooks/wallet-store';
 import QRScanner from '@/components/QRScanner';
 
@@ -29,7 +30,7 @@ if (Platform.OS === 'web') {
 
 export default function WalletSetupScreen() {
   const { theme, importWallet } = useWallet();
-  const [mode, setMode] = useState<'select' | 'create' | 'import'>('select');
+  const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
   const [selectedColor, setSelectedColor] = useState('#8B5CF6');
@@ -40,6 +41,9 @@ export default function WalletSetupScreen() {
   const [showWordCountDropdown, setShowWordCountDropdown] = useState(false);
   const [hasStoredPhrase, setHasStoredPhrase] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
+  const [confirmationWords, setConfirmationWords] = useState<{word: string, position: number}[]>([]);
+  const [userInputs, setUserInputs] = useState<string[]>(['', '']);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const walletColors = [
     '#8B5CF6', // Purple
@@ -127,15 +131,26 @@ export default function WalletSetupScreen() {
       return;
     }
 
-    setIsLoading(true);
-    try {
-      await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
-      router.replace('/(tabs)');
-    } catch (error) {
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
-    } finally {
-      setIsLoading(false);
+    // Move to confirmation page instead of creating wallet immediately
+    const words = generatedMnemonic.split(' ');
+    const randomPositions: number[] = [];
+    
+    // Generate 2 random positions based on word count
+    while (randomPositions.length < 2) {
+      const randomPos = Math.floor(Math.random() * words.length) + 1;
+      if (!randomPositions.includes(randomPos)) {
+        randomPositions.push(randomPos);
+      }
     }
+    
+    const confirmWords = randomPositions.map(pos => ({
+      word: words[pos - 1],
+      position: pos
+    }));
+    
+    setConfirmationWords(confirmWords);
+    setUserInputs(['', '']);
+    setMode('confirm');
   };
 
   const handleImportWallet = async () => {
@@ -576,6 +591,110 @@ export default function WalletSetupScreen() {
     setShowQRScanner(false);
   };
 
+  const handleConfirmationInput = (index: number, value: string) => {
+    const newInputs = [...userInputs];
+    newInputs[index] = value.toLowerCase().trim();
+    setUserInputs(newInputs);
+  };
+
+  const handleConfirmRecoveryPhrase = async () => {
+    // Check if both words are correct
+    const isValid = confirmationWords.every((confirmWord, index) => 
+      userInputs[index] === confirmWord.word.toLowerCase()
+    );
+
+    if (!isValid) {
+      Alert.alert('Incorrect Words', 'Please check the words you entered and try again.');
+      return;
+    }
+
+    // Show confetti and create wallet
+    setShowConfetti(true);
+    
+    // Wait a moment for confetti to show
+    setTimeout(async () => {
+      setIsLoading(true);
+      try {
+        await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
+        router.replace('/(tabs)');
+      } catch (error) {
+        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
+      } finally {
+        setIsLoading(false);
+        setShowConfetti(false);
+      }
+    }, 2000);
+  };
+
+  const renderConfirmMode = () => (
+    <ScrollView style={styles.content}>
+      <TouchableOpacity
+        style={styles.backButton}
+        onPress={() => setMode('create')}
+        activeOpacity={0.7}
+      >
+        <ArrowLeft color={theme.colors.text} size={24} />
+      </TouchableOpacity>
+
+      <View style={styles.header}>
+        <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+          <Sparkles color={theme.colors.primary} size={32} />
+        </View>
+        <Text style={[styles.title, { color: theme.colors.text }]}>
+          Confirm Recovery Phrase
+        </Text>
+        <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+          Please enter the following words from your recovery phrase to confirm you have saved it correctly.
+        </Text>
+      </View>
+
+      <View style={styles.form}>
+        {confirmationWords.map((confirmWord, index) => (
+          <View key={index} style={styles.confirmationWordContainer}>
+            <Text style={[styles.label, { color: theme.colors.text }]}>
+              Word #{confirmWord.position}
+            </Text>
+            <TextInput
+              style={[styles.input, { 
+                backgroundColor: theme.colors.surface,
+                color: theme.colors.text,
+                borderColor: theme.colors.border
+              }]}
+              value={userInputs[index]}
+              onChangeText={(value) => handleConfirmationInput(index, value)}
+              placeholder={`Enter word #${confirmWord.position}`}
+              placeholderTextColor={theme.colors.textSecondary}
+              autoCapitalize="none"
+              autoCorrect={false}
+            />
+          </View>
+        ))}
+
+        <TouchableOpacity
+          style={[styles.submitButton, { 
+            backgroundColor: theme.colors.primary,
+            opacity: isLoading ? 0.6 : 1
+          }]}
+          onPress={handleConfirmRecoveryPhrase}
+          disabled={isLoading}
+        >
+          <Text style={styles.submitButtonText}>
+            {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.helpLinkContainer}
+          onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
+        >
+          <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
+            What is a recovery phrase?
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -583,6 +702,16 @@ export default function WalletSetupScreen() {
       {mode === 'select' && renderSelectMode()}
       {mode === 'create' && renderCreateMode()}
       {mode === 'import' && renderImportMode()}
+      {mode === 'confirm' && renderConfirmMode()}
+      
+      {showConfetti && Platform.OS !== 'web' && (
+        <ConfettiCannon
+          count={200}
+          origin={{x: -10, y: 0}}
+          autoStart={true}
+          fadeOut={true}
+        />
+      )}
       
       <Modal
         visible={showQRScanner}
@@ -898,5 +1027,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     flex: 1,
+  },
+  successIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  confirmationWordContainer: {
+    marginBottom: 16,
   },
 });
