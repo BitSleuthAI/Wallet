@@ -49,8 +49,16 @@ const createECC = () => {
           return null;
         }
       },
-      pointAddScalar: (_p: Uint8Array, _tweak: Uint8Array, _compressed = true): Uint8Array | null => {
-        return null;
+      pointAddScalar: (p: Uint8Array, tweak: Uint8Array, compressed = true): Uint8Array | null => {
+        try {
+          if (!p || p.length === 0 || !tweak || tweak.length !== 32) return null;
+          const P = noble.Point.fromHex(p);
+          const T = noble.Point.fromPrivateKey(tweak);
+          const R = P.add(T);
+          return new Uint8Array(R.toRawBytes(compressed));
+        } catch {
+          return null;
+        }
       },
       privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
         try {
@@ -67,8 +75,19 @@ const createECC = () => {
         }
       },
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
-        const signature = noble.sign(hash, privateKey);
-        return new Uint8Array(signature.toCompactRawBytes());
+        try {
+          if (typeof noble.signSync === 'function') {
+            const sig: Uint8Array = noble.signSync(hash, privateKey, { der: false });
+            return new Uint8Array(sig);
+          }
+          const sigMaybePromise = noble.sign(hash, privateKey, { der: false });
+          if (sigMaybePromise && typeof sigMaybePromise.then === 'function') {
+            throw new Error('signSync not available');
+          }
+          return new Uint8Array(sigMaybePromise);
+        } catch {
+          throw new Error('sign failed');
+        }
       },
       verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
         try {
