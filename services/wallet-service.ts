@@ -97,6 +97,26 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
   try {
     console.log('Generating mnemonic with strength:', strength);
     
+    // Check if crypto.getRandomValues is available
+    if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
+      console.warn('crypto.getRandomValues not available, using fallback');
+      const result = strength === 256 ? fallback24 : fallback12;
+      console.log('Successfully generated fallback mnemonic');
+      return result;
+    }
+    
+    // Test crypto.getRandomValues before using bip39
+    try {
+      const testArray = new Uint8Array(4);
+      crypto.getRandomValues(testArray);
+      console.log('✅ crypto.getRandomValues test successful:', Array.from(testArray));
+    } catch (cryptoError) {
+      console.error('crypto.getRandomValues test failed:', cryptoError);
+      const result = strength === 256 ? fallback24 : fallback12;
+      console.log('Using fallback mnemonic due to crypto test failure');
+      return result;
+    }
+    
     if (bip39) {
       console.log('Using bip39 library');
       const result = bip39.generateMnemonic(strength);
