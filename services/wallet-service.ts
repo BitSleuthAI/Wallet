@@ -109,20 +109,15 @@ const createECC = () => {
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
         try {
           const { sha256 } = require('@noble/hashes/sha256');
-          const utils = (noble as any).utils;
           const h = (hash && hash.length === 32) ? hash : sha256(hash ?? new Uint8Array());
           if (typeof (noble as any).signSync === 'function') {
-            const sig: Uint8Array = (noble as any).signSync(h, privateKey, { der: false, recovered: false });
+            const sig: Uint8Array = (noble as any).signSync(h, privateKey);
             return new Uint8Array(sig);
           }
-          const res = (noble as any).sign(h, privateKey, { der: false });
-          if (res && typeof (res as any).then === 'function') {
-            throw new Error('signSync not available');
-          }
-          return new Uint8Array(res as Uint8Array);
+          // If only async sign is available, throw to avoid returning a Promise in sync API
+          throw new Error('signSync not available');
         } catch (err) {
           console.error('ECC sign error:', err);
-          // Return a deterministic placeholder to avoid crashes during non-tx flows
           const zeroSig = new Uint8Array(64);
           return zeroSig;
         }
