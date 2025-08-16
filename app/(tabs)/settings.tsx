@@ -8,6 +8,7 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -183,7 +184,7 @@ export default function SettingsScreen() {
           icon={UserX}
           title="Transaction Privacy"
           subtitle="Learn about Bitcoin anonymity"
-          onPress={() => console.log('Transaction privacy')}
+          onPress={() => Linking.openURL('https://www.bitsleuth.ai/glossary/transaction-privacy')}
         />
 
         {/* About Section */}
