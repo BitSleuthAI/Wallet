@@ -14,63 +14,24 @@ try {
   bip39 = null;
 }
 
-// ECC implementation for BIP32 - simplified and more robust
+// ECC implementation for BIP32 - simplified and robust, using @noble/secp256k1 only
 const createECC = () => {
-  console.log('🔧 Initializing ECC library...');
-  
-  // First, try to use tiny-secp256k1 (most compatible with React Native)
+  console.log('🔧 Initializing ECC library (noble only)...');
+
   try {
-    const tinySecp = require('tiny-secp256k1');
-    console.log('🔍 Checking tiny-secp256k1 availability...');
-    
-    if (tinySecp && typeof tinySecp.isPoint === 'function') {
-      console.log('✅ tiny-secp256k1 loaded successfully');
-      console.log('Available methods:', Object.keys(tinySecp).filter(key => typeof tinySecp[key] === 'function'));
-      
-      // Test the library with a simple operation
-      try {
-        const testKey = new Uint8Array(32);
-        testKey[31] = 1; // Set to 1 to ensure it's a valid private key
-        
-        const pubKey = tinySecp.pointFromScalar(testKey, true);
-        if (pubKey && pubKey.length === 33) {
-          console.log('✅ tiny-secp256k1 test passed');
-          return tinySecp;
-        } else {
-          console.warn('⚠️ tiny-secp256k1 test failed - invalid result');
-        }
-      } catch (testError) {
-        console.warn('⚠️ tiny-secp256k1 test failed:', testError);
-      }
-    } else {
-      console.warn('⚠️ tiny-secp256k1 not properly loaded');
-    }
-  } catch (tinyError) {
-    console.warn('⚠️ tiny-secp256k1 import failed:', tinyError);
-  }
-  
-  // Fallback to @noble/secp256k1
-  try {
-    console.log('🔍 Trying @noble/secp256k1 fallback...');
     const noble = require('@noble/secp256k1');
-    
+
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
     }
-    
-    console.log('✅ @noble/secp256k1 loaded, creating BIP32 interface...');
-    
-    // Create a BIP32-compatible interface
+
     const eccInterface = {
       isPoint: (p: Uint8Array): boolean => {
         if (!p || p.length === 0) return false;
-        // Check for compressed point (33 bytes, starts with 0x02 or 0x03)
         if (p.length === 33 && (p[0] === 0x02 || p[0] === 0x03)) return true;
-        // Check for uncompressed point (65 bytes, starts with 0x04)
         if (p.length === 65 && p[0] === 0x04) return true;
         return false;
       },
-      
       isPrivate: (d: Uint8Array): boolean => {
         if (!d || d.length !== 32) return false;
         try {
@@ -79,7 +40,6 @@ const createECC = () => {
           return false;
         }
       },
-      
       pointFromScalar: (d: Uint8Array, compressed = true): Uint8Array | null => {
         try {
           if (!d || d.length !== 32) return null;
@@ -89,74 +49,49 @@ const createECC = () => {
           return null;
         }
       },
-      
-      pointAddScalar: (p: Uint8Array, tweak: Uint8Array, compressed = true): Uint8Array | null => {
-        try {
-          // This is a complex operation, return null to indicate not supported
-          // BIP32 will handle this gracefully
-          return null;
-        } catch {
-          return null;
-        }
+      pointAddScalar: (_p: Uint8Array, _tweak: Uint8Array, _compressed = true): Uint8Array | null => {
+        return null;
       },
-      
       privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
         try {
           if (!d || d.length !== 32 || !tweak || tweak.length !== 32) return null;
-          
-          // Convert to BigInt for modular arithmetic
           const dBig = BigInt('0x' + Array.from(d).map(b => b.toString(16).padStart(2, '0')).join(''));
           const tweakBig = BigInt('0x' + Array.from(tweak).map(b => b.toString(16).padStart(2, '0')).join(''));
-          const n = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141'); // secp256k1 order
-          
+          const n = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
           const result = (dBig + tweakBig) % n;
-          if (result === 0n) return null; // Invalid result
-          
-          // Convert back to 32-byte array
+          if (result === 0n) return null;
           const hex = result.toString(16).padStart(64, '0');
           return new Uint8Array(hex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
         } catch {
           return null;
         }
       },
-      
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
         const signature = noble.sign(hash, privateKey);
         return new Uint8Array(signature.toCompactRawBytes());
       },
-      
       verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
         try {
           return noble.verify(signature, hash, publicKey);
         } catch {
           return false;
         }
-      }
+      },
     };
-    
-    // Test the interface
-    try {
-      const testKey = new Uint8Array(32);
-      testKey[31] = 1;
-      const testPoint = eccInterface.pointFromScalar(testKey, true);
-      if (testPoint && testPoint.length === 33) {
-        console.log('✅ @noble/secp256k1 interface test passed');
-        return eccInterface;
-      } else {
-        throw new Error('Interface test failed');
-      }
-    } catch (testError) {
-      console.error('❌ @noble/secp256k1 interface test failed:', testError);
-      throw testError;
+
+    // Self-test
+    const testKey = new Uint8Array(32);
+    testKey[31] = 1;
+    const testPoint = eccInterface.pointFromScalar(testKey, true);
+    if (testPoint && testPoint.length === 33) {
+      console.log('✅ ECC (noble) self-test passed');
+      return eccInterface;
     }
-    
-  } catch (nobleError) {
-    console.error('❌ @noble/secp256k1 fallback failed:', nobleError);
+    throw new Error('ECC self-test failed');
+  } catch (err) {
+    console.error('❌ @noble/secp256k1 init failed:', err);
+    throw new Error('ECC library invalid - no working cryptographic library found');
   }
-  
-  // If we get here, both libraries failed
-  console.error('❌ All ECC implementations failed');
-  throw new Error('ECC library invalid - no working cryptographic library found');
 };
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
