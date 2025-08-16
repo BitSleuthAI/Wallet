@@ -27,7 +27,7 @@ import {
 import { useWallet } from '@/hooks/wallet-store';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet } = useWallet();
 
   const handleLogout = () => {
     Alert.alert(
@@ -35,7 +35,24 @@ export default function SettingsScreen() {
       'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout & Erase', style: 'destructive', onPress: () => console.log('Logout') },
+        { 
+          text: 'Logout & Erase', 
+          style: 'destructive', 
+          onPress: async () => {
+            try {
+              await logoutAndEraseWallet();
+              // Navigate to wallet setup screen
+              router.replace('/wallet-setup');
+            } catch (error) {
+              console.error('Error during logout:', error);
+              Alert.alert(
+                'Error',
+                'There was an error clearing your wallet data. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          }
+        },
       ]
     );
   };

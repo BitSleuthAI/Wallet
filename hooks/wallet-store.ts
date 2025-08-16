@@ -140,6 +140,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
   }, [queryClient]);
 
+  const logoutAndEraseWallet = useCallback(async () => {
+    try {
+      // Clear all wallet-related data from AsyncStorage
+      await AsyncStorage.multiRemove([
+        'wallet',
+        'pin',
+        'biometric_enabled',
+        'wallet_setup_completed'
+      ]);
+      
+      // Reset local state
+      setCurrentWallet(null);
+      
+      // Clear all cached queries
+      queryClient.clear();
+      
+      console.log('Wallet data cleared successfully');
+    } catch (error) {
+      console.error('Error clearing wallet data:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
   return useMemo(() => ({
     // Wallet data
     currentWallet,
@@ -162,6 +185,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     generateNewAddress,
     toggleTheme,
     refreshData,
+    logoutAndEraseWallet,
     
     // Loading states
     isCreatingWallet: saveWalletMutation.isPending,
@@ -183,6 +207,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     generateNewAddress,
     toggleTheme,
     refreshData,
+    logoutAndEraseWallet,
     saveWalletMutation.isPending,
   ]);
 });
