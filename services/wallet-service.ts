@@ -136,16 +136,36 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
 
 export const validateMnemonic = (mnemonic: string): boolean => {
   try {
-    if (bip39) {
-      return bip39.validateMnemonic(mnemonic);
+    console.log('Validating mnemonic:', mnemonic.substring(0, 20) + '...');
+    
+    // Basic format validation first
+    if (!mnemonic || typeof mnemonic !== 'string') {
+      console.log('Invalid mnemonic: not a string');
+      return false;
     }
+    
+    const words = mnemonic.trim().toLowerCase().split(/\s+/).filter(word => word.length > 0);
+    console.log('Word count:', words.length);
+    
+    if (words.length !== 12 && words.length !== 24) {
+      console.log('Invalid word count:', words.length);
+      return false;
+    }
+    
+    if (bip39) {
+      const isValid = bip39.validateMnemonic(mnemonic.trim());
+      console.log('BIP39 validation result:', isValid);
+      return isValid;
+    }
+    
     // Fallback validation - just check word count and basic format
-    const words = mnemonic.trim().split(/\s+/);
-    return words.length === 12 || words.length === 24;
+    console.log('Using fallback validation - word count check only');
+    return true; // Accept any 12 or 24 word phrase when bip39 is not available
   } catch (error) {
     console.error('Error validating mnemonic:', error);
     // Fallback validation - just check word count and basic format
-    const words = mnemonic.trim().split(/\s+/);
+    const words = mnemonic.trim().split(/\s+/).filter(word => word.length > 0);
+    console.log('Fallback validation - word count:', words.length);
     return words.length === 12 || words.length === 24;
   }
 };

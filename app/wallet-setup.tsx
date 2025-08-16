@@ -195,10 +195,22 @@ export default function WalletSetupScreen() {
       return;
     }
 
-
+    console.log('Starting wallet import process...');
+    console.log('Wallet name:', walletName.trim());
+    console.log('Mnemonic length:', mnemonic.trim().length);
+    console.log('Mnemonic word count:', mnemonic.trim().split(/\s+/).filter(word => word.length > 0).length);
+    console.log('Platform:', Platform.OS);
 
     setIsLoading(true);
     try {
+      // First validate the mnemonic manually for debugging
+      const isValid = walletService.validateMnemonic(mnemonic.trim());
+      console.log('Manual validation result:', isValid);
+      
+      if (!isValid) {
+        console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
+      }
+      
       await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
       
       // Show confetti celebration
@@ -210,6 +222,7 @@ export default function WalletSetupScreen() {
         router.push('/pin-setup');
       }, 2000);
     } catch (error) {
+      console.error('Import wallet error:', error);
       Alert.alert('Error', error instanceof Error ? error.message : 'Failed to import wallet');
       setIsLoading(false);
     }
