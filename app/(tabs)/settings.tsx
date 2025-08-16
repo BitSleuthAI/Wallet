@@ -9,7 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import {
   Wallet,
   DollarSign,
@@ -191,9 +191,9 @@ export default function SettingsScreen() {
 
         <SettingItem
           icon={Info}
-          title="About Bitcoin Wallet"
-          subtitle="Version 1.0.0"
-          onPress={() => console.log('About')}
+          title="About BitSleuth Wallet"
+          subtitle="Version 1.1.6"
+          onPress={() => router.push('/about')}
         />
 
         {/* Logout Button */}
