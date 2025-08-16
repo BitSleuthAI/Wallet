@@ -9,7 +9,7 @@ import {
   Switch,
   Alert,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { QrCode, ArrowUpRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 
@@ -51,9 +51,18 @@ export default function SendScreen() {
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <Stack.Screen options={{ title: 'Send' }} />
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyText, { color: theme.colors.text }]}>
-            No wallet available
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
+            No Wallet Found
           </Text>
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+            Create or import a wallet to send funds
+          </Text>
+          <TouchableOpacity
+            style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => router.push('/wallet-setup')}
+          >
+            <Text style={styles.setupButtonText}>Setup Wallet</Text>
+          </TouchableOpacity>
         </View>
       </SafeAreaView>
     );
@@ -435,8 +444,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 40,
+  },
+  emptyTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 32,
+  },
+  setupButton: {
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+  },
+  setupButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
