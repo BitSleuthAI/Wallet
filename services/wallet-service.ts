@@ -3,6 +3,7 @@ import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
+import * as noble from '@noble/secp256k1';
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -19,8 +20,6 @@ const createECC = () => {
   console.log('🔧 Initializing ECC library (noble only)...');
 
   try {
-    const noble = require('@noble/secp256k1');
-
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
     }
@@ -76,22 +75,22 @@ const createECC = () => {
       },
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
         try {
-          if (typeof noble.signSync === 'function') {
-            const sig: Uint8Array = noble.signSync(hash, privateKey, { der: false });
+          if (typeof (noble as any).signSync === 'function') {
+            const sig: Uint8Array = (noble as any).signSync(hash, privateKey, { der: false });
             return new Uint8Array(sig);
           }
-          const sigMaybePromise = noble.sign(hash, privateKey, { der: false });
-          if (sigMaybePromise && typeof sigMaybePromise.then === 'function') {
+          const sigMaybePromise = (noble as any).sign(hash, privateKey, { der: false });
+          if (sigMaybePromise && typeof (sigMaybePromise as any).then === 'function') {
             throw new Error('signSync not available');
           }
-          return new Uint8Array(sigMaybePromise);
+          return new Uint8Array(sigMaybePromise as Uint8Array);
         } catch {
           throw new Error('sign failed');
         }
       },
       verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
         try {
-          return noble.verify(signature, hash, publicKey);
+          return (noble as any).verify(signature, hash, publicKey);
         } catch {
           return false;
         }
