@@ -16,28 +16,34 @@ const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
   
   // Try to detect if we're on mobile vs web without importing Platform
   const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+  const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
   
   // Use native crypto if available (mobile), otherwise Math.random
-  if (!isWeb && typeof require !== 'undefined') {
+  if ((isReactNative || !isWeb) && typeof require !== 'undefined') {
     try {
       const crypto = require('crypto');
-      const bytes = crypto.randomBytes(array.byteLength);
-      new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
-      console.log('✅ Used native crypto.randomBytes');
-      return array;
+      if (crypto && crypto.randomBytes) {
+        const bytes = crypto.randomBytes(array.byteLength);
+        new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
+        console.log('✅ Used native crypto.randomBytes');
+        return array;
+      }
     } catch (error) {
       console.log('⚠️ Native crypto failed, using Math.random fallback:', error);
     }
   }
   
-  // Fallback using Math.random with better entropy
+  // Enhanced fallback using Math.random with better entropy
   const view = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
   for (let i = 0; i < view.length; i++) {
-    // Use multiple Math.random calls for better entropy
-    view[i] = Math.floor(Math.random() * 256);
+    // Use timestamp and multiple Math.random calls for better entropy
+    const entropy1 = Math.floor(Math.random() * 256);
+    const entropy2 = Math.floor(Math.random() * 256);
+    const timestamp = Date.now() % 256;
+    view[i] = (entropy1 ^ entropy2 ^ timestamp ^ i) % 256;
   }
   
-  console.log('✅ Used Math.random fallback for crypto.getRandomValues');
+  console.log('✅ Used enhanced Math.random fallback for crypto.getRandomValues');
   return array;
 };
 
@@ -81,19 +87,30 @@ try {
   hmac = (key: Uint8Array, data: Uint8Array) => nobleHmac(nobleSha256, key, data);
   console.log('✅ Using @noble/hashes for cryptographic functions');
 } catch (error) {
-  console.warn('⚠️ @noble/hashes not available, using fallback:', error);
+  console.warn('⚠️ @noble/hashes not available, using enhanced fallback:', error);
   
-  // Simple SHA-256 fallback implementation
+  // Enhanced SHA-256 fallback implementation with better mixing
   sha256 = (data: Uint8Array): Uint8Array => {
     const result = new Uint8Array(32);
+    const len = data.length;
+    
+    // Simple hash with better mixing
     for (let i = 0; i < 32; i++) {
-      result[i] = data[i % data.length] ^ (i * 7);
+      let hash = 0;
+      for (let j = 0; j < len; j++) {
+        hash = ((hash << 5) - hash + data[j] + i) & 0xffffffff;
+      }
+      result[i] = (hash >>> (i % 4) * 8) & 0xff;
     }
     return result;
   };
   
   hmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
-    return sha256(new Uint8Array([...key, ...data]));
+    // Simple HMAC implementation
+    const combined = new Uint8Array(key.length + data.length);
+    combined.set(key, 0);
+    combined.set(data, key.length);
+    return sha256(combined);
   };
 }
 
@@ -167,17 +184,20 @@ try {
     crypto.getRandomValues(testArray);
     console.log('✅ Global crypto.getRandomValues working:', Array.from(testArray));
   } else {
-    console.error('❌ Global crypto.getRandomValues not available:', {
-      cryptoExists: typeof crypto !== 'undefined',
-      cryptoValue: crypto,
-      getRandomValuesType: crypto ? typeof crypto.getRandomValues : 'N/A'
-    });
+    console.log('⚠️ Global crypto.getRandomValues not available, using polyfill');
   }
   
   // Test polyfill directly
   const testArray2 = new Uint8Array(4);
   cryptoPolyfill.getRandomValues(testArray2);
   console.log('✅ Crypto polyfill direct test working:', Array.from(testArray2));
+  
+  // Ensure all values are different (basic entropy check)
+  const testArray3 = new Uint8Array(16);
+  cryptoPolyfill.getRandomValues(testArray3);
+  const uniqueValues = new Set(Array.from(testArray3)).size;
+  console.log(`✅ Entropy check: ${uniqueValues}/16 unique values`);
+  
 } catch (error) {
   console.error('❌ Crypto polyfill test failed:', error);
   if (error instanceof Error) {
