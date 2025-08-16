@@ -280,9 +280,11 @@ setTimeout(() => {
   }
 }, 0);
 
-// Buffer polyfill for React Native
+// Enhanced Buffer polyfill for React Native
 if (typeof global.Buffer === 'undefined') {
-  global.Buffer = {
+  console.log('🔧 Setting up Buffer polyfill...');
+  
+  const BufferPolyfill = {
     from: (data: any, encoding?: string) => {
       if (typeof data === 'string') {
         if (encoding === 'hex') {
@@ -290,14 +292,57 @@ if (typeof global.Buffer === 'undefined') {
           for (let i = 0; i < data.length; i += 2) {
             bytes[i / 2] = parseInt(data.substr(i, 2), 16);
           }
+          // Add toString method
+          (bytes as any).toString = (enc?: string) => {
+            if (enc === 'hex') {
+              return Array.from(bytes).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+            }
+            return new TextDecoder().decode(bytes);
+          };
           return bytes;
         }
-        return new TextEncoder().encode(data);
+        const encoded = new TextEncoder().encode(data);
+        // Add toString method
+        (encoded as any).toString = (enc?: string) => {
+          if (enc === 'hex') {
+            return Array.from(encoded).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+          }
+          return new TextDecoder().decode(encoded);
+        };
+        return encoded;
       }
-      return new Uint8Array(data);
+      const result = new Uint8Array(data);
+      // Add toString method
+      (result as any).toString = (enc?: string) => {
+        if (enc === 'hex') {
+          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+        }
+        return new TextDecoder().decode(result);
+      };
+      return result;
     },
-    alloc: (size: number) => new Uint8Array(size),
-    allocUnsafe: (size: number) => new Uint8Array(size),
+    alloc: (size: number) => {
+      const result = new Uint8Array(size);
+      // Add toString method
+      (result as any).toString = (enc?: string) => {
+        if (enc === 'hex') {
+          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+        }
+        return new TextDecoder().decode(result);
+      };
+      return result;
+    },
+    allocUnsafe: (size: number) => {
+      const result = new Uint8Array(size);
+      // Add toString method
+      (result as any).toString = (enc?: string) => {
+        if (enc === 'hex') {
+          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+        }
+        return new TextDecoder().decode(result);
+      };
+      return result;
+    },
     isBuffer: (obj: any) => obj instanceof Uint8Array,
     concat: (buffers: Uint8Array[]) => {
       const totalLength = buffers.reduce((sum, buf) => sum + buf.length, 0);
@@ -307,9 +352,19 @@ if (typeof global.Buffer === 'undefined') {
         result.set(buf, offset);
         offset += buf.length;
       }
+      // Add toString method
+      (result as any).toString = (enc?: string) => {
+        if (enc === 'hex') {
+          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
+        }
+        return new TextDecoder().decode(result);
+      };
       return result;
     }
-  } as any;
+  };
+  
+  global.Buffer = BufferPolyfill as any;
+  console.log('✅ Buffer polyfill set up successfully');
 }
 
 // Final verification
@@ -317,6 +372,8 @@ setTimeout(() => {
   console.log('🔍 Final crypto verification after module load...');
   console.log('Global crypto available:', typeof crypto !== 'undefined');
   console.log('Global crypto.getRandomValues available:', typeof crypto?.getRandomValues === 'function');
+  console.log('Global Buffer available:', typeof global.Buffer !== 'undefined');
+  console.log('Global hashes available:', typeof (global as any).hashes !== 'undefined');
   
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     try {
@@ -325,6 +382,16 @@ setTimeout(() => {
       console.log('✅ Final crypto test successful:', Array.from(finalTest));
     } catch (error) {
       console.error('❌ Final crypto test failed:', error);
+    }
+  }
+  
+  // Test Buffer polyfill
+  if (typeof global.Buffer !== 'undefined') {
+    try {
+      const testBuffer = global.Buffer.from('test');
+      console.log('✅ Buffer polyfill test successful:', testBuffer.length);
+    } catch (error) {
+      console.error('❌ Buffer polyfill test failed:', error);
     }
   }
 }, 0);
