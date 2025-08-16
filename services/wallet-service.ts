@@ -26,15 +26,19 @@ const createECC = () => {
 
     const eccInterface = {
       isPoint: (p: Uint8Array): boolean => {
-        if (!p || p.length === 0) return false;
-        if (p.length === 33 && (p[0] === 0x02 || p[0] === 0x03)) return true;
-        if (p.length === 65 && p[0] === 0x04) return true;
-        return false;
+        try {
+          if (!p || p.length === 0) return false;
+          noble.Point.fromHex(p);
+          return true;
+        } catch {
+          return false;
+        }
       },
       isPrivate: (d: Uint8Array): boolean => {
         if (!d || d.length !== 32) return false;
         try {
-          return noble.utils.isValidPrivateKey(d);
+          noble.getPublicKey(d, true);
+          return true;
         } catch {
           return false;
         }
@@ -304,18 +308,13 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     }
     console.log('✅ BIP39 library available');
     
-    // Test hash functions with better error reporting
+    // Proceed even if global.hashes is not present; bip32 v5 uses provided ECC and internal hashes.
     const globalHashes = (global as any).hashes;
-    if (!globalHashes) {
-      console.error('Hash functions not found on global object');
-      throw new Error('Hash functions not properly initialized - global.hashes is undefined');
+    if (!globalHashes || typeof globalHashes.hmacSha256Sync !== 'function') {
+      console.warn('Hash helpers not found; continuing with library defaults');
+    } else {
+      console.log('✅ Hash functions available');
     }
-    
-    if (typeof globalHashes.hmacSha256Sync !== 'function') {
-      console.error('hmacSha256Sync function not available:', typeof globalHashes.hmacSha256Sync);
-      throw new Error('Hash functions not properly initialized - hmacSha256Sync is not a function');
-    }
-    console.log('✅ Hash functions available');
     
     // Test ECC before using it
     let ecc;
@@ -445,6 +444,14 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(ecc);
     const bitcoin = require('bitcoinjs-lib');
+    if (typeof bitcoin.initEccLib === 'function') {
+      try {
+        bitcoin.initEccLib(ecc);
+        console.log('✅ bitcoinjs-lib ECC initialized with noble');
+      } catch (e) {
+        console.warn('⚠️ Failed to init bitcoinjs-lib ECC, continuing:', e);
+      }
+    }
     
     console.log('Parsing xpub...');
     const node = bip32.fromBase58(xpub);
