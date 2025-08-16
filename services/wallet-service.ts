@@ -153,13 +153,8 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    try {
-      const webService = require('./wallet-service.web');
-      return webService.createWallet(name, color);
-    } catch (error) {
-      console.error('Error with web service:', error);
-      throw new Error('Wallet creation is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
-    }
+    const webService = require('./wallet-service.web');
+    return webService.createWallet(name, color);
   }
 
   try {
@@ -174,13 +169,8 @@ export const createWallet = async (name: string, color: string = '#8B5CF6'): Pro
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    try {
-      const webService = require('./wallet-service.web');
-      return webService.importWallet(name, mnemonic, color);
-    } catch (error) {
-      console.error('Error with web service:', error);
-      throw new Error('Wallet import is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
-    }
+    const webService = require('./wallet-service.web');
+    return webService.importWallet(name, mnemonic, color);
   }
 
   if (!validateMnemonic(mnemonic)) {
