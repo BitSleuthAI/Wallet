@@ -14,31 +14,20 @@ try {
   bip39 = null;
 }
 
-// Robust ECC implementation using tiny-secp256k1 as primary, with noble fallback
+// Note: Avoiding tiny-secp256k1 completely to prevent bundling issues
+// Using only @noble/secp256k1 which is more compatible with Expo Go
+
+// Robust ECC implementation using @noble/secp256k1 as primary, avoiding tiny-secp256k1 bundling issues
 const createECC = () => {
   console.log('🔧 Initializing ECC library...');
 
-  // Try tiny-secp256k1 first (most compatible with bitcoinjs-lib)
-  try {
-    const tinysecp = require('tiny-secp256k1');
-    console.log('✅ tiny-secp256k1 loaded successfully');
-    
-    // Test basic functionality
-    const testPriv = new Uint8Array(32);
-    testPriv[31] = 1;
-    
-    if (tinysecp.isPrivate && tinysecp.isPrivate(testPriv)) {
-      console.log('✅ tiny-secp256k1 validation successful');
-      return tinysecp;
-    }
-  } catch (error) {
-    console.log('⚠️ tiny-secp256k1 not available:', error);
-  }
+  // Skip tiny-secp256k1 to avoid bundling issues in Expo Go
+  // Use @noble/secp256k1 directly as it's more reliable in React Native
 
-  // Fallback to @noble/secp256k1
+  // Use @noble/secp256k1 as primary ECC implementation
   try {
     const noble = require('@noble/secp256k1');
-    console.log('🔄 Falling back to @noble/secp256k1');
+    console.log('✅ Using @noble/secp256k1 as primary ECC implementation');
     
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
