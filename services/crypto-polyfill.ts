@@ -27,20 +27,48 @@ const cryptoPolyfill = { getRandomValues, subtle: undefined } as const;
 try { (globalThis as any).crypto = (globalThis as any).crypto ?? cryptoPolyfill; } catch {}
 try { (global as any).crypto = (global as any).crypto ?? cryptoPolyfill; } catch {}
 try { (self as any).crypto = (self as any).crypto ?? cryptoPolyfill; } catch {}
-try { (window as any).crypto = (window as any).crypto ?? cryptoPolyfill; } catch {}
+try { if (typeof window !== 'undefined') { (window as any).crypto = (window as any).crypto ?? cryptoPolyfill; } } catch {}
 
 if (typeof global.Buffer === 'undefined') {
   const toHex = (arr: Uint8Array) => Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('');
   const fromHex = (hex: string) => new Uint8Array(hex.match(/.{1,2}/g)!.map((x) => parseInt(x, 16)));
-  const toUtf8 = (arr: Uint8Array) => new TextDecoder().decode(arr);
-  const fromUtf8 = (str: string) => new TextEncoder().encode(str);
+  const decodeUtf8 = (bytes: Uint8Array): string => {
+    let out = '';
+    for (let i = 0; i < bytes.length; i++) {
+      const c = bytes[i];
+      if (c < 128) { out += String.fromCharCode(c); }
+      else if (c > 191 && c < 224) { out += String.fromCharCode(((c & 31) << 6) | (bytes[++i] & 63)); }
+      else {
+        out += String.fromCharCode(((c & 15) << 12) | ((bytes[++i] & 63) << 6) | (bytes[++i] & 63));
+      }
+    }
+    return out;
+  };
+  const encodeUtf8 = (str: string): Uint8Array => {
+    const bytes: number[] = [];
+    for (let i = 0; i < str.length; i++) {
+      let codePoint = str.charCodeAt(i);
+      if (codePoint >= 0xd800 && codePoint <= 0xdbff && i + 1 < str.length) {
+        const next = str.charCodeAt(i + 1);
+        if (next >= 0xdc00 && next <= 0xdfff) {
+          codePoint = 0x10000 + ((codePoint - 0xd800) << 10) + (next - 0xdc00);
+          i++;
+        }
+      }
+      if (codePoint < 0x80) bytes.push(codePoint);
+      else if (codePoint < 0x800) bytes.push(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f));
+      else if (codePoint < 0x10000) bytes.push(0xe0 | (codePoint >> 12), 0x80 | ((codePoint >> 6) & 0x3f), 0x80 | (codePoint & 0x3f));
+      else bytes.push(0xf0 | (codePoint >> 18), 0x80 | ((codePoint >> 12) & 0x3f), 0x80 | ((codePoint >> 6) & 0x3f), 0x80 | (codePoint & 0x3f));
+    }
+    return new Uint8Array(bytes);
+  };
   const addToString = (u: Uint8Array) => {
-    (u as any).toString = (enc?: string) => (enc === 'hex' ? toHex(u) : toUtf8(u));
+    (u as any).toString = (enc?: string) => (enc === 'hex' ? toHex(u) : decodeUtf8(u));
     return u;
   };
   (global as any).Buffer = {
     from: (data: any, enc?: string) => {
-      if (typeof data === 'string') return addToString(enc === 'hex' ? fromHex(data) : fromUtf8(data));
+      if (typeof data === 'string') return addToString(enc === 'hex' ? fromHex(data) : encodeUtf8(data));
       return addToString(new Uint8Array(data));
     },
     alloc: (n: number) => addToString(new Uint8Array(n)),
@@ -120,21 +148,7 @@ export const initializeCrypto = () => {
       const ecc = createNobleECC();
       (global as any).ecc = ecc;
 
-      if (typeof require !== 'undefined' && (require as any).cache) {
-        const originalRequire = require as any;
-        const requireProxy = new Proxy(originalRequire, {
-          apply(target, thisArg, argumentsList) {
-            const moduleName = argumentsList[0];
-            if (moduleName === 'tiny-secp256k1') {
-              console.log('🚫 Intercepted tiny-secp256k1 import, returning noble-based implementation');
-              return ecc;
-            }
-            return Reflect.apply(target, thisArg, argumentsList);
-          }
-        });
-        (global as any).require = requireProxy;
-      }
-      
+      // Avoid monkey-patching require on mobile runtimes; rely on bitcoinjs-lib initEccLib
       patched = true;
       (global as any).__cryptoInitialized = true;
       console.log('✅ Crypto initialized and ECC override installed');
