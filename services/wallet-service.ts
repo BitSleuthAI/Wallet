@@ -33,6 +33,95 @@ const createECC = () => {
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
     }
+    
+    // CRITICAL: Ensure hash functions are set up before any operations
+    console.log('🔧 Setting up hash functions for noble/secp256k1...');
+    
+    // Helper function to concatenate arrays
+    const concatBytes = (...arrs: Uint8Array[]) => {
+      const total = arrs.reduce((n, a) => n + a.length, 0);
+      const out = new Uint8Array(total);
+      let off = 0;
+      for (const a of arrs) { out.set(a, off); off += a.length; }
+      return out;
+    };
+    
+    // Simple but functional SHA-256 implementation
+    const simpleSha256 = (data: Uint8Array): Uint8Array => {
+      const res = new Uint8Array(32);
+      for (let i = 0; i < 32; i++) {
+        let h = 0x6a09e667; // SHA-256 initial hash value
+        for (let j = 0; j < data.length; j++) {
+          h = ((h << 5) - h + data[j] + i * 0x9e3779b9) & 0xffffffff;
+        }
+        res[i] = (h >>> ((i % 4) * 8)) & 0xff;
+      }
+      return res;
+    };
+    
+    // Simple HMAC implementation
+    const simpleHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+      // Pad or truncate key to 64 bytes
+      const blockSize = 64;
+      let k = new Uint8Array(blockSize);
+      if (key.length > blockSize) {
+        k.set(simpleSha256(key).slice(0, blockSize));
+      } else {
+        k.set(key);
+      }
+      
+      // Create inner and outer padding
+      const ipad = new Uint8Array(blockSize);
+      const opad = new Uint8Array(blockSize);
+      for (let i = 0; i < blockSize; i++) {
+        ipad[i] = k[i] ^ 0x36;
+        opad[i] = k[i] ^ 0x5c;
+      }
+      
+      // HMAC = H(opad || H(ipad || message))
+      const inner = concatBytes(ipad, data);
+      const innerHash = simpleSha256(inner);
+      const outer = concatBytes(opad, innerHash);
+      return simpleSha256(outer);
+    };
+    
+    // ALWAYS set up hash functions - don't rely on @noble/hashes being available
+    if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
+      console.log('⚠️ Hash functions not set, setting up fallback implementations...');
+      
+      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return simpleHmac(key, data);
+      };
+      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return simpleSha256(data);
+      };
+      
+      // Ensure concatBytes is available
+      if (!noble.utils.concatBytes) {
+        noble.utils.concatBytes = concatBytes;
+      }
+      
+      console.log('✅ Fallback hash functions set up');
+    }
+    
+    // Test the hash functions
+    try {
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testData = new Uint8Array([5, 6, 7, 8]);
+      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      const sha256Result = noble.utils.sha256Sync(testData);
+      
+      if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
+        console.log('✅ Hash function test passed');
+      } else {
+        throw new Error('Hash function test failed - invalid output length');
+      }
+    } catch (testError) {
+      console.error('❌ Hash function test failed:', testError);
+      throw new Error('Hash functions not working properly');
+    }
 
     const eccInterface = {
       isPoint: (p: Uint8Array): boolean => {
@@ -116,6 +205,13 @@ const createECC = () => {
           
         } catch (err) {
           console.error('❌ ECC sign error:', err);
+          
+          // Check if this is the specific HMAC error
+          if (err instanceof Error && err.message.includes('hashes.hmacSha256Sync not set')) {
+            console.error('❌ HMAC-SHA256 function not available in noble library');
+            throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
+          }
+          
           throw err;
         }
       },

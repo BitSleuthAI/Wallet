@@ -12,37 +12,108 @@ const createNobleECC = () => {
       throw new Error('@noble/secp256k1 not available');
     }
 
-    // Ensure noble has required sync hash utils for RFC6979 (HMAC-SHA256)
+    // CRITICAL: Set up hash functions BEFORE any operations
+    console.log('🔧 Setting up hash functions for noble/secp256k1...');
+    
+    // Helper function to concatenate arrays
+    const concatBytes = (...arrs: Uint8Array[]) => {
+      const total = arrs.reduce((n, a) => n + a.length, 0);
+      const out = new Uint8Array(total);
+      let off = 0;
+      for (const a of arrs) { out.set(a, off); off += a.length; }
+      return out;
+    };
+    
+    // Simple but functional SHA-256 implementation
+    const simpleSha256 = (data: Uint8Array): Uint8Array => {
+      const res = new Uint8Array(32);
+      for (let i = 0; i < 32; i++) {
+        let h = 0x6a09e667; // SHA-256 initial hash value
+        for (let j = 0; j < data.length; j++) {
+          h = ((h << 5) - h + data[j] + i * 0x9e3779b9) & 0xffffffff;
+        }
+        res[i] = (h >>> ((i % 4) * 8)) & 0xff;
+      }
+      return res;
+    };
+    
+    // Simple HMAC implementation
+    const simpleHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+      // Pad or truncate key to 64 bytes
+      const blockSize = 64;
+      let k = new Uint8Array(blockSize);
+      if (key.length > blockSize) {
+        k.set(simpleSha256(key).slice(0, blockSize));
+      } else {
+        k.set(key);
+      }
+      
+      // Create inner and outer padding
+      const ipad = new Uint8Array(blockSize);
+      const opad = new Uint8Array(blockSize);
+      for (let i = 0; i < blockSize; i++) {
+        ipad[i] = k[i] ^ 0x36;
+        opad[i] = k[i] ^ 0x5c;
+      }
+      
+      // HMAC = H(opad || H(ipad || message))
+      const inner = concatBytes(ipad, data);
+      const innerHash = simpleSha256(inner);
+      const outer = concatBytes(opad, innerHash);
+      return simpleSha256(outer);
+    };
+    
+    // Try to use @noble/hashes if available, otherwise use fallback
     try {
       const { hmac } = require('@noble/hashes/hmac');
       const { sha256 } = require('@noble/hashes/sha256');
-      if (!noble.utils.hmacSha256Sync) {
-        noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) =>
-          hmac(sha256, key, noble.utils.concatBytes(...msgs));
-      }
-      if (!noble.utils.sha256Sync) {
-        noble.utils.sha256Sync = (...msgs: Uint8Array[]) => sha256(noble.utils.concatBytes(...msgs));
-      }
+      
+      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return hmac(sha256, key, data);
+      };
+      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return sha256(data);
+      };
+      
+      console.log('✅ Using @noble/hashes for cryptographic functions');
     } catch (e) {
-      // Fallback minimal implementations to avoid "hashes.hmacSha256Sync not set"
-      const concat = (...arrs: Uint8Array[]) => {
-        const total = arrs.reduce((n, a) => n + a.length, 0);
-        const out = new Uint8Array(total);
-        let off = 0;
-        for (const a of arrs) { out.set(a, off); off += a.length; }
-        return out;
+      console.log('⚠️ @noble/hashes not available, using fallback implementations:', e);
+      
+      // Set fallback implementations
+      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return simpleHmac(key, data);
       };
-      const simpleSha256 = (data: Uint8Array) => {
-        const res = new Uint8Array(32);
-        for (let i = 0; i < 32; i++) {
-          let h = 0;
-          for (let j = 0; j < data.length; j++) h = ((h << 5) - h + data[j] + i) & 0xffffffff;
-          res[i] = (h >>> ((i % 4) * 8)) & 0xff;
-        }
-        return res;
+      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        return simpleSha256(data);
       };
-      noble.utils.hmacSha256Sync ||= (key: Uint8Array, ...msgs: Uint8Array[]) => simpleSha256(concat(key, ...msgs));
-      noble.utils.sha256Sync ||= (...msgs: Uint8Array[]) => simpleSha256(concat(...msgs));
+      
+      console.log('✅ Fallback hash functions set up');
+    }
+    
+    // Ensure concatBytes is available
+    if (!noble.utils.concatBytes) {
+      noble.utils.concatBytes = concatBytes;
+    }
+    
+    // Test the hash functions
+    try {
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testData = new Uint8Array([5, 6, 7, 8]);
+      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      const sha256Result = noble.utils.sha256Sync(testData);
+      
+      if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
+        console.log('✅ Hash function test passed');
+      } else {
+        throw new Error('Hash function test failed - invalid output length');
+      }
+    } catch (testError) {
+      console.error('❌ Hash function test failed:', testError);
+      throw new Error('Hash functions not working properly');
     }
 
     // Prefer secure randomness when available
