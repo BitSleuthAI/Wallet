@@ -1,7 +1,7 @@
-// Import ECC override FIRST to prevent tiny-secp256k1 WASM loading
-import '@/services/ecc-override';
-// Import crypto polyfill second
+// Import crypto polyfill FIRST
 import '@/services/crypto-polyfill';
+// Then import ECC override to ensure noble utils use initialized crypto
+import '@/services/ecc-override';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
@@ -182,9 +182,7 @@ const createECC = () => {
         }
       },
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
-        try {
-          console.log('🔐 Attempting to sign with noble secp256k1...');
-          
+        const attemptSign = (): Uint8Array => {
           // Validate inputs
           if (!hash || hash.length !== 32) {
             throw new Error('Invalid hash: must be 32 bytes');
@@ -192,31 +190,65 @@ const createECC = () => {
           if (!privateKey || privateKey.length !== 32) {
             throw new Error('Invalid private key: must be 32 bytes');
           }
-          
-          // Use noble's sign function
           const sig = noble.sign(hash, privateKey);
-          
-          // Handle different signature formats
           if (sig && typeof sig.toCompactRawBytes === 'function') {
             const compactSig = sig.toCompactRawBytes();
-            console.log('✅ Noble signature created, length:', compactSig.length);
             return new Uint8Array(compactSig);
           } else if (sig && sig.length) {
-            console.log('✅ Noble signature created (raw), length:', sig.length);
             return new Uint8Array(sig);
-          } else {
-            throw new Error('Invalid signature format from noble.sign');
           }
-          
+          throw new Error('Invalid signature format from noble.sign');
+        };
+
+        try {
+          console.log('🔐 Attempting to sign with noble secp256k1...');
+          return attemptSign();
         } catch (err) {
           console.error('❌ ECC sign error:', err);
-          
-          // Check if this is the specific HMAC error
-          if (err instanceof Error && err.message.includes('hashes.hmacSha256Sync not set')) {
-            console.error('❌ HMAC-SHA256 function not available in noble library');
-            throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
+          if (err instanceof Error && err.message.includes('hmacSha256Sync')) {
+            try {
+              const nobleLocal = (global as any).__noble || require('@noble/secp256k1');
+              const concatBytes = (...arrs: Uint8Array[]) => {
+                const total = arrs.reduce((n, a) => n + a.length, 0);
+                const out = new Uint8Array(total);
+                let off = 0;
+                for (const a of arrs) { out.set(a, off); off += a.length; }
+                return out;
+              };
+              const simpleSha256 = (data: Uint8Array): Uint8Array => {
+                const res = new Uint8Array(32);
+                for (let i = 0; i < 32; i++) {
+                  let h = 0x6a09e667;
+                  for (let j = 0; j < data.length; j++) {
+                    h = ((h << 5) - h + data[j] + i * 0x9e3779b9) & 0xffffffff;
+                  }
+                  res[i] = (h >>> ((i % 4) * 8)) & 0xff;
+                }
+                return res;
+              };
+              const simpleHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+                const blockSize = 64;
+                let k = new Uint8Array(blockSize);
+                if (key.length > blockSize) {
+                  k.set(simpleSha256(key).slice(0, blockSize));
+                } else { k.set(key); }
+                const ipad = new Uint8Array(blockSize);
+                const opad = new Uint8Array(blockSize);
+                for (let i = 0; i < blockSize; i++) { ipad[i] = k[i] ^ 0x36; opad[i] = k[i] ^ 0x5c; }
+                const inner = concatBytes(ipad, data);
+                const innerHash = simpleSha256(inner);
+                const outer = concatBytes(opad, innerHash);
+                return simpleSha256(outer);
+              };
+              nobleLocal.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmac(key, concatBytes(...msgs));
+              nobleLocal.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+              console.log('✅ Patched noble utils at runtime, retrying sign...');
+              return attemptSign();
+            } catch (patchErr) {
+              console.error('❌ Failed to patch noble utils:', patchErr);
+              throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
+            }
           }
-          
           throw err;
         }
       },

@@ -311,6 +311,12 @@ try {
     }
     
     console.log('✅ Noble/secp256k1 hash functions initialized successfully');
+
+    try {
+      (global as any).__noble = noble;
+      console.log('✅ Exposed configured noble instance on global.__noble');
+    } catch {}
+
   } else {
     console.warn('⚠️ Noble/secp256k1 not available or missing utils');
   }
