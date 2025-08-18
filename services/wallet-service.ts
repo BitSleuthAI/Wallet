@@ -512,10 +512,12 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     }
     console.log('✅ BIP39 library available');
     
-    // ECC should be initialized globally by now
-    const ecc = (global as any).ecc;
+    // ECC should be initialized globally by now, but create if missing
+    let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-      throw new Error('ECC library not available or invalid');
+      console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
+      ecc = createECC();
+      (global as any).ecc = ecc;
     }
     
     // Import BIP32 with error handling
@@ -651,10 +653,12 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
   try {
     console.log(`Generating address from xpub for index ${index}`);
     
-    // ECC should be initialized globally by now
-    const ecc = (global as any).ecc;
+    // ECC should be initialized globally by now, but create if missing
+    let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-      throw new Error('ECC library not available or invalid');
+      console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
+      ecc = createECC();
+      (global as any).ecc = ecc;
     }
     
     const { BIP32Factory } = require('bip32');

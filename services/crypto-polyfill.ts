@@ -120,9 +120,8 @@ export const initializeCrypto = () => {
       const ecc = createNobleECC();
       (global as any).ecc = ecc;
 
-      // Override require to intercept tiny-secp256k1 imports
-      if (typeof require !== 'undefined' && require.cache) {
-        const originalRequire = require;
+      if (typeof require !== 'undefined' && (require as any).cache) {
+        const originalRequire = require as any;
         const requireProxy = new Proxy(originalRequire, {
           apply(target, thisArg, argumentsList) {
             const moduleName = argumentsList[0];
@@ -146,5 +145,12 @@ export const initializeCrypto = () => {
     console.error('❌ Failed to initialize crypto');
   }
 };
+
+// Auto-initialize on module import to ensure ECC is ready before wallet operations
+try {
+  initializeCrypto();
+} catch (e) {
+  console.warn('Crypto auto-initialization failed, will attempt lazy init later:', e);
+}
 
 export {};

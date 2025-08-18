@@ -5,9 +5,11 @@ console.log('🔧 Setting up ECC override to prevent tiny-secp256k1 WASM loading
 // Create a noble-based ECC implementation that matches tiny-secp256k1 interface
 export const createNobleECC = () => {
   try {
-    const noble = require('@noble/secp256k1');
+    const mod = require('@noble/secp256k1');
+    const noble = (mod && (mod.secp256k1 || mod.default)) ? (mod.secp256k1 ?? mod.default) : mod;
 
     if (!noble || typeof noble.getPublicKey !== 'function') {
+      console.error('secp256k1 module shape:', Object.keys(mod || {}));
       throw new Error('@noble/secp256k1 not available');
     }
 
