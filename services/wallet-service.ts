@@ -86,25 +86,29 @@ const createECC = () => {
     };
     
     // ALWAYS set up hash functions - don't rely on @noble/hashes being available
-    if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
-      console.log('⚠️ Hash functions not set, setting up fallback implementations...');
-      
-      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return simpleHmac(key, data);
-      };
-      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return simpleSha256(data);
-      };
-      
-      // Ensure concatBytes is available
-      if (!noble.utils.concatBytes) {
-        noble.utils.concatBytes = concatBytes;
-      }
-      
-      console.log('✅ Fallback hash functions set up');
+    console.log('🔧 Setting up hash functions for wallet service noble instance...');
+    
+    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+      console.log('🔐 Wallet Service HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
+      const data = concatBytes(...msgs);
+      const result = simpleHmac(key, data);
+      console.log('✅ Wallet Service HMAC-SHA256 result length:', result.length);
+      return result;
+    };
+    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+      console.log('🔐 Wallet Service SHA256 called with msgs count:', msgs.length);
+      const data = concatBytes(...msgs);
+      const result = simpleSha256(data);
+      console.log('✅ Wallet Service SHA256 result length:', result.length);
+      return result;
+    };
+    
+    // Ensure concatBytes is available
+    if (!noble.utils.concatBytes) {
+      noble.utils.concatBytes = concatBytes;
     }
+    
+    console.log('✅ Wallet service hash functions set up');
     
     // Test the hash functions
     try {
@@ -114,12 +118,13 @@ const createECC = () => {
       const sha256Result = noble.utils.sha256Sync(testData);
       
       if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
-        console.log('✅ Hash function test passed');
+        console.log('✅ Wallet service hash function test passed');
       } else {
+        console.error('❌ Wallet service hash function test failed - lengths:', hmacResult?.length, sha256Result?.length);
         throw new Error('Hash function test failed - invalid output length');
       }
     } catch (testError) {
-      console.error('❌ Hash function test failed:', testError);
+      console.error('❌ Wallet service hash function test failed:', testError);
       throw new Error('Hash functions not working properly');
     }
 

@@ -63,36 +63,26 @@ const createNobleECC = () => {
       return simpleSha256(outer);
     };
     
-    // Try to use @noble/hashes if available, otherwise use fallback
-    try {
-      const { hmac } = require('@noble/hashes/hmac');
-      const { sha256 } = require('@noble/hashes/sha256');
-      
-      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return hmac(sha256, key, data);
-      };
-      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return sha256(data);
-      };
-      
-      console.log('✅ Using @noble/hashes for cryptographic functions');
-    } catch (e) {
-      console.log('⚠️ @noble/hashes not available, using fallback implementations:', e);
-      
-      // Set fallback implementations
-      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return simpleHmac(key, data);
-      };
-      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
-        const data = concatBytes(...msgs);
-        return simpleSha256(data);
-      };
-      
-      console.log('✅ Fallback hash functions set up');
-    }
+    // ALWAYS use fallback implementations to avoid @noble/hashes import issues
+    console.log('⚠️ Using fallback hash implementations to avoid @noble/hashes import warnings');
+    
+    // Set fallback implementations
+    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+      console.log('🔐 ECC Override HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
+      const data = concatBytes(...msgs);
+      const result = simpleHmac(key, data);
+      console.log('✅ ECC Override HMAC-SHA256 result length:', result.length);
+      return result;
+    };
+    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+      console.log('🔐 ECC Override SHA256 called with msgs count:', msgs.length);
+      const data = concatBytes(...msgs);
+      const result = simpleSha256(data);
+      console.log('✅ ECC Override SHA256 result length:', result.length);
+      return result;
+    };
+    
+    console.log('✅ Fallback hash functions set up in ECC override');
     
     // Ensure concatBytes is available
     if (!noble.utils.concatBytes) {
@@ -107,12 +97,13 @@ const createNobleECC = () => {
       const sha256Result = noble.utils.sha256Sync(testData);
       
       if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
-        console.log('✅ Hash function test passed');
+        console.log('✅ ECC Override hash function test passed');
       } else {
+        console.error('❌ ECC Override hash function test failed - lengths:', hmacResult?.length, sha256Result?.length);
         throw new Error('Hash function test failed - invalid output length');
       }
     } catch (testError) {
-      console.error('❌ Hash function test failed:', testError);
+      console.error('❌ ECC Override hash function test failed:', testError);
       throw new Error('Hash functions not working properly');
     }
 

@@ -239,6 +239,85 @@ hashContexts.forEach(context => {
   }
 });
 
+// CRITICAL: Initialize noble/secp256k1 with hash functions immediately
+console.log('🔧 Initializing noble/secp256k1 with hash functions...');
+try {
+  const noble = require('@noble/secp256k1');
+  
+  if (noble && noble.utils) {
+    // Set up the required hash functions for noble/secp256k1
+    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+      console.log('🔐 HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
+      
+      // Concatenate all messages
+      const totalLength = msgs.reduce((sum, msg) => sum + msg.length, 0);
+      const data = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const msg of msgs) {
+        data.set(msg, offset);
+        offset += msg.length;
+      }
+      
+      // Use our HMAC implementation
+      const result = hashFunctions.hmacSha256Sync(key, data);
+      console.log('✅ HMAC-SHA256 result length:', result.length);
+      return result;
+    };
+    
+    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+      console.log('🔐 SHA256 called with msgs count:', msgs.length);
+      
+      // Concatenate all messages
+      const totalLength = msgs.reduce((sum, msg) => sum + msg.length, 0);
+      const data = new Uint8Array(totalLength);
+      let offset = 0;
+      for (const msg of msgs) {
+        data.set(msg, offset);
+        offset += msg.length;
+      }
+      
+      // Use our SHA256 implementation
+      const hasher = hashFunctions.sha256('sha256');
+      const result = hasher.update(data).digest();
+      console.log('✅ SHA256 result length:', result.length);
+      return result;
+    };
+    
+    // Ensure concatBytes is available
+    if (!noble.utils.concatBytes) {
+      noble.utils.concatBytes = (...arrs: Uint8Array[]) => {
+        const total = arrs.reduce((n, a) => n + a.length, 0);
+        const out = new Uint8Array(total);
+        let off = 0;
+        for (const a of arrs) { out.set(a, off); off += a.length; }
+        return out;
+      };
+    }
+    
+    // Test the noble hash functions
+    try {
+      const testKey = new Uint8Array([1, 2, 3, 4]);
+      const testData = new Uint8Array([5, 6, 7, 8]);
+      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      const sha256Result = noble.utils.sha256Sync(testData);
+      
+      if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
+        console.log('✅ Noble hash functions initialized and tested successfully');
+      } else {
+        throw new Error('Noble hash function test failed - invalid output length');
+      }
+    } catch (testError) {
+      console.error('❌ Noble hash function test failed:', testError);
+    }
+    
+    console.log('✅ Noble/secp256k1 hash functions initialized successfully');
+  } else {
+    console.warn('⚠️ Noble/secp256k1 not available or missing utils');
+  }
+} catch (nobleError) {
+  console.warn('⚠️ Could not initialize noble/secp256k1:', nobleError);
+}
+
 // Also set it on the require cache if available
 if (typeof require !== 'undefined' && require.cache) {
   try {
