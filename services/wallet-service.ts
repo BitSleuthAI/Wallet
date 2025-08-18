@@ -474,10 +474,31 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     console.log('Generating first address...');
     let firstAddress;
     try {
+      console.log('About to call generateAddressFromXpub with xpub:', xpub.substring(0, 20) + '...');
       firstAddress = await generateAddressFromXpub(xpub, 0);
       console.log('✅ First address generated:', firstAddress);
     } catch (addressError) {
-      console.error('Address generation failed:', addressError);
+      console.error('❌ Address generation failed with error:', addressError);
+      console.error('❌ Error details:', {
+        message: addressError instanceof Error ? addressError.message : 'Unknown error',
+        stack: addressError instanceof Error ? addressError.stack : 'No stack trace',
+        xpub: xpub ? xpub.substring(0, 20) + '...' : 'undefined'
+      });
+      
+      // Try to provide more specific error information
+      if (addressError instanceof Error) {
+        if (addressError.message.includes('ECC')) {
+          throw new Error('ECC library error during address generation: ' + addressError.message);
+        }
+        if (addressError.message.includes('BIP32')) {
+          throw new Error('BIP32 error during address generation: ' + addressError.message);
+        }
+        if (addressError.message.includes('bitcoinjs')) {
+          throw new Error('Bitcoin library error during address generation: ' + addressError.message);
+        }
+        throw new Error('Address generation failed: ' + addressError.message);
+      }
+      
       throw new Error('Failed to generate first address');
     }
 
@@ -628,20 +649,40 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     }
     
     console.log('Parsing xpub...');
-    const node = bip32.fromBase58(xpub);
+    let node;
+    try {
+      node = bip32.fromBase58(xpub);
+      console.log('✅ Successfully parsed xpub');
+    } catch (xpubError) {
+      console.error('❌ Failed to parse xpub:', xpubError);
+      throw new Error('Invalid xpub format: ' + (xpubError instanceof Error ? xpubError.message : 'Unknown error'));
+    }
     
     console.log('Deriving child key...');
-    const child = node.derive(0).derive(index);
+    let child;
+    try {
+      child = node.derive(0).derive(index);
+      console.log('✅ Successfully derived child key for index', index);
+    } catch (deriveError) {
+      console.error('❌ Failed to derive child key:', deriveError);
+      throw new Error('Failed to derive child key: ' + (deriveError instanceof Error ? deriveError.message : 'Unknown error'));
+    }
     
     console.log('Creating payment address...');
     const pubkey = child.publicKey;
     if (!pubkey || pubkey.length === 0) {
+      console.error('❌ Invalid public key derived - pubkey is null or empty');
+      console.error('Child object:', {
+        hasPublicKey: !!child.publicKey,
+        publicKeyLength: child.publicKey ? child.publicKey.length : 0,
+        childKeys: Object.keys(child)
+      });
       throw new Error('Invalid public key derived');
     }
     
     console.log('Public key length:', pubkey.length, 'bytes');
     const pubkeyBytes = Array.from(pubkey.slice(0, 10)) as number[];
-    console.log('Public key (first 10 bytes):', pubkeyBytes.map(b => b.toString(16).padStart(2, '0')).join(' '));
+    console.log('Public key (first 10 bytes):', pubkeyBytes.map((b: number) => b.toString(16).padStart(2, '0')).join(' '));
     
     try {
       // Ensure we have a proper Buffer for bitcoinjs-lib
@@ -656,8 +697,8 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       
       console.log('Payment object created:', {
         address: payment.address,
-        hash: payment.hash ? (Array.from(payment.hash.slice(0, 10)) as number[]).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none',
-        output: payment.output ? (Array.from(payment.output.slice(0, 10)) as number[]).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none'
+        hash: payment.hash ? (Array.from(payment.hash.slice(0, 10)) as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join(' ') : 'none',
+        output: payment.output ? (Array.from(payment.output.slice(0, 10)) as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join(' ') : 'none'
       });
       
       if (!payment?.address) {
