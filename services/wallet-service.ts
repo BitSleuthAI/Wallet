@@ -640,7 +640,8 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     }
     
     console.log('Public key length:', pubkey.length, 'bytes');
-    console.log('Public key (first 10 bytes):', Array.from(pubkey.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '));
+    const pubkeyBytes = Array.from(pubkey.slice(0, 10)) as number[];
+    console.log('Public key (first 10 bytes):', pubkeyBytes.map(b => b.toString(16).padStart(2, '0')).join(' '));
     
     try {
       // Ensure we have a proper Buffer for bitcoinjs-lib
@@ -655,8 +656,8 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       
       console.log('Payment object created:', {
         address: payment.address,
-        hash: payment.hash ? Array.from(payment.hash.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none',
-        output: payment.output ? Array.from(payment.output.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none'
+        hash: payment.hash ? (Array.from(payment.hash.slice(0, 10)) as number[]).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none',
+        output: payment.output ? (Array.from(payment.output.slice(0, 10)) as number[]).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none'
       });
       
       if (!payment?.address) {
