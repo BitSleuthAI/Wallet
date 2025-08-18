@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "app.bitsleuth-wallet",
+      "bundleIdentifier": "ai.bitsleuth.wallet",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.bitsleuth-wallet",
+      "package": "ai.bitsleuth.wallet",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
