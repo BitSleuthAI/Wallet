@@ -146,6 +146,36 @@ const createECC = () => {
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
+// Wait for crypto initialization with timeout
+const waitForCryptoInitialization = async (maxWaitMs: number = 5000): Promise<void> => {
+  const startTime = Date.now();
+  
+  while (Date.now() - startTime < maxWaitMs) {
+    // Check if crypto initialization flag is set
+    if ((global as any).__cryptoInitialized) {
+      console.log('✅ Crypto initialization flag detected');
+      
+      // Double-check that crypto is actually working
+      if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
+        try {
+          // Test crypto functionality
+          const testArray = new Uint8Array(4);
+          crypto.getRandomValues(testArray);
+          console.log('✅ Crypto initialization verified');
+          return;
+        } catch (error) {
+          console.log('Crypto test failed despite flag, waiting...', error);
+        }
+      }
+    }
+    
+    // Wait 100ms before checking again
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  console.warn('⚠️ Crypto initialization timeout, proceeding anyway');
+};
+
 export const generateMnemonic = async (strength: number = 128): Promise<string> => {
   // Fallback mnemonics for demo purposes
   const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
@@ -329,20 +359,15 @@ export const importWallet = async (name: string, mnemonic: string, color: string
   try {
     console.log('Attempting to import wallet on mobile platform:', Platform.OS);
     
+    // Wait for crypto initialization
+    await waitForCryptoInitialization();
+    
     // Check if required libraries are available
     if (!bip39) {
       console.error('BIP39 library not available');
       throw new Error('BIP39 library not available');
     }
     console.log('✅ BIP39 library available');
-    
-    // Proceed even if global.hashes is not present; bip32 v5 uses provided ECC and internal hashes.
-    const globalHashes = (global as any).hashes;
-    if (!globalHashes || typeof globalHashes.hmacSha256Sync !== 'function') {
-      console.warn('Hash helpers not found; continuing with library defaults');
-    } else {
-      console.log('✅ Hash functions available');
-    }
     
     // Initialize ECC with better error handling
     let ecc;

@@ -1,4 +1,6 @@
-// Import crypto polyfill FIRST before any other modules
+// Import ECC override FIRST to prevent tiny-secp256k1 WASM loading
+import '@/services/ecc-override';
+// Import crypto polyfill SECOND
 import '@/services/crypto-polyfill';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";

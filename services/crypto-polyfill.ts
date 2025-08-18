@@ -370,6 +370,9 @@ if (typeof global.Buffer === 'undefined') {
   console.log('✅ Buffer polyfill set up successfully');
 }
 
+// Set initialization flag
+(global as any).__cryptoInitialized = true;
+
 // Final verification
 setTimeout(() => {
   console.log('🔍 Final crypto verification after module load...');
@@ -377,6 +380,7 @@ setTimeout(() => {
   console.log('Global crypto.getRandomValues available:', typeof crypto?.getRandomValues === 'function');
   console.log('Global Buffer available:', typeof global.Buffer !== 'undefined');
   console.log('Global hashes available:', typeof (global as any).hashes !== 'undefined');
+  console.log('Crypto initialization flag:', (global as any).__cryptoInitialized);
   
   if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
     try {
