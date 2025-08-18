@@ -1,5 +1,6 @@
 // Crypto must be initialized before any ECC libs
-import '@/services/crypto-polyfill';
+import { initializeCrypto } from '../services/crypto-polyfill';
+initializeCrypto();
 // Then install ECC override to ensure noble uses patched utils
 import '@/services/ecc-override';
 

@@ -505,11 +505,8 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     // Initialize ECC with better error handling
     let ecc;
     try {
-      ecc = createECC();
-      console.log('✅ ECC library initialized');
-      
-      // Validate ECC has required methods
-      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
+      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
         throw new Error('ECC library missing required methods');
       }
       
@@ -661,8 +658,8 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     // Create ECC with error handling
     let ecc;
     try {
-      ecc = createECC();
-      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
+      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
         throw new Error('ECC library missing required methods');
       }
     } catch (eccError) {
@@ -757,8 +754,8 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     let ecc;
     try {
-      ecc = createECC();
-      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
+      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
         throw new Error('ECC library missing required methods');
       }
     } catch (eccError) {

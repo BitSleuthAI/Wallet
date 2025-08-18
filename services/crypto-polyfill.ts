@@ -84,18 +84,33 @@ const simpleHmacSha256 = (key: Uint8Array, msg: Uint8Array): Uint8Array => {
   return simpleSha256(concatBytes(opad, simpleSha256(concatBytes(ipad, msg))));
 };
 
-try {
-  const noble = require('@noble/secp256k1');
-  if (noble?.utils) {
-    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
-    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
-    if (!noble.utils.concatBytes) noble.utils.concatBytes = concatBytes;
-    (global as any).__noble = noble;
-    console.log('✅ noble utils patched (sha256Sync, hmacSha256Sync)');
+const patchNoble = () => {
+  try {
+    const noble = require('@noble/secp256k1');
+    if (noble?.utils) {
+      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
+      if (!noble.utils.concatBytes) noble.utils.concatBytes = concatBytes;
+      (global as any).__noble = noble;
+      console.log('✅ noble utils patched (sha256Sync, hmacSha256Sync)');
+      return true;
+    }
+  } catch (e) {
+    console.error('❌ Failed to patch noble utils:', e);
   }
-} catch (e) {
-  console.log('⚠️ noble not initialized yet:', e);
-}
+  return false;
+};
 
-(global as any).__cryptoInitialized = true;
+let patched = false;
+export const initializeCrypto = () => {
+  if (patched) return;
+  if (patchNoble()) {
+    patched = true;
+    (global as any).__cryptoInitialized = true;
+    console.log('✅ Crypto initialized');
+  } else {
+    console.error('❌ Failed to initialize crypto');
+  }
+};
+
 export {};
