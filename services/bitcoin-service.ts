@@ -1,20 +1,33 @@
 import { BitcoinPrice, Transaction, UTXO } from '@/types/wallet';
-import bip32 from 'bip32';
-import * as bitcoin from 'bitcoinjs-lib';
 import { Platform } from 'react-native';
-import { initializeCrypto } from './crypto-polyfill';
 
-// Ensure crypto is initialized before any bitcoinjs-lib operations
-console.log('🔧 Initializing ECC library...');
-initializeCrypto();
-const ecc = (global as any).ecc;
-if (!ecc) {
-  console.error('❌ ECC library not initialized');
-  throw new Error('ECC library not initialized');
-}
-const bip32Instance = bip32(ecc);
-bitcoin.initEccLib(ecc);
-console.log('✅ ECC library initialized successfully');
+// Don't initialize ECC at module load time - do it lazily when needed
+let eccInitialized = false;
+
+const ensureECC = () => {
+  if (eccInitialized) return;
+  
+  try {
+    const { initializeCrypto } = require('./crypto-polyfill');
+    initializeCrypto();
+    
+    const ecc = (global as any).ecc;
+    if (!ecc) {
+      console.warn('⚠️ ECC library not available, some features may not work');
+      return;
+    }
+    
+    const bitcoin = require('bitcoinjs-lib');
+    if (typeof bitcoin.initEccLib === 'function') {
+      bitcoin.initEccLib(ecc);
+      console.log('✅ ECC library initialized for bitcoin service');
+    }
+    
+    eccInitialized = true;
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize ECC for bitcoin service:', error);
+  }
+};
 
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
 const MEMPOOL_API = 'https://mempool.space/api';
@@ -42,6 +55,17 @@ async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: numbe
       throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     return await response.json();
+  } catch (error) {
+    // Handle network errors more gracefully
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timeout');
+      }
+      if (error.message.includes('Failed to fetch')) {
+        throw new Error('Network error - please check your connection');
+      }
+    }
+    throw error;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -80,14 +104,14 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
     try {
       console.log(`Fetching Bitcoin price from ${api.name}...`);
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
       
       const response = await fetch(api.url, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
         },
-        mode: 'cors',
+        ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
       });
       
       clearTimeout(timeoutId);
@@ -114,16 +138,19 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
   // If all APIs fail, return fallback price with realistic variation
   console.log('All price APIs failed, using fallback Bitcoin price data');
   const basePrice = 45000;
-  const variation = (Math.random() - 0.5) * 2000; // ±$1000 variation
-  const fallbackPrice = Math.max(basePrice + variation, 30000); // Minimum $30k
+  const variation = (Math.random() - 0.5) * 2000;
+  const fallbackPrice = Math.max(basePrice + variation, 30000);
   
   return {
     usd: Math.round(fallbackPrice),
-    usd_24h_change: (Math.random() - 0.5) * 10, // Random ±5% change
+    usd_24h_change: (Math.random() - 0.5) * 10,
   };
 };
 
 export const getAddressBalance = async (address: string): Promise<number> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     console.log('Fetching balance for address:', address);
     const data = await fetchJSON(`${API_BASE}/address/${address}`, {
@@ -132,7 +159,7 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     });
     
     if (!data.chain_stats || typeof data.chain_stats.funded_txo_sum !== 'number') {
-      throw new Error('Invalid response format from Blockstream API');
+      throw new Error('Invalid response format from API');
     }
     
     // Convert from satoshis to BTC
@@ -142,6 +169,7 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   } catch (error) {
     console.error('Error fetching address balance:', error);
 
+    // Return a small demo balance for testing
     const demoBalance = Math.random() * 0.001;
     console.log('Using demo balance:', demoBalance, 'BTC');
     return demoBalance;
@@ -149,6 +177,9 @@ export const getAddressBalance = async (address: string): Promise<number> => {
 };
 
 export const getWalletBalance = async (addresses: string[]): Promise<number> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     const balancePromises = addresses.map(address => getAddressBalance(address));
     const balances = await Promise.all(balancePromises);
@@ -160,6 +191,9 @@ export const getWalletBalance = async (addresses: string[]): Promise<number> => 
 };
 
 export const getAddressTransactions = async (address: string): Promise<any[]> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     console.log('Fetching transactions for address:', address);
     const data = await fetchJSON(`${API_BASE}/address/${address}/txs`, {
@@ -168,7 +202,7 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
     });
     
     if (!Array.isArray(data)) {
-      throw new Error('Invalid response format from Blockstream API');
+      throw new Error('Invalid response format from API');
     }
     
     console.log('✅ Address transactions fetched:', data.length, 'transactions');
@@ -202,6 +236,9 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
 };
 
 export const getTransactionHistory = async (addresses: string[]): Promise<Transaction[]> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     const transactionPromises = addresses.map(address => getAddressTransactions(address));
     const addressTransactions = await Promise.all(transactionPromises);
@@ -249,6 +286,9 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
 };
 
 export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     const data = await fetchJSON(`${API_BASE}/address/${address}/utxo`, { timeoutMs: 15000 });
     return data as UTXO[];
@@ -259,6 +299,9 @@ export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
 };
 
 export const broadcastTransaction = async (txHex: string): Promise<string> => {
+  // Ensure ECC is initialized for any crypto operations
+  ensureECC();
+  
   try {
     const response = await fetch(`${BLOCKSTREAM_API}/tx`, {
       method: 'POST',

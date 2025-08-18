@@ -35,18 +35,14 @@ export const createNobleECC = () => {
       const { hmac } = require('@noble/hashes/hmac');
       
       hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-        console.log('🔐 ECC Override HMAC-SHA256 (noble/hashes) called with key length:', key.length, 'msgs count:', msgs.length);
         const data = concatBytes(...msgs);
         const result = hmac(sha256, key, data);
-        console.log('✅ ECC Override HMAC-SHA256 result length:', result.length);
         return result;
       };
       
       shaImpl = (...msgs: Uint8Array[]) => {
-        console.log('🔐 ECC Override SHA256 (noble/hashes) called with msgs count:', msgs.length);
         const data = concatBytes(...msgs);
         const result = sha256(data);
-        console.log('✅ ECC Override SHA256 result length:', result.length);
         return result;
       };
       
@@ -94,18 +90,14 @@ export const createNobleECC = () => {
       };
       
       hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-        console.log('🔐 ECC Override HMAC-SHA256 (fallback) called with key length:', key.length, 'msgs count:', msgs.length);
         const data = concatBytes(...msgs);
         const result = simpleHmac(key, data);
-        console.log('✅ ECC Override HMAC-SHA256 result length:', result.length);
         return result;
       };
       
       shaImpl = (...msgs: Uint8Array[]) => {
-        console.log('🔐 ECC Override SHA256 (fallback) called with msgs count:', msgs.length);
         const data = concatBytes(...msgs);
         const result = simpleSha256(data);
-        console.log('✅ ECC Override SHA256 result length:', result.length);
         return result;
       };
     }
@@ -137,7 +129,6 @@ export const createNobleECC = () => {
       
       const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
       if (!hmacResult || hmacResult.length !== 32) {
-        console.error('❌ HMAC test failed - result:', hmacResult, 'length:', hmacResult?.length);
         throw new Error('HMAC function test failed - invalid output');
       }
       
@@ -148,7 +139,6 @@ export const createNobleECC = () => {
       
       const sha256Result = noble.utils.sha256Sync(testData);
       if (!sha256Result || sha256Result.length !== 32) {
-        console.error('❌ SHA256 test failed - result:', sha256Result, 'length:', sha256Result?.length);
         throw new Error('SHA256 function test failed - invalid output');
       }
       
@@ -236,7 +226,7 @@ export const createNobleECC = () => {
 
           // Ensure hash functions are available before signing
           if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
-            throw new Error('Hash functions not available for signing');
+            throw new Error('hashes.hmacSha256Sync not set');
           }
 
           const sig = noble.sign(hash, privateKey);
@@ -250,6 +240,9 @@ export const createNobleECC = () => {
           }
         } catch (err) {
           console.error('ECC sign error:', err);
+          if (err instanceof Error && err.message.includes('Hash functions not available')) {
+            throw new Error('hashes.hmacSha256Sync not set');
+          }
           throw err;
         }
       },
