@@ -294,22 +294,10 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
       });
+      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
     } catch (e) {
-      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
-      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
-        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
-        const k = toBytes(key);
-        const d = toBytes(data);
-        const combined = new Uint8Array(k.length + d.length);
-        combined.set(k, 0);
-        combined.set(d, k.length);
-        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
-        const out = new Uint8Array(64);
-        out.set(hash, 0);
-        out.set(hash, 32);
-        return out;
-      };
-      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+      console.error('❌ noble/hashes not available:', e);
+      throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     console.log('✅ BIP32 factory created');
 
@@ -421,22 +409,10 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
       });
+      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
     } catch (e) {
-      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
-      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
-        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
-        const k = toBytes(key);
-        const d = toBytes(data);
-        const combined = new Uint8Array(k.length + d.length);
-        combined.set(k, 0);
-        combined.set(d, k.length);
-        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
-        const out = new Uint8Array(64);
-        out.set(hash, 0);
-        out.set(hash, 32);
-        return out;
-      };
-      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+      console.error('❌ noble/hashes not available:', e);
+      throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     const bitcoin = require('bitcoinjs-lib');
     if (typeof bitcoin.initEccLib === 'function') {
@@ -511,22 +487,10 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
       });
+      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
     } catch (e) {
-      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
-      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
-        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
-        const k = toBytes(key);
-        const d = toBytes(data);
-        const combined = new Uint8Array(k.length + d.length);
-        combined.set(k, 0);
-        combined.set(d, k.length);
-        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
-        const out = new Uint8Array(64);
-        out.set(hash, 0);
-        out.set(hash, 32);
-        return out;
-      };
-      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+      console.error('❌ noble/hashes not available:', e);
+      throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     
     const seed = await bip39.mnemonicToSeed(mnemonic.trim());
