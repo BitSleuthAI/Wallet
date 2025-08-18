@@ -1,15 +1,6 @@
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
 
-// Initialize crypto immediately on module load
-console.log('🚀 Initializing crypto in RootLayout...');
-(async () => {
-  const success = await initializeCrypto();
-  if (!success) {
-    console.error('❌ Failed to initialize crypto in RootLayout');
-  }
-})();
-
 import { WalletProvider } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -17,14 +8,6 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-
-// Double-check crypto initialization
-if (!(global as any).__cryptoInitialized) {
-  console.log('⚠️ Crypto not initialized, attempting again...');
-  (async () => {
-    await initializeCrypto();
-  })();
-}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -46,25 +29,22 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    // Ensure crypto is initialized before hiding splash
+    // Initialize crypto synchronously on app start
     const ensureCrypto = async () => {
-      let attempts = 0;
-      while (attempts < 5 && !(global as any).__cryptoInitialized) {
-        console.log(`Attempt ${attempts + 1}: Waiting for crypto initialization...`);
+      console.log('🚀 Initializing crypto in RootLayout...');
+      
+      try {
         const success = await initializeCrypto();
         if (success) {
-          break;
+          console.log('✅ Crypto initialized successfully');
+        } else {
+          console.warn('⚠️ Crypto initialization failed, but continuing');
         }
-        await new Promise(resolve => setTimeout(resolve, 200));
-        attempts++;
+      } catch (error) {
+        console.warn('⚠️ Crypto initialization error:', error);
       }
       
-      if ((global as any).__cryptoInitialized) {
-        console.log('✅ Crypto initialized successfully');
-      } else {
-        console.warn('⚠️ Crypto initialization timeout, proceeding anyway');
-      }
-      
+      // Always hide splash screen after attempting initialization
       SplashScreen.hideAsync();
     };
     

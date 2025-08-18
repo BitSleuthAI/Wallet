@@ -238,20 +238,8 @@ export const initializeCrypto = async (): Promise<boolean> => {
   }
 };
 
-// Auto-initialize on module import
-(async () => {
-  try {
-    console.log('🚀 Auto-initializing crypto on module import...');
-    const success = await initializeCrypto();
-    if (success) {
-      console.log('✅ Auto-initialization completed');
-    } else {
-      console.warn('⚠️ Auto-initialization failed');
-    }
-  } catch (e) {
-    console.warn('⚠️ Crypto auto-initialization failed, will attempt lazy init later:', e);
-  }
-})();
+// Note: Auto-initialization removed to prevent race conditions
+// Crypto will be initialized explicitly in RootLayout
 
 export { };
 
