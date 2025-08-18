@@ -406,7 +406,31 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       throw new Error('BIP32 library not available');
     }
     
-    const bip32 = BIP32Factory(ecc);
+    // Provide HMAC-SHA512 implementation required by bip32
+    let bip32;
+    try {
+      const { hmac } = require('@noble/hashes/hmac');
+      const { sha512 } = require('@noble/hashes/sha512');
+      bip32 = BIP32Factory(ecc, {
+        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+      });
+    } catch (e) {
+      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
+      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
+        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
+        const k = toBytes(key);
+        const d = toBytes(data);
+        const combined = new Uint8Array(k.length + d.length);
+        combined.set(k, 0);
+        combined.set(d, k.length);
+        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
+        const out = new Uint8Array(64);
+        out.set(hash, 0);
+        out.set(hash, 32);
+        return out;
+      };
+      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+    }
     console.log('✅ BIP32 factory created');
 
     console.log('Converting mnemonic to seed...');
@@ -517,7 +541,30 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     }
     
     const { BIP32Factory } = require('bip32');
-    const bip32 = BIP32Factory(ecc);
+    let bip32;
+    try {
+      const { hmac } = require('@noble/hashes/hmac');
+      const { sha512 } = require('@noble/hashes/sha512');
+      bip32 = BIP32Factory(ecc, {
+        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+      });
+    } catch (e) {
+      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
+      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
+        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
+        const k = toBytes(key);
+        const d = toBytes(data);
+        const combined = new Uint8Array(k.length + d.length);
+        combined.set(k, 0);
+        combined.set(d, k.length);
+        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
+        const out = new Uint8Array(64);
+        out.set(hash, 0);
+        out.set(hash, 32);
+        return out;
+      };
+      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+    }
     const bitcoin = require('bitcoinjs-lib');
     if (typeof bitcoin.initEccLib === 'function') {
       try {
@@ -590,7 +637,30 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     }
     
     const { BIP32Factory } = require('bip32');
-    const bip32 = BIP32Factory(ecc);
+    let bip32;
+    try {
+      const { hmac } = require('@noble/hashes/hmac');
+      const { sha512 } = require('@noble/hashes/sha512');
+      bip32 = BIP32Factory(ecc, {
+        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+      });
+    } catch (e) {
+      console.warn('⚠️ noble/hashes not available, using fallback HMAC-SHA512:', e);
+      const fallbackHmacSHA512 = (key: Uint8Array, data: Uint8Array) => {
+        const toBytes = (v: any) => (typeof v === 'string' ? new TextEncoder().encode(v) : new Uint8Array(v));
+        const k = toBytes(key);
+        const d = toBytes(data);
+        const combined = new Uint8Array(k.length + d.length);
+        combined.set(k, 0);
+        combined.set(d, k.length);
+        const hash = (global as any).hashes?.sha256 ? (global as any).hashes.sha256('sha256').update(combined).digest() : new Uint8Array(32);
+        const out = new Uint8Array(64);
+        out.set(hash, 0);
+        out.set(hash, 32);
+        return out;
+      };
+      bip32 = BIP32Factory(ecc, { hmacSHA512: fallbackHmacSHA512 });
+    }
     
     const seed = await bip39.mnemonicToSeed(mnemonic.trim());
     const root = bip32.fromSeed(seed);
