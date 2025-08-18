@@ -504,9 +504,6 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       if (error.message.includes('ECC library invalid') || error.message.includes('ecc library invalid')) {
         throw new Error('ECC library invalid');
       }
-      if (error.message.includes('hashes') || error.message.includes('Hash functions')) {
-        throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
-      }
       if (error.message.includes('BIP39')) {
         throw new Error('Mnemonic processing library not available.');
       }
