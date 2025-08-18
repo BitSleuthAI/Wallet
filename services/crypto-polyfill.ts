@@ -8,8 +8,8 @@ if (typeof global === 'undefined') {
 
 console.log('🔧 Initializing crypto polyfill immediately (before Platform import)');
 
-// Note: Avoiding tiny-secp256k1 to prevent bundling issues in Expo Go
-// Using @noble/secp256k1 instead which is more compatible
+// IMPORTANT: Completely avoiding tiny-secp256k1 to prevent WASM loading errors in Expo Go
+// Using only @noble/secp256k1 which is pure JavaScript and compatible with all platforms
 
 // IMMEDIATELY set up crypto.getRandomValues before any other code runs
 const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {

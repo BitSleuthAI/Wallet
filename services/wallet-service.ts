@@ -1,8 +1,13 @@
-// Import crypto polyfill first
+// Import ECC override FIRST to prevent tiny-secp256k1 WASM loading
+import '@/services/ecc-override';
+// Import crypto polyfill second
 import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
+
+// CRITICAL: ECC override is now active to prevent tiny-secp256k1 WASM loading
+console.log('✅ ECC override active - tiny-secp256k1 imports will be redirected to @noble/secp256k1');
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -14,46 +19,16 @@ try {
   bip39 = null;
 }
 
-// Note: Avoiding tiny-secp256k1 completely to prevent bundling issues
-// Using only @noble/secp256k1 which is more compatible with Expo Go
+// IMPORTANT: Completely avoiding tiny-secp256k1 to prevent WASM loading errors
+// Using only @noble/secp256k1 which is pure JavaScript and Expo Go compatible
 
-// Robust ECC implementation using tiny-secp256k1 as primary, with @noble/secp256k1 fallback
+// ECC implementation using only @noble/secp256k1 for Expo Go compatibility
 const createECC = () => {
-  console.log('🔧 Initializing ECC library...');
+  console.log('🔧 Initializing ECC library with @noble/secp256k1...');
 
-  // Try tiny-secp256k1 first (most compatible with bitcoinjs-lib)
-  try {
-    const tinysecp = require('tiny-secp256k1');
-    console.log('✅ Using tiny-secp256k1 as primary ECC implementation');
-    
-    if (!tinysecp || typeof tinysecp.isPrivate !== 'function') {
-      throw new Error('tiny-secp256k1 not properly loaded');
-    }
-
-    // Test basic functionality
-    const testKey = new Uint8Array(32);
-    testKey[31] = 1;
-    
-    if (!tinysecp.isPrivate(testKey)) {
-      throw new Error('tiny-secp256k1 validation failed');
-    }
-    
-    const testPoint = tinysecp.pointFromScalar(testKey, true);
-    if (!testPoint || testPoint.length !== 33) {
-      throw new Error('tiny-secp256k1 point generation failed');
-    }
-    
-    console.log('✅ tiny-secp256k1 self-test passed');
-    return tinysecp;
-    
-  } catch (tinyError) {
-    console.warn('⚠️ tiny-secp256k1 failed, trying @noble/secp256k1:', tinyError);
-  }
-
-  // Fallback to @noble/secp256k1
   try {
     const noble = require('@noble/secp256k1');
-    console.log('✅ Using @noble/secp256k1 as fallback ECC implementation');
+    console.log('✅ Using @noble/secp256k1 as ECC implementation');
     
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
