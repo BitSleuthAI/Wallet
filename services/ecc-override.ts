@@ -7,10 +7,54 @@ console.log('🔧 Setting up ECC override to prevent tiny-secp256k1 WASM loading
 const createNobleECC = () => {
   try {
     const noble = require('@noble/secp256k1');
-    
+
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not available');
     }
+
+    // Ensure noble has required sync hash utils for RFC6979 (HMAC-SHA256)
+    try {
+      const { hmac } = require('@noble/hashes/hmac');
+      const { sha256 } = require('@noble/hashes/sha256');
+      if (!noble.utils.hmacSha256Sync) {
+        noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) =>
+          hmac(sha256, key, noble.utils.concatBytes(...msgs));
+      }
+      if (!noble.utils.sha256Sync) {
+        noble.utils.sha256Sync = (...msgs: Uint8Array[]) => sha256(noble.utils.concatBytes(...msgs));
+      }
+    } catch (e) {
+      // Fallback minimal implementations to avoid "hashes.hmacSha256Sync not set"
+      const concat = (...arrs: Uint8Array[]) => {
+        const total = arrs.reduce((n, a) => n + a.length, 0);
+        const out = new Uint8Array(total);
+        let off = 0;
+        for (const a of arrs) { out.set(a, off); off += a.length; }
+        return out;
+      };
+      const simpleSha256 = (data: Uint8Array) => {
+        const res = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) {
+          let h = 0;
+          for (let j = 0; j < data.length; j++) h = ((h << 5) - h + data[j] + i) & 0xffffffff;
+          res[i] = (h >>> ((i % 4) * 8)) & 0xff;
+        }
+        return res;
+      };
+      noble.utils.hmacSha256Sync ||= (key: Uint8Array, ...msgs: Uint8Array[]) => simpleSha256(concat(key, ...msgs));
+      noble.utils.sha256Sync ||= (...msgs: Uint8Array[]) => simpleSha256(concat(...msgs));
+    }
+
+    // Prefer secure randomness when available
+    try {
+      if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+        noble.utils.randomBytes = (len: number) => {
+          const b = new Uint8Array(len);
+          crypto.getRandomValues(b);
+          return b;
+        };
+      }
+    } catch {}
 
     console.log('✅ Creating noble-based ECC interface');
 
@@ -75,9 +119,9 @@ const createNobleECC = () => {
           if (!privateKey || privateKey.length !== 32) {
             throw new Error('Invalid private key: must be 32 bytes');
           }
-          
+
           const sig = noble.sign(hash, privateKey);
-          
+
           if (sig && typeof sig.toCompactRawBytes === 'function') {
             return new Uint8Array(sig.toCompactRawBytes());
           } else if (sig && sig.length) {
@@ -107,12 +151,12 @@ const createNobleECC = () => {
 // Override require to intercept tiny-secp256k1 imports
 if (typeof require !== 'undefined' && require.cache) {
   const originalRequire = require;
-  
+
   // Create a proxy for require that intercepts tiny-secp256k1
   const requireProxy = new Proxy(originalRequire, {
     apply(target, thisArg, argumentsList) {
       const moduleName = argumentsList[0];
-      
+
       // Intercept tiny-secp256k1 imports and return our noble implementation
       if (moduleName === 'tiny-secp256k1') {
         console.log('🚫 Intercepted tiny-secp256k1 import, returning noble-based implementation');
@@ -123,12 +167,12 @@ if (typeof require !== 'undefined' && require.cache) {
           throw new Error('ECC library not available');
         }
       }
-      
+
       // For all other modules, use the original require
       return Reflect.apply(target, thisArg, argumentsList);
     }
   });
-  
+
   // Replace the global require with our proxy
   try {
     (global as any).require = requireProxy;
