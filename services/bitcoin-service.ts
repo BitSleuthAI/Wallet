@@ -1,7 +1,36 @@
 import { Transaction, UTXO, BitcoinPrice } from '@/types/wallet';
+import { Platform } from 'react-native';
 
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
+const MEMPOOL_API = 'https://mempool.space/api';
 
+const API_BASE = Platform.select({
+  web: MEMPOOL_API,
+  default: BLOCKSTREAM_API,
+});
+
+async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: number }) {
+  const { timeoutMs = 15000, ...rest } = init ?? {};
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(input, {
+      signal: controller.signal,
+      headers: {
+        Accept: 'application/json',
+        ...(rest?.headers ?? {}),
+      },
+      ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
+      ...rest,
+    });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    return await response.json();
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
 // Multiple price API endpoints for redundancy
 const PRICE_APIS = [
   {
@@ -43,7 +72,7 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
         headers: {
           'Accept': 'application/json',
         },
-        mode: 'cors', // Explicitly set CORS mode
+        mode: 'cors',
       });
       
       clearTimeout(timeoutId);
@@ -82,24 +111,10 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
 export const getAddressBalance = async (address: string): Promise<number> => {
   try {
     console.log('Fetching balance for address:', address);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(`${BLOCKSTREAM_API}/address/${address}`, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    const data = await fetchJSON(`${API_BASE}/address/${address}`, {
+      timeoutMs: 15000,
+      headers: { 'Content-Type': 'application/json' },
     });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
     
     if (!data.chain_stats || typeof data.chain_stats.funded_txo_sum !== 'number') {
       throw new Error('Invalid response format from Blockstream API');
@@ -111,9 +126,8 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     return balance;
   } catch (error) {
     console.error('Error fetching address balance:', error);
-    
-    // For demo purposes, return a small random balance
-    const demoBalance = Math.random() * 0.001; // 0 to 0.001 BTC
+
+    const demoBalance = Math.random() * 0.001;
     console.log('Using demo balance:', demoBalance, 'BTC');
     return demoBalance;
   }
@@ -133,24 +147,10 @@ export const getWalletBalance = async (addresses: string[]): Promise<number> => 
 export const getAddressTransactions = async (address: string): Promise<any[]> => {
   try {
     console.log('Fetching transactions for address:', address);
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(`${BLOCKSTREAM_API}/address/${address}/txs`, {
-      signal: controller.signal,
-      headers: {
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
+    const data = await fetchJSON(`${API_BASE}/address/${address}/txs`, {
+      timeoutMs: 15000,
+      headers: { 'Content-Type': 'application/json' },
     });
-    
-    clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    
-    const data = await response.json();
     
     if (!Array.isArray(data)) {
       throw new Error('Invalid response format from Blockstream API');
@@ -235,8 +235,8 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
 
 export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
   try {
-    const response = await fetch(`${BLOCKSTREAM_API}/address/${address}/utxo`);
-    return await response.json();
+    const data = await fetchJSON(`${API_BASE}/address/${address}/utxo`, { timeoutMs: 15000 });
+    return data as UTXO[];
   } catch (error) {
     console.error('Error fetching UTXOs:', error);
     return [];
