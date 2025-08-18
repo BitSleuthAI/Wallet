@@ -279,9 +279,12 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
+    console.log('🌐 Platform detected as web, using web service');
     const webService = require('./wallet-service.web');
     return webService.createWallet(name, color);
   }
+  
+  console.log('📱 Platform detected as mobile:', Platform.OS);
 
   try {
     console.log('Creating new wallet:', name);
@@ -297,9 +300,12 @@ export const createWallet = async (name: string, color: string = '#8B5CF6'): Pro
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
+    console.log('🌐 Platform detected as web, using web service for import');
     const webService = require('./wallet-service.web');
     return webService.importWallet(name, mnemonic, color);
   }
+  
+  console.log('📱 Platform detected as mobile for import:', Platform.OS);
 
   console.log('Starting wallet import process...');
   
@@ -539,8 +545,11 @@ export const importWallet = async (name: string, mnemonic: string, color: string
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
   if (Platform.OS === 'web') {
-    throw new Error('Address derivation is not available on web in Expo Go. Please use a mobile device.');
+    console.log('🌐 Platform detected as web, throwing web error for address generation');
+    throw new Error('Address derivation is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
   }
+  
+  console.log('📱 Platform detected as mobile for address generation:', Platform.OS);
   
   try {
     console.log(`Generating address from xpub for index ${index}`);
@@ -722,7 +731,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     if (error instanceof Error && error.message.includes('ECC library invalid')) {
       throw new Error('ECC library invalid');
     }
-    throw new Error('Failed to generate address. This feature requires a mobile device.');
+    throw new Error('Failed to generate address. Please open this project on a mobile device using the QR code.');
   }
 };
 
