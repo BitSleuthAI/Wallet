@@ -545,8 +545,9 @@ export const importWallet = async (name: string, mnemonic: string, color: string
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, throwing web error for address generation');
-    throw new Error('Address derivation is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+    console.log('🌐 Platform detected as web, using web service for address generation');
+    const webService = require('./wallet-service.web');
+    return webService.generateAddressFromXpub(xpub, index);
   }
   
   console.log('📱 Platform detected as mobile for address generation:', Platform.OS);
@@ -736,6 +737,12 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
+  if (Platform.OS === 'web') {
+    console.log('🌐 Platform detected as web, using web service for new address');
+    const webService = require('./wallet-service.web');
+    return webService.generateNewAddress(wallet);
+  }
+  
   const newIndex = wallet.currentAddressIndex + 1;
   const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
   return {
@@ -747,7 +754,9 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 
 export const getPrivateKey = async (mnemonic: string, addressIndex: number): Promise<string> => {
   if (Platform.OS === 'web') {
-    throw new Error('Private key export is not available on web in Expo Go. Please use a mobile device.');
+    console.log('🌐 Platform detected as web, using web service for private key');
+    const webService = require('./wallet-service.web');
+    return webService.getPrivateKey(mnemonic, addressIndex);
   }
   
   try {
