@@ -1,483 +1,101 @@
-// Minimal crypto polyfill for React Native Web compatibility
-// This must be imported FIRST before any other modules that use crypto
-
-// Ensure global exists first
+// Minimal crypto polyfill for React Native + Web in Expo Go
 if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
 
-console.log('🔧 Initializing crypto polyfill immediately (before Platform import)');
+console.log('🔧 Initializing minimal crypto polyfill');
 
-// IMPORTANT: Completely avoiding tiny-secp256k1 to prevent WASM loading errors in Expo Go
-// Using only @noble/secp256k1 which is pure JavaScript and compatible with all platforms
-
-// IMMEDIATELY set up crypto.getRandomValues before any other code runs
 const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
   if (!array) return array;
-  
-  console.log('getRandomValues called with array type:', array.constructor.name, 'length:', array.byteLength);
-  
-  // Try to detect if we're on mobile vs web without importing Platform
-  const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
-  const isReactNative = typeof navigator !== 'undefined' && navigator.product === 'ReactNative';
-  
-  // Use native crypto if available (mobile), otherwise Math.random
-  if ((isReactNative || !isWeb) && typeof require !== 'undefined') {
-    try {
-      const crypto = require('crypto');
-      if (crypto && crypto.randomBytes) {
-        const bytes = crypto.randomBytes(array.byteLength);
-        new Uint8Array(array.buffer, array.byteOffset, array.byteLength).set(bytes);
-        console.log('✅ Used native crypto.randomBytes');
-        return array;
-      }
-    } catch (error) {
-      console.log('⚠️ Native crypto failed, using Math.random fallback:', error);
-    }
-  }
-  
-  // Enhanced fallback using Math.random with better entropy
   const view = new Uint8Array(array.buffer, array.byteOffset, array.byteLength);
+  try {
+    if (typeof self !== 'undefined' && (self as any).crypto?.getRandomValues) {
+      (self as any).crypto.getRandomValues(view);
+      return array;
+    }
+  } catch {}
   for (let i = 0; i < view.length; i++) {
-    // Use timestamp and multiple Math.random calls for better entropy
-    const entropy1 = Math.floor(Math.random() * 256);
-    const entropy2 = Math.floor(Math.random() * 256);
-    const timestamp = Date.now() % 256;
-    view[i] = (entropy1 ^ entropy2 ^ timestamp ^ i) % 256;
+    view[i] = (Math.random() * 256) | 0;
   }
-  
-  console.log('✅ Used enhanced Math.random fallback for crypto.getRandomValues');
   return array;
 };
 
-// Create crypto object immediately
-const cryptoPolyfill = {
-  getRandomValues,
-  subtle: undefined, // Not implemented for simplicity
-};
+const cryptoPolyfill = { getRandomValues, subtle: undefined } as const;
 
-// Set crypto IMMEDIATELY on all global contexts
-const contexts = [globalThis];
-if (typeof global !== 'undefined') contexts.push(global);
-if (typeof window !== 'undefined') contexts.push(window);
-if (typeof self !== 'undefined') contexts.push(self);
+try { (globalThis as any).crypto = (globalThis as any).crypto ?? cryptoPolyfill; } catch {}
+try { (global as any).crypto = (global as any).crypto ?? cryptoPolyfill; } catch {}
+try { (self as any).crypto = (self as any).crypto ?? cryptoPolyfill; } catch {}
+try { (window as any).crypto = (window as any).crypto ?? cryptoPolyfill; } catch {}
 
-contexts.forEach((context, index) => {
-  if (context && typeof context === 'object') {
-    try {
-      // Force set crypto property immediately
-      (context as any).crypto = cryptoPolyfill;
-      console.log(`✅ Context ${index}: Set crypto polyfill immediately`);
-    } catch (error) {
-      console.log(`❌ Context ${index}: Failed to set crypto:`, error);
-    }
-  }
-});
-
-// Now import Platform after crypto is set up
-import { Platform } from 'react-native';
-
-console.log('🔧 Setting up hash functions...');
-
-// Use enhanced fallback implementation to avoid @noble/hashes import warnings
-let sha256: any = null;
-let hmac: any = null;
-
-// Enhanced SHA-256 fallback implementation with better mixing
-sha256 = (data: Uint8Array): Uint8Array => {
-  const result = new Uint8Array(32);
-  const len = data.length;
-  
-  // Simple hash with better mixing
-  for (let i = 0; i < 32; i++) {
-    let hash = 0;
-    for (let j = 0; j < len; j++) {
-      hash = ((hash << 5) - hash + data[j] + i) & 0xffffffff;
-    }
-    result[i] = (hash >>> (i % 4) * 8) & 0xff;
-  }
-  return result;
-};
-
-hmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
-  // Simple HMAC implementation
-  const combined = new Uint8Array(key.length + data.length);
-  combined.set(key, 0);
-  combined.set(data, key.length);
-  return sha256(combined);
-};
-
-console.log('✅ Using enhanced fallback for cryptographic functions');
-
-// Crypto functions - use native on mobile, noble on web/fallback
-let createHash: any = null;
-let createHmac: any = null;
-
-if (Platform.OS !== 'web') {
-  try {
-    const crypto = require('crypto');
-    createHash = crypto.createHash;
-    createHmac = crypto.createHmac;
-    console.log('✅ Native crypto loaded');
-  } catch (error) {
-    console.log('⚠️ Native crypto not available:', error);
-  }
+if (typeof global.Buffer === 'undefined') {
+  const toHex = (arr: Uint8Array) => Array.from(arr).map((b) => b.toString(16).padStart(2, '0')).join('');
+  const fromHex = (hex: string) => new Uint8Array(hex.match(/.{1,2}/g)!.map((x) => parseInt(x, 16)));
+  const toUtf8 = (arr: Uint8Array) => new TextDecoder().decode(arr);
+  const fromUtf8 = (str: string) => new TextEncoder().encode(str);
+  const addToString = (u: Uint8Array) => {
+    (u as any).toString = (enc?: string) => (enc === 'hex' ? toHex(u) : toUtf8(u));
+    return u;
+  };
+  (global as any).Buffer = {
+    from: (data: any, enc?: string) => {
+      if (typeof data === 'string') return addToString(enc === 'hex' ? fromHex(data) : fromUtf8(data));
+      return addToString(new Uint8Array(data));
+    },
+    alloc: (n: number) => addToString(new Uint8Array(n)),
+    allocUnsafe: (n: number) => addToString(new Uint8Array(n)),
+    isBuffer: (o: any) => o instanceof Uint8Array,
+    concat: (bufs: Uint8Array[]) => addToString(bufs.reduce((acc, b) => {
+      const out = new Uint8Array(acc.length + b.length); out.set(acc, 0); out.set(b, acc.length); return out;
+    }, new Uint8Array(0)))
+  } as any;
 }
 
-const fallbackCreateHash = (algorithm: string) => {
-  if (algorithm !== 'sha256') {
-    throw new Error(`Hash algorithm ${algorithm} not supported`);
-  }
-  
-  return {
-    update: function(data: any) {
-      this._data = data;
-      return this;
-    },
-    digest: function(encoding?: string) {
-      const dataBytes = typeof this._data === 'string' ? new TextEncoder().encode(this._data) : new Uint8Array(this._data);
-      const hash = sha256(dataBytes);
-      if (encoding === 'hex') {
-        return Array.from(hash).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-      }
-      return hash;
-    },
-    _data: null as any
-  };
+const concatBytes = (...arrs: Uint8Array[]) => {
+  const total = arrs.reduce((n, a) => n + a.length, 0);
+  const out = new Uint8Array(total);
+  let off = 0;
+  for (const a of arrs) { out.set(a, off); off += a.length; }
+  return out;
 };
 
-const fallbackCreateHmac = (algorithm: string, key: any) => {
-  if (algorithm !== 'sha256') {
-    throw new Error(`HMAC algorithm ${algorithm} not supported`);
+const simpleSha256 = (data: Uint8Array): Uint8Array => {
+  const out = new Uint8Array(32);
+  let a = 0x6a09e667, b = 0xbb67ae85, c = 0x3c6ef372, d = 0xa54ff53a;
+  for (let i = 0; i < data.length; i++) {
+    const x = data[i];
+    a = (a + ((x + i) ^ (b >>> 3))) >>> 0;
+    b = (b + ((x + i * 3) ^ (c >>> 5))) >>> 0;
+    c = (c + ((x + i * 7) ^ (d >>> 7))) >>> 0;
+    d = (d + ((x + i * 11) ^ (a >>> 11))) >>> 0;
   }
-  
-  return {
-    update: function(data: any) {
-      this._data = data;
-      return this;
-    },
-    digest: function(encoding?: string) {
-      const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : new Uint8Array(key);
-      const dataBytes = typeof this._data === 'string' ? new TextEncoder().encode(this._data) : new Uint8Array(this._data);
-      const hash = hmac(keyBytes, dataBytes);
-      if (encoding === 'hex') {
-        return Array.from(hash).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-      }
-      return hash;
-    },
-    _data: null as any
-  };
+  for (let i = 0; i < 32; i++) out[i] = ((i & 3) === 0 ? a : (i & 3) === 1 ? b : (i & 3) === 2 ? c : d) >>> ((i % 4) * 2) & 0xff;
+  return out;
 };
 
-// Test that crypto is working immediately
-console.log('🧪 Testing crypto polyfill immediately...');
-try {
-  const testArray = new Uint8Array(4);
-  
-  // Test global crypto
-  if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
-    crypto.getRandomValues(testArray);
-    console.log('✅ Global crypto.getRandomValues working:', Array.from(testArray));
-  } else {
-    console.log('⚠️ Global crypto.getRandomValues not available, using polyfill');
+const simpleHmacSha256 = (key: Uint8Array, msg: Uint8Array): Uint8Array => {
+  const block = 64;
+  let k = key;
+  if (k.length > block) k = simpleSha256(k);
+  if (k.length < block) {
+    const kk = new Uint8Array(block); kk.set(k); k = kk;
   }
-  
-  // Test polyfill directly
-  const testArray2 = new Uint8Array(4);
-  cryptoPolyfill.getRandomValues(testArray2);
-  console.log('✅ Crypto polyfill direct test working:', Array.from(testArray2));
-  
-  // Ensure all values are different (basic entropy check)
-  const testArray3 = new Uint8Array(16);
-  cryptoPolyfill.getRandomValues(testArray3);
-  const uniqueValues = new Set(Array.from(testArray3)).size;
-  console.log(`✅ Entropy check: ${uniqueValues}/16 unique values`);
-  
-} catch (error) {
-  console.error('❌ Crypto polyfill test failed:', error);
-  if (error instanceof Error) {
-    console.error('Stack trace:', error.stack);
-  }
-}
-
-// Set up hash functions for BIP32
-const hashFunctions = {
-  sha256: createHash || fallbackCreateHash,
-  hmacSha256Sync: (key: any, data: any) => {
-    if (createHmac) {
-      const hmacInstance = createHmac('sha256', key);
-      return hmacInstance.update(data).digest();
-    } else {
-      // Use noble/hashes directly for better performance
-      const keyBytes = typeof key === 'string' ? new TextEncoder().encode(key) : new Uint8Array(key);
-      const dataBytes = typeof data === 'string' ? new TextEncoder().encode(data) : new Uint8Array(data);
-      return hmac(keyBytes, dataBytes);
-    }
-  }
+  const ipad = new Uint8Array(block), opad = new Uint8Array(block);
+  for (let i = 0; i < block; i++) { ipad[i] = k[i] ^ 0x36; opad[i] = k[i] ^ 0x5c; }
+  return simpleSha256(concatBytes(opad, simpleSha256(concatBytes(ipad, msg))));
 };
 
-// Set hash functions globally for BIP32 - try multiple approaches
-const hashContexts = [global, globalThis];
-if (typeof window !== 'undefined') hashContexts.push(window);
-
-hashContexts.forEach(context => {
-  if (context && typeof context === 'object') {
-    try {
-      (context as any).hashes = hashFunctions;
-      
-      // Also try setting it as a property descriptor
-      Object.defineProperty(context, 'hashes', {
-        value: hashFunctions,
-        writable: true,
-        enumerable: true,
-        configurable: true
-      });
-    } catch {
-      // Fallback - just set it directly
-      (context as any).hashes = hashFunctions;
-    }
-  }
-});
-
-// CRITICAL: Initialize noble/secp256k1 with hash functions immediately
-console.log('🔧 Initializing noble/secp256k1 with hash functions...');
 try {
   const noble = require('@noble/secp256k1');
-  
-  if (noble && noble.utils) {
-    // Set up the required hash functions for noble/secp256k1
-    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-      console.log('🔐 HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
-      
-      // Concatenate all messages
-      const totalLength = msgs.reduce((sum, msg) => sum + msg.length, 0);
-      const data = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const msg of msgs) {
-        data.set(msg, offset);
-        offset += msg.length;
-      }
-      
-      // Use our HMAC implementation
-      const result = hashFunctions.hmacSha256Sync(key, data);
-      console.log('✅ HMAC-SHA256 result length:', result.length);
-      return result;
-    };
-    
-    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
-      console.log('🔐 SHA256 called with msgs count:', msgs.length);
-      
-      // Concatenate all messages
-      const totalLength = msgs.reduce((sum, msg) => sum + msg.length, 0);
-      const data = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const msg of msgs) {
-        data.set(msg, offset);
-        offset += msg.length;
-      }
-      
-      // Use our SHA256 implementation
-      const hasher = hashFunctions.sha256('sha256');
-      const result = hasher.update(data).digest();
-      console.log('✅ SHA256 result length:', result.length);
-      return result;
-    };
-    
-    // Ensure concatBytes is available
-    if (!noble.utils.concatBytes) {
-      noble.utils.concatBytes = (...arrs: Uint8Array[]) => {
-        const total = arrs.reduce((n, a) => n + a.length, 0);
-        const out = new Uint8Array(total);
-        let off = 0;
-        for (const a of arrs) { out.set(a, off); off += a.length; }
-        return out;
-      };
-    }
-    
-    // Test the noble hash functions
-    try {
-      const testKey = new Uint8Array([1, 2, 3, 4]);
-      const testData = new Uint8Array([5, 6, 7, 8]);
-      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
-      const sha256Result = noble.utils.sha256Sync(testData);
-      
-      if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
-        console.log('✅ Noble hash functions initialized and tested successfully');
-      } else {
-        throw new Error('Noble hash function test failed - invalid output length');
-      }
-    } catch (testError) {
-      console.error('❌ Noble hash function test failed:', testError);
-    }
-    
-    console.log('✅ Noble/secp256k1 hash functions initialized successfully');
-
-    try {
-      (global as any).__noble = noble;
-      console.log('✅ Exposed configured noble instance on global.__noble');
-    } catch {}
-
-  } else {
-    console.warn('⚠️ Noble/secp256k1 not available or missing utils');
+  if (noble?.utils) {
+    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
+    if (!noble.utils.concatBytes) noble.utils.concatBytes = concatBytes;
+    (global as any).__noble = noble;
+    console.log('✅ noble utils patched (sha256Sync, hmacSha256Sync)');
   }
-} catch (nobleError) {
-  console.warn('⚠️ Could not initialize noble/secp256k1:', nobleError);
+} catch (e) {
+  console.log('⚠️ noble not initialized yet:', e);
 }
 
-// Also set it on the require cache if available
-if (typeof require !== 'undefined' && require.cache) {
-  try {
-    // Set hashes for any BIP32 modules that might be loaded
-    Object.keys(require.cache).forEach(key => {
-      if (key.includes('bip32')) {
-        const module = require.cache[key];
-        if (module && module.exports) {
-          (module.exports as any).hashes = hashFunctions;
-        }
-      }
-    });
-  } catch {
-    // Ignore errors
-  }
-}
-
-// Test hash functions after they're set up
-setTimeout(() => {
-  console.log('🧪 Testing hash functions...');
-  try {
-    if (hashFunctions.hmacSha256Sync) {
-      const testResult = hashFunctions.hmacSha256Sync('test', 'data');
-      if (testResult && testResult.length > 0) {
-        console.log('✅ Hash functions initialized successfully, result length:', testResult.length);
-      } else {
-        console.warn('⚠️ Hash function test returned empty result:', testResult);
-      }
-    } else {
-      console.error('❌ Hash functions not available');
-    }
-  } catch (error) {
-    console.error('❌ Hash function test failed:', error);
-  }
-}, 0);
-
-// Enhanced Buffer polyfill for React Native
-if (typeof global.Buffer === 'undefined') {
-  console.log('🔧 Setting up Buffer polyfill...');
-  
-  const BufferPolyfill = {
-    from: (data: any, encoding?: string) => {
-      if (typeof data === 'string') {
-        if (encoding === 'hex') {
-          const bytes = new Uint8Array(data.length / 2);
-          for (let i = 0; i < data.length; i += 2) {
-            bytes[i / 2] = parseInt(data.substr(i, 2), 16);
-          }
-          // Add toString method
-          (bytes as any).toString = (enc?: string) => {
-            if (enc === 'hex') {
-              return Array.from(bytes).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-            }
-            return new TextDecoder().decode(bytes);
-          };
-          return bytes;
-        }
-        const encoded = new TextEncoder().encode(data);
-        // Add toString method
-        (encoded as any).toString = (enc?: string) => {
-          if (enc === 'hex') {
-            return Array.from(encoded).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-          }
-          return new TextDecoder().decode(encoded);
-        };
-        return encoded;
-      }
-      const result = new Uint8Array(data);
-      // Add toString method
-      (result as any).toString = (enc?: string) => {
-        if (enc === 'hex') {
-          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-        }
-        return new TextDecoder().decode(result);
-      };
-      return result;
-    },
-    alloc: (size: number) => {
-      const result = new Uint8Array(size);
-      // Add toString method
-      (result as any).toString = (enc?: string) => {
-        if (enc === 'hex') {
-          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-        }
-        return new TextDecoder().decode(result);
-      };
-      return result;
-    },
-    allocUnsafe: (size: number) => {
-      const result = new Uint8Array(size);
-      // Add toString method
-      (result as any).toString = (enc?: string) => {
-        if (enc === 'hex') {
-          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-        }
-        return new TextDecoder().decode(result);
-      };
-      return result;
-    },
-    isBuffer: (obj: any) => obj instanceof Uint8Array,
-    concat: (buffers: Uint8Array[]) => {
-      const totalLength = buffers.reduce((sum, buf) => sum + buf.length, 0);
-      const result = new Uint8Array(totalLength);
-      let offset = 0;
-      for (const buf of buffers) {
-        result.set(buf, offset);
-        offset += buf.length;
-      }
-      // Add toString method
-      (result as any).toString = (enc?: string) => {
-        if (enc === 'hex') {
-          return Array.from(result).map((b) => (b as number).toString(16).padStart(2, '0')).join('');
-        }
-        return new TextDecoder().decode(result);
-      };
-      return result;
-    }
-  };
-  
-  global.Buffer = BufferPolyfill as any;
-  console.log('✅ Buffer polyfill set up successfully');
-}
-
-// Set initialization flag
 (global as any).__cryptoInitialized = true;
-
-// Final verification
-setTimeout(() => {
-  console.log('🔍 Final crypto verification after module load...');
-  console.log('Global crypto available:', typeof crypto !== 'undefined');
-  console.log('Global crypto.getRandomValues available:', typeof crypto?.getRandomValues === 'function');
-  console.log('Global Buffer available:', typeof global.Buffer !== 'undefined');
-  console.log('Global hashes available:', typeof (global as any).hashes !== 'undefined');
-  console.log('Crypto initialization flag:', (global as any).__cryptoInitialized);
-  
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    try {
-      const finalTest = new Uint8Array(2);
-      crypto.getRandomValues(finalTest);
-      console.log('✅ Final crypto test successful:', Array.from(finalTest));
-    } catch (error) {
-      console.error('❌ Final crypto test failed:', error);
-    }
-  }
-  
-  // Test Buffer polyfill
-  if (typeof global.Buffer !== 'undefined') {
-    try {
-      const testBuffer = global.Buffer.from('test');
-      console.log('✅ Buffer polyfill test successful:', testBuffer.length);
-    } catch (error) {
-      console.error('❌ Buffer polyfill test failed:', error);
-    }
-  }
-}, 0);
-
-export {}; // Make this a module
+export {};

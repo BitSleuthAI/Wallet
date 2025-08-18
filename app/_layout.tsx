@@ -1,7 +1,7 @@
-// Import ECC override FIRST to prevent tiny-secp256k1 WASM loading
-import '@/services/ecc-override';
-// Import crypto polyfill SECOND
+// Crypto must be initialized before any ECC libs
 import '@/services/crypto-polyfill';
+// Then install ECC override to ensure noble uses patched utils
+import '@/services/ecc-override';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
