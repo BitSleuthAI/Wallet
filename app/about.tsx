@@ -66,7 +66,14 @@ export default function AboutScreen() {
       <Stack.Screen 
         options={{ 
           title: 'About BitSleuth Wallet',
-          headerBackTitle: 'Settings'
+          headerBackTitle: 'Settings',
+          headerStyle: {
+            backgroundColor: theme.colors.background,
+          },
+          headerTintColor: theme.colors.primary,
+          headerTitleStyle: {
+            color: theme.colors.text,
+          },
         }} 
       />
       
