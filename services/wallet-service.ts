@@ -639,13 +639,42 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       throw new Error('Invalid public key derived');
     }
     
-    const payment = bitcoin.payments.p2wpkh({ pubkey: Buffer.from(pubkey) });
-    if (!payment?.address) {
-      throw new Error('Failed to derive address from public key');
-    }
+    console.log('Public key length:', pubkey.length, 'bytes');
+    console.log('Public key (first 10 bytes):', Array.from(pubkey.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' '));
     
-    console.log('✅ Address generated successfully:', payment.address);
-    return payment.address as string;
+    try {
+      // Ensure we have a proper Buffer for bitcoinjs-lib
+      const pubkeyBuffer = Buffer.from(pubkey);
+      console.log('Created Buffer from public key, length:', pubkeyBuffer.length);
+      
+      // Create P2WPKH (native segwit) payment
+      const payment = bitcoin.payments.p2wpkh({ 
+        pubkey: pubkeyBuffer,
+        network: bitcoin.networks.bitcoin // Explicitly set network
+      });
+      
+      console.log('Payment object created:', {
+        address: payment.address,
+        hash: payment.hash ? Array.from(payment.hash.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none',
+        output: payment.output ? Array.from(payment.output.slice(0, 10)).map(b => b.toString(16).padStart(2, '0')).join(' ') : 'none'
+      });
+      
+      if (!payment?.address) {
+        console.error('Payment object:', payment);
+        throw new Error('Failed to derive address from public key - no address in payment object');
+      }
+      
+      // Validate the address format
+      if (!payment.address.startsWith('bc1')) {
+        console.warn('Generated address does not start with bc1:', payment.address);
+      }
+      
+      console.log('✅ Address generated successfully:', payment.address);
+      return payment.address as string;
+    } catch (paymentError) {
+      console.error('❌ Payment creation failed:', paymentError);
+      throw new Error(`Failed to create payment from public key: ${paymentError instanceof Error ? paymentError.message : 'Unknown error'}`);
+    }
   } catch (error) {
     console.error('❌ Error generating address:', error);
     if (error instanceof Error && error.message.includes('ECC library invalid')) {
