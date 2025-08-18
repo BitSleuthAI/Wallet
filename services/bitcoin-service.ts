@@ -1,5 +1,20 @@
-import { Transaction, UTXO, BitcoinPrice } from '@/types/wallet';
+import { BitcoinPrice, Transaction, UTXO } from '@/types/wallet';
+import bip32 from 'bip32';
+import * as bitcoin from 'bitcoinjs-lib';
 import { Platform } from 'react-native';
+import { initializeCrypto } from './crypto-polyfill';
+
+// Ensure crypto is initialized before any bitcoinjs-lib operations
+console.log('🔧 Initializing ECC library...');
+initializeCrypto();
+const ecc = (global as any).ecc;
+if (!ecc) {
+  console.error('❌ ECC library not initialized');
+  throw new Error('ECC library not initialized');
+}
+const bip32Instance = bip32(ecc);
+bitcoin.initEccLib(ecc);
+console.log('✅ ECC library initialized successfully');
 
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
 const MEMPOOL_API = 'https://mempool.space/api';

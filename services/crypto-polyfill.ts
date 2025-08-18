@@ -140,47 +140,58 @@ const patchNoble = () => {
 };
 
 let patched = false;
+let initializing = false; // Add a flag to prevent re-entrant calls
 export const initializeCrypto = () => {
   if (patched) {
     console.log('✅ Crypto already initialized, skipping');
     return;
   }
+  if (initializing) {
+    console.warn('⚠️ Crypto initialization already in progress, skipping');
+    return;
+  }
   
+  initializing = true;
   console.log('🔧 Starting crypto initialization...');
   
-  if (patchNoble()) {
-    try {
-      console.log('🔧 Creating ECC instance...');
-      const ecc = createNobleECC();
-      (global as any).ecc = ecc;
-      console.log('✅ ECC instance created and stored globally');
+  try {
+    if (patchNoble()) {
+      try {
+        console.log('🔧 Creating ECC instance...');
+        const ecc = createNobleECC();
+        (global as any).ecc = ecc;
+        console.log('✅ ECC instance created and stored globally');
 
-      // Test the global ECC instance
-      const testKey = new Uint8Array(32);
-      testKey[31] = 1;
-      const testResult = ecc.isPrivate(testKey);
-      console.log('📝 ECC global test result:', testResult);
+        // Test the global ECC instance
+        const testKey = new Uint8Array(32);
+        testKey[31] = 1; // A simple non-zero private key
+        const testResult = ecc.isPrivate(testKey);
+        console.log('📝 ECC global test result:', testResult);
 
-      // Avoid monkey-patching require on mobile runtimes; rely on bitcoinjs-lib initEccLib
-      patched = true;
-      (global as any).__cryptoInitialized = true;
-      console.log('✅ Crypto initialized and ECC override installed');
-    } catch (error) {
-      console.error('❌ Failed to initialize ECC override:', error);
-      // Don't set patched to true if initialization failed
+        // Avoid monkey-patching require on mobile runtimes; rely on bitcoinjs-lib initEccLib
+        patched = true;
+        (global as any).__cryptoInitialized = true;
+        console.log('✅ Crypto initialized and ECC override installed');
+      } catch (error) {
+        console.error('❌ Failed to initialize ECC override:', error);
+        // Don't set patched to true if initialization failed
+      }
+    } else {
+      console.error('❌ Failed to initialize crypto - noble patching failed');
     }
-  } else {
-    console.error('❌ Failed to initialize crypto - noble patching failed');
+  } finally {
+    initializing = false; // Reset the flag
   }
 };
 
 // Auto-initialize on module import to ensure ECC is ready before wallet operations
-try {
-  console.log('🚀 Auto-initializing crypto on module import...');
-  initializeCrypto();
-  console.log('✅ Auto-initialization completed');
-} catch (e) {
-  console.warn('⚠️ Crypto auto-initialization failed, will attempt lazy init later:', e);
-}
+// try {
+//   console.log('🚀 Auto-initializing crypto on module import...');
+//   initializeCrypto();
+//   console.log('✅ Auto-initialization completed');
+// } catch (e) {
+//   console.warn('⚠️ Crypto auto-initialization failed, will attempt lazy init later:', e);
+// }
 
-export {};
+export { };
+
