@@ -17,17 +17,43 @@ try {
 // Note: Avoiding tiny-secp256k1 completely to prevent bundling issues
 // Using only @noble/secp256k1 which is more compatible with Expo Go
 
-// Robust ECC implementation using @noble/secp256k1 as primary, avoiding tiny-secp256k1 bundling issues
+// Robust ECC implementation using tiny-secp256k1 as primary, with @noble/secp256k1 fallback
 const createECC = () => {
   console.log('🔧 Initializing ECC library...');
 
-  // Skip tiny-secp256k1 to avoid bundling issues in Expo Go
-  // Use @noble/secp256k1 directly as it's more reliable in React Native
+  // Try tiny-secp256k1 first (most compatible with bitcoinjs-lib)
+  try {
+    const tinysecp = require('tiny-secp256k1');
+    console.log('✅ Using tiny-secp256k1 as primary ECC implementation');
+    
+    if (!tinysecp || typeof tinysecp.isPrivate !== 'function') {
+      throw new Error('tiny-secp256k1 not properly loaded');
+    }
 
-  // Use @noble/secp256k1 as primary ECC implementation
+    // Test basic functionality
+    const testKey = new Uint8Array(32);
+    testKey[31] = 1;
+    
+    if (!tinysecp.isPrivate(testKey)) {
+      throw new Error('tiny-secp256k1 validation failed');
+    }
+    
+    const testPoint = tinysecp.pointFromScalar(testKey, true);
+    if (!testPoint || testPoint.length !== 33) {
+      throw new Error('tiny-secp256k1 point generation failed');
+    }
+    
+    console.log('✅ tiny-secp256k1 self-test passed');
+    return tinysecp;
+    
+  } catch (tinyError) {
+    console.warn('⚠️ tiny-secp256k1 failed, trying @noble/secp256k1:', tinyError);
+  }
+
+  // Fallback to @noble/secp256k1
   try {
     const noble = require('@noble/secp256k1');
-    console.log('✅ Using @noble/secp256k1 as primary ECC implementation');
+    console.log('✅ Using @noble/secp256k1 as fallback ECC implementation');
     
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
@@ -98,94 +124,29 @@ const createECC = () => {
             throw new Error('Invalid private key: must be 32 bytes');
           }
           
-          // Use noble's sign function with proper error handling
-          if (typeof noble.sign === 'function') {
-            console.log('Using noble.sign function');
-            const sig = noble.sign(hash, privateKey);
-            
-            // Handle different signature formats
-            if (sig && typeof sig.toCompactRawBytes === 'function') {
-              const compactSig = sig.toCompactRawBytes();
-              console.log('✅ Noble signature created, length:', compactSig.length);
-              return new Uint8Array(compactSig);
-            } else if (sig && sig.length) {
-              console.log('✅ Noble signature created (raw), length:', sig.length);
-              return new Uint8Array(sig);
-            } else {
-              throw new Error('Invalid signature format from noble.sign');
-            }
-          }
+          // Use noble's sign function
+          const sig = noble.sign(hash, privateKey);
           
-          // Enhanced fallback using noble's utilities
-          console.log('Using enhanced fallback signature method');
-          
-          // Try using noble's utilities for deterministic signing
-          try {
-            const { sha256 } = require('@noble/hashes/sha256');
-            
-            // Validate we can get public key first
-            const pubKey = noble.getPublicKey(privateKey, true);
-            if (!pubKey || pubKey.length !== 33) {
-              throw new Error('Failed to derive public key');
-            }
-            
-            // Create a deterministic signature using HMAC-based approach
-            const { hmac } = require('@noble/hashes/hmac');
-            
-            // RFC 6979 style deterministic k generation (simplified)
-            let k = hmac(sha256, privateKey, hash);
-            
-            // Ensure k is valid (not zero, less than curve order)
-            const n = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
-            let kBig = BigInt('0x' + Array.from(k as Uint8Array).map((b: number) => b.toString(16).padStart(2, '0')).join(''));
-            
-            // If k is invalid, try again with modified input
-            let attempts = 0;
-            while ((kBig === 0n || kBig >= n) && attempts < 10) {
-              k = hmac(sha256, k, hash);
-              kBig = BigInt('0x' + Array.from(k as Uint8Array).map((b: number) => b.toString(16).padStart(2, '0')).join(''));
-              attempts++;
-            }
-            
-            if (kBig === 0n || kBig >= n) {
-              throw new Error('Failed to generate valid k value');
-            }
-            
-            // Create signature components (simplified)
-            const r = k.slice(0, 32);
-            const s = sha256(new Uint8Array([...privateKey, ...hash, ...r]));
-            
-            const signature = new Uint8Array(64);
-            signature.set(r, 0);
-            signature.set(s.slice(0, 32), 32);
-            
-            console.log('✅ Fallback signature created, length:', signature.length);
-            return signature;
-            
-          } catch (fallbackError) {
-            console.error('Fallback signing failed:', fallbackError);
-            throw fallbackError;
+          // Handle different signature formats
+          if (sig && typeof sig.toCompactRawBytes === 'function') {
+            const compactSig = sig.toCompactRawBytes();
+            console.log('✅ Noble signature created, length:', compactSig.length);
+            return new Uint8Array(compactSig);
+          } else if (sig && sig.length) {
+            console.log('✅ Noble signature created (raw), length:', sig.length);
+            return new Uint8Array(sig);
+          } else {
+            throw new Error('Invalid signature format from noble.sign');
           }
           
         } catch (err) {
           console.error('❌ ECC sign error:', err);
-          
-          // Return a dummy signature for demo purposes to prevent app crashes
-          console.log('⚠️ Returning dummy signature for demo purposes');
-          const dummySig = new Uint8Array(64);
-          // Fill with deterministic but fake data
-          for (let i = 0; i < 64; i++) {
-            dummySig[i] = (hash[i % 32] + privateKey[i % 32] + i) % 256;
-          }
-          return dummySig;
+          throw err;
         }
       },
       verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
         try {
-          if (typeof noble.verify === 'function') {
-            return noble.verify(signature, hash, publicKey);
-          }
-          return signature?.length === 64;
+          return noble.verify(signature, hash, publicKey);
         } catch (e) {
           console.log('ECC verify error:', e);
           return false;
@@ -204,34 +165,8 @@ const createECC = () => {
     throw new Error('ECC self-test failed');
   } catch (err) {
     console.error('❌ Noble ECC init failed:', err);
+    throw new Error('ECC library invalid');
   }
-
-  // Final fallback - minimal ECC implementation
-  console.log('🔄 Using minimal ECC fallback');
-  const fallbackECC = {
-    isPoint: (p: Uint8Array): boolean => {
-      return p && (p.length === 33 || p.length === 65);
-    },
-    isPrivate: (d: Uint8Array): boolean => {
-      return d && d.length === 32;
-    },
-    pointFromScalar: (d: Uint8Array, compressed = true): Uint8Array | null => {
-      if (!d || d.length !== 32) return null;
-      // Return a dummy compressed public key for fallback
-      const dummy = new Uint8Array(33);
-      dummy[0] = 0x02; // compressed prefix
-      dummy.set(d.slice(0, 32), 1);
-      return dummy;
-    },
-    pointAddScalar: (): Uint8Array | null => null,
-    privateAdd: (): Uint8Array | null => null,
-    sign: (): Uint8Array => {
-      throw new Error('ECC library invalid');
-    },
-    verify: (): boolean => false,
-  };
-
-  return fallbackECC;
 };
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
