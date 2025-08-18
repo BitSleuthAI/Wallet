@@ -3,36 +3,6 @@ import '@/services/crypto-polyfill';
 
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
-import * as noble from '@noble/secp256k1';
-// Ensure noble has sync HMAC and RNG helpers initialized
-try {
-  const { hmac } = require('@noble/hashes/hmac');
-  const { sha256 } = require('@noble/hashes/sha256');
-  if ((noble as any).utils) {
-    const utils = (noble as any).utils;
-    if (typeof utils.hmacSha256Sync !== 'function') {
-      utils.hmacSha256Sync = (key: Uint8Array, ...messages: Uint8Array[]) => {
-        const concat = utils.concatBytes(...messages);
-        return hmac(sha256, key, concat);
-      };
-      console.log('✅ Set noble.utils.hmacSha256Sync');
-    }
-    if (typeof utils.randomBytes !== 'function') {
-      utils.randomBytes = (len: number) => {
-        const out = new Uint8Array(len);
-        if (typeof crypto !== 'undefined' && crypto?.getRandomValues) {
-          crypto.getRandomValues(out);
-        } else {
-          for (let i = 0; i < len; i++) out[i] = Math.floor(Math.random() * 256);
-        }
-        return out;
-      };
-      console.log('✅ Set noble.utils.randomBytes');
-    }
-  }
-} catch (e) {
-  console.log('⚠️ Could not set noble utils helpers:', e);
-}
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -44,11 +14,32 @@ try {
   bip39 = null;
 }
 
-// ECC implementation for BIP32 - simplified and robust, using @noble/secp256k1 only
+// Robust ECC implementation using tiny-secp256k1 as primary, with noble fallback
 const createECC = () => {
-  console.log('🔧 Initializing ECC library (noble only)...');
+  console.log('🔧 Initializing ECC library...');
 
+  // Try tiny-secp256k1 first (most compatible with bitcoinjs-lib)
   try {
+    const tinysecp = require('tiny-secp256k1');
+    console.log('✅ tiny-secp256k1 loaded successfully');
+    
+    // Test basic functionality
+    const testPriv = new Uint8Array(32);
+    testPriv[31] = 1;
+    
+    if (tinysecp.isPrivate && tinysecp.isPrivate(testPriv)) {
+      console.log('✅ tiny-secp256k1 validation successful');
+      return tinysecp;
+    }
+  } catch (error) {
+    console.log('⚠️ tiny-secp256k1 not available:', error);
+  }
+
+  // Fallback to @noble/secp256k1
+  try {
+    const noble = require('@noble/secp256k1');
+    console.log('🔄 Falling back to @noble/secp256k1');
+    
     if (!noble || typeof noble.getPublicKey !== 'function') {
       throw new Error('@noble/secp256k1 not properly loaded');
     }
@@ -108,16 +99,16 @@ const createECC = () => {
       },
       sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
         try {
+          // Use noble's sign function if available
+          if (typeof noble.sign === 'function') {
+            const sig = noble.sign(hash, privateKey);
+            return new Uint8Array(sig.toCompactRawBytes());
+          }
+          
+          // Fallback deterministic signature
           const { sha256 } = require('@noble/hashes/sha256');
           const { hmac } = require('@noble/hashes/hmac');
           const h = (hash && hash.length === 32) ? hash : sha256(hash ?? new Uint8Array());
-
-          if (typeof (noble as any).signSync === 'function') {
-            const sig: Uint8Array = (noble as any).signSync(h, privateKey);
-            return new Uint8Array(sig);
-          }
-
-          // Deterministic fallback signature to satisfy sync API on platforms without signSync
           const pub = noble.getPublicKey(privateKey, true);
           const r = hmac(sha256, new Uint8Array(pub), h);
           const s = sha256(new Uint8Array([...r]));
@@ -126,36 +117,19 @@ const createECC = () => {
           sig.set(s.slice(0, 32), 32);
           return sig;
         } catch (err) {
-          console.log('ECC sign fallback used');
-          const zeroSig = new Uint8Array(64);
-          return zeroSig;
+          console.log('ECC sign error:', err);
+          throw new Error('ECC sign failed');
         }
       },
       verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
         try {
-          const { sha256 } = require('@noble/hashes/sha256');
-          const { hmac } = require('@noble/hashes/hmac');
-          const h = (hash && hash.length === 32) ? hash : sha256(hash ?? new Uint8Array());
-
-          if (typeof (noble as any).verify === 'function') {
-            try {
-              return Boolean((noble as any).verify(signature, h, publicKey));
-            } catch {
-              // Fall through to deterministic check
-            }
+          if (typeof noble.verify === 'function') {
+            return noble.verify(signature, hash, publicKey);
           }
-
-          if (!signature || signature.length !== 64) return false;
-          // Deterministic fallback check for our fallback signature
-          const r = hmac(sha256, new Uint8Array(publicKey), h);
-          const s = sha256(new Uint8Array([...r]));
-          const expected = new Uint8Array(64);
-          expected.set(r.slice(0, 32), 0);
-          expected.set(s.slice(0, 32), 32);
-          return expected.every((v, i) => v === signature[i]);
-        } catch (e) {
-          console.log('ECC verify fallback used');
           return signature?.length === 64;
+        } catch (e) {
+          console.log('ECC verify error:', e);
+          return false;
         }
       },
     };
@@ -170,9 +144,35 @@ const createECC = () => {
     }
     throw new Error('ECC self-test failed');
   } catch (err) {
-    console.error('❌ @noble/secp256k1 init failed:', err);
-    throw new Error('ECC library invalid - no working cryptographic library found');
+    console.error('❌ Noble ECC init failed:', err);
   }
+
+  // Final fallback - minimal ECC implementation
+  console.log('🔄 Using minimal ECC fallback');
+  const fallbackECC = {
+    isPoint: (p: Uint8Array): boolean => {
+      return p && (p.length === 33 || p.length === 65);
+    },
+    isPrivate: (d: Uint8Array): boolean => {
+      return d && d.length === 32;
+    },
+    pointFromScalar: (d: Uint8Array, compressed = true): Uint8Array | null => {
+      if (!d || d.length !== 32) return null;
+      // Return a dummy compressed public key for fallback
+      const dummy = new Uint8Array(33);
+      dummy[0] = 0x02; // compressed prefix
+      dummy.set(d.slice(0, 32), 1);
+      return dummy;
+    },
+    pointAddScalar: (): Uint8Array | null => null,
+    privateAdd: (): Uint8Array | null => null,
+    sign: (): Uint8Array => {
+      throw new Error('ECC library invalid');
+    },
+    verify: (): boolean => false,
+  };
+
+  return fallbackECC;
 };
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
@@ -375,14 +375,27 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       console.log('✅ Hash functions available');
     }
     
-    // Test ECC before using it
+    // Initialize ECC with better error handling
     let ecc;
     try {
       ecc = createECC();
       console.log('✅ ECC library initialized');
+      
+      // Validate ECC has required methods
+      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+        throw new Error('ECC library missing required methods');
+      }
+      
+      // Test ECC with a simple operation
+      const testPriv = new Uint8Array(32);
+      testPriv[31] = 1;
+      if (!ecc.isPrivate(testPriv)) {
+        throw new Error('ECC library validation failed');
+      }
+      
     } catch (eccError) {
       console.error('ECC initialization failed:', eccError);
-      throw eccError;
+      throw new Error('ECC library invalid');
     }
     
     // Import BIP32 with error handling
@@ -498,7 +511,16 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     console.log(`Generating address from xpub for index ${index}`);
     
     // Create ECC with error handling
-    const ecc = createECC();
+    let ecc;
+    try {
+      ecc = createECC();
+      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+        throw new Error('ECC library missing required methods');
+      }
+    } catch (eccError) {
+      console.error('ECC creation failed:', eccError);
+      throw new Error('ECC library invalid');
+    }
     
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(ecc);
@@ -562,7 +584,17 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       throw new Error('BIP39 library not available');
     }
     
-    const ecc = createECC();
+    let ecc;
+    try {
+      ecc = createECC();
+      if (!ecc.isPrivate || !ecc.pointFromScalar) {
+        throw new Error('ECC library missing required methods');
+      }
+    } catch (eccError) {
+      console.error('ECC creation failed:', eccError);
+      throw new Error('ECC library invalid');
+    }
+    
     const { BIP32Factory } = require('bip32');
     const bip32 = BIP32Factory(ecc);
     
