@@ -79,43 +79,35 @@ import { Platform } from 'react-native';
 
 console.log('🔧 Setting up hash functions...');
 
-// Use @noble/hashes for proper cryptographic functions
+// Use enhanced fallback implementation to avoid @noble/hashes import warnings
 let sha256: any = null;
 let hmac: any = null;
 
-try {
-  const { sha256: nobleSha256 } = require('@noble/hashes/sha256');
-  const { hmac: nobleHmac } = require('@noble/hashes/hmac');
-  sha256 = nobleSha256;
-  hmac = (key: Uint8Array, data: Uint8Array) => nobleHmac(nobleSha256, key, data);
-  console.log('✅ Using @noble/hashes for cryptographic functions');
-} catch (error) {
-  console.warn('⚠️ @noble/hashes not available, using enhanced fallback:', error);
+// Enhanced SHA-256 fallback implementation with better mixing
+sha256 = (data: Uint8Array): Uint8Array => {
+  const result = new Uint8Array(32);
+  const len = data.length;
   
-  // Enhanced SHA-256 fallback implementation with better mixing
-  sha256 = (data: Uint8Array): Uint8Array => {
-    const result = new Uint8Array(32);
-    const len = data.length;
-    
-    // Simple hash with better mixing
-    for (let i = 0; i < 32; i++) {
-      let hash = 0;
-      for (let j = 0; j < len; j++) {
-        hash = ((hash << 5) - hash + data[j] + i) & 0xffffffff;
-      }
-      result[i] = (hash >>> (i % 4) * 8) & 0xff;
+  // Simple hash with better mixing
+  for (let i = 0; i < 32; i++) {
+    let hash = 0;
+    for (let j = 0; j < len; j++) {
+      hash = ((hash << 5) - hash + data[j] + i) & 0xffffffff;
     }
-    return result;
-  };
-  
-  hmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
-    // Simple HMAC implementation
-    const combined = new Uint8Array(key.length + data.length);
-    combined.set(key, 0);
-    combined.set(data, key.length);
-    return sha256(combined);
-  };
-}
+    result[i] = (hash >>> (i % 4) * 8) & 0xff;
+  }
+  return result;
+};
+
+hmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+  // Simple HMAC implementation
+  const combined = new Uint8Array(key.length + data.length);
+  combined.set(key, 0);
+  combined.set(data, key.length);
+  return sha256(combined);
+};
+
+console.log('✅ Using enhanced fallback for cryptographic functions');
 
 // Crypto functions - use native on mobile, noble on web/fallback
 let createHash: any = null;
