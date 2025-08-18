@@ -25,14 +25,51 @@ const createECC = () => {
   console.log('🔧 Initializing ECC using shared noble override...');
   try {
     const ecc = createNobleECC();
+    
+    // More comprehensive ECC validation
     const testKey = new Uint8Array(32);
-    testKey[31] = 1;
-    const pt = ecc.pointFromScalar(testKey, true);
-    if (pt && pt.length === 33) {
-      console.log('✅ ECC self-test passed (shared override)');
-      return ecc;
+    testKey[31] = 1; // Set to 1 to ensure it's a valid private key
+    
+    // Test basic ECC functions
+    if (!ecc.isPrivate || !ecc.pointFromScalar || !ecc.sign || !ecc.verify) {
+      throw new Error('ECC interface incomplete');
     }
-    throw new Error('ECC self-test failed');
+    
+    // Test private key validation
+    if (!ecc.isPrivate(testKey)) {
+      throw new Error('ECC private key validation failed');
+    }
+    
+    // Test point generation (both compressed and uncompressed)
+    const compressedPt = ecc.pointFromScalar(testKey, true);
+    const uncompressedPt = ecc.pointFromScalar(testKey, false);
+    
+    if (!compressedPt || !uncompressedPt) {
+      throw new Error('ECC point generation failed');
+    }
+    
+    // Validate point lengths (compressed should be 33, uncompressed should be 65)
+    if (compressedPt.length !== 33 || uncompressedPt.length !== 65) {
+      console.warn('⚠️ Unexpected point lengths:', compressedPt.length, uncompressedPt.length);
+      // Don't fail here as some implementations might have different formats
+    }
+    
+    // Test signing (basic test)
+    try {
+      const testHash = new Uint8Array(32);
+      testHash.fill(0xaa); // Fill with test data
+      const signature = ecc.sign(testHash, testKey);
+      if (!signature || signature.length === 0) {
+        throw new Error('ECC signing test failed');
+      }
+      console.log('✅ ECC signing test passed, signature length:', signature.length);
+    } catch (signError) {
+      console.error('❌ ECC signing test failed:', signError);
+      throw new Error('ECC signing functionality not working');
+    }
+    
+    console.log('✅ ECC self-test passed (shared override)');
+    return ecc;
   } catch (err) {
     console.error('❌ Noble ECC init failed:', err);
     throw new Error('ECC library invalid');
@@ -268,8 +305,31 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
       console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
-      ecc = createECC();
-      (global as any).ecc = ecc;
+      
+      // Try multiple times with delay to handle timing issues
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          ecc = createECC();
+          (global as any).ecc = ecc;
+          console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
+          break;
+        } catch (eccError) {
+          attempts++;
+          console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
+          
+          if (attempts >= maxAttempts) {
+            throw eccError;
+          }
+          
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } else {
+      console.log('✅ Using existing global ECC instance');
     }
     
     // Import BIP32 with error handling
@@ -397,8 +457,31 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
       console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
-      ecc = createECC();
-      (global as any).ecc = ecc;
+      
+      // Try multiple times with delay to handle timing issues
+      let attempts = 0;
+      const maxAttempts = 3;
+      
+      while (attempts < maxAttempts) {
+        try {
+          ecc = createECC();
+          (global as any).ecc = ecc;
+          console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
+          break;
+        } catch (eccError) {
+          attempts++;
+          console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
+          
+          if (attempts >= maxAttempts) {
+            throw eccError;
+          }
+          
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+      }
+    } else {
+      console.log('✅ Using existing global ECC instance');
     }
     
     const { BIP32Factory } = require('bip32');

@@ -129,18 +129,34 @@ export const createNobleECC = () => {
     try {
       const testKey = new Uint8Array([1, 2, 3, 4]);
       const testData = new Uint8Array([5, 6, 7, 8]);
-      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
-      const sha256Result = noble.utils.sha256Sync(testData);
       
-      if (hmacResult && hmacResult.length === 32 && sha256Result && sha256Result.length === 32) {
-        console.log('✅ ECC Override hash function test passed');
-      } else {
-        console.error('❌ ECC Override hash function test failed - lengths:', hmacResult?.length, sha256Result?.length);
-        throw new Error('Hash function test failed - invalid output length');
+      // Test HMAC function
+      if (!noble.utils.hmacSha256Sync || typeof noble.utils.hmacSha256Sync !== 'function') {
+        throw new Error('hmacSha256Sync function not available');
       }
+      
+      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      if (!hmacResult || hmacResult.length !== 32) {
+        console.error('❌ HMAC test failed - result:', hmacResult, 'length:', hmacResult?.length);
+        throw new Error('HMAC function test failed - invalid output');
+      }
+      
+      // Test SHA256 function
+      if (!noble.utils.sha256Sync || typeof noble.utils.sha256Sync !== 'function') {
+        throw new Error('sha256Sync function not available');
+      }
+      
+      const sha256Result = noble.utils.sha256Sync(testData);
+      if (!sha256Result || sha256Result.length !== 32) {
+        console.error('❌ SHA256 test failed - result:', sha256Result, 'length:', sha256Result?.length);
+        throw new Error('SHA256 function test failed - invalid output');
+      }
+      
+      console.log('✅ ECC Override hash function test passed');
     } catch (testError) {
       console.error('❌ ECC Override hash function test failed:', testError);
-      throw new Error('Hash functions not working properly');
+      const errorMessage = testError instanceof Error ? testError.message : 'Unknown error';
+      throw new Error(`Hash functions not working properly: ${errorMessage}`);
     }
 
     // Prefer secure randomness when available
@@ -216,6 +232,11 @@ export const createNobleECC = () => {
           }
           if (!privateKey || privateKey.length !== 32) {
             throw new Error('Invalid private key: must be 32 bytes');
+          }
+
+          // Ensure hash functions are available before signing
+          if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
+            throw new Error('Hash functions not available for signing');
           }
 
           const sig = noble.sign(hash, privateKey);
