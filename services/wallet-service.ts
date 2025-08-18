@@ -1,8 +1,5 @@
 // Import crypto polyfill FIRST
 import '@/services/crypto-polyfill';
-// Then import ECC override to ensure noble utils use initialized crypto
-import '@/services/ecc-override';
-
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 
@@ -502,24 +499,10 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     }
     console.log('✅ BIP39 library available');
     
-    // Initialize ECC with better error handling
-    let ecc;
-    try {
-      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
-      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-        throw new Error('ECC library missing required methods');
-      }
-      
-      // Test ECC with a simple operation
-      const testPriv = new Uint8Array(32);
-      testPriv[31] = 1;
-      if (!ecc.isPrivate(testPriv)) {
-        throw new Error('ECC library validation failed');
-      }
-      
-    } catch (eccError) {
-      console.error('ECC initialization failed:', eccError);
-      throw new Error('ECC library invalid');
+    // ECC should be initialized globally by now
+    const ecc = (global as any).ecc;
+    if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
+      throw new Error('ECC library not available or invalid');
     }
     
     // Import BIP32 with error handling
@@ -655,16 +638,10 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
   try {
     console.log(`Generating address from xpub for index ${index}`);
     
-    // Create ECC with error handling
-    let ecc;
-    try {
-      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
-      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-        throw new Error('ECC library missing required methods');
-      }
-    } catch (eccError) {
-      console.error('ECC creation failed:', eccError);
-      throw new Error('ECC library invalid');
+    // ECC should be initialized globally by now
+    const ecc = (global as any).ecc;
+    if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
+      throw new Error('ECC library not available or invalid');
     }
     
     const { BIP32Factory } = require('bip32');
@@ -752,15 +729,9 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       throw new Error('BIP39 library not available');
     }
     
-    let ecc;
-    try {
-      ecc = (global as any).ecc; // Use the ECC object from ecc-override.ts
-      if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-        throw new Error('ECC library missing required methods');
-      }
-    } catch (eccError) {
-      console.error('ECC creation failed:', eccError);
-      throw new Error('ECC library invalid');
+    const ecc = (global as any).ecc;
+    if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
+      throw new Error('ECC library not available or invalid');
     }
     
     const { BIP32Factory } = require('bip32');

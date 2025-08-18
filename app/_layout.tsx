@@ -1,8 +1,8 @@
 // Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
 initializeCrypto();
-// Then install ECC override to ensure noble uses patched utils
-import '@/services/ecc-override';
+
+import { useFonts } from 'expo-font';
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";

@@ -1,4 +1,6 @@
 // Minimal crypto polyfill for React Native + Web in Expo Go
+import { createNobleECC } from './ecc-override';
+
 if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
@@ -104,10 +106,35 @@ const patchNoble = () => {
 let patched = false;
 export const initializeCrypto = () => {
   if (patched) return;
+  
   if (patchNoble()) {
-    patched = true;
-    (global as any).__cryptoInitialized = true;
-    console.log('✅ Crypto initialized');
+    try {
+      // Create and set the global ECC object
+      const ecc = createNobleECC();
+      (global as any).ecc = ecc;
+
+      // Override require to intercept tiny-secp256k1 imports
+      if (typeof require !== 'undefined' && require.cache) {
+        const originalRequire = require;
+        const requireProxy = new Proxy(originalRequire, {
+          apply(target, thisArg, argumentsList) {
+            const moduleName = argumentsList[0];
+            if (moduleName === 'tiny-secp256k1') {
+              console.log('🚫 Intercepted tiny-secp256k1 import, returning noble-based implementation');
+              return ecc;
+            }
+            return Reflect.apply(target, thisArg, argumentsList);
+          }
+        });
+        (global as any).require = requireProxy;
+      }
+      
+      patched = true;
+      (global as any).__cryptoInitialized = true;
+      console.log('✅ Crypto initialized and ECC override installed');
+    } catch (error) {
+      console.error('❌ Failed to initialize ECC override:', error);
+    }
   } else {
     console.error('❌ Failed to initialize crypto');
   }
