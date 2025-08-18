@@ -89,12 +89,20 @@ const simpleHmacSha256 = (key: Uint8Array, msg: Uint8Array): Uint8Array => {
 const patchNoble = () => {
   try {
     const noble = require('@noble/secp256k1');
-    if (noble?.utils) {
-      noble.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
-      noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
-      if (!noble.utils.concatBytes) noble.utils.concatBytes = concatBytes;
+    if (noble) {
+      const targetEtc = (noble as any).etc ?? {};
+      const targetUtils = (noble as any).utils ?? {};
+      const sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+      const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
+      targetEtc.sha256Sync = sha256Impl;
+      targetEtc.hmacSha256Sync = hmacImpl;
+      targetUtils.sha256Sync = targetUtils.sha256Sync ?? sha256Impl;
+      targetUtils.hmacSha256Sync = targetUtils.hmacSha256Sync ?? hmacImpl;
+      targetUtils.concatBytes = targetUtils.concatBytes ?? concatBytes;
+      (noble as any).etc = { ...(noble as any).etc, ...targetEtc };
+      (noble as any).utils = { ...(noble as any).utils, ...targetUtils };
       (global as any).__noble = noble;
-      console.log('✅ noble utils patched (sha256Sync, hmacSha256Sync)');
+      console.log('✅ noble patched (etc.sha256Sync, etc.hmacSha256Sync)');
       return true;
     }
   } catch (e) {
@@ -109,7 +117,6 @@ export const initializeCrypto = () => {
   
   if (patchNoble()) {
     try {
-      // Create and set the global ECC object
       const ecc = createNobleECC();
       (global as any).ecc = ecc;
 

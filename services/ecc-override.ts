@@ -62,24 +62,30 @@ export const createNobleECC = () => {
       return simpleSha256(outer);
     };
     
-    // ALWAYS use fallback implementations to avoid @noble/hashes import issues
     console.log('⚠️ Using fallback hash implementations to avoid @noble/hashes import warnings');
-    
-    // Set fallback implementations
-    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+    const etcObj = (noble as any).etc ?? {};
+    const utilsObj = (noble as any).utils ?? {};
+    const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
       console.log('🔐 ECC Override HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
       const data = concatBytes(...msgs);
       const result = simpleHmac(key, data);
       console.log('✅ ECC Override HMAC-SHA256 result length:', result.length);
       return result;
     };
-    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+    const shaImpl = (...msgs: Uint8Array[]) => {
       console.log('🔐 ECC Override SHA256 called with msgs count:', msgs.length);
       const data = concatBytes(...msgs);
       const result = simpleSha256(data);
       console.log('✅ ECC Override SHA256 result length:', result.length);
       return result;
     };
+    etcObj.hmacSha256Sync = hmacImpl;
+    etcObj.sha256Sync = shaImpl;
+    utilsObj.hmacSha256Sync = utilsObj.hmacSha256Sync ?? hmacImpl;
+    utilsObj.sha256Sync = utilsObj.sha256Sync ?? shaImpl;
+    utilsObj.concatBytes = utilsObj.concatBytes ?? concatBytes;
+    (noble as any).etc = { ...(noble as any).etc, ...etcObj };
+    (noble as any).utils = { ...(noble as any).utils, ...utilsObj };
     
     console.log('✅ Fallback hash functions set up in ECC override');
     

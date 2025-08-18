@@ -85,25 +85,29 @@ const createECC = () => {
     // ALWAYS set up hash functions - don't rely on @noble/hashes being available
     console.log('🔧 Setting up hash functions for wallet service noble instance...');
     
-    noble.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+    const etcObj = (noble as any).etc ?? {};
+    const utilsObj = (noble as any).utils ?? {};
+    const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
       console.log('🔐 Wallet Service HMAC-SHA256 called with key length:', key.length, 'msgs count:', msgs.length);
       const data = concatBytes(...msgs);
       const result = simpleHmac(key, data);
       console.log('✅ Wallet Service HMAC-SHA256 result length:', result.length);
       return result;
     };
-    noble.utils.sha256Sync = (...msgs: Uint8Array[]) => {
+    const shaImpl = (...msgs: Uint8Array[]) => {
       console.log('🔐 Wallet Service SHA256 called with msgs count:', msgs.length);
       const data = concatBytes(...msgs);
       const result = simpleSha256(data);
       console.log('✅ Wallet Service SHA256 result length:', result.length);
       return result;
     };
-    
-    // Ensure concatBytes is available
-    if (!noble.utils.concatBytes) {
-      noble.utils.concatBytes = concatBytes;
-    }
+    etcObj.hmacSha256Sync = hmacImpl;
+    etcObj.sha256Sync = shaImpl;
+    utilsObj.hmacSha256Sync = utilsObj.hmacSha256Sync ?? hmacImpl;
+    utilsObj.sha256Sync = utilsObj.sha256Sync ?? shaImpl;
+    utilsObj.concatBytes = utilsObj.concatBytes ?? concatBytes;
+    (noble as any).etc = { ...(noble as any).etc, ...etcObj };
+    (noble as any).utils = { ...(noble as any).utils, ...utilsObj };
     
     console.log('✅ Wallet service hash functions set up');
     
@@ -237,9 +241,18 @@ const createECC = () => {
                 const outer = concatBytes(opad, innerHash);
                 return simpleSha256(outer);
               };
-              nobleLocal.utils.hmacSha256Sync = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmac(key, concatBytes(...msgs));
-              nobleLocal.utils.sha256Sync = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
-              console.log('✅ Patched noble utils at runtime, retrying sign...');
+              const etcObj2 = (nobleLocal as any).etc ?? {};
+              const utilsObj2 = (nobleLocal as any).utils ?? {};
+              const hmacImpl2 = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmac(key, concatBytes(...msgs));
+              const shaImpl2 = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+              etcObj2.hmacSha256Sync = hmacImpl2;
+              etcObj2.sha256Sync = shaImpl2;
+              utilsObj2.hmacSha256Sync = utilsObj2.hmacSha256Sync ?? hmacImpl2;
+              utilsObj2.sha256Sync = utilsObj2.sha256Sync ?? shaImpl2;
+              utilsObj2.concatBytes = utilsObj2.concatBytes ?? concatBytes;
+              (nobleLocal as any).etc = { ...(nobleLocal as any).etc, ...etcObj2 };
+              (nobleLocal as any).utils = { ...(nobleLocal as any).utils, ...utilsObj2 };
+              console.log('✅ Patched noble etc/utils at runtime, retrying sign...');
               return attemptSign();
             } catch (patchErr) {
               console.error('❌ Failed to patch noble utils:', patchErr);
