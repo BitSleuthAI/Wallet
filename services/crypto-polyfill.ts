@@ -120,8 +120,30 @@ const patchNoble = () => {
     if (noble) {
       const targetEtc = (noble as any).etc ?? {};
       const targetUtils = (noble as any).utils ?? {};
-      const sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
-      const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
+      
+      // Try to use @noble/hashes first, fallback to simple implementations
+      let sha256Impl, hmacImpl;
+      try {
+        const { sha256 } = require('@noble/hashes/sha256');
+        const { hmac } = require('@noble/hashes/hmac');
+        
+        sha256Impl = (...msgs: Uint8Array[]) => {
+          const data = concatBytes(...msgs);
+          return sha256(data);
+        };
+        
+        hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+          const data = concatBytes(...msgs);
+          return hmac(sha256, key, data);
+        };
+        
+        console.log('✅ Using @noble/hashes for crypto polyfill');
+      } catch (hashError) {
+        console.warn('⚠️ @noble/hashes not available in crypto polyfill, using fallback:', hashError);
+        sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+        hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
+      }
+      
       targetEtc.sha256Sync = sha256Impl;
       targetEtc.hmacSha256Sync = hmacImpl;
       targetUtils.sha256Sync = targetUtils.sha256Sync ?? sha256Impl;
@@ -142,14 +164,20 @@ const patchNoble = () => {
 let patched = false;
 let initializing = false;
 
-export const initializeCrypto = () => {
+export const initializeCrypto = async (): Promise<boolean> => {
   if (patched) {
     console.log('✅ Crypto already initialized, skipping');
-    return;
+    return true;
   }
   if (initializing) {
-    console.warn('⚠️ Crypto initialization already in progress, skipping');
-    return;
+    console.warn('⚠️ Crypto initialization already in progress, waiting...');
+    // Wait for initialization to complete
+    let attempts = 0;
+    while (initializing && attempts < 50) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      attempts++;
+    }
+    return patched;
   }
   
   initializing = true;
@@ -193,6 +221,7 @@ export const initializeCrypto = () => {
         patched = true;
         (global as any).__cryptoInitialized = true;
         console.log('✅ Crypto initialization completed successfully');
+        return true;
         
       } catch (eccError) {
         console.error('❌ Failed to create or test ECC:', eccError);
@@ -203,20 +232,26 @@ export const initializeCrypto = () => {
     }
   } catch (error) {
     console.error('❌ Crypto initialization failed:', error);
-    // Don't set patched to true on failure
+    return false;
   } finally {
     initializing = false;
   }
 };
 
 // Auto-initialize on module import
-try {
-  console.log('🚀 Auto-initializing crypto on module import...');
-  initializeCrypto();
-  console.log('✅ Auto-initialization completed');
-} catch (e) {
-  console.warn('⚠️ Crypto auto-initialization failed, will attempt lazy init later:', e);
-}
+(async () => {
+  try {
+    console.log('🚀 Auto-initializing crypto on module import...');
+    const success = await initializeCrypto();
+    if (success) {
+      console.log('✅ Auto-initialization completed');
+    } else {
+      console.warn('⚠️ Auto-initialization failed');
+    }
+  } catch (e) {
+    console.warn('⚠️ Crypto auto-initialization failed, will attempt lazy init later:', e);
+  }
+})();
 
 export { };
 

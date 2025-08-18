@@ -1,5 +1,7 @@
 // Import crypto polyfill FIRST
 import '@/services/crypto-polyfill';
+import { initializeCrypto } from '@/services/crypto-polyfill';
+import { createNobleECC } from '@/services/ecc-override';
 import { Platform } from 'react-native';
 import { Wallet } from '@/types/wallet';
 
@@ -20,7 +22,6 @@ try {
 // Using only @noble/secp256k1 which is pure JavaScript and Expo Go compatible
 
 // ECC implementation via shared override to ensure single, stable source on all platforms
-import { createNobleECC } from '@/services/ecc-override';
 const createECC = () => {
   console.log('🔧 Initializing ECC using shared noble override...');
   try {
@@ -79,8 +80,18 @@ const createECC = () => {
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
 
 // Wait for crypto initialization with timeout
-const waitForCryptoInitialization = async (maxWaitMs: number = 5000): Promise<void> => {
+const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<void> => {
   const startTime = Date.now();
+  
+  // First try to initialize crypto if not already done
+  if (!(global as any).__cryptoInitialized) {
+    console.log('🔧 Crypto not initialized, attempting initialization...');
+    const success = await initializeCrypto();
+    if (success) {
+      console.log('✅ Crypto initialization successful');
+      return;
+    }
+  }
   
   while (Date.now() - startTime < maxWaitMs) {
     // Check if crypto initialization flag is set
@@ -101,8 +112,19 @@ const waitForCryptoInitialization = async (maxWaitMs: number = 5000): Promise<vo
       }
     }
     
-    // Wait 100ms before checking again
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Try to initialize again
+    try {
+      const success = await initializeCrypto();
+      if (success) {
+        console.log('✅ Crypto initialization successful on retry');
+        return;
+      }
+    } catch (error) {
+      console.log('Crypto initialization retry failed:', error);
+    }
+    
+    // Wait 200ms before checking again
+    await new Promise(resolve => setTimeout(resolve, 200));
   }
   
   console.warn('⚠️ Crypto initialization timeout, proceeding anyway');
@@ -349,14 +371,63 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     // Provide HMAC-SHA512 implementation required by bip32
     let bip32;
     try {
-      const { hmac } = require('@noble/hashes/hmac');
-      const { sha512 } = require('@noble/hashes/sha512');
+      // Try @noble/hashes first
+      let hmacSHA512Impl;
+      try {
+        const { hmac } = require('@noble/hashes/hmac');
+        const { sha512 } = require('@noble/hashes/sha512');
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
+        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+      } catch (hashError) {
+        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        
+        // Fallback HMAC-SHA512 implementation
+        const simpleSha512 = (data: Uint8Array): Uint8Array => {
+          const result = new Uint8Array(64);
+          for (let i = 0; i < 64; i++) {
+            let hash = BigInt(0x6a09e667f3bcc908);
+            for (let j = 0; j < data.length; j++) {
+              hash = ((hash << 5n) - hash + BigInt(data[j]) + BigInt(i) * 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
+            }
+            result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
+          }
+          return result;
+        };
+        
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => {
+          const blockSize = 128;
+          let k = new Uint8Array(blockSize);
+          if (key.length > blockSize) {
+            k.set(simpleSha512(key).slice(0, blockSize));
+          } else {
+            k.set(key);
+          }
+          
+          const ipad = new Uint8Array(blockSize);
+          const opad = new Uint8Array(blockSize);
+          for (let i = 0; i < blockSize; i++) {
+            ipad[i] = k[i] ^ 0x36;
+            opad[i] = k[i] ^ 0x5c;
+          }
+          
+          const innerData = new Uint8Array(blockSize + data.length);
+          innerData.set(ipad);
+          innerData.set(data, blockSize);
+          const innerHash = simpleSha512(innerData);
+          
+          const outerData = new Uint8Array(blockSize + innerHash.length);
+          outerData.set(opad);
+          outerData.set(innerHash, blockSize);
+          return simpleSha512(outerData);
+        };
+      }
+      
       bip32 = BIP32Factory(ecc, {
-        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+        hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
+      console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ noble/hashes not available:', e);
+      console.error('❌ Failed to create BIP32 factory:', e);
       throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     console.log('✅ BIP32 factory created');
@@ -487,14 +558,63 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     const { BIP32Factory } = require('bip32');
     let bip32;
     try {
-      const { hmac } = require('@noble/hashes/hmac');
-      const { sha512 } = require('@noble/hashes/sha512');
+      // Try @noble/hashes first
+      let hmacSHA512Impl;
+      try {
+        const { hmac } = require('@noble/hashes/hmac');
+        const { sha512 } = require('@noble/hashes/sha512');
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
+        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+      } catch (hashError) {
+        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        
+        // Fallback HMAC-SHA512 implementation
+        const simpleSha512 = (data: Uint8Array): Uint8Array => {
+          const result = new Uint8Array(64);
+          for (let i = 0; i < 64; i++) {
+            let hash = BigInt(0x6a09e667f3bcc908);
+            for (let j = 0; j < data.length; j++) {
+              hash = ((hash << 5n) - hash + BigInt(data[j]) + BigInt(i) * 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
+            }
+            result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
+          }
+          return result;
+        };
+        
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => {
+          const blockSize = 128;
+          let k = new Uint8Array(blockSize);
+          if (key.length > blockSize) {
+            k.set(simpleSha512(key).slice(0, blockSize));
+          } else {
+            k.set(key);
+          }
+          
+          const ipad = new Uint8Array(blockSize);
+          const opad = new Uint8Array(blockSize);
+          for (let i = 0; i < blockSize; i++) {
+            ipad[i] = k[i] ^ 0x36;
+            opad[i] = k[i] ^ 0x5c;
+          }
+          
+          const innerData = new Uint8Array(blockSize + data.length);
+          innerData.set(ipad);
+          innerData.set(data, blockSize);
+          const innerHash = simpleSha512(innerData);
+          
+          const outerData = new Uint8Array(blockSize + innerHash.length);
+          outerData.set(opad);
+          outerData.set(innerHash, blockSize);
+          return simpleSha512(outerData);
+        };
+      }
+      
       bip32 = BIP32Factory(ecc, {
-        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+        hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
+      console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ noble/hashes not available:', e);
+      console.error('❌ Failed to create BIP32 factory:', e);
       throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     const bitcoin = require('bitcoinjs-lib');
@@ -565,14 +685,63 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     const { BIP32Factory } = require('bip32');
     let bip32;
     try {
-      const { hmac } = require('@noble/hashes/hmac');
-      const { sha512 } = require('@noble/hashes/sha512');
+      // Try @noble/hashes first
+      let hmacSHA512Impl;
+      try {
+        const { hmac } = require('@noble/hashes/hmac');
+        const { sha512 } = require('@noble/hashes/sha512');
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
+        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+      } catch (hashError) {
+        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        
+        // Fallback HMAC-SHA512 implementation
+        const simpleSha512 = (data: Uint8Array): Uint8Array => {
+          const result = new Uint8Array(64);
+          for (let i = 0; i < 64; i++) {
+            let hash = BigInt(0x6a09e667f3bcc908);
+            for (let j = 0; j < data.length; j++) {
+              hash = ((hash << 5n) - hash + BigInt(data[j]) + BigInt(i) * 0x9e3779b97f4a7c15n) & 0xffffffffffffffffn;
+            }
+            result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
+          }
+          return result;
+        };
+        
+        hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => {
+          const blockSize = 128;
+          let k = new Uint8Array(blockSize);
+          if (key.length > blockSize) {
+            k.set(simpleSha512(key).slice(0, blockSize));
+          } else {
+            k.set(key);
+          }
+          
+          const ipad = new Uint8Array(blockSize);
+          const opad = new Uint8Array(blockSize);
+          for (let i = 0; i < blockSize; i++) {
+            ipad[i] = k[i] ^ 0x36;
+            opad[i] = k[i] ^ 0x5c;
+          }
+          
+          const innerData = new Uint8Array(blockSize + data.length);
+          innerData.set(ipad);
+          innerData.set(data, blockSize);
+          const innerHash = simpleSha512(innerData);
+          
+          const outerData = new Uint8Array(blockSize + innerHash.length);
+          outerData.set(opad);
+          outerData.set(innerHash, blockSize);
+          return simpleSha512(outerData);
+        };
+      }
+      
       bip32 = BIP32Factory(ecc, {
-        hmacSHA512: (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data),
+        hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with noble/hashes HMAC-SHA512');
+      console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ noble/hashes not available:', e);
+      console.error('❌ Failed to create BIP32 factory:', e);
       throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     

@@ -3,7 +3,12 @@ import { initializeCrypto } from '../services/crypto-polyfill';
 
 // Initialize crypto immediately on module load
 console.log('🚀 Initializing crypto in RootLayout...');
-initializeCrypto();
+(async () => {
+  const success = await initializeCrypto();
+  if (!success) {
+    console.error('❌ Failed to initialize crypto in RootLayout');
+  }
+})();
 
 import { WalletProvider } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -16,7 +21,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // Double-check crypto initialization
 if (!(global as any).__cryptoInitialized) {
   console.log('⚠️ Crypto not initialized, attempting again...');
-  initializeCrypto();
+  (async () => {
+    await initializeCrypto();
+  })();
 }
 
 SplashScreen.preventAutoHideAsync();
@@ -44,8 +51,11 @@ export default function RootLayout() {
       let attempts = 0;
       while (attempts < 5 && !(global as any).__cryptoInitialized) {
         console.log(`Attempt ${attempts + 1}: Waiting for crypto initialization...`);
-        initializeCrypto();
-        await new Promise(resolve => setTimeout(resolve, 100));
+        const success = await initializeCrypto();
+        if (success) {
+          break;
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
         attempts++;
       }
       
