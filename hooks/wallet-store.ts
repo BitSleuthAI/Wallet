@@ -35,28 +35,37 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryKey: ['bitcoin-price'],
     queryFn: bitcoinService.getBitcoinPrice,
     refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 3,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
+    staleTime: 60000, // Consider data fresh for 1 minute
   });
 
   // Wallet balance query
   const balanceQuery = useQuery({
-    queryKey: ['wallet-balance', currentWallet?.id, currentWallet?.addresses],
+    queryKey: ['wallet-balance', currentWallet?.id, currentWallet?.addresses, currentWallet],
     queryFn: async () => {
       if (!currentWallet) return null;
       return bitcoinService.getWalletBalance(currentWallet.addresses);
     },
     enabled: !!currentWallet,
     refetchInterval: 10000, // Refetch every 10 seconds
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    staleTime: 30000, // Consider data fresh for 30 seconds
   });
 
   // Transaction history query
   const transactionsQuery = useQuery({
-    queryKey: ['transactions', currentWallet?.id, currentWallet?.addresses],
+    queryKey: ['transactions', currentWallet?.id, currentWallet?.addresses, currentWallet],
     queryFn: async () => {
       if (!currentWallet) return [];
       return bitcoinService.getTransactionHistory(currentWallet.addresses);
     },
     enabled: !!currentWallet,
     refetchInterval: 15000,
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
+    staleTime: 60000, // Consider data fresh for 1 minute
   });
 
   // Save wallet mutation
@@ -70,6 +79,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['wallet'] });
     },
   });
+  const { mutate: saveWallet } = saveWalletMutation;
 
   // Save theme mutation
   const saveThemeMutation = useMutation({
@@ -83,6 +93,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['theme'] });
     },
   });
+  const { mutate: saveTheme } = saveThemeMutation;
 
   useEffect(() => {
     if (walletQuery.data) {
@@ -99,40 +110,40 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
       const wallet = await walletService.createWallet(name, color);
-      saveWalletMutation.mutate(wallet);
+      saveWallet(wallet);
       return wallet;
     } catch (error) {
       console.error('Error creating wallet:', error);
       throw error;
     }
-  }, [saveWalletMutation.mutate]);
+  }, [saveWallet]);
 
   const importWallet = useCallback(async (name: string, mnemonic: string, color?: string) => {
     try {
       const wallet = await walletService.importWallet(name, mnemonic, color);
-      saveWalletMutation.mutate(wallet);
+      saveWallet(wallet);
       return wallet;
     } catch (error) {
       console.error('Error importing wallet:', error);
       throw error;
     }
-  }, [saveWalletMutation.mutate]);
+  }, [saveWallet]);
 
   const generateNewAddress = useCallback(async () => {
     if (!currentWallet) return null;
     try {
       const updatedWallet = await walletService.generateNewAddress(currentWallet);
-      saveWalletMutation.mutate(updatedWallet);
+      saveWallet(updatedWallet);
       return updatedWallet.addresses[updatedWallet.addresses.length - 1];
     } catch (error) {
       console.error('Error generating new address:', error);
       throw error;
     }
-  }, [currentWallet, saveWalletMutation.mutate]);
+  }, [currentWallet, saveWallet]);
 
   const toggleTheme = useCallback(() => {
-    saveThemeMutation.mutate(!theme.isDark);
-  }, [theme.isDark, saveThemeMutation.mutate]);
+    saveTheme(!theme.isDark);
+  }, [theme.isDark, saveTheme]);
 
   const refreshData = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
