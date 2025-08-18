@@ -8,6 +8,8 @@ import {
   ScrollView,
   Switch,
   Alert,
+  Platform,
+  Pressable,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Stack, router } from 'expo-router';
@@ -135,12 +137,39 @@ export default function SettingsScreen() {
               <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
                 {theme.isDark ? 'Dark' : 'Light'}
               </Text>
-              <Switch
-                value={theme.isDark}
-                onValueChange={toggleTheme}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor="white"
-              />
+              {Platform.OS === 'web' ? (
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: theme.isDark }}
+                  onPress={() => toggleTheme()}
+                  style={[
+                    styles.webSwitch,
+                    {
+                      backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
+                  testID="theme-switch-web"
+                >
+                  <View
+                    style={[
+                      styles.webSwitchThumb,
+                      {
+                        transform: [{ translateX: theme.isDark ? 24 : 2 }],
+                        backgroundColor: '#FFFFFF',
+                      },
+                    ]}
+                  />
+                </Pressable>
+              ) : (
+                <Switch
+                  value={theme.isDark}
+                  onValueChange={toggleTheme}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                  ios_backgroundColor={theme.colors.border}
+                  testID="theme-switch-native"
+                />
+              )}
             </View>
           }
         />
@@ -298,5 +327,22 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  webSwitch: {
+    width: 48,
+    height: 28,
+    borderRadius: 9999,
+    justifyContent: 'center',
+  },
+  webSwitchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 1.5,
   },
 });
