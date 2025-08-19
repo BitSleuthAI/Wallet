@@ -190,12 +190,18 @@ export default function WalletScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity style={[styles.sendButton, { backgroundColor: theme.colors.primary }]}>
+          <TouchableOpacity 
+            style={[styles.sendButton, { backgroundColor: theme.colors.primary }]}
+            onPress={() => router.push('/(tabs)/send')}
+          >
             <ArrowUpRight color="white" size={20} />
             <Text style={styles.actionButtonText}>Send</Text>
           </TouchableOpacity>
           
-          <TouchableOpacity style={[styles.receiveButton, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity 
+            style={[styles.receiveButton, { backgroundColor: theme.colors.surface }]}
+            onPress={() => router.push('/(tabs)/receive')}
+          >
             <ArrowDownLeft color={theme.colors.text} size={20} />
             <Text style={[styles.receiveButtonText, { color: theme.colors.text }]}>Receive</Text>
           </TouchableOpacity>
