@@ -37,9 +37,8 @@ import { useWallet } from '@/hooks/wallet-store';
 import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting, autoLockTimeout, setAutoLockTimeoutSetting } = useWallet();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
-  const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
 
   const handleLogout = () => {
     Alert.alert(
@@ -289,19 +288,20 @@ export default function SettingsScreen() {
           onPress={() => {
             Alert.alert(
               'Auto-Lock Timeout',
-              'Choose inactivity timeout',
+              'Choose when the app should automatically lock after inactivity',
               [
-                { text: '5 minutes', onPress: () => setAutoLockTimeout(5) },
-                { text: '15 minutes', onPress: () => setAutoLockTimeout(15) },
-                { text: '30 minutes', onPress: () => setAutoLockTimeout(30) },
-                { text: '1 hour', onPress: () => setAutoLockTimeout(60) },
+                { text: '5 minutes', onPress: () => setAutoLockTimeoutSetting(5) },
+                { text: '15 minutes', onPress: () => setAutoLockTimeoutSetting(15) },
+                { text: '30 minutes', onPress: () => setAutoLockTimeoutSetting(30) },
+                { text: '1 hour', onPress: () => setAutoLockTimeoutSetting(60) },
+                { text: 'Never', onPress: () => setAutoLockTimeoutSetting(0) },
                 { text: 'Cancel', style: 'cancel' },
               ]
             );
           }}
           rightElement={
             <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              {autoLockTimeout} minutes
+              {autoLockTimeout === 0 ? 'Never' : `${autoLockTimeout} min`}
             </Text>
           }
         />

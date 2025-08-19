@@ -25,6 +25,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [theme, setTheme] = useState<Theme>(lightTheme);
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const [hideBalance, setHideBalance] = useState<boolean>(false);
+  const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
   const queryClient = useQueryClient();
 
   // Load wallet from storage
@@ -60,6 +61,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('hideBalance');
       return stored === 'true';
+    },
+  });
+
+  // Load auto-lock timeout from storage
+  const autoLockQuery = useQuery({
+    queryKey: ['autoLockTimeout'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('autoLockTimeout');
+      return stored ? parseInt(stored, 10) : 15;
     },
   });
 
@@ -197,6 +207,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveHideBalance } = saveHideBalanceMutation;
 
+  // Save auto-lock timeout mutation
+  const saveAutoLockMutation = useMutation({
+    mutationFn: async (timeout: number) => {
+      await AsyncStorage.setItem('autoLockTimeout', timeout.toString());
+      return timeout;
+    },
+    onSuccess: (timeout) => {
+      setAutoLockTimeout(timeout);
+      queryClient.invalidateQueries({ queryKey: ['autoLockTimeout'] });
+    },
+  });
+  const { mutate: saveAutoLock } = saveAutoLockMutation;
+
   useEffect(() => {
     if (walletQuery.data) {
       setCurrentWallet(walletQuery.data);
@@ -220,6 +243,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setHideBalance(hideBalanceQuery.data);
     }
   }, [hideBalanceQuery.data]);
+
+  useEffect(() => {
+    if (autoLockQuery.data !== undefined) {
+      setAutoLockTimeout(autoLockQuery.data);
+    }
+  }, [autoLockQuery.data]);
 
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
@@ -267,6 +296,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     saveHideBalance(hide);
   }, [saveHideBalance]);
 
+  const setAutoLockTimeoutSetting = useCallback((timeout: number) => {
+    saveAutoLock(timeout);
+  }, [saveAutoLock]);
+
   const formatCurrency = useCallback((amount: number, showSymbol: boolean = true) => {
     const symbol = CURRENCY_SYMBOLS[selectedCurrency];
     const formatted = amount.toLocaleString(undefined, {
@@ -311,6 +344,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'theme', // Reset theme to default
         'currency', // Reset currency to default
         'hideBalance', // Reset hide balance setting
+        'autoLockTimeout', // Reset auto-lock timeout
         'user_preferences',
         'app_settings',
         'cached_addresses',
@@ -328,6 +362,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setTheme(lightTheme); // Reset to light theme
       setSelectedCurrency('USD'); // Reset to USD
       setHideBalance(false); // Reset hide balance setting
+      setAutoLockTimeout(15); // Reset auto-lock timeout to default
       
       // Clear all cached queries and reset query client
       console.log('🔄 Clearing query cache...');
@@ -386,6 +421,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     hideBalance,
     setHideBalanceSetting,
     
+    // Auto-lock setting
+    autoLockTimeout,
+    setAutoLockTimeoutSetting,
+    
     // Actions
     createWallet,
     importWallet,
@@ -431,5 +470,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrencyName,
     hideBalance,
     setHideBalanceSetting,
+    autoLockTimeout,
+    setAutoLockTimeoutSetting,
   ]);
 });
