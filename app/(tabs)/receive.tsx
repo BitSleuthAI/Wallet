@@ -147,7 +147,7 @@ export default function ReceiveScreen() {
         {/* QR Code */}
         <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.qrCodeWrapper}>
-            {currentAddress && currentAddress.length > 0 ? (
+            {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
               <QRCode
                 value={currentAddress}
                 size={200}
@@ -164,7 +164,7 @@ export default function ReceiveScreen() {
             ) : (
               <View style={styles.qrPlaceholder}>
                 <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
-                  No address available
+                  {currentWallet ? 'Generating address...' : 'No address available'}
                 </Text>
               </View>
             )}
