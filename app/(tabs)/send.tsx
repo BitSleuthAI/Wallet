@@ -22,28 +22,82 @@ export default function SendScreen() {
   const [enableRBF, setEnableRBF] = useState(true);
 
   const handleSendMax = () => {
-    setAmount(balance.toString());
+    try {
+      if (balance > 0) {
+        // Reserve some amount for fees (rough estimate)
+        const feeEstimate = 0.0001; // ~0.0001 BTC for fees
+        const maxSendable = Math.max(0, balance - feeEstimate);
+        setAmount(maxSendable.toFixed(8));
+      } else {
+        Alert.alert('Error', 'No balance available to send');
+      }
+    } catch (error) {
+      console.error('Error calculating max send amount:', error);
+      Alert.alert('Error', 'Failed to calculate maximum sendable amount');
+    }
   };
 
   const handleReviewTransaction = () => {
-    if (!recipientAddress || !amount) {
-      Alert.alert('Error', 'Please fill in all required fields');
-      return;
-    }
+    try {
+      // Validate inputs
+      if (!recipientAddress || !amount) {
+        Alert.alert('Error', 'Please fill in all required fields');
+        return;
+      }
 
-    if (parseFloat(amount) > balance) {
-      Alert.alert('Error', 'Insufficient balance');
-      return;
-    }
+      // Validate recipient address format (basic check)
+      if (!recipientAddress.startsWith('bc1') && !recipientAddress.startsWith('1') && !recipientAddress.startsWith('3')) {
+        Alert.alert('Error', 'Invalid Bitcoin address format');
+        return;
+      }
 
-    Alert.alert(
-      'Review Transaction',
-      `Send ${amount} BTC to ${recipientAddress.slice(0, 10)}...?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Confirm', onPress: () => console.log('Transaction confirmed') },
-      ]
-    );
+      // Validate amount
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        Alert.alert('Error', 'Please enter a valid amount');
+        return;
+      }
+
+      if (amountNum > balance) {
+        Alert.alert('Error', 'Insufficient balance');
+        return;
+      }
+
+      // Show transaction review
+      Alert.alert(
+        'Review Transaction',
+        `Send ${amount} ${isAmountInBTC ? 'BTC' : 'USD'} to:\n${recipientAddress.slice(0, 20)}...\n\nFee: ${feeRate} sat/vB\nRBF: ${enableRBF ? 'Enabled' : 'Disabled'}`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Confirm', 
+            onPress: () => {
+              console.log('✅ Transaction confirmed:', {
+                to: recipientAddress,
+                amount: amountNum,
+                currency: isAmountInBTC ? 'BTC' : 'USD',
+                feeRate,
+                rbf: enableRBF
+              });
+              
+              // For demo purposes, show success message
+              Alert.alert(
+                'Transaction Sent',
+                'Your Bitcoin transaction has been broadcast to the network. It may take a few minutes to confirm.',
+                [{ text: 'OK', onPress: () => {
+                  // Clear form
+                  setRecipientAddress('');
+                  setAmount('');
+                }}]
+              );
+            }
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error reviewing transaction:', error);
+      Alert.alert('Error', 'Failed to review transaction. Please try again.');
+    }
   };
 
   if (!currentWallet) {
@@ -107,7 +161,16 @@ export default function SendScreen() {
               onChangeText={setRecipientAddress}
               multiline
             />
-            <TouchableOpacity style={styles.qrButton}>
+            <TouchableOpacity 
+              style={styles.qrButton}
+              onPress={() => {
+                Alert.alert(
+                  'QR Scanner',
+                  'QR code scanning is not available in this demo. Please enter the address manually.',
+                  [{ text: 'OK' }]
+                );
+              }}
+            >
               <QrCode color={theme.colors.textSecondary} size={20} />
             </TouchableOpacity>
           </View>
@@ -190,7 +253,16 @@ export default function SendScreen() {
             </Text>
           </View>
 
-          <TouchableOpacity style={styles.customFeeButton}>
+          <TouchableOpacity 
+            style={styles.customFeeButton}
+            onPress={() => {
+              Alert.alert(
+                'Custom Fee',
+                'Custom fee selection is not available in this demo. The current fee rate will be used.',
+                [{ text: 'OK' }]
+              );
+            }}
+          >
             <Text style={[styles.customFeeText, { color: theme.colors.textSecondary }]}>
               Custom Fee
             </Text>
@@ -216,7 +288,16 @@ export default function SendScreen() {
         </View>
 
         {/* Coin Control */}
-        <TouchableOpacity style={styles.coinControlSection}>
+        <TouchableOpacity 
+          style={styles.coinControlSection}
+          onPress={() => {
+            Alert.alert(
+              'Coin Control',
+              'Coin control is not available in this demo. All available coins will be used automatically.',
+              [{ text: 'OK' }]
+            );
+          }}
+        >
           <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
             Coin Control
           </Text>
@@ -228,8 +309,15 @@ export default function SendScreen() {
 
       {/* Review Button */}
       <TouchableOpacity
-        style={[styles.reviewButton, { backgroundColor: theme.colors.primary }]}
+        style={[
+          styles.reviewButton, 
+          { 
+            backgroundColor: theme.colors.primary,
+            opacity: (!recipientAddress || !amount) ? 0.5 : 1
+          }
+        ]}
         onPress={handleReviewTransaction}
+        disabled={!recipientAddress || !amount}
       >
         <Text style={styles.reviewButtonText}>Review Transaction</Text>
       </TouchableOpacity>

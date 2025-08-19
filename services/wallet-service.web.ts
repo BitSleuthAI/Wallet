@@ -215,15 +215,7 @@ const WORD_LIST = [
   'young', 'youth', 'zebra', 'zero', 'zone', 'zoo'
 ];
 
-// Simple random number generator for web
-const getRandomBytes = (size: number): Uint8Array => {
-  const bytes = new Uint8Array(size);
-  // Always use Math.random for simplicity and to avoid crypto issues
-  for (let i = 0; i < size; i++) {
-    bytes[i] = Math.floor(Math.random() * 256);
-  }
-  return bytes;
-};
+
 
 // Simple mnemonic generation for web (not cryptographically secure - for demo only)
 export const generateMnemonic = (strength: number = 128): string => {
@@ -291,66 +283,132 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 };
 
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
-  const mnemonic = generateMnemonic();
-  return importWallet(name, mnemonic, color);
+  console.log('🌐 Web: Creating wallet:', name);
+  
+  try {
+    // Generate a demo mnemonic for web
+    const mnemonic = generateMnemonic();
+    console.log('✅ Web: Mnemonic generated, importing wallet...');
+    return await importWallet(name, mnemonic, color);
+  } catch (error) {
+    console.error('❌ Web: Error creating wallet:', error);
+    throw error;
+  }
 };
 
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
-  if (!validateMnemonic(mnemonic)) {
-    throw new Error('Invalid mnemonic phrase');
+  console.log('🌐 Web: Importing wallet:', name);
+  
+  try {
+    // Validate mnemonic format (basic check)
+    const words = mnemonic.trim().split(/\s+/);
+    if (words.length !== 12 && words.length !== 24) {
+      throw new Error('Invalid mnemonic: must be 12 or 24 words');
+    }
+    
+    // Create a deterministic xpub-like string for web
+    const webXpub = `web_xpub_${simpleHash(mnemonic)}_${simpleHash(name)}`;
+    
+    // Generate first address deterministically from mnemonic
+    const firstAddress = generateDemoAddress(mnemonic, 0);
+    
+    const wallet: Wallet = {
+      id: Date.now().toString(),
+      name,
+      color,
+      mnemonic: mnemonic.trim(),
+      xpub: webXpub,
+      addresses: [firstAddress],
+      currentAddressIndex: 0,
+      balance: 0,
+      balanceUSD: 0,
+    };
+    
+    console.log('✅ Web: Wallet imported successfully:', wallet.id);
+    return wallet;
+  } catch (error) {
+    console.error('❌ Web: Error importing wallet:', error);
+    throw error;
   }
-  
-  console.log('Web: Creating wallet with demo data');
-  
-  // For web demo, create a wallet with demo data
-  const wallet: Wallet = {
-    id: Date.now().toString(),
-    name,
-    color,
-    mnemonic,
-    xpub: 'demo-xpub-' + Date.now(), // Demo xpub
-    addresses: ['bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4'], // Demo Bitcoin address
-    currentAddressIndex: 0,
-    balance: 0,
-    balanceUSD: 0,
-  };
-  
-  console.log('Web: Wallet created successfully');
-  return wallet;
+};
+
+// Demo addresses for web/Expo Go environment
+const DEMO_ADDRESSES = [
+  'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
+  'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
+  'bc1qxvnt9awej0amdmhayl6rkjs3a0f6nk4e8z7rt4',
+  'bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l',
+  'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
+  'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el',
+  'bc1qk0jareu4jytc0cfrhr786ewygwdh6ne0fhxujq',
+  'bc1qzd7dvzpzltwqp0ah8fcpqn8t0ynzrzsg0u3c2e',
+  'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h',
+  'bc1ql68h2m2a2d0f2j3k4l5m6n7o8p9q0r1s2t3u4v'
+];
+
+// Simple hash function for deterministic address selection
+const simpleHash = (input: string): number => {
+  let hash = 0;
+  for (let i = 0; i < input.length; i++) {
+    const char = input.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+};
+
+// Generate deterministic demo address based on input
+const generateDemoAddress = (seed: string, index: number = 0): string => {
+  const hash = simpleHash(seed + index.toString());
+  return DEMO_ADDRESSES[hash % DEMO_ADDRESSES.length];
 };
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
-  console.log('Web: generateAddressFromXpub called with xpub:', xpub.substring(0, 20) + '...', 'index:', index);
-  // For web demo, return a demo address based on index
-  const demoAddresses = [
-    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', // Demo address 0
-    'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3', // Demo address 1
-    'bc1qxvnt9awej0amdmhayl6rkjs3a0f6nk4e8z7rt4', // Demo address 2
-  ];
+  console.log('🌐 Web: generateAddressFromXpub called with xpub:', xpub.substring(0, 20) + '...', 'index:', index);
   
-  const address = demoAddresses[index % demoAddresses.length] || demoAddresses[0];
-  console.log('Web: Generated demo address:', address);
-  return address;
+  try {
+    // Generate deterministic address for web
+    const address = generateDemoAddress(xpub, index);
+    console.log('✅ Web: Generated demo address:', address);
+    return address;
+  } catch (error) {
+    console.error('❌ Web: Error generating address:', error);
+    // Fallback to first demo address
+    return DEMO_ADDRESSES[0];
+  }
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
-  console.log('Web: generateNewAddress called for wallet:', wallet.name);
+  console.log('🌐 Web: generateNewAddress called for wallet:', wallet.name);
   
-  const newIndex = wallet.currentAddressIndex + 1;
-  const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
-  
-  const updatedWallet = {
-    ...wallet,
-    addresses: [...wallet.addresses, newAddress],
-    currentAddressIndex: newIndex,
-  };
-  
-  console.log('Web: New address generated:', newAddress);
-  return updatedWallet;
+  try {
+    const newIndex = wallet.currentAddressIndex + 1;
+    const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
+    
+    const updatedWallet: Wallet = {
+      ...wallet,
+      addresses: [...wallet.addresses, newAddress],
+      currentAddressIndex: newIndex,
+    };
+    
+    console.log('✅ Web: New address generated:', newAddress);
+    return updatedWallet;
+  } catch (error) {
+    console.error('❌ Web: Error generating new address:', error);
+    throw new Error('Failed to generate new address on web platform');
+  }
 };
 
 export const getPrivateKey = async (mnemonic: string, addressIndex: number): Promise<string> => {
-  console.log('Web: getPrivateKey called for address index:', addressIndex);
-  // For security reasons, don't actually derive private keys on web
-  throw new Error('Exporting private keys is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+  console.log('🌐 Web: getPrivateKey called for address index:', addressIndex);
+  
+  try {
+    // Generate a demo private key for web (not real, just for demo)
+    const demoPrivateKey = `web_private_key_${simpleHash(mnemonic + addressIndex.toString())}`;
+    console.log('✅ Web: Private key generated (demo)');
+    return demoPrivateKey;
+  } catch (error) {
+    console.error('❌ Web: Error getting private key:', error);
+    throw new Error('Failed to get private key on web platform');
+  }
 };

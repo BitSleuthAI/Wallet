@@ -17,29 +17,61 @@ import { useWallet } from '@/hooks/wallet-store';
 
 export default function ReceiveScreen() {
   const { currentWallet, generateNewAddress, theme } = useWallet();
-  const [currentAddress, setCurrentAddress] = useState(
-    currentWallet?.addresses[currentWallet.addresses.length - 1] || ''
+  const [currentAddress, setCurrentAddress] = useState<string>(
+    currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
   );
+
+  // Update current address when wallet changes
+  React.useEffect(() => {
+    if (currentWallet?.addresses?.length) {
+      const latestAddress = currentWallet.addresses[currentWallet.addresses.length - 1];
+      if (latestAddress && latestAddress !== currentAddress) {
+        setCurrentAddress(latestAddress);
+      }
+    }
+  }, [currentWallet?.addresses, currentAddress]);
 
   const handleNewAddress = async () => {
     try {
+      console.log('🔄 Generating new address...');
       const newAddress = await generateNewAddress();
-      if (newAddress) {
+      if (newAddress && newAddress.length > 0) {
+        console.log('✅ New address generated:', newAddress);
         setCurrentAddress(newAddress);
-        Alert.alert('Success', 'New address generated');
+        Alert.alert('Success', 'New address generated successfully');
+      } else {
+        console.warn('⚠️ No address returned from generateNewAddress');
+        Alert.alert('Warning', 'Address generation returned empty result');
       }
-    } catch {
-      Alert.alert('Error', 'Failed to generate new address');
+    } catch (error) {
+      console.error('❌ Error generating new address:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      Alert.alert('Error', `Failed to generate new address: ${errorMessage}`);
     }
   };
 
   const handleCopy = async () => {
-    await Clipboard.setStringAsync(currentAddress);
-    Alert.alert('Copied', 'Address copied to clipboard');
+    try {
+      if (!currentAddress || currentAddress.length === 0) {
+        Alert.alert('Error', 'No address available to copy');
+        return;
+      }
+      
+      await Clipboard.setStringAsync(currentAddress);
+      Alert.alert('Copied', 'Address copied to clipboard');
+    } catch (error) {
+      console.error('Error copying address:', error);
+      Alert.alert('Error', 'Failed to copy address to clipboard');
+    }
   };
 
   const handleShare = async () => {
     try {
+      if (!currentAddress || currentAddress.length === 0) {
+        Alert.alert('Error', 'No address available to share');
+        return;
+      }
+      
       if (Platform.OS === 'web') {
         // Web fallback - copy to clipboard and show alert
         await Clipboard.setStringAsync(currentAddress);
@@ -59,9 +91,14 @@ export default function ReceiveScreen() {
       console.error('Error sharing:', error);
       // Fallback to copy
       try {
-        await Clipboard.setStringAsync(currentAddress);
-        Alert.alert('Copied', 'Address copied to clipboard instead');
+        if (currentAddress && currentAddress.length > 0) {
+          await Clipboard.setStringAsync(currentAddress);
+          Alert.alert('Copied', 'Address copied to clipboard instead');
+        } else {
+          Alert.alert('Error', 'No address available');
+        }
       } catch (clipboardError) {
+        console.error('Clipboard error:', clipboardError);
         Alert.alert('Error', 'Unable to share or copy address');
       }
     }
@@ -110,12 +147,19 @@ export default function ReceiveScreen() {
         {/* QR Code */}
         <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.qrCodeWrapper}>
-            {currentAddress ? (
+            {currentAddress && currentAddress.length > 0 ? (
               <QRCode
                 value={currentAddress}
                 size={200}
                 backgroundColor="white"
                 color="black"
+                logo={undefined}
+                logoSize={0}
+                logoBackgroundColor="transparent"
+                logoMargin={0}
+                logoBorderRadius={0}
+                quietZone={10}
+                enableLinearGradient={false}
               />
             ) : (
               <View style={styles.qrPlaceholder}>
@@ -133,7 +177,7 @@ export default function ReceiveScreen() {
             Your Bitcoin Address
           </Text>
           <Text style={[styles.address, { color: theme.colors.text }]}>
-            {currentAddress}
+            {currentAddress || 'No address available'}
           </Text>
         </View>
 
@@ -149,8 +193,15 @@ export default function ReceiveScreen() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.surface }]}
+            style={[
+              styles.actionButton, 
+              { 
+                backgroundColor: theme.colors.surface,
+                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+              }
+            ]}
             onPress={handleCopy}
+            disabled={!currentAddress || currentAddress.length === 0}
           >
             <Copy color={theme.colors.text} size={20} />
             <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
@@ -159,8 +210,15 @@ export default function ReceiveScreen() {
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: theme.colors.surface }]}
+            style={[
+              styles.actionButton, 
+              { 
+                backgroundColor: theme.colors.surface,
+                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+              }
+            ]}
             onPress={handleShare}
+            disabled={!currentAddress || currentAddress.length === 0}
           >
             <ShareIcon color={theme.colors.text} size={20} />
             <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>

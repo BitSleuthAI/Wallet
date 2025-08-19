@@ -43,23 +43,45 @@ const API_BASE = Platform.select({
 // Test network connectivity
 export const testNetworkConnectivity = async (): Promise<boolean> => {
   try {
-    console.log('Testing network connectivity...');
+    console.log('🔍 Testing network connectivity...');
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // Quick test
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // Increased timeout
     
-    const response = await fetch('https://httpbin.org/get', {
-      method: 'GET',
-      signal: controller.signal,
-      headers: { 'Accept': 'application/json' },
-      ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
-    });
+    // Try multiple connectivity test endpoints
+    const testEndpoints = [
+      'https://httpbin.org/get',
+      'https://api.github.com',
+      'https://www.google.com',
+    ];
+    
+    for (const endpoint of testEndpoints) {
+      try {
+        const response = await fetch(endpoint, {
+          method: 'GET',
+          signal: controller.signal,
+          headers: { 'Accept': 'application/json' },
+          ...(Platform.OS === 'web' ? { 
+            mode: 'cors' as const,
+            credentials: 'omit' as const,
+          } : {}),
+        });
+        
+        if (response.ok) {
+          clearTimeout(timeoutId);
+          console.log(`✅ Network connectivity test: PASSED (${endpoint})`);
+          return true;
+        }
+      } catch (endpointError) {
+        console.log(`❌ Connectivity test failed for ${endpoint}:`, endpointError);
+        continue;
+      }
+    }
     
     clearTimeout(timeoutId);
-    const isConnected = response.ok;
-    console.log(`Network connectivity test: ${isConnected ? 'PASSED' : 'FAILED'}`);
-    return isConnected;
+    console.log('❌ Network connectivity test: FAILED (all endpoints)');
+    return false;
   } catch (error) {
-    console.warn('Network connectivity test failed:', error);
+    console.warn('⚠️ Network connectivity test failed:', error);
     return false;
   }
 };
@@ -70,19 +92,26 @@ async function fetchWithRetry(input: string, init?: RequestInit & { timeoutMs?: 
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
+      console.log(`🔄 Attempt ${attempt + 1}/${maxRetries + 1} for ${input}`);
       const result = await fetchJSON(input, init);
+      if (attempt > 0) {
+        console.log(`✅ Request succeeded on retry ${attempt}`);
+      }
       return result;
     } catch (error) {
       lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.log(`❌ Attempt ${attempt + 1} failed:`, errorMessage);
       
       if (attempt < maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Max 5 second delay
-        console.log(`Retrying request to ${input} in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 8000); // Max 8 second delay
+        console.log(`⏳ Retrying request to ${input} in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
   
+  console.error(`❌ All ${maxRetries + 1} attempts failed for ${input}`);
   throw lastError;
 }
 
@@ -180,26 +209,46 @@ const PRICE_APIS = [
   {
     name: 'CoinGecko',
     url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
-    parser: (data: any) => ({
-      usd: data.bitcoin?.usd || 0,
-      usd_24h_change: data.bitcoin?.usd_24h_change || 0,
-    })
+    parser: (data: any) => {
+      console.log('CoinGecko response:', data);
+      return {
+        usd: data.bitcoin?.usd || 0,
+        usd_24h_change: data.bitcoin?.usd_24h_change || 0,
+      };
+    }
   },
   {
     name: 'CoinDesk',
     url: 'https://api.coindesk.com/v1/bpi/currentprice.json',
-    parser: (data: any) => ({
-      usd: parseFloat(data.bpi?.USD?.rate?.replace(/,/g, '') || '0'),
-      usd_24h_change: 0, // CoinDesk doesn't provide 24h change
-    })
+    parser: (data: any) => {
+      console.log('CoinDesk response:', data);
+      return {
+        usd: parseFloat(data.bpi?.USD?.rate?.replace(/,/g, '') || '0'),
+        usd_24h_change: 0, // CoinDesk doesn't provide 24h change
+      };
+    }
   },
   {
     name: 'Blockchain.info',
     url: 'https://blockchain.info/ticker',
-    parser: (data: any) => ({
-      usd: data.USD?.last || 0,
-      usd_24h_change: 0, // Blockchain.info doesn't provide 24h change in this endpoint
-    })
+    parser: (data: any) => {
+      console.log('Blockchain.info response:', data);
+      return {
+        usd: data.USD?.last || 0,
+        usd_24h_change: 0, // Blockchain.info doesn't provide 24h change in this endpoint
+      };
+    }
+  },
+  {
+    name: 'Fallback',
+    url: '',
+    parser: () => {
+      console.log('Using fallback price data');
+      return {
+        usd: 45000, // Reasonable fallback price
+        usd_24h_change: 0,
+      };
+    }
   }
 ];
 
@@ -207,16 +256,27 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
   // Try each API endpoint in sequence
   for (const api of PRICE_APIS) {
     try {
-      console.log(`Fetching Bitcoin price from ${api.name}...`);
+      console.log(`💰 Fetching Bitcoin price from ${api.name}...`);
+      
+      // Handle fallback case
+      if (api.name === 'Fallback') {
+        console.log('⚠️ All price APIs failed, using fallback price');
+        return api.parser({});
+      }
+      
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000); // Reduced timeout
+      const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased timeout
       
       const response = await fetch(api.url, {
         signal: controller.signal,
         headers: {
           'Accept': 'application/json',
+          'User-Agent': 'BitcoinWallet/1.0',
         },
-        ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
+        ...(Platform.OS === 'web' ? { 
+          mode: 'cors' as const,
+          credentials: 'omit' as const,
+        } : {}),
       });
       
       clearTimeout(timeoutId);
@@ -229,21 +289,21 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
       const priceData = api.parser(data);
       
       if (!priceData.usd || priceData.usd <= 0) {
-        throw new Error(`Invalid price data from ${api.name}`);
+        throw new Error(`Invalid price data from ${api.name}: ${priceData.usd}`);
       }
       
       console.log(`✅ Bitcoin price fetched successfully from ${api.name}:`, priceData.usd);
       return priceData;
     } catch (error) {
-      console.warn(`Failed to fetch from ${api.name}:`, error);
+      console.warn(`❌ Failed to fetch from ${api.name}:`, error);
       // Continue to next API
     }
   }
   
-  // If all APIs fail, return fallback price instead of throwing error
-  console.warn('All price APIs failed, returning fallback price for better UX');
+  // This should never be reached due to fallback, but just in case
+  console.warn('⚠️ Unexpected: All APIs including fallback failed');
   return {
-    usd: 45000, // Reasonable fallback price
+    usd: 45000, // Final fallback price
     usd_24h_change: 0,
   };
 };
@@ -253,9 +313,11 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   ensureECC();
   
   if (!address || address.length < 26) {
-    console.warn('Invalid address provided:', address);
+    console.warn('⚠️ Invalid address provided:', address);
     return 0;
   }
+  
+  console.log(`💰 Fetching balance for address: ${address.substring(0, 10)}...`);
   
   // Try multiple APIs for redundancy with different endpoints
   const apiAttempts = [
@@ -266,37 +328,43 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   ];
   
   let lastError: Error | null = null;
+  let successfulAttempts = 0;
   
   for (const api of apiAttempts) {
     try {
-      console.log(`Fetching balance for address ${address} from ${api.name}...`);
+      console.log(`🔍 Trying ${api.name} for balance...`);
       
       const url = `${api.base}${api.endpoint}/${address}`;
       const data = await fetchWithRetry(url, {
-        timeoutMs: 8000, // Reduced timeout for faster failover
-      }, 1); // Reduced retries for faster failover
+        timeoutMs: 10000, // Increased timeout
+      }, 2); // Increased retries
       
       const balance = normalizeBalanceResponse(data, api.name);
       console.log(`✅ Address balance fetched from ${api.name}:`, balance, 'BTC');
       return Math.max(0, balance); // Ensure non-negative balance
     } catch (error) {
       lastError = error as Error;
-      console.warn(`Failed to fetch balance from ${api.name}:`, error);
+      console.warn(`❌ Failed to fetch balance from ${api.name}:`, error);
+      successfulAttempts++;
+      
+      // If we've tried half the APIs and all failed, test connectivity
+      if (successfulAttempts === Math.ceil(apiAttempts.length / 2)) {
+        console.log('🔍 Testing network connectivity...');
+        const isConnected = await testNetworkConnectivity();
+        if (!isConnected) {
+          console.warn('⚠️ Network connectivity test failed, returning 0 balance');
+          return 0;
+        }
+      }
+      
       continue;
     }
   }
   
-  console.error('All balance APIs failed for address:', address);
-  
-  // Test network connectivity to provide better error message
-  const isConnected = await testNetworkConnectivity();
-  if (!isConnected) {
-    console.warn('Network connectivity test failed, returning 0 balance');
-    return 0; // Return 0 instead of throwing error for better UX
-  }
+  console.error('❌ All balance APIs failed for address:', address.substring(0, 10) + '...');
   
   // Return 0 balance instead of throwing error to prevent app crashes
-  console.warn('All Bitcoin APIs unavailable, returning 0 balance for better UX');
+  console.warn('⚠️ All Bitcoin APIs unavailable, returning 0 balance for better UX');
   return 0;
 };
 
@@ -321,9 +389,11 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   ensureECC();
   
   if (!address || address.length < 26) {
-    console.warn('Invalid address provided:', address);
+    console.warn('⚠️ Invalid address provided:', address);
     return [];
   }
+  
+  console.log(`📜 Fetching transactions for address: ${address.substring(0, 10)}...`);
   
   // Try multiple APIs for redundancy with different endpoints
   const apiAttempts = [
@@ -334,10 +404,11 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   ];
   
   let lastError: Error | null = null;
+  let successfulAttempts = 0;
   
   for (const api of apiAttempts) {
     try {
-      console.log(`Fetching transactions for address ${address} from ${api.name}...`);
+      console.log(`🔍 Trying ${api.name} for transactions...`);
       
       let url: string;
       if (api.name === 'Blockchain.info') {
@@ -348,30 +419,35 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
       }
       
       const data = await fetchWithRetry(url, {
-        timeoutMs: 8000, // Reduced timeout for faster failover
-      }, 1); // Reduced retries for faster failover
+        timeoutMs: 12000, // Increased timeout for transactions
+      }, 2); // Increased retries
       
       const transactions = normalizeTransactionResponse(data, api.name);
       console.log(`✅ Address transactions fetched from ${api.name}:`, transactions.length, 'transactions');
       return transactions;
     } catch (error) {
       lastError = error as Error;
-      console.warn(`Failed to fetch transactions from ${api.name}:`, error);
+      console.warn(`❌ Failed to fetch transactions from ${api.name}:`, error);
+      successfulAttempts++;
+      
+      // If we've tried half the APIs and all failed, test connectivity
+      if (successfulAttempts === Math.ceil(apiAttempts.length / 2)) {
+        console.log('🔍 Testing network connectivity...');
+        const isConnected = await testNetworkConnectivity();
+        if (!isConnected) {
+          console.warn('⚠️ Network connectivity test failed, returning empty transactions');
+          return [];
+        }
+      }
+      
       continue;
     }
   }
   
-  console.error('All transaction APIs failed for address:', address);
-  
-  // Test network connectivity to provide better error message
-  const isConnected = await testNetworkConnectivity();
-  if (!isConnected) {
-    console.warn('Network connectivity test failed, returning empty transactions');
-    return []; // Return empty array instead of throwing error
-  }
+  console.error('❌ All transaction APIs failed for address:', address.substring(0, 10) + '...');
   
   // Return empty array instead of throwing error to prevent app crashes
-  console.warn('All Bitcoin APIs unavailable, returning empty transactions for better UX');
+  console.warn('⚠️ All Bitcoin APIs unavailable, returning empty transactions for better UX');
   return [];
 };
 
