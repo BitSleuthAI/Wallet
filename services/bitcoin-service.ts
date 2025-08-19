@@ -172,10 +172,12 @@ export const getWalletBalance = async (addresses: string[]): Promise<number> => 
   try {
     const balancePromises = addresses.map(address => getAddressBalance(address));
     const balances = await Promise.all(balancePromises);
-    return balances.reduce((total, balance) => total + balance, 0);
+    const totalBalance = balances.reduce((total, balance) => total + balance, 0);
+    console.log('✅ Wallet balance calculated:', totalBalance, 'BTC');
+    return totalBalance;
   } catch (error) {
     console.error('Error fetching wallet balance:', error);
-    return 0;
+    throw error;
   }
 };
 
@@ -243,9 +245,12 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
       }
     });
     
-    return Array.from(uniqueTransactions.values())
+    const processedTransactions = Array.from(uniqueTransactions.values())
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 50); // Limit to 50 most recent transactions
+    
+    console.log('✅ Transaction history processed:', processedTransactions.length, 'transactions');
+    return processedTransactions;
   } catch (error) {
     console.error('Error fetching transaction history:', error);
     throw error;
