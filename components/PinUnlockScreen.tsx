@@ -9,20 +9,19 @@ import {
   Platform,
   Vibration,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { ArrowLeft, Delete } from 'lucide-react-native';
+import { Delete, Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 
-export default function PinSetupScreen() {
+export default function PinUnlockScreen() {
   const { theme } = useWallet();
-  const { savePin } = useAutoLock();
+  const { unlock } = useAutoLock();
   const [pin, setPin] = useState('');
-  const [confirmPin, setConfirmPin] = useState('');
-  const [mode, setMode] = useState<'setup' | 'confirm'>('setup');
+  const [attempts, setAttempts] = useState(0);
 
   const maxPinLength = 4;
+  const maxAttempts = 5;
 
   const handleNumberPress = async (number: string) => {
     if (Platform.OS !== 'web') {
@@ -33,14 +32,8 @@ export default function PinSetupScreen() {
       }
     }
 
-    if (mode === 'setup') {
-      if (pin.length < maxPinLength) {
-        setPin(prev => prev + number);
-      }
-    } else {
-      if (confirmPin.length < maxPinLength) {
-        setConfirmPin(prev => prev + number);
-      }
+    if (pin.length < maxPinLength) {
+      setPin(prev => prev + number);
     }
   };
 
@@ -53,73 +46,51 @@ export default function PinSetupScreen() {
       }
     }
 
-    if (mode === 'setup') {
-      setPin(prev => prev.slice(0, -1));
-    } else {
-      setConfirmPin(prev => prev.slice(0, -1));
-    }
+    setPin(prev => prev.slice(0, -1));
   };
 
   useEffect(() => {
-    if (mode === 'setup' && pin.length === maxPinLength) {
-      // Auto-advance to confirm mode
-      setTimeout(() => {
-        setMode('confirm');
-      }, 300);
-    }
-  }, [pin, mode]);
-
-  useEffect(() => {
-    if (mode === 'confirm' && confirmPin.length === maxPinLength) {
-      // Check if PINs match
-      if (pin === confirmPin) {
-        // PINs match, save PIN and proceed to biometric setup
-        const savePinAndProceed = async () => {
-          try {
-            await savePin(pin);
-            setTimeout(() => {
-              router.push('/biometric-setup');
-            }, 300);
-          } catch (error) {
-            console.error('Error saving PIN:', error);
+    if (pin.length === maxPinLength) {
+      // Auto-verify PIN when 4 digits are entered
+      setTimeout(async () => {
+        const isValid = await unlock(pin);
+        
+        if (!isValid) {
+          // Invalid PIN
+          const newAttempts = attempts + 1;
+          setAttempts(newAttempts);
+          
+          if (Platform.OS !== 'web') {
+            try {
+              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            } catch {
+              // Haptics not available, use vibration fallback
+              Vibration.vibrate(500);
+            }
+          }
+          
+          if (newAttempts >= maxAttempts) {
             Alert.alert(
-              'Error',
-              'Failed to save PIN. Please try again.',
+              'Too Many Attempts',
+              'You have entered an incorrect PIN too many times. Please restart the app and try again.',
+              [{ text: 'OK' }]
+            );
+          } else {
+            Alert.alert(
+              'Incorrect PIN',
+              `Please try again. ${maxAttempts - newAttempts} attempts remaining.`,
               [{ text: 'OK' }]
             );
           }
-        };
-        savePinAndProceed();
-      } else {
-        // PINs don't match, show error and reset
-        if (Platform.OS !== 'web') {
-          try {
-            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          } catch {
-            // Haptics not available, use vibration fallback
-            Vibration.vibrate(500);
-          }
+          
+          setPin('');
         }
-        
-        Alert.alert(
-          'PIN Mismatch',
-          'The PINs you entered do not match. Please try again.',
-          [
-            {
-              text: 'OK',
-              onPress: () => {
-                setPin('');
-                setConfirmPin('');
-                setMode('setup');
-              }
-            }
-          ]
-        );
-      }
+        // If valid, the unlock function will handle unlocking the app
+      }, 300);
     }
-  }, [confirmPin, pin, mode, savePin]);
+  }, [pin, unlock, attempts]);
 
-  const renderPinDots = (currentPin: string) => {
+  const renderPinDots = () => {
     return (
       <View style={styles.pinDotsContainer}>
         {Array.from({ length: maxPinLength }).map((_, index) => (
@@ -128,7 +99,7 @@ export default function PinSetupScreen() {
             style={[
               styles.pinDot,
               {
-                backgroundColor: index < currentPin.length 
+                backgroundColor: index < pin.length 
                   ? theme.colors.primary 
                   : 'transparent',
                 borderColor: theme.colors.primary,
@@ -183,30 +154,25 @@ export default function PinSetupScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
-
       <View style={styles.content}>
         <View style={styles.header}>
+          <View style={[styles.lockIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Lock color={theme.colors.primary} size={32} />
+          </View>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            {mode === 'setup' ? 'Set a PIN' : 'Confirm PIN'}
+            Enter PIN
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {mode === 'setup' 
-              ? 'This 4-digit PIN will be used to unlock your wallet on this device.'
-              : 'Please enter your PIN again to confirm.'
-            }
+            Enter your 4-digit PIN to unlock the app
           </Text>
+          {attempts > 0 && (
+            <Text style={[styles.attemptsText, { color: theme.colors.error }]}>
+              {maxAttempts - attempts} attempts remaining
+            </Text>
+          )}
         </View>
 
-        {renderPinDots(mode === 'setup' ? pin : confirmPin)}
+        {renderPinDots()}
         {renderNumberPad()}
       </View>
     </SafeAreaView>
@@ -217,11 +183,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  backButton: {
-    marginTop: 20,
-    marginLeft: 20,
-    marginBottom: 20,
-  },
   content: {
     flex: 1,
     paddingHorizontal: 20,
@@ -229,7 +190,15 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
+    marginTop: 80,
+  },
+  lockIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   title: {
     fontSize: 28,
@@ -242,6 +211,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: 20,
+  },
+  attemptsText: {
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 12,
+    fontWeight: '600',
   },
   pinDotsContainer: {
     flexDirection: 'row',

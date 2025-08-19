@@ -301,7 +301,9 @@ export default function SettingsScreen() {
           }}
           rightElement={
             <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              {autoLockTimeout === 0 ? 'Never' : `${autoLockTimeout} min`}
+              {autoLockTimeout === 0 ? 'Never' : 
+               autoLockTimeout === 60 ? '1 hour' : 
+               `${autoLockTimeout} min`}
             </Text>
           }
         />

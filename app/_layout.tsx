@@ -2,7 +2,10 @@
 import { initializeCrypto } from '../services/crypto-polyfill';
 
 import { WalletProvider } from '@/hooks/wallet-store';
+import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import ActivityTracker from '@/components/ActivityTracker';
+import PinUnlockScreen from '@/components/PinUnlockScreen';
 
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -13,9 +16,15 @@ SplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
-function RootLayoutNav() {
+function AppContent() {
+  const { isLocked } = useAutoLock();
+
+  if (isLocked) {
+    return <PinUnlockScreen />;
+  }
+
   return (
-    <WalletProvider>
+    <ActivityTracker>
       <Stack screenOptions={{ headerBackTitle: 'Back' }}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="wallet-setup" options={{ headerShown: false }} />
@@ -23,6 +32,16 @@ function RootLayoutNav() {
         <Stack.Screen name="biometric-setup" options={{ headerShown: false }} />
         <Stack.Screen name="about" options={{ headerShown: true }} />
       </Stack>
+    </ActivityTracker>
+  );
+}
+
+function RootLayoutNav() {
+  return (
+    <WalletProvider>
+      <AutoLockProvider>
+        <AppContent />
+      </AutoLockProvider>
     </WalletProvider>
   );
 }
