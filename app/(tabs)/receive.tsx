@@ -7,6 +7,7 @@ import {
   SafeAreaView,
   Alert,
   Share,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { RefreshCw, Copy, Share as ShareIcon } from 'lucide-react-native';
@@ -39,12 +40,30 @@ export default function ReceiveScreen() {
 
   const handleShare = async () => {
     try {
-      await Share.share({
-        message: `Bitcoin Address: ${currentAddress}`,
-        title: 'Bitcoin Address',
-      });
+      if (Platform.OS === 'web') {
+        // Web fallback - copy to clipboard and show alert
+        await Clipboard.setStringAsync(currentAddress);
+        Alert.alert(
+          'Address Copied',
+          'Bitcoin address has been copied to clipboard since sharing is not available on web.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        // Native sharing
+        await Share.share({
+          message: `Bitcoin Address: ${currentAddress}`,
+          title: 'Bitcoin Address',
+        });
+      }
     } catch (error) {
       console.error('Error sharing:', error);
+      // Fallback to copy
+      try {
+        await Clipboard.setStringAsync(currentAddress);
+        Alert.alert('Copied', 'Address copied to clipboard instead');
+      } catch (clipboardError) {
+        Alert.alert('Error', 'Unable to share or copy address');
+      }
     }
   };
 
