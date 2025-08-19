@@ -333,7 +333,7 @@ export default function SettingsScreen() {
           icon={List}
           title="View Addresses"
           subtitle="Show all derived addresses"
-          onPress={() => console.log('View addresses')}
+          onPress={() => router.push('/wallet-addresses')}
         />
 
         {/* Privacy Section */}
