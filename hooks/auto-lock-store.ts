@@ -41,6 +41,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     // Clear existing timeout
     if (lockTimeoutRef.current) {
       clearTimeout(lockTimeoutRef.current);
+      lockTimeoutRef.current = null;
     }
 
     // Don't set timer if auto-lock is disabled (timeout = 0)

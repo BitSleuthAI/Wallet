@@ -406,11 +406,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       
       console.log('✅ Wallet data cleared successfully');
       console.log('🔄 App state has been completely reset');
+      
+      // Trigger app re-mount to prevent hook ordering issues
+      if (typeof global !== 'undefined' && (global as any).__forceAppReset) {
+        console.log('🔄 Triggering app re-mount...');
+        setTimeout(() => {
+          (global as any).__forceAppReset();
+        }, 100);
+      }
     } catch (error) {
       console.error('❌ Error clearing wallet data:', error);
       throw new Error('Failed to clear wallet data. Please try again.');
     }
-  }, [queryClient, setTheme]);
+  }, [queryClient]);
 
   return useMemo(() => ({
     // Wallet data

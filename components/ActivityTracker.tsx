@@ -12,13 +12,13 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
   // Create a PanResponder to track touch events
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => {
-      if (!isLocked) {
+      if (!isLocked && updateActivity && typeof updateActivity === 'function') {
         updateActivity();
       }
       return false; // Don't capture the gesture, just track it
     },
     onMoveShouldSetPanResponder: () => {
-      if (!isLocked) {
+      if (!isLocked && updateActivity && typeof updateActivity === 'function') {
         updateActivity();
       }
       return false; // Don't capture the gesture, just track it
@@ -27,9 +27,9 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
 
   useEffect(() => {
     // Attach event listeners for web
-    if (typeof window !== 'undefined') {
+    if (typeof window !== 'undefined' && window.addEventListener) {
       const handleActivity = () => {
-        if (!isLocked) {
+        if (!isLocked && updateActivity && typeof updateActivity === 'function') {
           updateActivity();
         }
       };
@@ -38,12 +38,20 @@ export default function ActivityTracker({ children }: ActivityTrackerProps) {
       const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart'];
       
       events.forEach(event => {
-        window.addEventListener(event, handleActivity, { passive: true });
+        try {
+          window.addEventListener(event, handleActivity, { passive: true });
+        } catch (error) {
+          console.warn(`Failed to add event listener for ${event}:`, error);
+        }
       });
 
       return () => {
         events.forEach(event => {
-          window.removeEventListener(event, handleActivity);
+          try {
+            window.removeEventListener(event, handleActivity);
+          } catch (error) {
+            console.warn(`Failed to remove event listener for ${event}:`, error);
+          }
         });
       };
     }
