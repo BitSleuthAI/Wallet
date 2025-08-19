@@ -34,7 +34,7 @@ export default function SettingsScreen() {
   const handleLogout = () => {
     Alert.alert(
       'Logout & Erase Wallet',
-      'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.',
+      'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.\n\nThis action cannot be undone!',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -42,14 +42,37 @@ export default function SettingsScreen() {
           style: 'destructive', 
           onPress: async () => {
             try {
+              console.log('🚀 User confirmed wallet logout and erase');
+              
+              // Show loading state
+              Alert.alert(
+                'Clearing Wallet Data',
+                'Please wait while we securely clear your wallet data...',
+                [],
+                { cancelable: false }
+              );
+              
+              // Perform the logout and erase
               await logoutAndEraseWallet();
-              // Navigate to wallet setup screen
-              router.replace('/wallet-setup');
+              
+              console.log('✅ Wallet logout and erase completed successfully');
+              
+              // Navigate to wallet setup screen with a slight delay to ensure state is cleared
+              setTimeout(() => {
+                try {
+                  router.replace('/wallet-setup');
+                } catch (navError) {
+                  console.warn('Navigation error, trying alternative route:', navError);
+                  // Fallback navigation
+                  router.push('/wallet-setup');
+                }
+              }, 500);
+              
             } catch (error) {
-              console.error('Error during logout:', error);
+              console.error('❌ Error during logout:', error);
               Alert.alert(
                 'Error',
-                'There was an error clearing your wallet data. Please try again.',
+                'There was an error clearing your wallet data. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'),
                 [{ text: 'OK' }]
               );
             }

@@ -172,26 +172,55 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const logoutAndEraseWallet = useCallback(async () => {
     try {
+      console.log('🔄 Starting wallet logout and erase process...');
+      
       // Clear all wallet-related data from AsyncStorage
-      await AsyncStorage.multiRemove([
+      const keysToRemove = [
         'wallet',
         'pin',
         'biometric_enabled',
-        'wallet_setup_completed'
-      ]);
+        'wallet_setup_completed',
+        'theme', // Reset theme to default
+        'user_preferences',
+        'app_settings',
+        'cached_addresses',
+        'transaction_cache',
+        'price_cache',
+        'last_sync_time'
+      ];
+      
+      console.log('🗑️ Removing storage keys:', keysToRemove);
+      await AsyncStorage.multiRemove(keysToRemove);
       
       // Reset local state
+      console.log('🔄 Resetting local state...');
       setCurrentWallet(null);
+      setTheme(lightTheme); // Reset to light theme
       
-      // Clear all cached queries
+      // Clear all cached queries and reset query client
+      console.log('🔄 Clearing query cache...');
       queryClient.clear();
+      queryClient.resetQueries();
+      queryClient.invalidateQueries();
       
-      console.log('Wallet data cleared successfully');
+      // Clear any global state that might persist
+      if ((global as any).ecc) {
+        console.log('🔄 Clearing global ECC state...');
+        delete (global as any).ecc;
+      }
+      
+      if ((global as any).__cryptoInitialized) {
+        console.log('🔄 Resetting crypto initialization flag...');
+        (global as any).__cryptoInitialized = false;
+      }
+      
+      console.log('✅ Wallet data cleared successfully');
+      console.log('🔄 App state has been completely reset');
     } catch (error) {
-      console.error('Error clearing wallet data:', error);
-      throw error;
+      console.error('❌ Error clearing wallet data:', error);
+      throw new Error('Failed to clear wallet data. Please try again.');
     }
-  }, [queryClient]);
+  }, [queryClient, setTheme]);
 
   return useMemo(() => ({
     // Wallet data
