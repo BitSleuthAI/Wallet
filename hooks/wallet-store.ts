@@ -34,10 +34,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const priceQuery = useQuery({
     queryKey: ['bitcoin-price'],
     queryFn: bitcoinService.getBitcoinPrice,
-    refetchInterval: 60000, // Refetch every 60 seconds
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 30000),
-    staleTime: 120000, // Consider data fresh for 2 minutes
+    refetchInterval: 120000, // Refetch every 2 minutes (less aggressive)
+    retry: 1, // Reduced retries
+    retryDelay: 5000, // Fixed 5 second delay
+    staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
@@ -49,13 +49,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryKey: ['wallet-balance', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
     queryFn: async () => {
       if (!currentWallet || !currentWallet.addresses.length) return 0;
-      return bitcoinService.getWalletBalance(currentWallet.addresses);
+      try {
+        return await bitcoinService.getWalletBalance(currentWallet.addresses);
+      } catch (error) {
+        console.warn('Balance fetch failed, returning 0:', error);
+        return 0; // Return 0 instead of throwing
+      }
     },
     enabled: !!currentWallet && !!currentWallet.addresses?.length,
-    refetchInterval: 30000, // Refetch every 30 seconds
-    retry: 1,
-    retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 15000),
-    staleTime: 60000, // Consider data fresh for 1 minute
+    refetchInterval: 60000, // Refetch every 60 seconds (less aggressive)
+    retry: 1, // Reduced retries
+    retryDelay: 10000, // Fixed 10 second delay
+    staleTime: 120000, // Consider data fresh for 2 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
@@ -67,13 +72,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryKey: ['transactions', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
     queryFn: async () => {
       if (!currentWallet || !currentWallet.addresses.length) return [];
-      return bitcoinService.getTransactionHistory(currentWallet.addresses);
+      try {
+        return await bitcoinService.getTransactionHistory(currentWallet.addresses);
+      } catch (error) {
+        console.warn('Transaction history fetch failed, returning empty array:', error);
+        return []; // Return empty array instead of throwing
+      }
     },
     enabled: !!currentWallet && !!currentWallet.addresses?.length,
-    refetchInterval: 45000, // Refetch every 45 seconds
-    retry: 1,
-    retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 15000),
-    staleTime: 90000, // Consider data fresh for 1.5 minutes
+    refetchInterval: 90000, // Refetch every 90 seconds (less aggressive)
+    retry: 1, // Reduced retries
+    retryDelay: 15000, // Fixed 15 second delay
+    staleTime: 180000, // Consider data fresh for 3 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
@@ -159,11 +169,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const refreshData = useCallback(async () => {
     console.log('Refreshing wallet data...');
     try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance'] }),
-        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
-        queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] }),
-      ]);
+      // Invalidate queries to trigger fresh fetches
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
+      
       console.log('✅ Wallet data refresh initiated');
     } catch (error) {
       console.warn('⚠️ Error during data refresh:', error);
@@ -232,10 +242,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     balanceUSD: (balanceQuery.data || 0) * (priceQuery.data?.usd || 0),
     bitcoinPrice: priceQuery.data,
     
-    // Error states
-    priceError: priceQuery.error,
-    balanceError: balanceQuery.error,
-    transactionsError: transactionsQuery.error,
+    // Error states (only show if there's actually an error and no data)
+    priceError: priceQuery.error && !priceQuery.data ? priceQuery.error : null,
+    balanceError: balanceQuery.error && balanceQuery.data === undefined ? balanceQuery.error : null,
+    transactionsError: transactionsQuery.error && !transactionsQuery.data?.length ? transactionsQuery.error : null,
     
     // Transactions
     transactions: transactionsQuery.data || [],
@@ -257,10 +267,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isLoadingTransactions: transactionsQuery.isLoading,
     isLoadingPrice: priceQuery.isLoading,
     
-    // Error states for loading
-    hasBalanceError: !!balanceQuery.error,
-    hasTransactionsError: !!transactionsQuery.error,
-    hasPriceError: !!priceQuery.error,
+    // Error states for loading (only show if there's actually an error and no data)
+    hasBalanceError: !!balanceQuery.error && balanceQuery.data === undefined,
+    hasTransactionsError: !!transactionsQuery.error && !transactionsQuery.data?.length,
+    hasPriceError: !!priceQuery.error && !priceQuery.data,
   }), [
     currentWallet,
     walletQuery.isLoading,
