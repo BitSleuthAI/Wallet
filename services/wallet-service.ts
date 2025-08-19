@@ -298,11 +298,21 @@ export const createWallet = async (name: string, color: string = '#8B5CF6'): Pro
 };
 
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
+  console.log('🔍 importWallet called with Platform.OS:', Platform.OS);
+  
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, using web service for import');
-    const webService = require('./wallet-service.web');
-    return webService.importWallet(name, mnemonic, color);
+    console.log('🌐 Platform detected as web, delegating to web service for import');
+    try {
+      const webService = require('./wallet-service.web');
+      console.log('✅ Web service loaded successfully');
+      const result = await webService.importWallet(name, mnemonic, color);
+      console.log('✅ Web service importWallet completed successfully');
+      return result;
+    } catch (webError) {
+      console.error('❌ Error in web service:', webError);
+      throw webError;
+    }
   }
   
   console.log('📱 Platform detected as mobile for import:', Platform.OS);
@@ -523,7 +533,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     console.log('✅ Wallet created successfully');
     return wallet;
   } catch (error) {
-    console.error('❌ Error creating wallet:', error);
+    console.error('❌ Import wallet error:', error);
     
     // Provide more specific error messages
     if (error instanceof Error) {

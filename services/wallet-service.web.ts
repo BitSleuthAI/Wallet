@@ -319,14 +319,38 @@ export const importWallet = async (name: string, mnemonic: string, color: string
   return wallet;
 };
 
-export const generateAddressFromXpub = async (_xpub: string, _index: number): Promise<string> => {
-  throw new Error('Address derivation is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
+  console.log('Web: generateAddressFromXpub called with xpub:', xpub.substring(0, 20) + '...', 'index:', index);
+  // For web demo, return a demo address based on index
+  const demoAddresses = [
+    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', // Demo address 0
+    'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3', // Demo address 1
+    'bc1qxvnt9awej0amdmhayl6rkjs3a0f6nk4e8z7rt4', // Demo address 2
+  ];
+  
+  const address = demoAddresses[index % demoAddresses.length] || demoAddresses[0];
+  console.log('Web: Generated demo address:', address);
+  return address;
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
-  throw new Error('Generating new addresses is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
+  console.log('Web: generateNewAddress called for wallet:', wallet.name);
+  
+  const newIndex = wallet.currentAddressIndex + 1;
+  const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
+  
+  const updatedWallet = {
+    ...wallet,
+    addresses: [...wallet.addresses, newAddress],
+    currentAddressIndex: newIndex,
+  };
+  
+  console.log('Web: New address generated:', newAddress);
+  return updatedWallet;
 };
 
-export const getPrivateKey = async (_mnemonic: string, _addressIndex: number): Promise<string> => {
+export const getPrivateKey = async (mnemonic: string, addressIndex: number): Promise<string> => {
+  console.log('Web: getPrivateKey called for address index:', addressIndex);
+  // For security reasons, don't actually derive private keys on web
   throw new Error('Exporting private keys is not available on web in Expo Go. Please open this project on a mobile device using the QR code.');
 };
