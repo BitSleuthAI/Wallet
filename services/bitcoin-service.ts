@@ -41,7 +41,8 @@ const API_BASE = Platform.select({
 });
 
 // Development mode flag - set to true when APIs are unavailable
-const DEVELOPMENT_MODE = false;
+// Temporarily enabled to use mock data while API issues are resolved
+const DEVELOPMENT_MODE = true;
 
 // Mock data for development
 const MOCK_DATA = {
@@ -342,12 +343,51 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
   };
 };
 
+// Validate Bitcoin address format
+const isValidBitcoinAddress = (address: string): boolean => {
+  if (!address || typeof address !== 'string') {
+    return false;
+  }
+  
+  // Basic format checks
+  if (address.length < 26 || address.length > 62) {
+    return false;
+  }
+  
+  // Check for valid Bitcoin address prefixes
+  const validPrefixes = ['1', '3', 'bc1', 'tb1']; // Legacy, P2SH, Bech32 mainnet, Bech32 testnet
+  const hasValidPrefix = validPrefixes.some(prefix => address.startsWith(prefix));
+  
+  if (!hasValidPrefix) {
+    return false;
+  }
+  
+  // Additional checks for bech32 addresses
+  if (address.startsWith('bc1') || address.startsWith('tb1')) {
+    // Bech32 addresses should only contain lowercase letters and numbers
+    if (!/^[a-z0-9]+$/.test(address)) {
+      return false;
+    }
+    
+    // Check length constraints for different bech32 types
+    if (address.startsWith('bc1q') && address.length !== 42) {
+      return false; // P2WPKH should be 42 characters
+    }
+    if (address.startsWith('bc1p') && address.length !== 62) {
+      return false; // P2TR should be 62 characters
+    }
+  }
+  
+  return true;
+};
+
 export const getAddressBalance = async (address: string): Promise<number> => {
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  if (!address || address.length < 26) {
-    console.warn('⚠️ Invalid address provided:', address);
+  // Validate address format first
+  if (!isValidBitcoinAddress(address)) {
+    console.warn('⚠️ Invalid Bitcoin address format:', address);
     return 0;
   }
   
@@ -384,7 +424,18 @@ export const getAddressBalance = async (address: string): Promise<number> => {
       return Math.max(0, balance); // Ensure non-negative balance
     } catch (error) {
       lastError = error as Error;
-      console.warn(`❌ Failed to fetch balance from ${api.name}:`, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Handle specific error cases
+      if (errorMsg.includes('400')) {
+        console.warn(`❌ ${api.name} returned 400 - possibly invalid address or API issue:`, address);
+      } else if (errorMsg.includes('404')) {
+        console.log(`ℹ️ ${api.name} returned 404 - address not found (new address):`, address);
+        // 404 for new addresses is normal, return 0 balance
+        return 0;
+      } else {
+        console.warn(`❌ Failed to fetch balance from ${api.name}:`, errorMsg);
+      }
       continue;
     }
   }
@@ -414,8 +465,9 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  if (!address || address.length < 26) {
-    console.warn('⚠️ Invalid address provided:', address);
+  // Validate address format first
+  if (!isValidBitcoinAddress(address)) {
+    console.warn('⚠️ Invalid Bitcoin address format:', address);
     return [];
   }
   
@@ -473,7 +525,18 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
       return transactions;
     } catch (error) {
       lastError = error as Error;
-      console.warn(`❌ Failed to fetch transactions from ${api.name}:`, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      // Handle specific error cases
+      if (errorMsg.includes('400')) {
+        console.warn(`❌ ${api.name} returned 400 - possibly invalid address or API issue:`, address);
+      } else if (errorMsg.includes('404')) {
+        console.log(`ℹ️ ${api.name} returned 404 - no transactions found (new address):`, address);
+        // 404 for new addresses is normal, return empty array
+        return [];
+      } else {
+        console.warn(`❌ Failed to fetch transactions from ${api.name}:`, errorMsg);
+      }
       continue;
     }
   }

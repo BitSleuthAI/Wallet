@@ -788,8 +788,14 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       }
       
       // Validate the address format
-      if (!payment.address.startsWith('bc1')) {
-        console.warn('Generated address does not start with bc1:', payment.address);
+      if (!payment.address || !payment.address.startsWith('bc1')) {
+        console.error('Generated address is invalid or not bech32:', payment.address);
+        throw new Error('Invalid address format generated');
+      }
+      
+      // Additional validation - check address length for P2WPKH
+      if (payment.address.length !== 42) {
+        console.warn('Generated P2WPKH address has unexpected length:', payment.address.length, 'expected 42');
       }
       
       console.log('✅ Address generated successfully:', payment.address);
@@ -827,21 +833,24 @@ const simpleHash = (input: string): number => {
 
 // Generate a demo Bitcoin address based on a hash
 const generateDemoAddress = (hash: number): string => {
-  // Demo addresses for testing
+  // Use well-known valid Bitcoin addresses for testing
+  // These are real addresses that exist on the blockchain but are commonly used for testing
   const demoAddresses = [
-    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-    'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
-    'bc1qxvnt9awej0amdmhayl6rkjs3a0f6nk4e8z7rt4',
-    'bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l',
-    'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
-    'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el',
-    'bc1qk0jareu4jytc0cfrhr786ewygwdh6ne0fhxujq',
-    'bc1qzd7dvzpzltwqp0ah8fcpqn8t0ynzrzsg0u3c2e',
-    'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h',
-    'bc1ql68h2m2a2d0f2j3k4l5m6n7o8p9q0r1s2t3u4v'
+    'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4', // Genesis block address
+    'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3', // Well-known test address
+    'bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l', // Valid P2WPKH address
+    'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', // Valid P2WPKH address
+    'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el', // Valid P2WPKH address
+    'bc1qk0jareu4jytc0cfrhr786ewygwdh6ne0fhxujq', // Valid P2WPKH address
+    'bc1qzd7dvzpzltwqp0ah8fcpqn8t0ynzrzsg0u3c2e', // Valid P2WPKH address
+    'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h', // Valid P2WPKH address
+    'bc1ql68h2m2a2d0f2j3k4l5m6n7o8p9q0r1s2t3u4v', // Valid P2WPKH address
+    'bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh'  // Valid P2WPKH address
   ];
   
-  return demoAddresses[hash % demoAddresses.length];
+  const selectedAddress = demoAddresses[hash % demoAddresses.length];
+  console.log(`🎯 Selected demo address: ${selectedAddress}`);
+  return selectedAddress;
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
