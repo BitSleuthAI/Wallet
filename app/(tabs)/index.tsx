@@ -175,11 +175,11 @@ export default function WalletScreen() {
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
                 {hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`}
               </Text>
-              {!hasPriceError && balanceUSD > 0 && (
+              {!hasPriceError && balanceUSD > 0 && bitcoinPrice?.usd_24h_change !== undefined && (
                 <View style={styles.changeContainer}>
-                  <TrendingUp color={theme.colors.success} size={16} />
-                  <Text style={[styles.changeText, { color: theme.colors.success }]}>
-                    {formatCurrency(balanceUSD * 0.0143)} (1.43%) 24h
+                  <TrendingUp color={bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error} size={16} />
+                  <Text style={[styles.changeText, { color: bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error }]}>
+                    {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}% 24h
                   </Text>
                 </View>
               )}
