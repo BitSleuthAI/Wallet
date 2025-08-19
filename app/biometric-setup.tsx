@@ -131,6 +131,7 @@ export default function BiometricSetupScreen() {
   };
 
   const handleSkip = () => {
+    console.log('User tapped Skip for now');
     Alert.alert(
       'Skip Biometric Setup?',
       'You can always enable biometric authentication later in settings. You will use your PIN to access your wallet.',
@@ -138,7 +139,10 @@ export default function BiometricSetupScreen() {
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Skip', 
-          onPress: () => router.replace('/(tabs)')
+          onPress: () => {
+            console.log('User confirmed skip, navigating to tabs...');
+            router.replace('/(tabs)');
+          }
         }
       ]
     );
