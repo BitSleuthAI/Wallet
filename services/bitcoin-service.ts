@@ -240,17 +240,7 @@ const PRICE_APIS = [
       };
     }
   },
-  {
-    name: 'Fallback',
-    url: '',
-    parser: () => {
-      console.log('Using fallback price data');
-      return {
-        usd: 45000, // Reasonable fallback price
-        usd_24h_change: 0,
-      };
-    }
-  }
+
 ];
 
 export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
@@ -259,11 +249,7 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
     try {
       console.log(`💰 Fetching Bitcoin price from ${api.name}...`);
       
-      // Handle fallback case
-      if (api.name === 'Fallback') {
-        console.log('⚠️ All price APIs failed, using fallback price');
-        return api.parser({});
-      }
+
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 8000); // Increased timeout
@@ -301,12 +287,9 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
     }
   }
   
-  // This should never be reached due to fallback, but just in case
-  console.warn('⚠️ Unexpected: All APIs including fallback failed');
-  return {
-    usd: 45000, // Final fallback price
-    usd_24h_change: 0,
-  };
+  // All APIs failed - throw error instead of returning fallback
+  console.error('⚠️ All price APIs failed');
+  throw new Error('Unable to fetch Bitcoin price from any API');
 };
 
 // Validate Bitcoin address format
