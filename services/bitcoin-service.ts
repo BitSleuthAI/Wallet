@@ -41,8 +41,9 @@ const API_BASE = Platform.select({
 });
 
 // Development mode flag - set to true when APIs are unavailable
-// Set to false to try real APIs first, fallback to mock data on failure
+// Set to false to try real APIs first, return 0/empty on failure instead of mock data
 const DEVELOPMENT_MODE = false;
+const USE_MOCK_DATA_ON_FAILURE = false; // Changed to false to show real 0 balance
 
 // Mock data for development
 const MOCK_DATA = {
@@ -406,8 +407,13 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   // Check if we should use mock data
   const isConnected = await testNetworkConnectivity();
   if (!isConnected || DEVELOPMENT_MODE) {
-    console.log('🔧 Using mock balance data');
-    return MOCK_DATA.balance;
+    if (USE_MOCK_DATA_ON_FAILURE) {
+      console.log('🔧 Using mock balance data');
+      return MOCK_DATA.balance;
+    } else {
+      console.log('🔧 No network connection, returning 0 balance');
+      return 0;
+    }
   }
   
   // Try multiple APIs for redundancy with different endpoints
@@ -451,14 +457,20 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   }
   
   console.error('❌ All balance APIs failed for address:', address.substring(0, 10) + '...');
-  console.log('🔧 Falling back to mock balance data');
-  // Return a portion of the mock balance for this specific address
-  const addressHash = address.split('').reduce((a, b) => {
-    a = ((a << 5) - a) + b.charCodeAt(0);
-    return a & a;
-  }, 0);
-  const balanceFactor = Math.abs(addressHash % 100) / 1000; // 0 to 0.099
-  return MOCK_DATA.balance * (0.1 + balanceFactor); // 10% to 20% of total balance per address
+  
+  if (USE_MOCK_DATA_ON_FAILURE) {
+    console.log('🔧 Falling back to mock balance data');
+    // Return a portion of the mock balance for this specific address
+    const addressHash = address.split('').reduce((a, b) => {
+      a = ((a << 5) - a) + b.charCodeAt(0);
+      return a & a;
+    }, 0);
+    const balanceFactor = Math.abs(addressHash % 100) / 1000; // 0 to 0.099
+    return MOCK_DATA.balance * (0.1 + balanceFactor); // 10% to 20% of total balance per address
+  } else {
+    console.log('🔧 All APIs failed, returning 0 balance (no mock data)');
+    return 0;
+  }
 };
 
 export const getWalletBalance = async (addresses: string[]): Promise<number> => {
@@ -492,22 +504,27 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   // Check if we should use mock data
   const isConnected = await testNetworkConnectivity();
   if (!isConnected || DEVELOPMENT_MODE) {
-    console.log('🔧 Using mock transaction data');
-    // Return mock transactions in the expected API format
-    return [
-      {
-        txid: 'mock_tx_1',
-        status: { confirmed: true, block_time: Math.floor((Date.now() - 86400000) / 1000) },
-        vout: [{ scriptpubkey_address: address, value: 100000 }], // 0.001 BTC in satoshis
-        vin: [],
-      },
-      {
-        txid: 'mock_tx_2',
-        status: { confirmed: true, block_time: Math.floor((Date.now() - 172800000) / 1000) },
-        vout: [],
-        vin: [{ prevout: { scriptpubkey_address: address, value: 50000 } }], // 0.0005 BTC in satoshis
-      },
-    ];
+    if (USE_MOCK_DATA_ON_FAILURE) {
+      console.log('🔧 Using mock transaction data');
+      // Return mock transactions in the expected API format
+      return [
+        {
+          txid: 'mock_tx_1',
+          status: { confirmed: true, block_time: Math.floor((Date.now() - 86400000) / 1000) },
+          vout: [{ scriptpubkey_address: address, value: 100000 }], // 0.001 BTC in satoshis
+          vin: [],
+        },
+        {
+          txid: 'mock_tx_2',
+          status: { confirmed: true, block_time: Math.floor((Date.now() - 172800000) / 1000) },
+          vout: [],
+          vin: [{ prevout: { scriptpubkey_address: address, value: 50000 } }], // 0.0005 BTC in satoshis
+        },
+      ];
+    } else {
+      console.log('🔧 No network connection, returning empty transactions');
+      return [];
+    }
   }
   
   // Try multiple APIs for redundancy with different endpoints
@@ -558,29 +575,34 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   }
   
   console.error('❌ All transaction APIs failed for address:', address.substring(0, 10) + '...');
-  console.log('🔧 Falling back to mock transaction data');
   
-  // Return mock transactions in the expected API format
-  return [
-    {
-      txid: 'mock_tx_received_1',
-      status: { confirmed: true, block_time: Math.floor((Date.now() - 86400000) / 1000) },
-      vout: [{ scriptpubkey_address: address, value: 5000000 }], // 0.05 BTC in satoshis
-      vin: [],
-    },
-    {
-      txid: 'mock_tx_received_2',
-      status: { confirmed: true, block_time: Math.floor((Date.now() - 172800000) / 1000) },
-      vout: [{ scriptpubkey_address: address, value: 10248505 }], // 0.10248505 BTC in satoshis
-      vin: [],
-    },
-    {
-      txid: 'mock_tx_sent_1',
-      status: { confirmed: true, block_time: Math.floor((Date.now() - 259200000) / 1000) },
-      vout: [],
-      vin: [{ prevout: { scriptpubkey_address: address, value: 1000000 } }], // 0.01 BTC in satoshis
-    },
-  ];
+  if (USE_MOCK_DATA_ON_FAILURE) {
+    console.log('🔧 Falling back to mock transaction data');
+    // Return mock transactions in the expected API format
+    return [
+      {
+        txid: 'mock_tx_received_1',
+        status: { confirmed: true, block_time: Math.floor((Date.now() - 86400000) / 1000) },
+        vout: [{ scriptpubkey_address: address, value: 5000000 }], // 0.05 BTC in satoshis
+        vin: [],
+      },
+      {
+        txid: 'mock_tx_received_2',
+        status: { confirmed: true, block_time: Math.floor((Date.now() - 172800000) / 1000) },
+        vout: [{ scriptpubkey_address: address, value: 10248505 }], // 0.10248505 BTC in satoshis
+        vin: [],
+      },
+      {
+        txid: 'mock_tx_sent_1',
+        status: { confirmed: true, block_time: Math.floor((Date.now() - 259200000) / 1000) },
+        vout: [],
+        vin: [{ prevout: { scriptpubkey_address: address, value: 1000000 } }], // 0.01 BTC in satoshis
+      },
+    ];
+  } else {
+    console.log('🔧 All APIs failed, returning empty transactions (no mock data)');
+    return [];
+  }
 };
 
 export const getTransactionHistory = async (addresses: string[]): Promise<Transaction[]> => {
@@ -635,9 +657,15 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
     return processedTransactions;
   } catch (error) {
     console.error('Error fetching transaction history:', error);
-    // Return mock data instead of throwing error
-    console.log('🔧 Returning mock transaction history due to error');
-    return MOCK_DATA.transactions;
+    
+    if (USE_MOCK_DATA_ON_FAILURE) {
+      // Return mock data instead of throwing error
+      console.log('🔧 Returning mock transaction history due to error');
+      return MOCK_DATA.transactions;
+    } else {
+      console.log('🔧 Error occurred, returning empty transaction history (no mock data)');
+      return [];
+    }
   }
 };
 

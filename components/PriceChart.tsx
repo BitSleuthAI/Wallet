@@ -8,59 +8,81 @@ const { width } = Dimensions.get('window');
 const chartWidth = width - 40;
 const chartHeight = 120;
 
-export default function PriceChart() {
-  const { theme, hasPriceError, bitcoinPrice } = useWallet();
+export default function BalanceChart() {
+  const { theme, hasBalanceError, balance, transactions } = useWallet();
 
-  // Don't show mock data when there are network errors
-  if (hasPriceError) {
+  // Show error state only if balance data is unavailable
+  if (hasBalanceError) {
     return (
       <View style={[styles.container, styles.errorContainer, { backgroundColor: theme.colors.surface }]}>
         <WifiOff color={theme.colors.error} size={32} />
         <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
-          Chart Unavailable
+          Balance Chart Unavailable
         </Text>
         <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-          Unable to load price chart data
+          Unable to load balance history
         </Text>
       </View>
     );
   }
 
-  // Generate realistic mock data based on current price and 24h change
-  const currentPrice = bitcoinPrice?.usd || 45000;
-  const change24h = bitcoinPrice?.usd_24h_change || 0;
-  
-  // Create a realistic price chart showing the last 7 data points
-  const generateMockData = () => {
-    const basePrice = currentPrice;
-    const volatility = Math.abs(change24h) * 0.1; // Use 24h change to determine volatility
+  // Generate balance history based on actual transactions
+  const generateBalanceHistory = () => {
+    const currentBalance = balance;
     
-    return Array.from({ length: 7 }, (_, i) => {
-      // Create a trend that leads to the current 24h change
-      const progress = i / 6; // 0 to 1
-      const trendFactor = change24h * progress * 0.01; // Convert percentage to decimal
-      const randomFactor = (Math.sin(i * 0.8) * volatility * 0.5); // Add some realistic variation
-      const price = basePrice * (1 + trendFactor + randomFactor);
-      
-      return {
+    // If no transactions, show flat line at current balance
+    if (transactions.length === 0) {
+      return Array.from({ length: 7 }, (_, i) => ({
         x: i,
-        y: Math.max(price, basePrice * 0.95) // Ensure price doesn't go too low
-      };
-    });
+        y: currentBalance,
+        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000)
+      }));
+    }
+    
+    // Sort transactions by timestamp (oldest first)
+    const sortedTransactions = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
+    
+    // Create balance history by walking through transactions
+    const history: { x: number; y: number; date: Date }[] = [];
+    let runningBalance = 0;
+    
+    // Start from 7 days ago
+    const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+      
+      // Add transactions that occurred before or on this date
+      const transactionsUpToDate = sortedTransactions.filter(tx => tx.timestamp <= date.getTime());
+      
+      // Calculate balance at this point in time
+      runningBalance = transactionsUpToDate.reduce((balance, tx) => {
+        return tx.type === 'received' ? balance + tx.amount : balance - tx.amount;
+      }, 0);
+      
+      history.push({
+        x: i,
+        y: Math.max(0, runningBalance), // Ensure non-negative balance
+        date
+      });
+    }
+    
+    return history;
   };
   
-  const mockData = generateMockData();
+  const balanceHistory = generateBalanceHistory();
 
   const createPath = (data: { x: number; y: number }[]) => {
     const maxY = Math.max(...data.map(d => d.y));
     const minY = Math.min(...data.map(d => d.y));
-    const range = maxY - minY || 1;
+    const range = maxY - minY || 0.001; // Prevent division by zero
 
     let path = '';
     
     data.forEach((point, index) => {
       const x = (point.x / (data.length - 1)) * chartWidth;
-      const y = chartHeight - ((point.y - minY) / range) * chartHeight;
+      // If all values are the same (flat line), center it vertically
+      const y = range === 0 ? chartHeight / 2 : chartHeight - ((point.y - minY) / range) * chartHeight;
       
       if (index === 0) {
         path += `M ${x} ${y}`;
@@ -72,24 +94,27 @@ export default function PriceChart() {
     return path;
   };
 
-  // Determine chart color based on 24h change
-  const chartColor = (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error;
+  // Determine chart color based on balance trend
+  const firstBalance = balanceHistory[0]?.y || 0;
+  const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
+  const balanceChange = lastBalance - firstBalance;
+  const chartColor = balanceChange >= 0 ? theme.colors.success : theme.colors.error;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.chartHeader}>
         <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-          Price Chart (7D)
+          Balance Overview (7D)
         </Text>
-        {bitcoinPrice && (
+        {balanceHistory.length > 1 && (
           <Text style={[styles.chartChange, { color: chartColor }]}>
-            {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}%
+            {balanceChange >= 0 ? '+' : ''}{balanceChange.toFixed(8)} BTC
           </Text>
         )}
       </View>
       <Svg width={chartWidth} height={chartHeight}>
         <Path
-          d={createPath(mockData)}
+          d={createPath(balanceHistory)}
           stroke={chartColor}
           strokeWidth={3}
           fill="none"

@@ -13,7 +13,7 @@ import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff } f
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
-import PriceChart from '@/components/PriceChart';
+import BalanceChart from '@/components/PriceChart';
 
 export default function WalletScreen() {
   const {
@@ -207,8 +207,8 @@ export default function WalletScreen() {
           ))}
         </View>
 
-        {/* Price Chart */}
-        <PriceChart />
+        {/* Balance Chart */}
+        <BalanceChart />
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
