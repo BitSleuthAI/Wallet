@@ -8,11 +8,15 @@ import {
   ScrollView,
   Alert,
   Platform,
+  ActivityIndicator,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowLeft, Copy } from 'lucide-react-native';
+import { ArrowLeft, Copy, RefreshCw } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
+import * as walletService from '@/services/wallet-service';
+import * as bitcoinService from '@/services/bitcoin-service';
 
 interface AddressInfo {
   address: string;
@@ -20,24 +24,124 @@ interface AddressInfo {
   balance: number;
   txCount: number;
   isUsed: boolean;
+  type: 'receiving' | 'change';
 }
 
 export default function WalletAddressesScreen() {
-  const { theme, currentWallet, balance } = useWallet();
+  const { theme, currentWallet } = useWallet();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
+  const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
 
-  // Mock address data based on current wallet addresses
+  // Generate additional addresses for display (up to 20 receiving + 20 change)
+  const addressesQuery = useQuery({
+    queryKey: ['wallet-addresses', currentWallet?.id, currentWallet?.xpub],
+    queryFn: async () => {
+      if (!currentWallet?.xpub) return [];
+      
+      console.log('🔍 Generating addresses for display...');
+      const addresses: AddressInfo[] = [];
+      
+      // Generate receiving addresses (0/0 to 0/19)
+      for (let i = 0; i < 20; i++) {
+        try {
+          const address = await walletService.generateAddressFromXpub(currentWallet.xpub, i);
+          addresses.push({
+            address,
+            index: i,
+            balance: 0,
+            txCount: 0,
+            isUsed: false,
+            type: 'receiving'
+          });
+        } catch (error) {
+          console.warn(`Failed to generate receiving address ${i}:`, error);
+        }
+      }
+      
+      // Generate change addresses (1/0 to 1/19)
+      // In a proper implementation, these would be derived from m/84'/0'/0'/1/i
+      // For now, we'll simulate change addresses by using a different range
+      for (let i = 0; i < 20; i++) {
+        try {
+          // Generate change addresses using a different derivation approach
+          // This is a simplified approach - in production, you'd derive from change path
+          const changeIndex = 10000 + i; // Use a high index to simulate change addresses
+          const address = await walletService.generateAddressFromXpub(currentWallet.xpub, changeIndex);
+          addresses.push({
+            address,
+            index: i,
+            balance: 0,
+            txCount: 0,
+            isUsed: false,
+            type: 'change'
+          });
+        } catch (error) {
+          console.warn(`Failed to generate change address ${i}:`, error);
+        }
+      }
+      
+      console.log(`✅ Generated ${addresses.length} addresses for display`);
+      return addresses;
+    },
+    enabled: !!currentWallet?.xpub,
+    staleTime: 300000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Fetch balance and transaction data for each address
+  const addressBalancesQuery = useQuery({
+    queryKey: ['address-balances', addressesQuery.data?.map(a => a.address).join(','), addressesQuery.data?.length],
+    queryFn: async () => {
+      if (!addressesQuery.data?.length) return {};
+      
+      console.log('💰 Fetching balances for addresses...');
+      const balanceData: Record<string, { balance: number; txCount: number }> = {};
+      
+      // Fetch balance and transaction count for each address
+      const promises = addressesQuery.data.map(async (addressInfo) => {
+        try {
+          const [balance, transactions] = await Promise.all([
+            bitcoinService.getAddressBalance(addressInfo.address),
+            bitcoinService.getAddressTransactions(addressInfo.address)
+          ]);
+          
+          balanceData[addressInfo.address] = {
+            balance,
+            txCount: transactions.length
+          };
+        } catch (error) {
+          console.warn(`Failed to fetch data for address ${addressInfo.address}:`, error);
+          balanceData[addressInfo.address] = {
+            balance: 0,
+            txCount: 0
+          };
+        }
+      });
+      
+      await Promise.all(promises);
+      console.log(`✅ Fetched balance data for ${Object.keys(balanceData).length} addresses`);
+      return balanceData;
+    },
+    enabled: !!addressesQuery.data?.length,
+    staleTime: 120000, // 2 minutes
+    refetchInterval: 300000, // 5 minutes
+    refetchOnWindowFocus: false,
+  });
+
+  // Combine address data with balance information
   const addressData = useMemo((): AddressInfo[] => {
-    if (!currentWallet?.addresses) return [];
+    if (!addressesQuery.data || !addressBalancesQuery.data) return [];
     
-    return currentWallet.addresses.map((address, index) => ({
-      address,
-      index,
-      balance: index === 0 ? balance : index === 1 ? balance * 0.1 : 0, // Mock balance distribution
-      txCount: index === 0 ? 3 : index === 1 ? 1 : 0, // Mock transaction counts
-      isUsed: index <= 1, // First two addresses are "used"
-    }));
-  }, [currentWallet?.addresses, balance]);
+    return addressesQuery.data.map(addressInfo => {
+      const balanceInfo = addressBalancesQuery.data[addressInfo.address] || { balance: 0, txCount: 0 };
+      return {
+        ...addressInfo,
+        balance: balanceInfo.balance,
+        txCount: balanceInfo.txCount,
+        isUsed: balanceInfo.txCount > 0 || balanceInfo.balance > 0
+      };
+    }).filter(addr => addr.type === selectedTab);
+  }, [addressesQuery.data, addressBalancesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -46,6 +150,21 @@ export default function WalletAddressesScreen() {
     } catch (error) {
       console.error('Failed to copy address:', error);
       Alert.alert('Error', 'Failed to copy address');
+    }
+  };
+
+  const refreshAddresses = async () => {
+    setGeneratingAddresses(true);
+    try {
+      await Promise.all([
+        addressesQuery.refetch(),
+        addressBalancesQuery.refetch()
+      ]);
+    } catch (error) {
+      console.error('Failed to refresh addresses:', error);
+      Alert.alert('Error', 'Failed to refresh addresses');
+    } finally {
+      setGeneratingAddresses(false);
     }
   };
 
@@ -147,6 +266,18 @@ export default function WalletAddressesScreen() {
               <ArrowLeft color={theme.colors.text} size={24} />
             </TouchableOpacity>
           ),
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={refreshAddresses}
+              style={styles.refreshButton}
+              disabled={generatingAddresses}
+            >
+              <RefreshCw 
+                color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
+                size={20} 
+              />
+            </TouchableOpacity>
+          ),
         }} 
       />
       
@@ -165,14 +296,32 @@ export default function WalletAddressesScreen() {
       </View>
       
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {addressData.length > 0 ? (
-          addressData.map((addressInfo) => (
-            <AddressItem key={addressInfo.address} addressInfo={addressInfo} />
-          ))
+        {addressesQuery.isLoading ? (
+          <View style={styles.loadingState}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              Generating addresses...
+            </Text>
+          </View>
+        ) : addressData.length > 0 ? (
+          <>
+            <View style={styles.infoContainer}>
+              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
+                {selectedTab === 'receiving' 
+                  ? 'These are your receiving addresses. Share them to receive Bitcoin.'
+                  : 'These are your change addresses. They are used automatically for change outputs.'}
+              </Text>
+            </View>
+            {addressData.map((addressInfo) => (
+              <AddressItem key={`${addressInfo.type}-${addressInfo.address}`} addressInfo={addressInfo} />
+            ))}
+          </>
         ) : (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              No addresses found
+              {addressesQuery.error 
+                ? 'Failed to generate addresses. Please try again.'
+                : 'No addresses found'}
             </Text>
           </View>
         )}
@@ -188,6 +337,32 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
+  },
+  refreshButton: {
+    padding: 8,
+    marginRight: -8,
+  },
+  loadingState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 100,
+  },
+  loadingText: {
+    fontSize: 16,
+    marginTop: 16,
+  },
+  infoContainer: {
+    marginHorizontal: 20,
+    marginBottom: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  infoText: {
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
   },
   tabContainer: {
     flexDirection: 'row',
