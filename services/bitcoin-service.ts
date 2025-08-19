@@ -135,16 +135,9 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
     }
   }
   
-  // If all APIs fail, return fallback price with realistic variation
-  console.log('All price APIs failed, using fallback Bitcoin price data');
-  const basePrice = 45000;
-  const variation = (Math.random() - 0.5) * 2000;
-  const fallbackPrice = Math.max(basePrice + variation, 30000);
-  
-  return {
-    usd: Math.round(fallbackPrice),
-    usd_24h_change: (Math.random() - 0.5) * 10,
-  };
+  // If all APIs fail, throw an error instead of returning demo data
+  console.error('All price APIs failed, unable to fetch Bitcoin price');
+  throw new Error('Unable to fetch Bitcoin price - all APIs failed');
 };
 
 export const getAddressBalance = async (address: string): Promise<number> => {
@@ -167,17 +160,8 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     console.log('✅ Address balance fetched:', balance, 'BTC');
     return balance;
   } catch (error) {
-    // Only log network errors as warnings, not errors
-    if (error instanceof Error && error.message.includes('Network error')) {
-      console.warn('⚠️ Network unavailable for balance fetch, using demo data');
-    } else {
-      console.error('Error fetching address balance:', error);
-    }
-
-    // Return a small demo balance for testing
-    const demoBalance = Math.random() * 0.001;
-    console.log('📊 Using demo balance:', demoBalance, 'BTC');
-    return demoBalance;
+    console.error('Error fetching address balance:', error);
+    throw error;
   }
 };
 
@@ -213,35 +197,8 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
     console.log('✅ Address transactions fetched:', data.length, 'transactions');
     return data;
   } catch (error) {
-    // Only log network errors as warnings, not errors
-    if (error instanceof Error && error.message.includes('Network error')) {
-      console.warn('⚠️ Network unavailable for transaction fetch, using demo data');
-    } else {
-      console.error('Error fetching address transactions:', error);
-    }
-    
-    // Return demo transactions for testing
-    console.log('📊 Using demo transaction data');
-    return [
-      {
-        txid: 'demo_tx_1',
-        status: { confirmed: true, block_time: Math.floor(Date.now() / 1000) - 3600 },
-        vout: [{
-          scriptpubkey_address: address,
-          value: 50000 // 0.0005 BTC in satoshis
-        }],
-        vin: []
-      },
-      {
-        txid: 'demo_tx_2',
-        status: { confirmed: true, block_time: Math.floor(Date.now() / 1000) - 7200 },
-        vout: [{
-          scriptpubkey_address: address,
-          value: 25000 // 0.00025 BTC in satoshis
-        }],
-        vin: []
-      }
-    ];
+    console.error('Error fetching address transactions:', error);
+    throw error;
   }
 };
 
@@ -290,9 +247,8 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 50); // Limit to 50 most recent transactions
   } catch (error) {
-    // Only log as warning since this is expected when network is unavailable
-    console.warn('⚠️ Unable to fetch transaction history, using demo data');
-    return [];
+    console.error('Error fetching transaction history:', error);
+    throw error;
   }
 };
 

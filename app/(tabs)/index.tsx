@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
@@ -24,6 +24,12 @@ export default function WalletScreen() {
     transactions,
     theme,
     refreshData,
+    hasBalanceError,
+    hasTransactionsError,
+    hasPriceError,
+    isLoadingBalance,
+    isLoadingTransactions,
+    isLoadingPrice,
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -92,15 +98,26 @@ export default function WalletScreen() {
                   BTC Bitcoin
                 </Text>
                 <View style={styles.priceRow}>
-                  <Text style={[styles.bitcoinPrice, { color: theme.colors.text }]}>
-                    ${bitcoinPrice?.usd.toLocaleString() || '0'}
-                  </Text>
-                  <Text style={[
-                    styles.priceChange,
-                    { color: (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error }
-                  ]}>
-                    {formatPriceChange(bitcoinPrice?.usd_24h_change || 0)}
-                  </Text>
+                  {hasPriceError ? (
+                    <View style={styles.errorContainer}>
+                      <WifiOff color={theme.colors.error} size={14} />
+                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
+                        Price unavailable
+                      </Text>
+                    </View>
+                  ) : (
+                    <>
+                      <Text style={[styles.bitcoinPrice, { color: theme.colors.text }]}>
+                        ${bitcoinPrice?.usd.toLocaleString() || '0'}
+                      </Text>
+                      <Text style={[
+                        styles.priceChange,
+                        { color: (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error }
+                      ]}>
+                        {formatPriceChange(bitcoinPrice?.usd_24h_change || 0)}
+                      </Text>
+                    </>
+                  )}
                 </View>
               </View>
             </View>
@@ -112,18 +129,40 @@ export default function WalletScreen() {
 
         {/* Balance Display */}
         <View style={styles.balanceSection}>
-          <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-            ${balanceUSD.toFixed(2)}
-          </Text>
-          <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
-            {balance.toFixed(8)} BTC
-          </Text>
-          <View style={styles.changeContainer}>
-            <TrendingUp color={theme.colors.success} size={16} />
-            <Text style={[styles.changeText, { color: theme.colors.success }]}>
-              ${(balanceUSD * 0.0143).toFixed(2)} (1.43%) 24h
-            </Text>
-          </View>
+          {hasBalanceError ? (
+            <View style={styles.balanceErrorContainer}>
+              <AlertCircle color={theme.colors.error} size={24} />
+              <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+                Balance Unavailable
+              </Text>
+              <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
+                Unable to fetch wallet balance. Please check your connection.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+                onPress={refreshData}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
+                {hasPriceError ? `${balance.toFixed(8)} BTC` : `${balanceUSD.toFixed(2)}`}
+              </Text>
+              <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
+                {hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`}
+              </Text>
+              {!hasPriceError && (
+                <View style={styles.changeContainer}>
+                  <TrendingUp color={theme.colors.success} size={16} />
+                  <Text style={[styles.changeText, { color: theme.colors.success }]}>
+                    ${(balanceUSD * 0.0143).toFixed(2)} (1.43%) 24h
+                  </Text>
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         {/* Time Period Selector */}
@@ -175,12 +214,36 @@ export default function WalletScreen() {
             </TouchableOpacity>
           </View>
 
-          {transactions.slice(0, 5).map((transaction) => (
-            <TransactionItem
-              key={transaction.txid}
-              transaction={transaction}
-            />
-          ))}
+          {hasTransactionsError ? (
+            <View style={styles.transactionsErrorContainer}>
+              <WifiOff color={theme.colors.error} size={32} />
+              <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+                Transactions Unavailable
+              </Text>
+              <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
+                Unable to load transaction history. Please check your connection and try again.
+              </Text>
+              <TouchableOpacity 
+                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+                onPress={refreshData}
+              >
+                <Text style={styles.retryButtonText}>Retry</Text>
+              </TouchableOpacity>
+            </View>
+          ) : transactions.length === 0 ? (
+            <View style={styles.emptyTransactionsContainer}>
+              <Text style={[styles.emptyTransactionsText, { color: theme.colors.textSecondary }]}>
+                No transactions yet
+              </Text>
+            </View>
+          ) : (
+            transactions.slice(0, 5).map((transaction) => (
+              <TransactionItem
+                key={transaction.txid}
+                transaction={transaction}
+              />
+            ))
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -363,5 +426,52 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  errorText: {
+    fontSize: 12,
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  balanceErrorContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  transactionsErrorContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+    paddingHorizontal: 20,
+  },
+  errorTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 8,
+  },
+  errorSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: 20,
+  },
+  retryButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyTransactionsContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyTransactionsText: {
+    fontSize: 16,
   },
 });

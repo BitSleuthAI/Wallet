@@ -38,9 +38,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     staleTime: 60000, // Consider data fresh for 1 minute
-    meta: {
-      errorMessage: 'Failed to fetch Bitcoin price, using fallback data'
-    }
+    throwOnError: false, // Don't throw errors, handle them gracefully
   });
 
   // Wallet balance query
@@ -55,9 +53,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 30000, // Consider data fresh for 30 seconds
-    meta: {
-      errorMessage: 'Failed to fetch wallet balance, using demo data'
-    }
+    throwOnError: false, // Don't throw errors, handle them gracefully
   });
 
   // Transaction history query
@@ -72,9 +68,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 60000, // Consider data fresh for 1 minute
-    meta: {
-      errorMessage: 'Failed to fetch transaction history, using demo data'
-    }
+    throwOnError: false, // Don't throw errors, handle them gracefully
   });
 
   // Save wallet mutation
@@ -193,6 +187,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     balanceUSD: (balanceQuery.data || 0) * (priceQuery.data?.usd || 0),
     bitcoinPrice: priceQuery.data,
     
+    // Error states
+    priceError: priceQuery.error,
+    balanceError: balanceQuery.error,
+    transactionsError: transactionsQuery.error,
+    
     // Transactions
     transactions: transactionsQuery.data || [],
     
@@ -212,6 +211,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isLoadingBalance: balanceQuery.isLoading,
     isLoadingTransactions: transactionsQuery.isLoading,
     isLoadingPrice: priceQuery.isLoading,
+    
+    // Error states for loading
+    hasBalanceError: !!balanceQuery.error,
+    hasTransactionsError: !!transactionsQuery.error,
+    hasPriceError: !!priceQuery.error,
   }), [
     currentWallet,
     walletQuery.isLoading,
@@ -219,8 +223,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     balanceQuery.isLoading,
     priceQuery.data,
     priceQuery.isLoading,
+    priceQuery.error,
     transactionsQuery.data,
     transactionsQuery.isLoading,
+    transactionsQuery.error,
+    balanceQuery.error,
     theme,
     createWallet,
     importWallet,

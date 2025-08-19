@@ -9,7 +9,7 @@ interface WalletCardProps {
 }
 
 export default function WalletCard({ onPress }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, theme } = useWallet();
+  const { currentWallet, balance, balanceUSD, theme, hasBalanceError, hasPriceError } = useWallet();
 
   if (!currentWallet) return null;
 
@@ -32,8 +32,19 @@ export default function WalletCard({ onPress }: WalletCardProps) {
         </View>
 
         <View style={styles.balanceContainer}>
-          <Text style={styles.balance}>{balance.toFixed(8)} BTC</Text>
-          <Text style={styles.balanceUSD}>${balanceUSD.toFixed(2)}</Text>
+          {hasBalanceError ? (
+            <>
+              <Text style={styles.balance}>Balance unavailable</Text>
+              <Text style={styles.balanceUSD}>Network error</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.balance}>{balance.toFixed(8)} BTC</Text>
+              <Text style={styles.balanceUSD}>
+                {hasPriceError ? 'USD value unavailable' : `${balanceUSD.toFixed(2)}`}
+              </Text>
+            </>
+          )}
         </View>
 
         <View style={styles.footer}>
