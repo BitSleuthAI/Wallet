@@ -743,13 +743,20 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
     return webService.generateNewAddress(wallet);
   }
   
-  const newIndex = wallet.currentAddressIndex + 1;
-  const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
-  return {
-    ...wallet,
-    addresses: [...wallet.addresses, newAddress],
-    currentAddressIndex: newIndex,
-  };
+  console.log('📱 Platform detected as mobile for new address generation:', Platform.OS);
+  
+  try {
+    const newIndex = wallet.currentAddressIndex + 1;
+    const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
+    return {
+      ...wallet,
+      addresses: [...wallet.addresses, newAddress],
+      currentAddressIndex: newIndex,
+    };
+  } catch (error) {
+    console.error('❌ Error generating new address:', error);
+    throw new Error('Failed to generate new address. This feature requires a mobile device.');
+  }
 };
 
 export const getPrivateKey = async (mnemonic: string, addressIndex: number): Promise<string> => {
