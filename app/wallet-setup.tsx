@@ -21,6 +21,7 @@ import { Stack, router } from 'expo-router';
 import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle, Sparkles } from 'lucide-react-native';
 import * as WebBrowser from 'expo-web-browser';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useWallet } from '@/hooks/wallet-store';
 import QRScanner from '@/components/QRScanner';
 
@@ -69,6 +70,30 @@ export default function WalletSetupScreen() {
     '#10B981', // Emerald
     '#3B82F6', // Blue
   ];
+
+  // Function to generate gradient colors from a base color
+  const generateGradientColors = (baseColor: string): [string, string] => {
+    // Convert hex to RGB
+    const hex = baseColor.replace('#', '');
+    const r = parseInt(hex.substr(0, 2), 16);
+    const g = parseInt(hex.substr(2, 2), 16);
+    const b = parseInt(hex.substr(4, 2), 16);
+    
+    // Create a lighter version (add 30 to each component, max 255)
+    const lighterR = Math.min(255, r + 30);
+    const lighterG = Math.min(255, g + 30);
+    const lighterB = Math.min(255, b + 30);
+    
+    // Create a darker version (subtract 40 from each component, min 0)
+    const darkerR = Math.max(0, r - 40);
+    const darkerG = Math.max(0, g - 40);
+    const darkerB = Math.max(0, b - 40);
+    
+    const lighterColor = `rgb(${lighterR}, ${lighterG}, ${lighterB})`;
+    const darkerColor = `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
+    
+    return [lighterColor, darkerColor];
+  };
 
   const openLink = async (url: string) => {
     try {
@@ -392,17 +417,27 @@ export default function WalletSetupScreen() {
           Color
         </Text>
         <View style={styles.colorPicker}>
-          {walletColors.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[styles.colorOption, { backgroundColor: color }]}
-              onPress={() => setSelectedColor(color)}
-            >
-              {selectedColor === color && (
-                <Check color="white" size={20} />
-              )}
-            </TouchableOpacity>
-          ))}
+          {walletColors.map((color) => {
+            const [lightColor, darkColor] = generateGradientColors(color);
+            return (
+              <TouchableOpacity
+                key={color}
+                style={styles.colorOptionContainer}
+                onPress={() => setSelectedColor(color)}
+              >
+                <LinearGradient
+                  colors={[lightColor, darkColor]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.colorOption}
+                >
+                  {selectedColor === color && (
+                    <Check color="white" size={20} />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <Text style={[styles.label, { color: theme.colors.text }]}>
@@ -563,17 +598,27 @@ export default function WalletSetupScreen() {
           Color
         </Text>
         <View style={styles.colorPicker}>
-          {walletColors.map((color) => (
-            <TouchableOpacity
-              key={color}
-              style={[styles.colorOption, { backgroundColor: color }]}
-              onPress={() => setSelectedColor(color)}
-            >
-              {selectedColor === color && (
-                <Check color="white" size={20} />
-              )}
-            </TouchableOpacity>
-          ))}
+          {walletColors.map((color) => {
+            const [lightColor, darkColor] = generateGradientColors(color);
+            return (
+              <TouchableOpacity
+                key={color}
+                style={styles.colorOptionContainer}
+                onPress={() => setSelectedColor(color)}
+              >
+                <LinearGradient
+                  colors={[lightColor, darkColor]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.colorOption}
+                >
+                  {selectedColor === color && (
+                    <Check color="white" size={20} />
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         <View style={styles.recoveryPhraseSection}>
@@ -913,12 +958,7 @@ const styles = StyleSheet.create({
     gap: 12,
     marginBottom: 8,
   },
-  colorOption: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
+  colorOptionContainer: {
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -927,6 +967,14 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    borderRadius: 30,
+  },
+  colorOption: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   recoveryPhraseSection: {
     gap: 8,
