@@ -28,6 +28,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
   const queryClient = useQueryClient();
 
+  // Clear any potential mock data on initialization
+  useEffect(() => {
+    const clearMockData = async () => {
+      try {
+        await AsyncStorage.multiRemove(['mock_data', 'test_data', 'sample_data', 'dummy_data']);
+        console.log('🧹 Cleared any potential mock data on initialization');
+      } catch (error) {
+        console.warn('⚠️ Error clearing mock data on initialization:', error);
+      }
+    };
+    clearMockData();
+  }, []);
+
   // Load wallet from storage
   const walletQuery = useQuery({
     queryKey: ['wallet'],
@@ -320,12 +333,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const refreshData = useCallback(async () => {
     console.log('Refreshing wallet data...');
     try {
+      // Clear any potential cached mock data
+      await AsyncStorage.multiRemove(['mock_data', 'test_data', 'sample_data', 'dummy_data']);
+      
+      // Clear React Query cache completely to remove any cached mock data
+      queryClient.clear();
+      
       // Invalidate queries to trigger fresh fetches
       queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
       
-      console.log('✅ Wallet data refresh initiated');
+      console.log('✅ Wallet data refresh initiated and cache cleared');
     } catch (error) {
       console.warn('⚠️ Error during data refresh:', error);
     }
@@ -350,7 +369,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'cached_addresses',
         'transaction_cache',
         'price_cache',
-        'last_sync_time'
+        'last_sync_time',
+        'mock_data', // Remove any mock data
+        'test_data', // Remove any test data
+        'sample_data', // Remove any sample data
+        'dummy_data' // Remove any dummy data
       ];
       
       console.log('🗑️ Removing storage keys:', keysToRemove);
