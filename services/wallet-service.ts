@@ -3,7 +3,7 @@ import '@/services/crypto-polyfill';
 import { initializeCrypto } from '@/services/crypto-polyfill';
 import { createNobleECC } from '@/services/ecc-override';
 import { Platform } from 'react-native';
-import { Wallet } from '@/types/wallet';
+import { Wallet, WalletType, AddressType } from '@/types/wallet';
 
 // CRITICAL: ECC override is now active to prevent tiny-secp256k1 WASM loading
 console.log('✅ ECC override active - tiny-secp256k1 imports will be redirected to @noble/secp256k1');
@@ -78,6 +78,18 @@ const createECC = () => {
 };
 
 const DERIVATION_PATH = "m/84'/0'/0'"; // BIP84 for native segwit
+
+// Derivation paths for different wallet types
+const DERIVATION_PATHS = {
+  'hd': "m/44'/0'/0'",
+  'segwit-p2sh': "m/49'/0'/0'",
+  'segwit-native': "m/84'/0'/0'",
+  'legacy': "m/44'/0'/0'"
+} as const;
+
+// Default wallet type
+const DEFAULT_WALLET_TYPE: WalletType = 'segwit-native';
+const DEFAULT_ADDRESS_TYPE: AddressType = 'p2wpkh';
 
 // Wait for crypto initialization with timeout
 const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<void> => {
@@ -522,12 +534,17 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       id: Date.now().toString(),
       name,
       color,
+      type: DEFAULT_WALLET_TYPE,
+      addressType: DEFAULT_ADDRESS_TYPE,
       mnemonic,
       xpub,
       addresses: [firstAddress],
       currentAddressIndex: 0,
       balance: 0,
       balanceUSD: 0,
+      derivationPath: DERIVATION_PATH,
+      gap: 20,
+      createdAt: Date.now(),
     };
 
     console.log('✅ Wallet created successfully');
@@ -678,7 +695,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ BIP32 factory creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash, walletType);
+      const demoAddress = generateDemoAddress(hash);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -702,7 +719,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ xpub parsing failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash, walletType);
+      const demoAddress = generateDemoAddress(hash);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -717,7 +734,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Child key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash, walletType);
+      const demoAddress = generateDemoAddress(hash);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -734,7 +751,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Public key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash, walletType);
+      const demoAddress = generateDemoAddress(hash);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -765,7 +782,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         // Fallback to demo address generation
         console.log('⚠️ Payment address creation failed, using demo address generation');
         const hash = simpleHash(xpub + index.toString());
-        const demoAddress = generateDemoAddress(hash, walletType);
+        const demoAddress = generateDemoAddress(hash);
         console.log('✅ Generated fallback demo address:', demoAddress);
         return demoAddress;
       }
@@ -782,7 +799,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Payment creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash, walletType);
+      const demoAddress = generateDemoAddress(hash);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -791,7 +808,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     // Final fallback to demo address generation
     console.log('⚠️ All address generation methods failed, using final demo fallback');
     const hash = simpleHash(xpub + index.toString());
-    const demoAddress = generateDemoAddress(hash, walletType);
+    const demoAddress = generateDemoAddress(hash);
     console.log('✅ Generated final fallback demo address:', demoAddress);
     return demoAddress;
   }
@@ -934,8 +951,8 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     const seed = await bip39.mnemonicToSeed(mnemonic.trim());
     const root = bip32.fromSeed(seed);
-    // Use the wallet type's derivation path for private key extraction
-    const derivationPath = DERIVATION_PATHS[walletType];
+    // Use the default derivation path for private key extraction
+    const derivationPath = DERIVATION_PATH;
     const child = root.derivePath(`${derivationPath}/0/${addressIndex}`);
     
     if (!child.privateKey) {
