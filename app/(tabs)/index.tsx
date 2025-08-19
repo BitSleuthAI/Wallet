@@ -148,12 +148,12 @@ export default function WalletScreen() {
           ) : (
             <>
               <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-                {hasPriceError ? `${balance.toFixed(8)} BTC` : `${balanceUSD.toFixed(2)}`}
+{hasPriceError ? `${balance.toFixed(8)} BTC` : `${balanceUSD.toFixed(2)}`}
               </Text>
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
                 {hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`}
               </Text>
-              {!hasPriceError && (
+              {!hasPriceError && balanceUSD > 0 && (
                 <View style={styles.changeContainer}>
                   <TrendingUp color={theme.colors.success} size={16} />
                   <Text style={[styles.changeText, { color: theme.colors.success }]}>

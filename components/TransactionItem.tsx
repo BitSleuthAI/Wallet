@@ -10,10 +10,10 @@ interface TransactionItemProps {
 }
 
 export default function TransactionItem({ transaction, onPress }: TransactionItemProps) {
-  const { theme, bitcoinPrice } = useWallet();
+  const { theme, bitcoinPrice, hasPriceError } = useWallet();
   
   const isReceived = transaction.type === 'received';
-  const amountUSD = transaction.amount * (bitcoinPrice?.usd || 0);
+  const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
   
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -65,9 +65,15 @@ export default function TransactionItem({ transaction, onPress }: TransactionIte
           <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
             {formatDate(transaction.timestamp)}
           </Text>
-          <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-            {isReceived ? '+' : '-'}${amountUSD.toFixed(2)}
-          </Text>
+          {!hasPriceError && amountUSD > 0 ? (
+            <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
+              {isReceived ? '+' : '-'}${amountUSD.toFixed(2)}
+            </Text>
+          ) : (
+            <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
+              USD unavailable
+            </Text>
+          )}
         </View>
 
         <View style={styles.statusRow}>

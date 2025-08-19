@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { WifiOff } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 
 const { width } = Dimensions.get('window');
@@ -8,9 +9,24 @@ const chartWidth = width - 40;
 const chartHeight = 120;
 
 export default function PriceChart() {
-  const { theme } = useWallet();
+  const { theme, hasPriceError } = useWallet();
 
-  // Mock data for the chart - in a real app, you'd fetch historical price data
+  // Don't show mock data when there are network errors
+  if (hasPriceError) {
+    return (
+      <View style={[styles.container, styles.errorContainer, { backgroundColor: theme.colors.surface }]}>
+        <WifiOff color={theme.colors.error} size={32} />
+        <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+          Chart Unavailable
+        </Text>
+        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+          Unable to load price chart data
+        </Text>
+      </View>
+    );
+  }
+
+  // Mock data for the chart - only shown when price data is available
   const mockData = [
     { x: 0, y: 50 },
     { x: 1, y: 45 },
@@ -65,5 +81,19 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+  },
+  errorContainer: {
+    paddingVertical: 40,
+    justifyContent: 'center',
+  },
+  errorTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  errorText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 });
