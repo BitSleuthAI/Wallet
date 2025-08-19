@@ -2,14 +2,28 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Wallet, Theme } from '@/types/wallet';
+import { Wallet, Theme, FiatCurrency } from '@/types/wallet';
 import { lightTheme, darkTheme } from '@/constants/themes';
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
 
+// Currency symbols and exchange rates
+const CURRENCY_SYMBOLS: Record<FiatCurrency, string> = {
+  USD: '$',
+  EUR: '€',
+  GBP: '£',
+};
+
+const CURRENCY_NAMES: Record<FiatCurrency, string> = {
+  USD: 'United States Dollar',
+  EUR: 'Euro',
+  GBP: 'British Pound Sterling',
+};
+
 export const [WalletProvider, useWallet] = createContextHook(() => {
   const [currentWallet, setCurrentWallet] = useState<Wallet | null>(null);
   const [theme, setTheme] = useState<Theme>(lightTheme);
+  const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const queryClient = useQueryClient();
 
   // Load wallet from storage
@@ -30,10 +44,40 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
 
-  // Bitcoin price query
+  // Load currency from storage
+  const currencyQuery = useQuery({
+    queryKey: ['currency'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('currency');
+      return (stored as FiatCurrency) || 'USD';
+    },
+  });
+
+  // Bitcoin price query with multi-currency support
   const priceQuery = useQuery({
-    queryKey: ['bitcoin-price'],
-    queryFn: bitcoinService.getBitcoinPrice,
+    queryKey: ['bitcoin-price', selectedCurrency],
+    queryFn: async () => {
+      const prices = await bitcoinService.getBitcoinPrice();
+      // Convert USD price to selected currency if needed
+      if (selectedCurrency === 'USD') {
+        return prices;
+      }
+      
+      // Fetch exchange rates for EUR and GBP
+      try {
+        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
+        const data = await response.json();
+        const rate = data.rates[selectedCurrency] || 1;
+        
+        return {
+          usd: prices.usd * rate,
+          usd_24h_change: prices.usd_24h_change, // Keep the same percentage change
+        };
+      } catch (error) {
+        console.warn('Failed to fetch exchange rates, using USD prices:', error);
+        return prices;
+      }
+    },
     refetchInterval: 120000, // Refetch every 2 minutes (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 5000, // Fixed 5 second delay
@@ -116,6 +160,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveTheme } = saveThemeMutation;
 
+  // Save currency mutation
+  const saveCurrencyMutation = useMutation({
+    mutationFn: async (currency: FiatCurrency) => {
+      await AsyncStorage.setItem('currency', currency);
+      return currency;
+    },
+    onSuccess: (currency) => {
+      setSelectedCurrency(currency);
+      queryClient.invalidateQueries({ queryKey: ['currency'] });
+      queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
+    },
+  });
+  const { mutate: saveCurrency } = saveCurrencyMutation;
+
   useEffect(() => {
     if (walletQuery.data) {
       setCurrentWallet(walletQuery.data);
@@ -127,6 +185,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setTheme(themeQuery.data);
     }
   }, [themeQuery.data]);
+
+  useEffect(() => {
+    if (currencyQuery.data) {
+      setSelectedCurrency(currencyQuery.data);
+    }
+  }, [currencyQuery.data]);
 
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
@@ -166,6 +230,27 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     saveTheme(!theme.isDark);
   }, [theme.isDark, saveTheme]);
 
+  const setCurrency = useCallback((currency: FiatCurrency) => {
+    saveCurrency(currency);
+  }, [saveCurrency]);
+
+  const formatCurrency = useCallback((amount: number, showSymbol: boolean = true) => {
+    const symbol = CURRENCY_SYMBOLS[selectedCurrency];
+    const formatted = amount.toLocaleString(undefined, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return showSymbol ? `${symbol}${formatted}` : formatted;
+  }, [selectedCurrency]);
+
+  const getCurrencySymbol = useCallback(() => {
+    return CURRENCY_SYMBOLS[selectedCurrency];
+  }, [selectedCurrency]);
+
+  const getCurrencyName = useCallback((currency?: FiatCurrency) => {
+    return CURRENCY_NAMES[currency || selectedCurrency];
+  }, [selectedCurrency]);
+
   const refreshData = useCallback(async () => {
     console.log('Refreshing wallet data...');
     try {
@@ -191,6 +276,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'biometric_enabled',
         'wallet_setup_completed',
         'theme', // Reset theme to default
+        'currency', // Reset currency to default
         'user_preferences',
         'app_settings',
         'cached_addresses',
@@ -206,6 +292,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.log('🔄 Resetting local state...');
       setCurrentWallet(null);
       setTheme(lightTheme); // Reset to light theme
+      setSelectedCurrency('USD'); // Reset to USD
       
       // Clear all cached queries and reset query client
       console.log('🔄 Clearing query cache...');
@@ -253,6 +340,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     // Theme
     theme,
     
+    // Currency
+    selectedCurrency,
+    setCurrency,
+    formatCurrency,
+    getCurrencySymbol,
+    getCurrencyName,
+    
     // Actions
     createWallet,
     importWallet,
@@ -291,5 +385,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refreshData,
     logoutAndEraseWallet,
     saveWalletMutation.isPending,
+    selectedCurrency,
+    setCurrency,
+    formatCurrency,
+    getCurrencySymbol,
+    getCurrencyName,
   ]);
 });

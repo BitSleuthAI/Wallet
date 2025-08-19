@@ -30,6 +30,9 @@ export default function WalletScreen() {
     isLoadingBalance,
     isLoadingTransactions,
     isLoadingPrice,
+    formatCurrency,
+    getCurrencySymbol,
+    selectedCurrency,
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -108,7 +111,7 @@ export default function WalletScreen() {
                   ) : (
                     <>
                       <Text style={[styles.bitcoinPrice, { color: theme.colors.text }]}>
-                        ${bitcoinPrice?.usd.toLocaleString() || '0'}
+                        {formatCurrency(bitcoinPrice?.usd || 0)}
                       </Text>
                       <Text style={[
                         styles.priceChange,
@@ -148,7 +151,7 @@ export default function WalletScreen() {
           ) : (
             <>
               <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-{hasPriceError ? `${balance.toFixed(8)} BTC` : `${balanceUSD.toFixed(2)}`}
+                {hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD)}
               </Text>
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
                 {hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`}
@@ -157,7 +160,7 @@ export default function WalletScreen() {
                 <View style={styles.changeContainer}>
                   <TrendingUp color={theme.colors.success} size={16} />
                   <Text style={[styles.changeText, { color: theme.colors.success }]}>
-                    ${(balanceUSD * 0.0143).toFixed(2)} (1.43%) 24h
+                    {formatCurrency(balanceUSD * 0.0143)} (1.43%) 24h
                   </Text>
                 </View>
               )}

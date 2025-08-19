@@ -37,9 +37,8 @@ import { useWallet } from '@/hooks/wallet-store';
 import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName } = useWallet();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
-  const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
 
@@ -137,18 +136,7 @@ export default function SettingsScreen() {
     </Text>
   );
 
-  const getCurrencyName = (currency: FiatCurrency): string => {
-    switch (currency) {
-      case 'USD':
-        return 'United States Dollar';
-      case 'EUR':
-        return 'Euro';
-      case 'GBP':
-        return 'British Pound Sterling';
-      default:
-        return 'Unknown Currency';
-    }
-  };
+
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -179,7 +167,7 @@ export default function SettingsScreen() {
           onPress={() => setShowCurrencyModal(true)}
           rightElement={
             <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]}>
-              {selectedCurrency} - {getCurrencyName(selectedCurrency)}
+              {selectedCurrency} - {getCurrencyName()}
             </Text>
           }
         />
@@ -410,7 +398,7 @@ export default function SettingsScreen() {
                     },
                   ]}
                   onPress={() => {
-                    setSelectedCurrency(currency);
+                    setCurrency(currency);
                     setShowCurrencyModal(false);
                   }}
                 >

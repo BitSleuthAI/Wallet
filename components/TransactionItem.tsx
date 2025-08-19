@@ -10,7 +10,7 @@ interface TransactionItemProps {
 }
 
 export default function TransactionItem({ transaction, onPress }: TransactionItemProps) {
-  const { theme, bitcoinPrice, hasPriceError } = useWallet();
+  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet();
   
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
@@ -67,11 +67,11 @@ export default function TransactionItem({ transaction, onPress }: TransactionIte
           </Text>
           {!hasPriceError && amountUSD > 0 ? (
             <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-              {isReceived ? '+' : '-'}${amountUSD.toFixed(2)}
+              {isReceived ? '+' : '-'}{formatCurrency(amountUSD, false)}
             </Text>
           ) : (
             <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-              USD unavailable
+              Fiat unavailable
             </Text>
           )}
         </View>
