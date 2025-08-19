@@ -132,15 +132,22 @@ export default function WalletAddressesScreen() {
   const addressData = useMemo((): AddressInfo[] => {
     if (!addressesQuery.data || !addressBalancesQuery.data) return [];
     
-    return addressesQuery.data.map(addressInfo => {
-      const balanceInfo = addressBalancesQuery.data[addressInfo.address] || { balance: 0, txCount: 0 };
-      return {
-        ...addressInfo,
-        balance: balanceInfo.balance,
-        txCount: balanceInfo.txCount,
-        isUsed: balanceInfo.txCount > 0 || balanceInfo.balance > 0
-      };
-    }).filter(addr => addr.type === selectedTab);
+    return addressesQuery.data
+      .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
+      .map(addressInfo => {
+        const balanceInfo = addressBalancesQuery.data[addressInfo.address] || { balance: 0, txCount: 0 };
+        return {
+          ...addressInfo,
+          balance: balanceInfo.balance,
+          txCount: balanceInfo.txCount,
+          isUsed: balanceInfo.txCount > 0 || balanceInfo.balance > 0
+        };
+      })
+      .filter(addr => addr.type === selectedTab)
+      .filter((addr, index, array) => {
+        // Remove duplicates based on address
+        return array.findIndex(a => a.address === addr.address) === index;
+      });
   }, [addressesQuery.data, addressBalancesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
@@ -312,8 +319,8 @@ export default function WalletAddressesScreen() {
                   : 'These are your change addresses. They are used automatically for change outputs.'}
               </Text>
             </View>
-            {addressData.map((addressInfo) => (
-              <AddressItem key={`${addressInfo.type}-${addressInfo.address}`} addressInfo={addressInfo} />
+            {addressData.map((addressInfo, index) => (
+              <AddressItem key={`${addressInfo.type}-${addressInfo.index}-${index}-${addressInfo.address.slice(-8)}`} addressInfo={addressInfo} />
             ))}
           </>
         ) : (
