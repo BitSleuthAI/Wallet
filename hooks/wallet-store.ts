@@ -331,8 +331,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     
     // Error states (only show if there's actually an error and no data)
     priceError: priceQuery.error && !priceQuery.data ? priceQuery.error : null,
-    balanceError: balanceQuery.error && balanceQuery.data === undefined ? balanceQuery.error : null,
-    transactionsError: transactionsQuery.error && !transactionsQuery.data?.length ? transactionsQuery.error : null,
+    balanceError: balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null) ? balanceQuery.error : null,
+    transactionsError: transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0) ? transactionsQuery.error : null,
     
     // Transactions
     transactions: transactionsQuery.data || [],
@@ -362,8 +362,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isLoadingPrice: priceQuery.isLoading,
     
     // Error states for loading (only show if there's actually an error and no data)
-    hasBalanceError: !!balanceQuery.error && balanceQuery.data === undefined,
-    hasTransactionsError: !!transactionsQuery.error && !transactionsQuery.data?.length,
+    hasBalanceError: !!balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null),
+    hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
     hasPriceError: !!priceQuery.error && !priceQuery.data,
   }), [
     currentWallet,

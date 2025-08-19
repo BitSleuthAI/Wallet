@@ -9,7 +9,7 @@ const chartWidth = width - 40;
 const chartHeight = 120;
 
 export default function PriceChart() {
-  const { theme, hasPriceError } = useWallet();
+  const { theme, hasPriceError, bitcoinPrice } = useWallet();
 
   // Don't show mock data when there are network errors
   if (hasPriceError) {
@@ -26,16 +26,30 @@ export default function PriceChart() {
     );
   }
 
-  // Mock data for the chart - only shown when price data is available
-  const mockData = [
-    { x: 0, y: 50 },
-    { x: 1, y: 45 },
-    { x: 2, y: 40 },
-    { x: 3, y: 55 },
-    { x: 4, y: 60 },
-    { x: 5, y: 65 },
-    { x: 6, y: 70 },
-  ];
+  // Generate realistic mock data based on current price and 24h change
+  const currentPrice = bitcoinPrice?.usd || 45000;
+  const change24h = bitcoinPrice?.usd_24h_change || 0;
+  
+  // Create a realistic price chart showing the last 7 data points
+  const generateMockData = () => {
+    const basePrice = currentPrice;
+    const volatility = Math.abs(change24h) * 0.1; // Use 24h change to determine volatility
+    
+    return Array.from({ length: 7 }, (_, i) => {
+      // Create a trend that leads to the current 24h change
+      const progress = i / 6; // 0 to 1
+      const trendFactor = change24h * progress * 0.01; // Convert percentage to decimal
+      const randomFactor = (Math.sin(i * 0.8) * volatility * 0.5); // Add some realistic variation
+      const price = basePrice * (1 + trendFactor + randomFactor);
+      
+      return {
+        x: i,
+        y: Math.max(price, basePrice * 0.95) // Ensure price doesn't go too low
+      };
+    });
+  };
+  
+  const mockData = generateMockData();
 
   const createPath = (data: { x: number; y: number }[]) => {
     const maxY = Math.max(...data.map(d => d.y));
@@ -58,12 +72,25 @@ export default function PriceChart() {
     return path;
   };
 
+  // Determine chart color based on 24h change
+  const chartColor = (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error;
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
+      <View style={styles.chartHeader}>
+        <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
+          Price Chart (7D)
+        </Text>
+        {bitcoinPrice && (
+          <Text style={[styles.chartChange, { color: chartColor }]}>
+            {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}%
+          </Text>
+        )}
+      </View>
       <Svg width={chartWidth} height={chartHeight}>
         <Path
           d={createPath(mockData)}
-          stroke={theme.colors.primary}
+          stroke={chartColor}
           strokeWidth={3}
           fill="none"
           strokeLinecap="round"
@@ -95,5 +122,20 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 14,
     textAlign: 'center',
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 12,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  chartChange: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });
