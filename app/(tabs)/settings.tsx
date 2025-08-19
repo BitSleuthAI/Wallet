@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   Alert,
   Platform,
   Pressable,
+  Modal,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import { Stack, router } from 'expo-router';
@@ -25,16 +26,27 @@ import {
   UserX,
   Info,
   ChevronRight,
+  Settings,
+  Zap,
+  Eye,
+  EyeOff,
+  Coins,
+  X,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet } = useWallet();
+  const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
+  const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
+  const [hideBalance, setHideBalance] = useState<boolean>(false);
+  const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
 
   const handleLogout = () => {
     Alert.alert(
       'Logout & Erase Wallet',
-      'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.\n\nThis action cannot be undone!',
+      'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.\\n\\nThis action cannot be undone!',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -72,7 +84,7 @@ export default function SettingsScreen() {
               console.error('❌ Error during logout:', error);
               Alert.alert(
                 'Error',
-                'There was an error clearing your wallet data. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'),
+                'There was an error clearing your wallet data. Please try again.\\n\\nError: ' + (error instanceof Error ? error.message : 'Unknown error'),
                 [{ text: 'OK' }]
               );
             }
@@ -125,6 +137,19 @@ export default function SettingsScreen() {
     </Text>
   );
 
+  const getCurrencyName = (currency: FiatCurrency): string => {
+    switch (currency) {
+      case 'USD':
+        return 'United States Dollar';
+      case 'EUR':
+        return 'Euro';
+      case 'GBP':
+        return 'British Pound Sterling';
+      default:
+        return 'Unknown Currency';
+    }
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ title: 'Settings' }} />
@@ -135,18 +160,26 @@ export default function SettingsScreen() {
         
         <SettingItem
           icon={Wallet}
-          title="Manage Wallets"
-          subtitle="Add, edit, or remove wallets"
+          title="Current Wallet"
+          subtitle={currentWallet ? `${currentWallet.name} (${currentWallet.type})` : 'No wallet selected'}
           onPress={() => console.log('Manage wallets')}
+        />
+
+        <SettingItem
+          icon={Settings}
+          title="Wallet Settings"
+          subtitle="Configure wallet preferences"
+          onPress={() => console.log('Wallet settings')}
         />
 
         <SettingItem
           icon={DollarSign}
           title="Display Currency"
           subtitle="Set your preferred currency"
+          onPress={() => setShowCurrencyModal(true)}
           rightElement={
             <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]}>
-              USD - United States Dollar
+              {selectedCurrency} - {getCurrencyName(selectedCurrency)}
             </Text>
           }
         />
@@ -198,7 +231,62 @@ export default function SettingsScreen() {
         />
 
         <SettingItem
-          icon={Clock}
+          icon={Eye}
+          title="Hide Balance"
+          subtitle="Hide wallet balance from main screen"
+          rightElement={
+            Platform.OS === 'web' ? (
+              <Pressable
+                accessibilityRole="switch"
+                accessibilityState={{ checked: hideBalance }}
+                onPress={() => setHideBalance(!hideBalance)}
+                style={[
+                  styles.webSwitch,
+                  {
+                    backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}
+                testID="hide-balance-switch-web"
+              >
+                <View
+                  style={[
+                    styles.webSwitchThumb,
+                    {
+                      transform: [{ translateX: hideBalance ? 24 : 2 }],
+                      backgroundColor: '#FFFFFF',
+                    },
+                  ]}
+                />
+              </Pressable>
+            ) : (
+              <Switch
+                value={hideBalance}
+                onValueChange={setHideBalance}
+                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                ios_backgroundColor={theme.colors.border}
+                testID="hide-balance-switch-native"
+              />
+            )
+          }
+        />
+
+        <SettingItem
+          icon={Zap}
+          title="Fee Settings"
+          subtitle="Configure transaction fee preferences"
+          onPress={() => console.log('Fee settings')}
+        />
+
+        <SettingItem
+          icon={Coins}
+          title="Coin Control"
+          subtitle="Advanced UTXO management"
+          onPress={() => console.log('Coin control')}
+        />
+
+        <SettingItem
+          icon={List}
           title="Transaction History"
           subtitle="View all wallet transactions"
           onPress={() => console.log('Transaction history')}
@@ -211,9 +299,22 @@ export default function SettingsScreen() {
           icon={Clock}
           title="Auto-Lock"
           subtitle="Set inactivity timeout"
+          onPress={() => {
+            Alert.alert(
+              'Auto-Lock Timeout',
+              'Choose inactivity timeout',
+              [
+                { text: '5 minutes', onPress: () => setAutoLockTimeout(5) },
+                { text: '15 minutes', onPress: () => setAutoLockTimeout(15) },
+                { text: '30 minutes', onPress: () => setAutoLockTimeout(30) },
+                { text: '1 hour', onPress: () => setAutoLockTimeout(60) },
+                { text: 'Cancel', style: 'cancel' },
+              ]
+            );
+          }}
           rightElement={
             <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              15 minutes
+              {autoLockTimeout} minutes
             </Text>
           }
         />
@@ -276,6 +377,60 @@ export default function SettingsScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      {/* Currency Selection Modal */}
+      <Modal
+        visible={showCurrencyModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowCurrencyModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Select Currency
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowCurrencyModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X color={theme.colors.textSecondary} size={24} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.currencyList}>
+              {(['USD', 'EUR', 'GBP'] as FiatCurrency[]).map((currency) => (
+                <TouchableOpacity
+                  key={currency}
+                  style={[
+                    styles.currencyItem,
+                    selectedCurrency === currency && {
+                      backgroundColor: theme.colors.primary + '20',
+                    },
+                  ]}
+                  onPress={() => {
+                    setSelectedCurrency(currency);
+                    setShowCurrencyModal(false);
+                  }}
+                >
+                  <View style={styles.currencyInfo}>
+                    <Text style={[styles.currencyCode, { color: theme.colors.text }]}>
+                      {currency}
+                    </Text>
+                    <Text style={[styles.currencyName, { color: theme.colors.textSecondary }]}>
+                      {getCurrencyName(currency)}
+                    </Text>
+                  </View>
+                  {selectedCurrency === currency && (
+                    <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -367,5 +522,60 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.2,
     shadowOffset: { width: 0, height: 1 },
     shadowRadius: 1.5,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '70%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  currencyList: {
+    paddingHorizontal: 20,
+  },
+  currencyItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginVertical: 2,
+    borderRadius: 12,
+  },
+  currencyInfo: {
+    flex: 1,
+  },
+  currencyCode: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  currencyName: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  selectedIndicator: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
   },
 });

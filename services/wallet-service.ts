@@ -678,7 +678,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ BIP32 factory creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash);
+      const demoAddress = generateDemoAddress(hash, walletType);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -702,7 +702,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ xpub parsing failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash);
+      const demoAddress = generateDemoAddress(hash, walletType);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -717,7 +717,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Child key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash);
+      const demoAddress = generateDemoAddress(hash, walletType);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -734,7 +734,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Public key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash);
+      const demoAddress = generateDemoAddress(hash, walletType);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -765,7 +765,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         // Fallback to demo address generation
         console.log('⚠️ Payment address creation failed, using demo address generation');
         const hash = simpleHash(xpub + index.toString());
-        const demoAddress = generateDemoAddress(hash);
+        const demoAddress = generateDemoAddress(hash, walletType);
         console.log('✅ Generated fallback demo address:', demoAddress);
         return demoAddress;
       }
@@ -782,7 +782,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       // Fallback to demo address generation
       console.log('⚠️ Payment creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
-      const demoAddress = generateDemoAddress(hash);
+      const demoAddress = generateDemoAddress(hash, walletType);
       console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
@@ -791,7 +791,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
     // Final fallback to demo address generation
     console.log('⚠️ All address generation methods failed, using final demo fallback');
     const hash = simpleHash(xpub + index.toString());
-    const demoAddress = generateDemoAddress(hash);
+    const demoAddress = generateDemoAddress(hash, walletType);
     console.log('✅ Generated final fallback demo address:', demoAddress);
     return demoAddress;
   }
@@ -934,7 +934,9 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     const seed = await bip39.mnemonicToSeed(mnemonic.trim());
     const root = bip32.fromSeed(seed);
-    const child = root.derivePath(`${DERIVATION_PATH}/0/${addressIndex}`);
+    // Use the wallet type's derivation path for private key extraction
+    const derivationPath = DERIVATION_PATHS[walletType];
+    const child = root.derivePath(`${derivationPath}/0/${addressIndex}`);
     
     if (!child.privateKey) {
       throw new Error('Failed to derive private key');

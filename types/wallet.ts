@@ -1,13 +1,24 @@
+export type WalletType = 'hd' | 'segwit-p2sh' | 'segwit-native' | 'legacy';
+export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh';
+export type FiatCurrency = 'USD' | 'EUR' | 'GBP';
+
 export interface Wallet {
   id: string;
   name: string;
   color: string;
+  type: WalletType;
+  addressType: AddressType;
   mnemonic: string;
   xpub: string;
   addresses: string[];
   currentAddressIndex: number;
   balance: number;
   balanceUSD: number;
+  derivationPath: string;
+  gap: number; // Address gap for discovery
+  isHardwareWallet?: boolean;
+  createdAt: number;
+  lastSyncAt?: number;
 }
 
 export interface Transaction {
@@ -18,7 +29,35 @@ export interface Transaction {
   address: string;
   timestamp: number;
   confirmations: number;
-  status: 'pending' | 'confirmed';
+  status: 'pending' | 'confirmed' | 'failed';
+  fee?: number;
+  feeRate?: number; // sat/vB
+  size?: number; // transaction size in bytes
+  vsize?: number; // virtual size
+  rbf?: boolean; // Replace-by-fee enabled
+  inputs?: TransactionInput[];
+  outputs?: TransactionOutput[];
+  blockHeight?: number;
+  blockHash?: string;
+  memo?: string;
+  labels?: string[];
+}
+
+export interface TransactionInput {
+  txid: string;
+  vout: number;
+  value: number;
+  address?: string;
+  scriptSig?: string;
+  witness?: string[];
+}
+
+export interface TransactionOutput {
+  value: number;
+  address?: string;
+  scriptPubKey?: string;
+  n: number;
+  spent?: boolean;
 }
 
 export interface UTXO {
@@ -28,7 +67,44 @@ export interface UTXO {
   status: {
     confirmed: boolean;
     block_height?: number;
+    block_hash?: string;
+    block_time?: number;
   };
+  address?: string;
+  scriptPubKey?: string;
+  frozen?: boolean; // For coin control
+  label?: string;
+  confirmations?: number;
+}
+
+export interface FeeEstimate {
+  fastestFee: number; // ~10 min
+  halfHourFee: number; // ~30 min
+  hourFee: number; // ~60 min
+  economyFee: number; // ~3 hours
+  minimumFee: number; // ~24 hours
+}
+
+export interface SendTransactionParams {
+  toAddress: string;
+  amount: number; // in BTC
+  feeRate?: number; // sat/vB
+  memo?: string;
+  utxos?: UTXO[]; // For coin control
+  rbf?: boolean;
+}
+
+export interface WalletSettings {
+  fiatCurrency: FiatCurrency;
+  autoLockTimeout: number; // minutes
+  biometricEnabled: boolean;
+  pinEnabled: boolean;
+  hideBalance: boolean;
+  enableRBF: boolean;
+  defaultFeeRate: 'fast' | 'medium' | 'slow' | 'custom';
+  customFeeRate?: number;
+  addressGap: number;
+  enableCoinControl: boolean;
 }
 
 export interface BitcoinPrice {
