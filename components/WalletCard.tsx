@@ -4,19 +4,46 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 
+// Function to generate gradient colors from a base color
+function generateGradientColors(baseColor: string): [string, string] {
+  // Convert hex to RGB
+  const hex = baseColor.replace('#', '');
+  const r = parseInt(hex.substr(0, 2), 16);
+  const g = parseInt(hex.substr(2, 2), 16);
+  const b = parseInt(hex.substr(4, 2), 16);
+  
+  // Create a lighter version (add 30 to each component, max 255)
+  const lighterR = Math.min(255, r + 30);
+  const lighterG = Math.min(255, g + 30);
+  const lighterB = Math.min(255, b + 30);
+  
+  // Create a darker version (subtract 40 from each component, min 0)
+  const darkerR = Math.max(0, r - 40);
+  const darkerG = Math.max(0, g - 40);
+  const darkerB = Math.max(0, b - 40);
+  
+  const lighterColor = `rgb(${lighterR}, ${lighterG}, ${lighterB})`;
+  const darkerColor = `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
+  
+  return [lighterColor, darkerColor];
+}
+
 interface WalletCardProps {
   onPress?: () => void;
 }
 
 export default function WalletCard({ onPress }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, theme, hasBalanceError, hasPriceError, formatCurrency, hideBalance } = useWallet();
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance } = useWallet();
 
   if (!currentWallet) return null;
+
+  // Generate gradient colors based on wallet color
+  const [lightColor, darkColor] = generateGradientColors(currentWallet.color);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={[theme.colors.primary, theme.colors.secondary]}
+        colors={[lightColor, darkColor]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.card}
