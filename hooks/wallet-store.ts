@@ -24,6 +24,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [currentWallet, setCurrentWallet] = useState<Wallet | null>(null);
   const [theme, setTheme] = useState<Theme>(lightTheme);
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
+  const [hideBalance, setHideBalance] = useState<boolean>(false);
   const queryClient = useQueryClient();
 
   // Load wallet from storage
@@ -50,6 +51,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('currency');
       return (stored as FiatCurrency) || 'USD';
+    },
+  });
+
+  // Load hide balance setting from storage
+  const hideBalanceQuery = useQuery({
+    queryKey: ['hideBalance'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('hideBalance');
+      return stored === 'true';
     },
   });
 
@@ -174,6 +184,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveCurrency } = saveCurrencyMutation;
 
+  // Save hide balance setting mutation
+  const saveHideBalanceMutation = useMutation({
+    mutationFn: async (hide: boolean) => {
+      await AsyncStorage.setItem('hideBalance', hide.toString());
+      return hide;
+    },
+    onSuccess: (hide) => {
+      setHideBalance(hide);
+      queryClient.invalidateQueries({ queryKey: ['hideBalance'] });
+    },
+  });
+  const { mutate: saveHideBalance } = saveHideBalanceMutation;
+
   useEffect(() => {
     if (walletQuery.data) {
       setCurrentWallet(walletQuery.data);
@@ -191,6 +214,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setSelectedCurrency(currencyQuery.data);
     }
   }, [currencyQuery.data]);
+
+  useEffect(() => {
+    if (hideBalanceQuery.data !== undefined) {
+      setHideBalance(hideBalanceQuery.data);
+    }
+  }, [hideBalanceQuery.data]);
 
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
@@ -233,6 +262,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const setCurrency = useCallback((currency: FiatCurrency) => {
     saveCurrency(currency);
   }, [saveCurrency]);
+
+  const setHideBalanceSetting = useCallback((hide: boolean) => {
+    saveHideBalance(hide);
+  }, [saveHideBalance]);
 
   const formatCurrency = useCallback((amount: number, showSymbol: boolean = true) => {
     const symbol = CURRENCY_SYMBOLS[selectedCurrency];
@@ -277,6 +310,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'wallet_setup_completed',
         'theme', // Reset theme to default
         'currency', // Reset currency to default
+        'hideBalance', // Reset hide balance setting
         'user_preferences',
         'app_settings',
         'cached_addresses',
@@ -293,6 +327,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setCurrentWallet(null);
       setTheme(lightTheme); // Reset to light theme
       setSelectedCurrency('USD'); // Reset to USD
+      setHideBalance(false); // Reset hide balance setting
       
       // Clear all cached queries and reset query client
       console.log('🔄 Clearing query cache...');
@@ -347,6 +382,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrencySymbol,
     getCurrencyName,
     
+    // Hide balance setting
+    hideBalance,
+    setHideBalanceSetting,
+    
     // Actions
     createWallet,
     importWallet,
@@ -390,5 +429,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     formatCurrency,
     getCurrencySymbol,
     getCurrencyName,
+    hideBalance,
+    setHideBalanceSetting,
   ]);
 });

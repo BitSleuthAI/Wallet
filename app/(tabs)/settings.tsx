@@ -37,9 +37,8 @@ import { useWallet } from '@/hooks/wallet-store';
 import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
-  const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
 
   const handleLogout = () => {
@@ -227,7 +226,7 @@ export default function SettingsScreen() {
               <Pressable
                 accessibilityRole="switch"
                 accessibilityState={{ checked: hideBalance }}
-                onPress={() => setHideBalance(!hideBalance)}
+                onPress={() => setHideBalanceSetting(!hideBalance)}
                 style={[
                   styles.webSwitch,
                   {
@@ -249,7 +248,7 @@ export default function SettingsScreen() {
             ) : (
               <Switch
                 value={hideBalance}
-                onValueChange={setHideBalance}
+                onValueChange={setHideBalanceSetting}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
                 ios_backgroundColor={theme.colors.border}

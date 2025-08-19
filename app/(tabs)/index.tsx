@@ -9,7 +9,7 @@ import {
   SafeAreaView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
@@ -34,6 +34,8 @@ export default function WalletScreen() {
     formatCurrency,
     getCurrencySymbol,
     selectedCurrency,
+    hideBalance,
+    setHideBalanceSetting,
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -169,13 +171,25 @@ export default function WalletScreen() {
             </View>
           ) : (
             <>
-              <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-                {hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD)}
-              </Text>
+              <View style={styles.balanceRow}>
+                <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
+                  {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
+                </Text>
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setHideBalanceSetting(!hideBalance)}
+                >
+                  {hideBalance ? (
+                    <EyeOff color={theme.colors.textSecondary} size={20} />
+                  ) : (
+                    <Eye color={theme.colors.textSecondary} size={20} />
+                  )}
+                </TouchableOpacity>
+              </View>
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
-                {hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`}
+                {hideBalance ? 'Balance hidden' : (hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`)}
               </Text>
-              {!hasPriceError && balanceUSD > 0 && bitcoinPrice?.usd_24h_change !== undefined && (
+              {!hideBalance && !hasPriceError && balanceUSD > 0 && bitcoinPrice?.usd_24h_change !== undefined && (
                 <View style={styles.changeContainer}>
                   <TrendingUp color={bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error} size={16} />
                   <Text style={[styles.changeText, { color: bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error }]}>
@@ -341,6 +355,15 @@ const styles = StyleSheet.create({
   balanceSection: {
     alignItems: 'center',
     paddingVertical: 20,
+  },
+  balanceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  eyeButton: {
+    marginLeft: 12,
+    padding: 4,
   },
   mainBalance: {
     fontSize: 36,
