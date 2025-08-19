@@ -38,6 +38,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 3,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
     staleTime: 60000, // Consider data fresh for 1 minute
+    meta: {
+      errorMessage: 'Failed to fetch Bitcoin price, using fallback data'
+    }
   });
 
   // Wallet balance query
@@ -52,6 +55,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 30000, // Consider data fresh for 30 seconds
+    meta: {
+      errorMessage: 'Failed to fetch wallet balance, using demo data'
+    }
   });
 
   // Transaction history query
@@ -66,6 +72,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     retry: 2,
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
     staleTime: 60000, // Consider data fresh for 1 minute
+    meta: {
+      errorMessage: 'Failed to fetch transaction history, using demo data'
+    }
   });
 
   // Save wallet mutation

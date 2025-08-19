@@ -167,11 +167,16 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     console.log('✅ Address balance fetched:', balance, 'BTC');
     return balance;
   } catch (error) {
-    console.error('Error fetching address balance:', error);
+    // Only log network errors as warnings, not errors
+    if (error instanceof Error && error.message.includes('Network error')) {
+      console.warn('⚠️ Network unavailable for balance fetch, using demo data');
+    } else {
+      console.error('Error fetching address balance:', error);
+    }
 
     // Return a small demo balance for testing
     const demoBalance = Math.random() * 0.001;
-    console.log('Using demo balance:', demoBalance, 'BTC');
+    console.log('📊 Using demo balance:', demoBalance, 'BTC');
     return demoBalance;
   }
 };
@@ -208,10 +213,15 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
     console.log('✅ Address transactions fetched:', data.length, 'transactions');
     return data;
   } catch (error) {
-    console.error('Error fetching address transactions:', error);
+    // Only log network errors as warnings, not errors
+    if (error instanceof Error && error.message.includes('Network error')) {
+      console.warn('⚠️ Network unavailable for transaction fetch, using demo data');
+    } else {
+      console.error('Error fetching address transactions:', error);
+    }
     
     // Return demo transactions for testing
-    console.log('Using demo transaction data');
+    console.log('📊 Using demo transaction data');
     return [
       {
         txid: 'demo_tx_1',
@@ -280,7 +290,8 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 50); // Limit to 50 most recent transactions
   } catch (error) {
-    console.error('Error fetching transaction history:', error);
+    // Only log as warning since this is expected when network is unavailable
+    console.warn('⚠️ Unable to fetch transaction history, using demo data');
     return [];
   }
 };
