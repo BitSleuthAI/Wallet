@@ -34,41 +34,49 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const priceQuery = useQuery({
     queryKey: ['bitcoin-price'],
     queryFn: bitcoinService.getBitcoinPrice,
-    refetchInterval: 30000, // Refetch every 30 seconds
-    retry: 3,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-    staleTime: 60000, // Consider data fresh for 1 minute
+    refetchInterval: 60000, // Refetch every 60 seconds
+    retry: 2,
+    retryDelay: (attemptIndex) => Math.min(2000 * 2 ** attemptIndex, 30000),
+    staleTime: 120000, // Consider data fresh for 2 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, // Only refetch on mount
   });
 
   // Wallet balance query
   const balanceQuery = useQuery({
-    queryKey: ['wallet-balance', currentWallet?.id, currentWallet?.addresses, currentWallet],
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    queryKey: ['wallet-balance', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
     queryFn: async () => {
-      if (!currentWallet) return null;
+      if (!currentWallet || !currentWallet.addresses.length) return 0;
       return bitcoinService.getWalletBalance(currentWallet.addresses);
     },
-    enabled: !!currentWallet,
-    refetchInterval: 10000, // Refetch every 10 seconds
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    staleTime: 30000, // Consider data fresh for 30 seconds
+    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    refetchInterval: 30000, // Refetch every 30 seconds
+    retry: 1,
+    retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 15000),
+    staleTime: 60000, // Consider data fresh for 1 minute
     throwOnError: false, // Don't throw errors, handle them gracefully
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, // Only refetch on mount
   });
 
   // Transaction history query
   const transactionsQuery = useQuery({
-    queryKey: ['transactions', currentWallet?.id, currentWallet?.addresses, currentWallet],
+    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    queryKey: ['transactions', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
     queryFn: async () => {
-      if (!currentWallet) return [];
+      if (!currentWallet || !currentWallet.addresses.length) return [];
       return bitcoinService.getTransactionHistory(currentWallet.addresses);
     },
-    enabled: !!currentWallet,
-    refetchInterval: 15000,
-    retry: 2,
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 10000),
-    staleTime: 60000, // Consider data fresh for 1 minute
+    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    refetchInterval: 45000, // Refetch every 45 seconds
+    retry: 1,
+    retryDelay: (attemptIndex) => Math.min(3000 * 2 ** attemptIndex, 15000),
+    staleTime: 90000, // Consider data fresh for 1.5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
+    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnMount: true, // Only refetch on mount
   });
 
   // Save wallet mutation
@@ -148,10 +156,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     saveTheme(!theme.isDark);
   }, [theme.isDark, saveTheme]);
 
-  const refreshData = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-    queryClient.invalidateQueries({ queryKey: ['transactions'] });
-    queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
+  const refreshData = useCallback(async () => {
+    console.log('Refreshing wallet data...');
+    try {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance'] }),
+        queryClient.invalidateQueries({ queryKey: ['transactions'] }),
+        queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] }),
+      ]);
+      console.log('✅ Wallet data refresh initiated');
+    } catch (error) {
+      console.warn('⚠️ Error during data refresh:', error);
+    }
   }, [queryClient]);
 
   const logoutAndEraseWallet = useCallback(async () => {

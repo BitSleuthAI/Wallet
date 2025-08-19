@@ -38,33 +38,47 @@ const API_BASE = Platform.select({
 });
 
 async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: number }) {
-  const { timeoutMs = 15000, ...rest } = init ?? {};
+  const { timeoutMs = 10000, ...rest } = init ?? {};
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  
   try {
     const response = await fetch(input, {
       signal: controller.signal,
       headers: {
         Accept: 'application/json',
+        'User-Agent': 'BitcoinWallet/1.0',
         ...(rest?.headers ?? {}),
       },
-      ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
+      ...(Platform.OS === 'web' ? { 
+        mode: 'cors' as const,
+        credentials: 'omit' as const,
+      } : {}),
       ...rest,
     });
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      console.warn(`API request failed: ${response.status} ${response.statusText} for ${input}`);
+      throw new Error(`API request failed: ${response.status}`);
     }
-    return await response.json();
+    
+    const data = await response.json();
+    return data;
   } catch (error) {
-    // Handle network errors more gracefully
+    console.warn(`Network request failed for ${input}:`, error);
+    
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        throw new Error('Request timeout');
+        throw new Error('Request timeout - please try again');
       }
-      if (error.message.includes('Failed to fetch')) {
+      if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
         throw new Error('Network error - please check your connection');
       }
+      if (error.message.includes('CORS')) {
+        throw new Error('Network configuration error');
+      }
     }
+    
     throw error;
   } finally {
     clearTimeout(timeoutId);
@@ -144,25 +158,41 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  try {
-    console.log('Fetching balance for address:', address);
-    const data = await fetchJSON(`${API_BASE}/address/${address}`, {
-      timeoutMs: 15000,
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    if (!data.chain_stats || typeof data.chain_stats.funded_txo_sum !== 'number') {
-      throw new Error('Invalid response format from API');
-    }
-    
-    // Convert from satoshis to BTC
-    const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
-    console.log('✅ Address balance fetched:', balance, 'BTC');
-    return balance;
-  } catch (error) {
-    console.error('Error fetching address balance:', error);
-    throw error;
+  if (!address || address.length < 26) {
+    console.warn('Invalid address provided:', address);
+    return 0;
   }
+  
+  // Try multiple APIs for redundancy
+  const apis = [
+    { base: BLOCKSTREAM_API, name: 'Blockstream' },
+    { base: MEMPOOL_API, name: 'Mempool' },
+  ];
+  
+  for (const api of apis) {
+    try {
+      console.log(`Fetching balance for address ${address} from ${api.name}...`);
+      const data = await fetchJSON(`${api.base}/address/${address}`, {
+        timeoutMs: 8000,
+      });
+      
+      if (!data.chain_stats || typeof data.chain_stats.funded_txo_sum !== 'number') {
+        console.warn(`Invalid response format from ${api.name}:`, data);
+        continue;
+      }
+      
+      // Convert from satoshis to BTC
+      const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
+      console.log(`✅ Address balance fetched from ${api.name}:`, balance, 'BTC');
+      return Math.max(0, balance); // Ensure non-negative balance
+    } catch (error) {
+      console.warn(`Failed to fetch balance from ${api.name}:`, error);
+      continue;
+    }
+  }
+  
+  console.error('All balance APIs failed for address:', address);
+  throw new Error('Unable to fetch address balance - all APIs failed');
 };
 
 export const getWalletBalance = async (addresses: string[]): Promise<number> => {
@@ -185,23 +215,39 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  try {
-    console.log('Fetching transactions for address:', address);
-    const data = await fetchJSON(`${API_BASE}/address/${address}/txs`, {
-      timeoutMs: 15000,
-      headers: { 'Content-Type': 'application/json' },
-    });
-    
-    if (!Array.isArray(data)) {
-      throw new Error('Invalid response format from API');
-    }
-    
-    console.log('✅ Address transactions fetched:', data.length, 'transactions');
-    return data;
-  } catch (error) {
-    console.error('Error fetching address transactions:', error);
-    throw error;
+  if (!address || address.length < 26) {
+    console.warn('Invalid address provided:', address);
+    return [];
   }
+  
+  // Try multiple APIs for redundancy
+  const apis = [
+    { base: BLOCKSTREAM_API, name: 'Blockstream' },
+    { base: MEMPOOL_API, name: 'Mempool' },
+  ];
+  
+  for (const api of apis) {
+    try {
+      console.log(`Fetching transactions for address ${address} from ${api.name}...`);
+      const data = await fetchJSON(`${api.base}/address/${address}/txs`, {
+        timeoutMs: 8000,
+      });
+      
+      if (!Array.isArray(data)) {
+        console.warn(`Invalid response format from ${api.name}:`, data);
+        continue;
+      }
+      
+      console.log(`✅ Address transactions fetched from ${api.name}:`, data.length, 'transactions');
+      return data;
+    } catch (error) {
+      console.warn(`Failed to fetch transactions from ${api.name}:`, error);
+      continue;
+    }
+  }
+  
+  console.error('All transaction APIs failed for address:', address);
+  throw new Error('Unable to fetch address transactions - all APIs failed');
 };
 
 export const getTransactionHistory = async (addresses: string[]): Promise<Transaction[]> => {
