@@ -276,7 +276,7 @@ export default function SettingsScreen() {
           icon={List}
           title="Transaction History"
           subtitle="View all wallet transactions"
-          onPress={() => console.log('Transaction history')}
+          onPress={() => router.push('/transaction-history')}
         />
 
         {/* Security Section */}
