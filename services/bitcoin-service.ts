@@ -29,6 +29,9 @@ const ensureECC = () => {
   }
 };
 
+
+
+// Legacy constants for backward compatibility
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
 const MEMPOOL_API = 'https://mempool.space/api';
 
@@ -37,8 +40,49 @@ const API_BASE = Platform.select({
   default: BLOCKSTREAM_API,
 });
 
+// Test network connectivity
+export const testNetworkConnectivity = async (): Promise<boolean> => {
+  try {
+    console.log('Testing network connectivity...');
+    const response = await fetch('https://httpbin.org/get', {
+      method: 'GET',
+      headers: { 'Accept': 'application/json' },
+      ...(Platform.OS === 'web' ? { mode: 'cors' as const } : {}),
+    });
+    
+    const isConnected = response.ok;
+    console.log(`Network connectivity test: ${isConnected ? 'PASSED' : 'FAILED'}`);
+    return isConnected;
+  } catch (error) {
+    console.warn('Network connectivity test failed:', error);
+    return false;
+  }
+};
+
+// Retry mechanism with exponential backoff
+async function fetchWithRetry(input: string, init?: RequestInit & { timeoutMs?: number }, maxRetries: number = 2): Promise<any> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await fetchJSON(input, init);
+      return result;
+    } catch (error) {
+      lastError = error as Error;
+      
+      if (attempt < maxRetries) {
+        const delay = Math.min(1000 * Math.pow(2, attempt), 5000); // Max 5 second delay
+        console.log(`Retrying request to ${input} in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+  
+  throw lastError;
+}
+
 async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: number }) {
-  const { timeoutMs = 10000, ...rest } = init ?? {};
+  const { timeoutMs = 15000, ...rest } = init ?? {};
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
   
@@ -82,6 +126,48 @@ async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: numbe
     throw error;
   } finally {
     clearTimeout(timeoutId);
+  }
+}
+
+// Helper function to normalize API responses
+function normalizeBalanceResponse(data: any, apiName: string): number {
+  try {
+    if (apiName === 'BlockCypher') {
+      // BlockCypher returns balance in satoshis
+      return (data.balance || 0) / 100000000;
+    } else if (apiName === 'Blockchain.info') {
+      // Blockchain.info returns balance in satoshis
+      return (data.final_balance || 0) / 100000000;
+    } else {
+      // Blockstream/Mempool format
+      if (!data.chain_stats) {
+        console.warn(`Invalid response format from ${apiName}:`, data);
+        throw new Error('Invalid response format');
+      }
+      return (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
+    }
+  } catch (error) {
+    console.warn(`Error normalizing balance response from ${apiName}:`, error);
+    throw error;
+  }
+}
+
+// Helper function to normalize transaction responses
+function normalizeTransactionResponse(data: any, apiName: string): any[] {
+  try {
+    if (apiName === 'BlockCypher') {
+      // BlockCypher has different format
+      return data.txs || [];
+    } else if (apiName === 'Blockchain.info') {
+      // Blockchain.info returns transactions in 'txs' array
+      return data.txs || [];
+    } else {
+      // Blockstream/Mempool format
+      return Array.isArray(data) ? data : [];
+    }
+  } catch (error) {
+    console.warn(`Error normalizing transaction response from ${apiName}:`, error);
+    return [];
   }
 }
 // Multiple price API endpoints for redundancy
@@ -163,26 +249,24 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     return 0;
   }
   
-  // Try multiple APIs for redundancy
-  const apis = [
-    { base: BLOCKSTREAM_API, name: 'Blockstream' },
-    { base: MEMPOOL_API, name: 'Mempool' },
+  // Try multiple APIs for redundancy with different endpoints
+  const apiAttempts = [
+    { base: MEMPOOL_API, name: 'Mempool.space', endpoint: '/address' },
+    { base: BLOCKSTREAM_API, name: 'Blockstream', endpoint: '/address' },
+    { base: 'https://api.blockcypher.com/v1/btc/main', name: 'BlockCypher', endpoint: '/addrs' },
+    { base: 'https://api.blockchain.info', name: 'Blockchain.info', endpoint: '/rawaddr' },
   ];
   
-  for (const api of apis) {
+  for (const api of apiAttempts) {
     try {
       console.log(`Fetching balance for address ${address} from ${api.name}...`);
-      const data = await fetchJSON(`${api.base}/address/${address}`, {
-        timeoutMs: 8000,
+      
+      const url = `${api.base}${api.endpoint}/${address}`;
+      const data = await fetchWithRetry(url, {
+        timeoutMs: 12000,
       });
       
-      if (!data.chain_stats || typeof data.chain_stats.funded_txo_sum !== 'number') {
-        console.warn(`Invalid response format from ${api.name}:`, data);
-        continue;
-      }
-      
-      // Convert from satoshis to BTC
-      const balance = (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
+      const balance = normalizeBalanceResponse(data, api.name);
       console.log(`✅ Address balance fetched from ${api.name}:`, balance, 'BTC');
       return Math.max(0, balance); // Ensure non-negative balance
     } catch (error) {
@@ -192,7 +276,14 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   }
   
   console.error('All balance APIs failed for address:', address);
-  throw new Error('Unable to fetch address balance - all APIs failed');
+  
+  // Test network connectivity to provide better error message
+  const isConnected = await testNetworkConnectivity();
+  if (!isConnected) {
+    throw new Error('No internet connection - please check your network and try again');
+  }
+  
+  throw new Error('Unable to fetch address balance - all Bitcoin APIs are currently unavailable');
 };
 
 export const getWalletBalance = async (addresses: string[]): Promise<number> => {
@@ -220,26 +311,33 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
     return [];
   }
   
-  // Try multiple APIs for redundancy
-  const apis = [
-    { base: BLOCKSTREAM_API, name: 'Blockstream' },
-    { base: MEMPOOL_API, name: 'Mempool' },
+  // Try multiple APIs for redundancy with different endpoints
+  const apiAttempts = [
+    { base: MEMPOOL_API, name: 'Mempool.space', endpoint: '/address', suffix: '/txs' },
+    { base: BLOCKSTREAM_API, name: 'Blockstream', endpoint: '/address', suffix: '/txs' },
+    { base: 'https://api.blockcypher.com/v1/btc/main', name: 'BlockCypher', endpoint: '/addrs', suffix: '/full?limit=50' },
+    { base: 'https://api.blockchain.info', name: 'Blockchain.info', endpoint: '/rawaddr', suffix: '' },
   ];
   
-  for (const api of apis) {
+  for (const api of apiAttempts) {
     try {
       console.log(`Fetching transactions for address ${address} from ${api.name}...`);
-      const data = await fetchJSON(`${api.base}/address/${address}/txs`, {
-        timeoutMs: 8000,
-      });
       
-      if (!Array.isArray(data)) {
-        console.warn(`Invalid response format from ${api.name}:`, data);
-        continue;
+      let url: string;
+      if (api.name === 'Blockchain.info') {
+        // Blockchain.info needs different URL format
+        url = `${api.base}${api.endpoint}/${address}?format=json&limit=50`;
+      } else {
+        url = `${api.base}${api.endpoint}/${address}${api.suffix}`;
       }
       
-      console.log(`✅ Address transactions fetched from ${api.name}:`, data.length, 'transactions');
-      return data;
+      const data = await fetchWithRetry(url, {
+        timeoutMs: 12000,
+      });
+      
+      const transactions = normalizeTransactionResponse(data, api.name);
+      console.log(`✅ Address transactions fetched from ${api.name}:`, transactions.length, 'transactions');
+      return transactions;
     } catch (error) {
       console.warn(`Failed to fetch transactions from ${api.name}:`, error);
       continue;
@@ -247,7 +345,14 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   }
   
   console.error('All transaction APIs failed for address:', address);
-  throw new Error('Unable to fetch address transactions - all APIs failed');
+  
+  // Test network connectivity to provide better error message
+  const isConnected = await testNetworkConnectivity();
+  if (!isConnected) {
+    throw new Error('No internet connection - please check your network and try again');
+  }
+  
+  throw new Error('Unable to fetch address transactions - all Bitcoin APIs are currently unavailable');
 };
 
 export const getTransactionHistory = async (addresses: string[]): Promise<Transaction[]> => {
