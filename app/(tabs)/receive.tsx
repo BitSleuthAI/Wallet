@@ -91,12 +91,20 @@ export default function ReceiveScreen() {
         {/* QR Code */}
         <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.qrCodeWrapper}>
-            <QRCode
-              value={currentAddress}
-              size={200}
-              backgroundColor="white"
-              color="black"
-            />
+            {currentAddress ? (
+              <QRCode
+                value={currentAddress}
+                size={200}
+                backgroundColor="white"
+                color="black"
+              />
+            ) : (
+              <View style={styles.qrPlaceholder}>
+                <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
+                  No address available
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 
@@ -271,5 +279,17 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  qrPlaceholder: {
+    width: 200,
+    height: 200,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+  },
+  qrPlaceholderText: {
+    fontSize: 16,
+    textAlign: 'center',
   },
 });
