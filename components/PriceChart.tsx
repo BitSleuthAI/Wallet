@@ -23,7 +23,7 @@ interface BalanceChartProps {
 }
 
 export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
-  const { theme, hasBalanceError, balance, transactions } = useWallet();
+  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = useWallet();
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
@@ -203,6 +203,18 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
     }
   };
 
+  const formatTooltipDate = (date: Date) => {
+    const options: Intl.DateTimeFormatOptions = {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: false
+    };
+    return date.toLocaleDateString('en-US', options);
+  };
+
   const getTimeRangeLabels = (data: DataPoint[]) => {
     if (data.length === 0) return [];
     
@@ -311,12 +323,20 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
               }
             ]}
           >
-            <Text style={[styles.tooltipBalance, { color: theme.colors.text }]}>
-              {selectedPoint.balance.toFixed(8)} BTC
-            </Text>
-            <Text style={[styles.tooltipDate, { color: theme.colors.textSecondary }]}>
-              {formatDate(selectedPoint.date)}
-            </Text>
+            <View style={styles.tooltipContent}>
+              <Text style={[styles.tooltipTitle, { color: theme.colors.text }]}>Balance</Text>
+              <Text style={[styles.tooltipBTC, { color: theme.colors.text }]}>
+                {selectedPoint.balance.toFixed(8)} BTC
+              </Text>
+              {bitcoinPrice?.usd && (
+                <Text style={[styles.tooltipFiat, { color: theme.colors.textSecondary }]}>
+                  {formatCurrency(selectedPoint.balance * bitcoinPrice.usd)}
+                </Text>
+              )}
+              <Text style={[styles.tooltipDate, { color: theme.colors.textSecondary }]}>
+                {formatTooltipDate(selectedPoint.date)}
+              </Text>
+            </View>
           </Animated.View>
         )}
       </View>
@@ -396,7 +416,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 12,
+    padding: 16,
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -406,17 +426,31 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 8,
     elevation: 8,
-    minWidth: 120,
-    alignItems: 'center',
+    minWidth: 140,
   },
-  tooltipBalance: {
-    fontSize: 14,
+  tooltipContent: {
+    alignItems: 'flex-start',
+  },
+  tooltipTitle: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 4,
+    opacity: 0.7,
+  },
+  tooltipBTC: {
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 2,
   },
+  tooltipFiat: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
   tooltipDate: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '500',
+    opacity: 0.8,
   },
   timeLabelsContainer: {
     position: 'relative',

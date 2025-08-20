@@ -284,7 +284,7 @@ export default function WalletScreen() {
                 <View style={styles.changeContainer}>
                   <TrendingUp color={bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error} size={16} />
                   <Text style={[styles.changeText, { color: bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error }]}>
-                    {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}% 24h
+                    {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{formatCurrency((balanceUSD * bitcoinPrice.usd_24h_change) / 100)} ({bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}%) 24h
                   </Text>
                 </View>
               )}
