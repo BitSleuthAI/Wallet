@@ -45,7 +45,11 @@ export default function SettingsScreen() {
   const [showAutoLockModal, setShowAutoLockModal] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
 
+  const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+
   const handleLogout = () => {
+    if (isLoggingOut) return; // Prevent multiple logout attempts
+    
     Alert.alert(
       'Logout & Erase Wallet',
       'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.\\n\\nThis action cannot be undone!',
@@ -55,35 +59,28 @@ export default function SettingsScreen() {
           text: 'Logout & Erase', 
           style: 'destructive', 
           onPress: async () => {
+            setIsLoggingOut(true);
+            
             try {
               console.log('🚀 User confirmed wallet logout and erase');
               
-              // Show loading state
-              Alert.alert(
-                'Clearing Wallet Data',
-                'Please wait while we securely clear your wallet data...',
-                [],
-                { cancelable: false }
-              );
-              
-              // Perform the logout and erase
+              // Perform the logout and erase without showing a blocking alert
               await logoutAndEraseWallet();
               
               console.log('✅ Wallet logout and erase completed successfully');
               
-              // Navigate to wallet setup screen with a slight delay to ensure state is cleared
-              setTimeout(() => {
-                try {
-                  router.replace('/wallet-setup');
-                } catch (navError) {
-                  console.warn('Navigation error, trying alternative route:', navError);
-                  // Fallback navigation
-                  router.push('/wallet-setup');
-                }
-              }, 500);
+              // Navigate to wallet setup screen immediately
+              try {
+                router.replace('/wallet-setup');
+              } catch (navError) {
+                console.warn('Navigation error, trying alternative route:', navError);
+                // Fallback navigation
+                router.push('/wallet-setup');
+              }
               
             } catch (error) {
               console.error('❌ Error during logout:', error);
+              setIsLoggingOut(false);
               Alert.alert(
                 'Error',
                 'There was an error clearing your wallet data. Please try again.\\n\\nError: ' + (error instanceof Error ? error.message : 'Unknown error'),
@@ -321,11 +318,18 @@ export default function SettingsScreen() {
 
         {/* Logout Button */}
         <TouchableOpacity
-          style={[styles.logoutButton, { borderColor: theme.colors.error }]}
+          style={[
+            styles.logoutButton, 
+            { 
+              borderColor: theme.colors.error,
+              opacity: isLoggingOut ? 0.6 : 1
+            }
+          ]}
           onPress={handleLogout}
+          disabled={isLoggingOut}
         >
           <Text style={[styles.logoutText, { color: theme.colors.error }]}>
-            Logout & Erase Wallet
+            {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
           </Text>
         </TouchableOpacity>
       </ScrollView>

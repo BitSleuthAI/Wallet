@@ -455,33 +455,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     try {
       console.log('🔄 Starting wallet logout and erase process...');
       
-      // Clear all wallet-related data from AsyncStorage
-      const keysToRemove = [
-        'wallets',
-        'currentWalletId',
-        'pin',
-        'biometric_enabled',
-        'wallet_setup_completed',
-        'theme', // Reset theme to default
-        'currency', // Reset currency to default
-        'hideBalance', // Reset hide balance setting
-        'autoLockTimeout', // Reset auto-lock timeout
-        'user_preferences',
-        'app_settings',
-        'cached_addresses',
-        'transaction_cache',
-        'price_cache',
-        'last_sync_time',
-        'mock_data', // Remove any mock data
-        'test_data', // Remove any test data
-        'sample_data', // Remove any sample data
-        'dummy_data' // Remove any dummy data
-      ];
+      // First, get all AsyncStorage keys to ensure we clear everything
+      const allKeys = await AsyncStorage.getAllKeys();
+      console.log('📋 Found AsyncStorage keys:', allKeys);
       
-      console.log('🗑️ Removing storage keys:', keysToRemove);
-      await AsyncStorage.multiRemove(keysToRemove);
+      // Clear all AsyncStorage data completely
+      console.log('🗑️ Clearing all AsyncStorage data...');
+      await AsyncStorage.clear();
       
-      // Reset local state
+      // Reset local state immediately
       console.log('🔄 Resetting local state...');
       setWallets([]);
       setCurrentWalletId(null);
@@ -497,26 +479,30 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries();
       
       // Clear any global state that might persist
-      if ((global as any).ecc) {
-        console.log('🔄 Clearing global ECC state...');
-        delete (global as any).ecc;
-      }
-      
-      if ((global as any).__cryptoInitialized) {
-        console.log('🔄 Resetting crypto initialization flag...');
-        (global as any).__cryptoInitialized = false;
+      if (typeof global !== 'undefined') {
+        if ((global as any).ecc) {
+          console.log('🔄 Clearing global ECC state...');
+          delete (global as any).ecc;
+        }
+        
+        if ((global as any).__cryptoInitialized) {
+          console.log('🔄 Resetting crypto initialization flag...');
+          (global as any).__cryptoInitialized = false;
+        }
+        
+        // Clear any other global wallet state
+        if ((global as any).__walletState) {
+          console.log('🔄 Clearing global wallet state...');
+          delete (global as any).__walletState;
+        }
       }
       
       console.log('✅ Wallet data cleared successfully');
       console.log('🔄 App state has been completely reset');
       
-      // Trigger app re-mount to prevent hook ordering issues
-      if (typeof global !== 'undefined' && (global as any).__forceAppReset) {
-        console.log('🔄 Triggering app re-mount...');
-        setTimeout(() => {
-          (global as any).__forceAppReset();
-        }, 100);
-      }
+      // Force a small delay to ensure all async operations complete
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
     } catch (error) {
       console.error('❌ Error clearing wallet data:', error);
       throw new Error('Failed to clear wallet data. Please try again.');
