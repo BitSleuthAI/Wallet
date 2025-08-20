@@ -189,43 +189,43 @@ export default function ReceiveScreen() {
           <RefreshCw color="white" size={20} />
           <Text style={styles.newAddressText}>New Address</Text>
         </TouchableOpacity>
+      </View>
+      
+      {/* Action Buttons - Positioned at bottom */}
+      <View style={styles.bottomActionButtons}>
+        <TouchableOpacity
+          style={[
+            styles.actionButton, 
+            { 
+              backgroundColor: theme.colors.surface,
+              opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+            }
+          ]}
+          onPress={handleCopy}
+          disabled={!currentAddress || currentAddress.length === 0}
+        >
+          <Copy color={theme.colors.text} size={20} />
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+            Copy
+          </Text>
+        </TouchableOpacity>
 
-        {/* Action Buttons */}
-        <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[
-              styles.actionButton, 
-              { 
-                backgroundColor: theme.colors.surface,
-                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-              }
-            ]}
-            onPress={handleCopy}
-            disabled={!currentAddress || currentAddress.length === 0}
-          >
-            <Copy color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Copy
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.actionButton, 
-              { 
-                backgroundColor: theme.colors.surface,
-                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-              }
-            ]}
-            onPress={handleShare}
-            disabled={!currentAddress || currentAddress.length === 0}
-          >
-            <ShareIcon color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Share
-            </Text>
-          </TouchableOpacity>
-        </View>
+        <TouchableOpacity
+          style={[
+            styles.actionButton, 
+            { 
+              backgroundColor: theme.colors.surface,
+              opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+            }
+          ]}
+          onPress={handleShare}
+          disabled={!currentAddress || currentAddress.length === 0}
+        >
+          <ShareIcon color={theme.colors.text} size={20} />
+          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+            Share
+          </Text>
+        </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
@@ -312,10 +312,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-  actionButtons: {
+  bottomActionButtons: {
     flexDirection: 'row',
     gap: 16,
-    width: '100%',
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    paddingTop: 10,
   },
   actionButton: {
     flex: 1,
