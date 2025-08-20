@@ -16,7 +16,13 @@ interface DataPoint {
   balance: number;
 }
 
-export default function BalanceChart() {
+type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
+
+interface BalanceChartProps {
+  selectedPeriod: TimePeriod;
+}
+
+export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
   const { theme, hasBalanceError, balance, transactions } = useWallet();
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
@@ -41,16 +47,31 @@ export default function BalanceChart() {
   const generateBalanceHistory = (): DataPoint[] => {
     const currentBalance = balance;
     
-    // Generate more data points for smoother curve (30 days)
-    const days = 30;
+    // Calculate days based on selected period
+    const getDaysForPeriod = (period: TimePeriod): number => {
+      switch (period) {
+        case '1D': return 1;
+        case '1W': return 7;
+        case '1M': return 30;
+        case '1Y': return 365;
+        case 'All': return Math.max(365, transactions.length > 0 ? 
+          Math.ceil((Date.now() - Math.min(...transactions.map(tx => tx.timestamp))) / (24 * 60 * 60 * 1000)) : 365);
+        default: return 30;
+      }
+    };
+    
+    const days = getDaysForPeriod(selectedPeriod);
     
     // If no transactions, show flat line at current balance
     if (transactions.length === 0) {
-      return Array.from({ length: days }, (_, i) => ({
+      const dataPoints = selectedPeriod === '1D' ? 24 : Math.min(days, 100); // Limit data points for performance
+      const interval = selectedPeriod === '1D' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 1 hour for 1D, 1 day for others
+      
+      return Array.from({ length: dataPoints }, (_, i) => ({
         x: i,
         y: currentBalance,
         balance: currentBalance,
-        date: new Date(Date.now() - (days - 1 - i) * 24 * 60 * 60 * 1000)
+        date: new Date(Date.now() - (dataPoints - 1 - i) * interval)
       }));
     }
     
@@ -61,11 +82,15 @@ export default function BalanceChart() {
     const history: DataPoint[] = [];
     let runningBalance = 0;
     
-    // Start from 30 days ago
-    const startDate = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000);
+    // Calculate interval and data points based on period
+    const dataPoints = selectedPeriod === '1D' ? 24 : Math.min(days, 100);
+    const interval = selectedPeriod === '1D' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
     
-    for (let i = 0; i < days; i++) {
-      const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
+    // Start from the beginning of the period
+    const startDate = new Date(Date.now() - (dataPoints - 1) * interval);
+    
+    for (let i = 0; i < dataPoints; i++) {
+      const date = new Date(startDate.getTime() + i * interval);
       
       // Add transactions that occurred before or on this date
       const transactionsUpToDate = sortedTransactions.filter(tx => tx.timestamp <= date.getTime());
@@ -162,7 +187,20 @@ export default function BalanceChart() {
   });
 
   const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    switch (selectedPeriod) {
+      case '1D':
+        return date.toLocaleTimeString('en-US', { hour: 'numeric', hour12: true });
+      case '1W':
+        return date.toLocaleDateString('en-US', { weekday: 'short' });
+      case '1M':
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      case '1Y':
+        return date.toLocaleDateString('en-US', { month: 'short' });
+      case 'All':
+        return date.toLocaleDateString('en-US', { year: '2-digit', month: 'short' });
+      default:
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
   };
 
   const getTimeRangeLabels = (data: DataPoint[]) => {
@@ -212,7 +250,7 @@ export default function BalanceChart() {
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.chartHeader}>
         <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-          Balance Overview (30D)
+          Balance Overview ({selectedPeriod})
         </Text>
         {balanceHistory.length > 1 && (
           <Text style={[styles.chartChange, { color: chartColor }]}>

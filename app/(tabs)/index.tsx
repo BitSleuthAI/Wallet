@@ -18,6 +18,8 @@ import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
 import BalanceChart from '@/components/PriceChart';
+
+type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
 import { Wallet } from '@/types/wallet';
 import { platformStyles, createButtonStyle, lightTheme, darkTheme } from '@/constants/themes';
 
@@ -56,6 +58,7 @@ export default function WalletScreen() {
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [editName, setEditName] = useState<string>('');
   const [editColor, setEditColor] = useState<string>('');
+  const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -291,17 +294,18 @@ export default function WalletScreen() {
 
         {/* Time Period Selector */}
         <View style={styles.periodSelector}>
-          {['1D', '1W', '1M', '1Y', 'All'].map((period, index) => (
+          {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
             <TouchableOpacity
               key={period}
               style={[
                 styles.periodButton,
-                index === 2 && { backgroundColor: theme.colors.primary },
+                selectedPeriod === period && { backgroundColor: theme.colors.primary },
               ]}
+              onPress={() => setSelectedPeriod(period)}
             >
               <Text style={[
                 styles.periodText,
-                { color: index === 2 ? 'white' : theme.colors.textSecondary }
+                { color: selectedPeriod === period ? 'white' : theme.colors.textSecondary }
               ]}>
                 {period}
               </Text>
@@ -310,7 +314,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Chart */}
-        <BalanceChart />
+        <BalanceChart selectedPeriod={selectedPeriod} />
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
