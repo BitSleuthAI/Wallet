@@ -34,6 +34,8 @@ import {
   Coins,
   X,
   Check,
+  Euro,
+  PoundSterling,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
@@ -172,7 +174,7 @@ export default function SettingsScreen() {
         />
 
         <SettingItem
-          icon={DollarSign}
+          icon={selectedCurrency === 'USD' ? DollarSign : selectedCurrency === 'EUR' ? Euro : PoundSterling}
           title="Display Currency"
           subtitle="Set your preferred currency"
           onPress={() => setShowCurrencyModal(true)}
