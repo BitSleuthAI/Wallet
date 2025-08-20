@@ -1,15 +1,26 @@
-import React from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
-import Svg, { Path } from 'react-native-svg';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, Dimensions, PanResponder, Animated } from 'react-native';
+import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
 import { WifiOff } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 
 const { width } = Dimensions.get('window');
 const chartWidth = width - 40;
-const chartHeight = 120;
+const chartHeight = 200;
+const chartPadding = 20;
+
+interface DataPoint {
+  x: number;
+  y: number;
+  date: Date;
+  balance: number;
+}
 
 export default function BalanceChart() {
   const { theme, hasBalanceError, balance, transactions } = useWallet();
+  const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
+  const [showTooltip, setShowTooltip] = useState<boolean>(false);
+  const tooltipOpacity = useRef(new Animated.Value(0)).current;
 
   // Show error state only if balance data is unavailable
   if (hasBalanceError) {
@@ -27,29 +38,33 @@ export default function BalanceChart() {
   }
 
   // Generate balance history based on actual transactions
-  const generateBalanceHistory = () => {
+  const generateBalanceHistory = (): DataPoint[] => {
     const currentBalance = balance;
+    
+    // Generate more data points for smoother curve (30 days)
+    const days = 30;
     
     // If no transactions, show flat line at current balance
     if (transactions.length === 0) {
-      return Array.from({ length: 7 }, (_, i) => ({
+      return Array.from({ length: days }, (_, i) => ({
         x: i,
         y: currentBalance,
-        date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000)
+        balance: currentBalance,
+        date: new Date(Date.now() - (days - 1 - i) * 24 * 60 * 60 * 1000)
       }));
     }
     
-    // Sort transactions by timestamp (oldest first)
+    // Sort transactions by oldest first
     const sortedTransactions = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
     
     // Create balance history by walking through transactions
-    const history: { x: number; y: number; date: Date }[] = [];
+    const history: DataPoint[] = [];
     let runningBalance = 0;
     
-    // Start from 7 days ago
-    const startDate = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000);
+    // Start from 30 days ago
+    const startDate = new Date(Date.now() - (days - 1) * 24 * 60 * 60 * 1000);
     
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < days; i++) {
       const date = new Date(startDate.getTime() + i * 24 * 60 * 60 * 1000);
       
       // Add transactions that occurred before or on this date
@@ -60,9 +75,11 @@ export default function BalanceChart() {
         return tx.type === 'received' ? balance + tx.amount : balance - tx.amount;
       }, 0);
       
+      const balanceValue = Math.max(0, runningBalance);
       history.push({
         x: i,
-        y: Math.max(0, runningBalance), // Ensure non-negative balance
+        y: balanceValue,
+        balance: balanceValue,
         date
       });
     }
@@ -72,39 +89,130 @@ export default function BalanceChart() {
   
   const balanceHistory = generateBalanceHistory();
 
-  const createPath = (data: { x: number; y: number }[]) => {
+  const createPath = (data: DataPoint[]) => {
     const maxY = Math.max(...data.map(d => d.y));
     const minY = Math.min(...data.map(d => d.y));
-    const range = maxY - minY || 0.001; // Prevent division by zero
+    const range = maxY - minY || 0.001;
 
     let path = '';
+    let gradientPath = '';
     
     data.forEach((point, index) => {
-      const x = (point.x / (data.length - 1)) * chartWidth;
-      // If all values are the same (flat line), center it vertically
-      const y = range === 0 ? chartHeight / 2 : chartHeight - ((point.y - minY) / range) * chartHeight;
+      const x = chartPadding + (point.x / (data.length - 1)) * (chartWidth - 2 * chartPadding);
+      const y = chartPadding + (range === 0 ? (chartHeight - 2 * chartPadding) / 2 : (chartHeight - 2 * chartPadding) - ((point.y - minY) / range) * (chartHeight - 2 * chartPadding));
       
       if (index === 0) {
         path += `M ${x} ${y}`;
+        gradientPath += `M ${x} ${chartHeight - chartPadding} L ${x} ${y}`;
       } else {
-        path += ` L ${x} ${y}`;
+        // Create smooth curves using quadratic bezier
+        const prevPoint = data[index - 1];
+        const prevX = chartPadding + (prevPoint.x / (data.length - 1)) * (chartWidth - 2 * chartPadding);
+        const prevY = chartPadding + (range === 0 ? (chartHeight - 2 * chartPadding) / 2 : (chartHeight - 2 * chartPadding) - ((prevPoint.y - minY) / range) * (chartHeight - 2 * chartPadding));
+        
+        const cpX = (prevX + x) / 2;
+        
+        path += ` Q ${cpX} ${prevY} ${x} ${y}`;
+        gradientPath += ` Q ${cpX} ${prevY} ${x} ${y}`;
       }
     });
 
-    return path;
+    // Close the gradient path
+    const lastX = chartPadding + ((data.length - 1) / (data.length - 1)) * (chartWidth - 2 * chartPadding);
+    gradientPath += ` L ${lastX} ${chartHeight - chartPadding} Z`;
+
+    return { linePath: path, gradientPath };
+  };
+
+  const getPointAtX = (x: number, data: DataPoint[]) => {
+    const relativeX = (x - chartPadding) / (chartWidth - 2 * chartPadding);
+    const index = Math.round(relativeX * (data.length - 1));
+    return data[Math.max(0, Math.min(index, data.length - 1))];
+  };
+
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: () => true,
+    onPanResponderGrant: (evt) => {
+      const { locationX } = evt.nativeEvent;
+      const point = getPointAtX(locationX, balanceHistory);
+      setSelectedPoint(point);
+      setShowTooltip(true);
+      Animated.timing(tooltipOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }).start();
+    },
+    onPanResponderMove: (evt) => {
+      const { locationX } = evt.nativeEvent;
+      const point = getPointAtX(locationX, balanceHistory);
+      setSelectedPoint(point);
+    },
+    onPanResponderRelease: () => {
+      Animated.timing(tooltipOpacity, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setShowTooltip(false);
+        setSelectedPoint(null);
+      });
+    },
+  });
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const getTimeRangeLabels = (data: DataPoint[]) => {
+    if (data.length === 0) return [];
+    
+    const labels = [];
+    const step = Math.floor(data.length / 5); // Show 5 labels
+    
+    for (let i = 0; i < data.length; i += step) {
+      if (i < data.length) {
+        labels.push({
+          x: chartPadding + (i / (data.length - 1)) * (chartWidth - 2 * chartPadding),
+          label: formatDate(data[i].date)
+        });
+      }
+    }
+    
+    return labels;
   };
 
   // Determine chart color based on balance trend
   const firstBalance = balanceHistory[0]?.y || 0;
   const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
   const balanceChange = lastBalance - firstBalance;
-  const chartColor = balanceChange >= 0 ? theme.colors.success : theme.colors.error;
+  const isPositive = balanceChange >= 0;
+  const chartColor = isPositive ? '#8B5CF6' : '#EF4444';
+  const gradientStartColor = isPositive ? '#8B5CF6' : '#EF4444';
+  const gradientEndColor = isPositive ? 'rgba(139, 92, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+  
+  const { linePath, gradientPath } = createPath(balanceHistory);
+  const timeLabels = getTimeRangeLabels(balanceHistory);
+  
+  const getSelectedPointPosition = () => {
+    if (!selectedPoint) return { x: 0, y: 0 };
+    
+    const maxY = Math.max(...balanceHistory.map(d => d.y));
+    const minY = Math.min(...balanceHistory.map(d => d.y));
+    const range = maxY - minY || 0.001;
+    
+    const x = chartPadding + (selectedPoint.x / (balanceHistory.length - 1)) * (chartWidth - 2 * chartPadding);
+    const y = chartPadding + (range === 0 ? (chartHeight - 2 * chartPadding) / 2 : (chartHeight - 2 * chartPadding) - ((selectedPoint.y - minY) / range) * (chartHeight - 2 * chartPadding));
+    
+    return { x, y };
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.chartHeader}>
         <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-          Balance Overview (7D)
+          Balance Overview (30D)
         </Text>
         {balanceHistory.length > 1 && (
           <Text style={[styles.chartChange, { color: chartColor }]}>
@@ -112,16 +220,86 @@ export default function BalanceChart() {
           </Text>
         )}
       </View>
-      <Svg width={chartWidth} height={chartHeight}>
-        <Path
-          d={createPath(balanceHistory)}
-          stroke={chartColor}
-          strokeWidth={3}
-          fill="none"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </Svg>
+      
+      <View style={styles.chartContainer} {...panResponder.panHandlers}>
+        <Svg width={chartWidth} height={chartHeight}>
+          <Defs>
+            <LinearGradient id="gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <Stop offset="0%" stopColor={gradientStartColor} stopOpacity="0.8" />
+              <Stop offset="100%" stopColor={gradientEndColor} stopOpacity="0.1" />
+            </LinearGradient>
+          </Defs>
+          
+          {/* Gradient fill */}
+          <Path
+            d={gradientPath}
+            fill="url(#gradient)"
+          />
+          
+          {/* Line path */}
+          <Path
+            d={linePath}
+            stroke={chartColor}
+            strokeWidth={3}
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          
+          {/* Interactive point */}
+          {showTooltip && selectedPoint && (
+            <Circle
+              cx={getSelectedPointPosition().x}
+              cy={getSelectedPointPosition().y}
+              r="6"
+              fill={chartColor}
+              stroke="white"
+              strokeWidth="3"
+            />
+          )}
+        </Svg>
+        
+        {/* Tooltip */}
+        {showTooltip && selectedPoint && (
+          <Animated.View 
+            style={[
+              styles.tooltip,
+              {
+                opacity: tooltipOpacity,
+                left: Math.max(10, Math.min(getSelectedPointPosition().x - 60, chartWidth - 130)),
+                top: Math.max(10, getSelectedPointPosition().y - 80),
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              }
+            ]}
+          >
+            <Text style={[styles.tooltipBalance, { color: theme.colors.text }]}>
+              {selectedPoint.balance.toFixed(8)} BTC
+            </Text>
+            <Text style={[styles.tooltipDate, { color: theme.colors.textSecondary }]}>
+              {formatDate(selectedPoint.date)}
+            </Text>
+          </Animated.View>
+        )}
+      </View>
+      
+      {/* Time labels */}
+      <View style={styles.timeLabelsContainer}>
+        {timeLabels.map((label, index) => (
+          <Text 
+            key={index}
+            style={[
+              styles.timeLabel, 
+              { 
+                color: theme.colors.textSecondary,
+                left: label.x - 20
+              }
+            ]}
+          >
+            {label.label}
+          </Text>
+        ))}
+      </View>
     </View>
   );
 }
@@ -130,9 +308,17 @@ const styles = StyleSheet.create({
   container: {
     marginHorizontal: 20,
     marginVertical: 10,
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   errorContainer: {
     paddingVertical: 40,
@@ -153,14 +339,58 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 12,
+    marginBottom: 20,
   },
   chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   chartChange: {
     fontSize: 14,
+    fontWeight: '600',
+  },
+  chartContainer: {
+    position: 'relative',
+    width: chartWidth,
+    height: chartHeight,
+  },
+  tooltip: {
+    position: 'absolute',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+    minWidth: 120,
+    alignItems: 'center',
+  },
+  tooltipBalance: {
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  tooltipDate: {
+    fontSize: 12,
     fontWeight: '500',
+  },
+  timeLabelsContainer: {
+    position: 'relative',
+    width: chartWidth,
+    height: 20,
+    marginTop: 12,
+  },
+  timeLabel: {
+    position: 'absolute',
+    fontSize: 11,
+    fontWeight: '500',
+    width: 40,
+    textAlign: 'center',
   },
 });
