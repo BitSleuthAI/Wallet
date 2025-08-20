@@ -7,9 +7,10 @@ import {
   TouchableOpacity,
   RefreshControl,
   SafeAreaView,
+  FlatList,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff, Plus } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
@@ -148,8 +149,37 @@ export default function WalletScreen() {
           </View>
         </View>
 
-        {/* Wallet Card */}
-        <WalletCard />
+        {/* Wallet Carousel */}
+        <View style={styles.walletCarousel}>
+          <FlatList
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            data={[{ type: 'wallet', wallet: currentWallet }, { type: 'add' }]}
+            keyExtractor={(item, index) => `${item.type}-${index}`}
+            renderItem={({ item }) => {
+              if (item.type === 'add') {
+                return (
+                  <TouchableOpacity 
+                    style={[styles.addWalletCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                    onPress={() => router.push('/wallet-setup')}
+                    activeOpacity={0.7}
+                  >
+                    <View style={[styles.addWalletIcon, { backgroundColor: theme.colors.primary }]}>
+                      <Plus color="white" size={24} />
+                    </View>
+                    <Text style={[styles.addWalletText, { color: theme.colors.text }]}>Add new wallet</Text>
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <View style={styles.walletCardContainer}>
+                  <WalletCard />
+                </View>
+              );
+            }}
+            contentContainerStyle={styles.carouselContent}
+          />
+        </View>
 
         {/* Balance Display */}
         <View style={styles.balanceSection}>
@@ -524,5 +554,36 @@ const styles = StyleSheet.create({
   },
   emptyTransactionsText: {
     fontSize: 16,
+  },
+  walletCarousel: {
+    marginVertical: 10,
+  },
+  carouselContent: {
+    paddingHorizontal: 20,
+  },
+  walletCardContainer: {
+    marginRight: 16,
+  },
+  addWalletCard: {
+    width: 200,
+    height: 120,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderStyle: 'dashed',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  addWalletIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  addWalletText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

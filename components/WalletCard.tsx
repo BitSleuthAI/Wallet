@@ -91,8 +91,8 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
     padding: 20,
-    marginHorizontal: 20,
-    marginVertical: 10,
+    width: 280,
+    height: 120,
   },
   header: {
     flexDirection: 'row',
