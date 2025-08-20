@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   Switch,
   Alert,
+  ScrollView,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { QrCode, ArrowUpRight } from 'lucide-react-native';
@@ -126,7 +127,12 @@ export default function SendScreen() {
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen options={{ title: 'Send' }} />
       
-      <View style={styles.content}>
+      <ScrollView 
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.content}>
         {/* From Section */}
         <View style={styles.fromSection}>
           <Text style={[styles.label, { color: theme.colors.textSecondary }]}>From:</Text>
@@ -305,22 +311,23 @@ export default function SendScreen() {
             Select Coins
           </Text>
         </TouchableOpacity>
-      </View>
+        </View>
 
-      {/* Review Button */}
-      <TouchableOpacity
-        style={[
-          styles.reviewButton, 
-          { 
-            backgroundColor: theme.colors.primary,
-            opacity: (!recipientAddress || !amount) ? 0.5 : 1
-          }
-        ]}
-        onPress={handleReviewTransaction}
-        disabled={!recipientAddress || !amount}
-      >
-        <Text style={styles.reviewButtonText}>Review Transaction</Text>
-      </TouchableOpacity>
+        {/* Review Button */}
+        <TouchableOpacity
+          style={[
+            styles.reviewButton, 
+            { 
+              backgroundColor: theme.colors.primary,
+              opacity: (!recipientAddress || !amount) ? 0.5 : 1
+            }
+          ]}
+          onPress={handleReviewTransaction}
+          disabled={!recipientAddress || !amount}
+        >
+          <Text style={styles.reviewButtonText}>Review Transaction</Text>
+        </TouchableOpacity>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -329,8 +336,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 20,
+  },
+  content: {
     paddingHorizontal: 20,
     paddingTop: 20,
   },
@@ -364,7 +377,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   inputSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   inputLabel: {
     fontSize: 16,
@@ -416,7 +429,7 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
   feeSection: {
-    marginBottom: 24,
+    marginBottom: 20,
   },
   feeHeader: {
     flexDirection: 'row',
@@ -486,7 +499,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: 20,
   },
   rbfInfo: {
     flex: 1,
@@ -506,6 +519,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 16,
+    marginBottom: 30,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
   },
@@ -518,7 +532,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   reviewButton: {
-    margin: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    marginBottom: 30,
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
