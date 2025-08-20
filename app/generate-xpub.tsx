@@ -15,10 +15,12 @@ import { ArrowLeft, Copy, AlertTriangle } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { useWallet } from '@/hooks/wallet-store';
+import PinVerificationScreen from '@/components/PinVerificationScreen';
 
 export default function GenerateXPUBScreen() {
   const { currentWallet, theme } = useWallet();
   const [copied, setCopied] = useState<boolean>(false);
+  const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
 
   const handleCopyXPUB = async () => {
     if (!currentWallet?.xpub) return;
@@ -42,6 +44,28 @@ export default function GenerateXPUBScreen() {
   const handleGoBack = () => {
     router.back();
   };
+
+  const handlePinSuccess = () => {
+    setIsPinVerified(true);
+  };
+
+  if (!isPinVerified) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
+        <PinVerificationScreen
+          title="Extended Public Key (XPUB)"
+          subtitle="Confirm your PIN to view your XPUB."
+          onSuccess={handlePinSuccess}
+          onBack={handleGoBack}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (!currentWallet) {
     return (

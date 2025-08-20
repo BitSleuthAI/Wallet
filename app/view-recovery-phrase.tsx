@@ -12,12 +12,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Eye, AlertTriangle, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import QRCode from 'react-native-qrcode-svg';
+import PinVerificationScreen from '@/components/PinVerificationScreen';
 
 
 
 export default function ViewRecoveryPhrase() {
   const { currentWallet, theme } = useWallet();
   const [isRevealed, setIsRevealed] = useState(false);
+  const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
 
   const handleReveal = () => {
     Alert.alert(
@@ -37,6 +39,28 @@ export default function ViewRecoveryPhrase() {
   const handleBack = () => {
     router.back();
   };
+
+  const handlePinSuccess = () => {
+    setIsPinVerified(true);
+  };
+
+  if (!isPinVerified) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
+        <PinVerificationScreen
+          title="Recovery Phrase"
+          subtitle="Confirm your PIN to view the recovery phrase."
+          onSuccess={handlePinSuccess}
+          onBack={handleBack}
+        />
+      </SafeAreaView>
+    );
+  }
 
   if (!currentWallet) {
     return (
