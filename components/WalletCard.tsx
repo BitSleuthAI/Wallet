@@ -90,39 +90,44 @@ export default function WalletCard({ onPress }: WalletCardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 24,
+    padding: 20,
     width: 320,
     height: 160,
+    justifyContent: 'space-between',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 24,
   },
   walletName: {
     color: 'white',
-    fontSize: 20,
+    fontSize: 18,
     fontWeight: '600',
+    maxWidth: 200,
   },
   walletType: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
   },
   balanceContainer: {
-    marginBottom: 24,
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 8,
   },
   balance: {
     color: 'white',
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: 'bold',
+    lineHeight: 28,
   },
   balanceUSD: {
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
-    marginTop: 6,
+    marginTop: 4,
+    lineHeight: 20,
   },
   footer: {
     alignItems: 'flex-end',
