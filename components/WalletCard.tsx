@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
+import React, { useState, useRef } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check, Edit3, Trash2 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
@@ -40,6 +40,8 @@ interface WalletCardProps {
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
   const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet();
   const [showMenu, setShowMenu] = useState<boolean>(false);
+  const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const menuButtonRef = useRef<View>(null);
 
   // Use provided wallet or fall back to current wallet
   const displayWallet = wallet || currentWallet;
@@ -62,7 +64,27 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             <Text style={styles.walletName}>{displayWallet.name}</Text>
             <Text style={styles.walletType}>P2WPKH</Text>
           </View>
-          <TouchableOpacity onPress={() => setShowMenu(true)} testID="wallet-menu-button">
+          <TouchableOpacity 
+            ref={menuButtonRef}
+            onPress={() => {
+              menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+                const screenWidth = Dimensions.get('window').width;
+                const menuWidth = 150;
+                
+                // Position menu to the left of the button if it would go off screen
+                const menuX = pageX + width - menuWidth > screenWidth - 20 
+                  ? pageX - menuWidth + width 
+                  : pageX;
+                
+                setMenuPosition({ 
+                  x: Math.max(20, menuX), 
+                  y: pageY + height + 5 
+                });
+                setShowMenu(true);
+              });
+            }} 
+            testID="wallet-menu-button"
+          >
             <MoreHorizontal color="white" size={24} />
           </TouchableOpacity>
         </View>
@@ -104,7 +126,11 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           activeOpacity={1} 
           onPress={() => setShowMenu(false)}
         >
-          <View style={styles.menuContainer}>
+          <View style={[styles.menuContainer, {
+            position: 'absolute',
+            top: menuPosition.y,
+            left: menuPosition.x,
+          }]}>
             <TouchableOpacity 
               style={styles.menuItem}
               onPress={() => {
@@ -195,8 +221,6 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   menuContainer: {
     backgroundColor: '#FFFFFF',
