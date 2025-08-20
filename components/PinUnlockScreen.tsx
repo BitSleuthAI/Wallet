@@ -186,11 +186,11 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
-    justifyContent: 'space-between',
   },
   header: {
     alignItems: 'center',
-    marginTop: 80,
+    marginTop: 60,
+    marginBottom: 40,
   },
   lockIconContainer: {
     width: 80,
@@ -223,7 +223,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 20,
-    marginVertical: 60,
+    marginBottom: 80,
   },
   pinDot: {
     width: 20,
@@ -236,7 +236,8 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 20,
-    paddingBottom: 40,
+    paddingBottom: 60,
+    marginTop: 'auto',
   },
   numberButton: {
     width: 80,
