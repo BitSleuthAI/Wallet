@@ -326,7 +326,7 @@ export default function SettingsScreen() {
           icon={FileKey}
           title="Generate XPUB"
           subtitle="View your extended public key"
-          onPress={() => console.log('Generate XPUB')}
+          onPress={() => router.push('/generate-xpub')}
         />
 
         <SettingItem
