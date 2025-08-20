@@ -13,7 +13,6 @@ import { Delete, Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { platformStyles } from '@/constants/themes';
 
 export default function PinUnlockScreen() {
   const { theme } = useWallet();
@@ -186,12 +185,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: platformStyles.spacing.xl,
+    paddingHorizontal: 20,
   },
   header: {
     alignItems: 'center',
-    marginTop: platformStyles.spacing.xxxl * 2,
-    marginBottom: platformStyles.spacing.xxxl + platformStyles.spacing.sm,
+    marginTop: 64,
+    marginBottom: 40,
   },
   lockIconContainer: {
     width: 80,
@@ -199,29 +198,33 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.xxl,
+    marginBottom: 24,
   },
   title: {
-    ...platformStyles.typography.display,
+    fontSize: 32,
+    lineHeight: 40,
+    fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: platformStyles.spacing.md,
+    marginBottom: 12,
   },
   subtitle: {
-    ...platformStyles.typography.bodyLarge,
+    fontSize: 16,
+    lineHeight: 24,
     textAlign: 'center',
-    paddingHorizontal: platformStyles.spacing.xl,
+    paddingHorizontal: 20,
   },
   attemptsText: {
-    ...platformStyles.typography.body,
+    fontSize: 14,
+    lineHeight: 20,
     textAlign: 'center',
-    marginTop: platformStyles.spacing.md,
+    marginTop: 12,
     fontWeight: '600',
   },
   pinDotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: platformStyles.spacing.xl,
+    gap: 20,
     marginBottom: 80,
   },
   pinDot: {
@@ -234,7 +237,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: platformStyles.spacing.xl,
+    gap: 20,
     paddingBottom: 60,
     marginTop: 'auto',
   },
@@ -244,13 +247,28 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    ...platformStyles.buttonShadow,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+      },
+      android: {
+        elevation: 2,
+      },
+      web: {
+        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+      },
+    }),
   },
   deleteButton: {
     backgroundColor: 'transparent',
   },
   numberButtonText: {
-    ...platformStyles.typography.heading,
+    fontSize: 24,
+    lineHeight: 32,
+    fontWeight: 'bold',
     color: 'white',
   },
 });

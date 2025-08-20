@@ -16,7 +16,7 @@ import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
 import BalanceChart from '@/components/PriceChart';
 import { Wallet } from '@/types/wallet';
-import { platformStyles, createButtonStyle } from '@/constants/themes';
+import { platformStyles, createButtonStyle, lightTheme, darkTheme } from '@/constants/themes';
 
 type CarouselItem = 
   | { type: 'wallet'; wallet: Wallet }
