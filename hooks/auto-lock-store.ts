@@ -1,10 +1,11 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 
 export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
+  const queryClient = useQueryClient();
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
   const [storedPin, setStoredPin] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     queryKey: ['autoLockTimeout'],
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('autoLockTimeout');
-      return stored ? parseInt(stored, 10) : 15;
+      return stored ? parseInt(stored, 10) : 5; // Default to 5 minutes
     },
   });
 
@@ -36,7 +37,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   }, [pinQuery.data]);
 
   const resetLockTimer = useCallback(() => {
-    const timeout = autoLockTimeoutQuery.data || 15;
+    const timeout = autoLockTimeoutQuery.data || 5;
     
     // Clear existing timeout
     if (lockTimeoutRef.current) {
@@ -44,8 +45,8 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
       lockTimeoutRef.current = null;
     }
 
-    // Don't set timer if auto-lock is disabled (timeout = 0)
-    if (timeout === 0) {
+    // Don't set timer if auto-lock is disabled (timeout = -1 for "Never")
+    if (timeout === -1) {
       return;
     }
 
@@ -65,10 +66,10 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   }, [isLocked, resetLockTimer]);
 
   const handleAppStateChange = useCallback((nextAppState: AppStateStatus) => {
-    const timeout = autoLockTimeoutQuery.data || 15;
+    const timeout = autoLockTimeoutQuery.data || 5;
     
-    if (timeout === 0) {
-      // Auto-lock disabled
+    if (timeout === -1) {
+      // Auto-lock disabled ("Never")
       appStateRef.current = nextAppState;
       return;
     }
@@ -154,6 +155,18 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   // Check if we should show lock screen (only if PIN is set and app is locked)
   const shouldShowLockScreen = storedPin && isLocked;
 
+  const setAutoLockTimeout = useCallback(async (timeout: number) => {
+    try {
+      await AsyncStorage.setItem('autoLockTimeout', timeout.toString());
+      // Invalidate query to refetch the new value
+      await queryClient.invalidateQueries({ queryKey: ['autoLockTimeout'] });
+      console.log(`✅ Auto-lock timeout set to ${timeout} minutes`);
+    } catch (error) {
+      console.error('❌ Error saving auto-lock timeout:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
   return useMemo(() => ({
     isLocked: shouldShowLockScreen,
     hasPin: !!storedPin,
@@ -161,7 +174,8 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     lock,
     savePin,
     updateActivity,
-    autoLockTimeout: autoLockTimeoutQuery.data || 15,
+    autoLockTimeout: autoLockTimeoutQuery.data || 5,
+    setAutoLockTimeout,
   }), [
     shouldShowLockScreen,
     storedPin,
@@ -170,5 +184,6 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     savePin,
     updateActivity,
     autoLockTimeoutQuery.data,
+    setAutoLockTimeout,
   ]);
 });

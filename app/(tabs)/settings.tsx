@@ -34,11 +34,14 @@ import {
   X,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting, autoLockTimeout, setAutoLockTimeoutSetting } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
+  const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
+  const [showAutoLockModal, setShowAutoLockModal] = useState<boolean>(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -220,6 +223,18 @@ export default function SettingsScreen() {
         <SectionHeader title="Security" />
 
         <SettingItem
+          icon={Clock}
+          title="Auto-Lock"
+          subtitle="Automatically lock app after inactivity"
+          onPress={() => setShowAutoLockModal(true)}
+          rightElement={
+            <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
+              {autoLockTimeout === -1 ? 'Never' : `${autoLockTimeout} min`}
+            </Text>
+          }
+        />
+
+        <SettingItem
           icon={Shield}
           title="Passkeys & Security Keys"
           subtitle="Secure with a FIDO key or passkey"
@@ -302,6 +317,74 @@ export default function SettingsScreen() {
                     </Text>
                   </View>
                   {selectedCurrency === currency && (
+                    <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Auto-Lock Selection Modal */}
+      <Modal
+        visible={showAutoLockModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowAutoLockModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Auto-Lock Timer
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowAutoLockModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X color={theme.colors.textSecondary} size={24} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.currencyList}>
+              {[
+                { value: 5, label: '5 minutes' },
+                { value: 15, label: '15 minutes' },
+                { value: 30, label: '30 minutes' },
+                { value: 60, label: '1 hour' },
+                { value: -1, label: 'Never' },
+              ].map((option) => (
+                <TouchableOpacity
+                  key={option.value}
+                  style={[
+                    styles.currencyItem,
+                    autoLockTimeout === option.value && {
+                      backgroundColor: theme.colors.primary + '20',
+                    },
+                  ]}
+                  onPress={async () => {
+                    try {
+                      await setAutoLockTimeout(option.value);
+                      setShowAutoLockModal(false);
+                    } catch (error) {
+                      console.error('Error setting auto-lock timeout:', error);
+                      Alert.alert('Error', 'Failed to update auto-lock setting');
+                    }
+                  }}
+                >
+                  <View style={styles.currencyInfo}>
+                    <Text style={[styles.currencyCode, { color: theme.colors.text }]}>
+                      {option.label}
+                    </Text>
+                    <Text style={[styles.currencyName, { color: theme.colors.textSecondary }]}>
+                      {option.value === -1 
+                        ? 'App will never auto-lock' 
+                        : `Lock after ${option.label} of inactivity`
+                      }
+                    </Text>
+                  </View>
+                  {autoLockTimeout === option.value && (
                     <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
                   )}
                 </TouchableOpacity>
