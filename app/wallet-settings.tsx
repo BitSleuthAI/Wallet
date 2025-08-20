@@ -252,26 +252,14 @@ export default function WalletSettingsScreen() {
           icon={Zap}
           title="Fee Settings"
           subtitle="Configure transaction fee preferences"
-          onPress={() => {
-            Alert.alert(
-              'Fee Settings',
-              'Transaction fee configuration is coming soon. Currently using dynamic fee estimation.',
-              [{ text: 'OK' }]
-            );
-          }}
+          onPress={() => router.push('/fee-settings')}
         />
 
         <SettingItem
           icon={Coins}
           title="Coin Control"
           subtitle="Advanced UTXO management"
-          onPress={() => {
-            Alert.alert(
-              'Coin Control',
-              'Advanced UTXO management features are coming soon.',
-              [{ text: 'OK' }]
-            );
-          }}
+          onPress={() => router.push('/coin-control')}
         />
 
         <SettingItem

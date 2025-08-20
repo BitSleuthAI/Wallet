@@ -216,124 +216,14 @@ export default function SettingsScreen() {
           }
         />
 
-        <SettingItem
-          icon={Eye}
-          title="Hide Balance"
-          subtitle="Hide wallet balance from main screen"
-          rightElement={
-            Platform.OS === 'web' ? (
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityState={{ checked: hideBalance }}
-                onPress={() => setHideBalanceSetting(!hideBalance)}
-                style={[
-                  styles.webSwitch,
-                  {
-                    backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
-                  },
-                ]}
-                testID="hide-balance-switch-web"
-              >
-                <View
-                  style={[
-                    styles.webSwitchThumb,
-                    {
-                      transform: [{ translateX: hideBalance ? 24 : 2 }],
-                      backgroundColor: '#FFFFFF',
-                    },
-                  ]}
-                />
-              </Pressable>
-            ) : (
-              <Switch
-                value={hideBalance}
-                onValueChange={setHideBalanceSetting}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                ios_backgroundColor={theme.colors.border}
-                testID="hide-balance-switch-native"
-              />
-            )
-          }
-        />
-
-        <SettingItem
-          icon={Zap}
-          title="Fee Settings"
-          subtitle="Configure transaction fee preferences"
-          onPress={() => router.push('/fee-settings')}
-        />
-
-        <SettingItem
-          icon={Coins}
-          title="Coin Control"
-          subtitle="Advanced UTXO management"
-          onPress={() => router.push('/coin-control')}
-        />
-
-        <SettingItem
-          icon={List}
-          title="Transaction History"
-          subtitle="View all wallet transactions"
-          onPress={() => router.push('/transaction-history')}
-        />
-
         {/* Security Section */}
         <SectionHeader title="Security" />
-
-        <SettingItem
-          icon={Clock}
-          title="Auto-Lock"
-          subtitle="Set inactivity timeout"
-          onPress={() => {
-            Alert.alert(
-              'Auto-Lock Timeout',
-              'Choose when the app should automatically lock after inactivity',
-              [
-                { text: '5 minutes', onPress: () => setAutoLockTimeoutSetting(5) },
-                { text: '15 minutes', onPress: () => setAutoLockTimeoutSetting(15) },
-                { text: '30 minutes', onPress: () => setAutoLockTimeoutSetting(30) },
-                { text: '1 hour', onPress: () => setAutoLockTimeoutSetting(60) },
-                { text: 'Never', onPress: () => setAutoLockTimeoutSetting(0) },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}
-          rightElement={
-            <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              {autoLockTimeout === 0 ? 'Never' : 
-               autoLockTimeout === 60 ? '1 hour' : 
-               `${autoLockTimeout} min`}
-            </Text>
-          }
-        />
 
         <SettingItem
           icon={Shield}
           title="Passkeys & Security Keys"
           subtitle="Secure with a FIDO key or passkey"
           onPress={() => console.log('Security keys')}
-        />
-
-        <SettingItem
-          icon={Key}
-          title="View Recovery Phrase"
-          subtitle="Your BIP39 recovery phrase"
-          onPress={() => router.push('/view-recovery-phrase')}
-        />
-
-        <SettingItem
-          icon={FileKey}
-          title="Generate XPUB"
-          subtitle="View your extended public key"
-          onPress={() => router.push('/generate-xpub')}
-        />
-
-        <SettingItem
-          icon={List}
-          title="View Addresses"
-          subtitle="Show all derived addresses"
-          onPress={() => router.push('/wallet-addresses')}
         />
 
         {/* Privacy Section */}
