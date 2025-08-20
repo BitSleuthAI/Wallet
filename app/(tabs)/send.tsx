@@ -14,6 +14,7 @@ import { Stack, router } from 'expo-router';
 import { QrCode, ArrowUpRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
+import WalletSelector from '@/components/WalletSelector';
 
 export default function SendScreen() {
   const { currentWallet, balance, theme } = useWallet();
@@ -135,17 +136,7 @@ export default function SendScreen() {
       >
         <View style={styles.content}>
         {/* From Section */}
-        <View style={styles.fromSection}>
-          <Text style={[styles.label, { color: theme.colors.textSecondary }]}>From:</Text>
-          <View style={styles.fromContainer}>
-            <View style={styles.walletIcon}>
-              <Text style={styles.walletIconText}>J</Text>
-            </View>
-            <Text style={[styles.walletName, { color: theme.colors.text }]}>
-              {currentWallet.name}
-            </Text>
-          </View>
-        </View>
+        <WalletSelector label="From:" />
 
         {/* Recipient Address */}
         <View style={styles.inputSection}>
@@ -340,35 +331,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
-  fromSection: {
-    marginBottom: 30,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  fromContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  walletIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F7931A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  walletIconText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  walletName: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
+
   inputSection: {
     marginBottom: 20,
   },

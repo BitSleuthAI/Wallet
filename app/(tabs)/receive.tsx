@@ -15,6 +15,7 @@ import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles, createButtonStyle } from '@/constants/themes';
+import WalletSelector from '@/components/WalletSelector';
 
 export default function ReceiveScreen() {
   const { currentWallet, generateNewAddress, theme } = useWallet();
@@ -133,20 +134,10 @@ export default function ReceiveScreen() {
       
       <View style={styles.content}>
         {/* To Section */}
-        <View style={styles.toSection}>
-          <Text style={[styles.label, { color: theme.colors.textSecondary }]}>To:</Text>
-          <View style={styles.walletContainer}>
-            <View style={styles.walletIcon}>
-              <Text style={styles.walletIconText}>J</Text>
-            </View>
-            <Text style={[styles.walletName, { color: theme.colors.text }]}>
-              {currentWallet.name}
-            </Text>
-          </View>
-        </View>
+        <WalletSelector label="To:" />
 
         {/* QR Code */}
-        <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface }]}>
+        <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface, alignSelf: 'center' }]}>
           <View style={styles.qrCodeWrapper}>
             {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
               <QRCode
@@ -187,6 +178,7 @@ export default function ReceiveScreen() {
           style={[
             createButtonStyle(theme, 'primary'),
             styles.newAddressButton,
+            { alignSelf: 'center' }
           ]}
           onPress={handleNewAddress}
         >
@@ -243,38 +235,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingHorizontal: 20,
     paddingTop: 20,
-    alignItems: 'center',
   },
-  toSection: {
-    alignSelf: 'flex-start',
-    marginBottom: 40,
-  },
-  label: {
-    fontSize: 14,
-    marginBottom: 8,
-  },
-  walletContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  walletIcon: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#F7931A',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 12,
-  },
-  walletIconText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  walletName: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
+
   qrContainer: {
     borderRadius: 20,
     padding: 20,
