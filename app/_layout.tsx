@@ -104,6 +104,13 @@ function AppContent() {
       <Stack.Screen name="pin-setup" options={{ headerShown: false }} />
       <Stack.Screen name="biometric-setup" options={{ headerShown: false }} />
       <Stack.Screen name="about" options={{ headerShown: true }} />
+      <Stack.Screen name="view-recovery-phrase" options={{ headerShown: true }} />
+      <Stack.Screen name="transaction-history" options={{ headerShown: true }} />
+      <Stack.Screen name="wallet-addresses" options={{ headerShown: true }} />
+      <Stack.Screen name="generate-xpub" options={{ headerShown: true }} />
+      <Stack.Screen name="wallet-settings" options={{ headerShown: true }} />
+      <Stack.Screen name="coin-control" options={{ headerShown: true }} />
+      <Stack.Screen name="fee-settings" options={{ headerShown: true }} />
     </Stack>
   );
 }
