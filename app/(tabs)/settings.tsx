@@ -18,6 +18,7 @@ import {
   Wallet,
   DollarSign,
   Moon,
+  Sun,
   Clock,
   Shield,
   Key,
@@ -229,7 +230,7 @@ export default function SettingsScreen() {
         />
 
         <SettingItem
-          icon={Moon}
+          icon={theme.isDark ? Moon : Sun}
           title="Theme"
           subtitle="Set your preferred theme"
           rightElement={
