@@ -186,6 +186,52 @@ export default function SettingsScreen() {
         />
 
         <SettingItem
+          icon={hideBalance ? EyeOff : Eye}
+          title="Hide Balance"
+          subtitle="Hide wallet balance across all wallets"
+          rightElement={
+            <View style={styles.themeToggle}>
+              <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
+                {hideBalance ? 'Hidden' : 'Visible'}
+              </Text>
+              {Platform.OS === 'web' ? (
+                <Pressable
+                  accessibilityRole="switch"
+                  accessibilityState={{ checked: hideBalance }}
+                  onPress={() => setHideBalanceSetting(!hideBalance)}
+                  style={[
+                    styles.webSwitch,
+                    {
+                      backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
+                    },
+                  ]}
+                  testID="hide-balance-switch-web"
+                >
+                  <View
+                    style={[
+                      styles.webSwitchThumb,
+                      {
+                        transform: [{ translateX: hideBalance ? 24 : 2 }],
+                        backgroundColor: '#FFFFFF',
+                      },
+                    ]}
+                  />
+                </Pressable>
+              ) : (
+                <Switch
+                  value={hideBalance}
+                  onValueChange={setHideBalanceSetting}
+                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                  thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                  ios_backgroundColor={theme.colors.border}
+                  testID="hide-balance-switch-native"
+                />
+              )}
+            </View>
+          }
+        />
+
+        <SettingItem
           icon={Moon}
           title="Theme"
           subtitle="Set your preferred theme"

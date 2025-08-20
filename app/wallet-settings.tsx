@@ -7,9 +7,6 @@ import {
   SafeAreaView,
   ScrollView,
   Alert,
-  Platform,
-  Switch,
-  Pressable,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -17,10 +14,8 @@ import {
   Key,
   FileKey,
   List,
-  Eye,
   Coins,
   Zap,
-
   ChevronRight,
   Download,
   Upload,
@@ -34,8 +29,6 @@ export default function WalletSettingsScreen() {
   const { 
     theme, 
     currentWallet, 
-    hideBalance, 
-    setHideBalanceSetting,
     logoutAndEraseWallet 
   } = useWallet();
 
@@ -175,46 +168,7 @@ export default function WalletSettingsScreen() {
           onPress={() => router.push('/wallet-addresses')}
         />
 
-        <SettingItem
-          icon={Eye}
-          title="Hide Balance"
-          subtitle="Hide wallet balance from main screen"
-          rightElement={
-            Platform.OS === 'web' ? (
-              <Pressable
-                accessibilityRole="switch"
-                accessibilityState={{ checked: hideBalance }}
-                onPress={() => setHideBalanceSetting(!hideBalance)}
-                style={[
-                  styles.webSwitch,
-                  {
-                    backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
-                  },
-                ]}
-                testID="hide-balance-switch-web"
-              >
-                <View
-                  style={[
-                    styles.webSwitchThumb,
-                    {
-                      transform: [{ translateX: hideBalance ? 24 : 2 }],
-                      backgroundColor: '#FFFFFF',
-                    },
-                  ]}
-                />
-              </Pressable>
-            ) : (
-              <Switch
-                value={hideBalance}
-                onValueChange={setHideBalanceSetting}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                ios_backgroundColor={theme.colors.border}
-                testID="hide-balance-switch-native"
-              />
-            )
-          }
-        />
+
 
 
 
