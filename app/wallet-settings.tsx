@@ -20,7 +20,7 @@ import {
   Eye,
   Coins,
   Zap,
-  Clock,
+
   ChevronRight,
   Download,
   Upload,
@@ -36,8 +36,6 @@ export default function WalletSettingsScreen() {
     currentWallet, 
     hideBalance, 
     setHideBalanceSetting,
-    autoLockTimeout,
-    setAutoLockTimeoutSetting,
     logoutAndEraseWallet 
   } = useWallet();
 
@@ -218,32 +216,7 @@ export default function WalletSettingsScreen() {
           }
         />
 
-        <SettingItem
-          icon={Clock}
-          title="Auto-Lock"
-          subtitle="Set inactivity timeout"
-          onPress={() => {
-            Alert.alert(
-              'Auto-Lock Timeout',
-              'Choose when the app should automatically lock after inactivity',
-              [
-                { text: '5 minutes', onPress: () => setAutoLockTimeoutSetting(5) },
-                { text: '15 minutes', onPress: () => setAutoLockTimeoutSetting(15) },
-                { text: '30 minutes', onPress: () => setAutoLockTimeoutSetting(30) },
-                { text: '1 hour', onPress: () => setAutoLockTimeoutSetting(60) },
-                { text: 'Never', onPress: () => setAutoLockTimeoutSetting(0) },
-                { text: 'Cancel', style: 'cancel' },
-              ]
-            );
-          }}
-          rightElement={
-            <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              {autoLockTimeout === 0 ? 'Never' : 
-               autoLockTimeout === 60 ? '1 hour' : 
-               `${autoLockTimeout} min`}
-            </Text>
-          }
-        />
+
 
         {/* Transaction Settings Section */}
         <SectionHeader title="Transaction Settings" />
