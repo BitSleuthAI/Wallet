@@ -105,28 +105,30 @@ export default function PinVerificationScreen({
   };
 
   const renderNumberPad = () => {
-    const numbers = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9'], ['', '0', 'delete']];
+    const numberRows = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['', '0', 'delete']
+    ];
     
     return (
       <View style={styles.numberPad}>
-        {numbers.map((row, rowIndex) => (
+        {numberRows.map((row, rowIndex) => (
           <View key={rowIndex} style={styles.numberRow}>
             {row.map((item, itemIndex) => {
               if (item === '') {
-                return <View key={itemIndex} style={styles.numberButton} />;
+                return <View key={itemIndex} style={styles.emptyButton} />;
               }
               
               if (item === 'delete') {
                 return (
                   <TouchableOpacity
                     key={itemIndex}
-                    style={[
-                      styles.numberButton,
-                      styles.deleteButton,
-                      { backgroundColor: theme.colors.surface },
-                    ]}
+                    style={[styles.numberButton, styles.deleteButton]}
                     onPress={handleDelete}
                     disabled={isLoading}
+                    activeOpacity={0.6}
                   >
                     <Delete size={24} color={theme.colors.text} />
                   </TouchableOpacity>
@@ -138,10 +140,11 @@ export default function PinVerificationScreen({
                   key={itemIndex}
                   style={[
                     styles.numberButton,
-                    { backgroundColor: '#8B5CF6' },
+                    { backgroundColor: theme.colors.primary },
                   ]}
                   onPress={() => handleNumberPress(item)}
                   disabled={isLoading}
+                  activeOpacity={0.6}
                 >
                   <Text style={styles.numberText}>{item}</Text>
                 </TouchableOpacity>
@@ -260,21 +263,42 @@ const styles = StyleSheet.create({
   },
   numberPad: {
     alignItems: 'center',
-    gap: 20,
+    marginTop: 'auto',
+    paddingBottom: 40,
   },
   numberRow: {
     flexDirection: 'row',
-    gap: 20,
+    justifyContent: 'center',
+    gap: 24,
+    marginBottom: 16,
   },
   numberButton: {
-    width: 70,
-    height: 70,
-    borderRadius: 35,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      },
+    }),
+  },
+  emptyButton: {
+    width: 72,
+    height: 72,
   },
   deleteButton: {
-    borderRadius: 35,
+    backgroundColor: 'transparent',
   },
   numberText: {
     fontSize: 24,

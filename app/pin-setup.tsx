@@ -141,42 +141,51 @@ export default function PinSetupScreen() {
   };
 
   const renderNumberPad = () => {
-    const numbers = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '', '0', 'delete'];
+    const numberRows = [
+      ['1', '2', '3'],
+      ['4', '5', '6'],
+      ['7', '8', '9'],
+      ['', '0', 'delete']
+    ];
     
     return (
       <View style={styles.numberPad}>
-        {numbers.map((item, index) => {
-          if (item === '') {
-            return <View key={index} style={styles.numberButton} />;
-          }
-          
-          if (item === 'delete') {
-            return (
-              <TouchableOpacity
-                key={index}
-                style={[styles.numberButton, styles.deleteButton]}
-                onPress={handleDelete}
-                activeOpacity={0.7}
-              >
-                <Delete color={theme.colors.text} size={24} />
-              </TouchableOpacity>
-            );
-          }
-          
-          return (
-            <TouchableOpacity
-              key={index}
-              style={[
-                styles.numberButton,
-                { backgroundColor: theme.colors.primary }
-              ]}
-              onPress={() => handleNumberPress(item)}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.numberButtonText}>{item}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        {numberRows.map((row, rowIndex) => (
+          <View key={rowIndex} style={styles.numberRow}>
+            {row.map((item, itemIndex) => {
+              if (item === '') {
+                return <View key={itemIndex} style={styles.emptyButton} />;
+              }
+              
+              if (item === 'delete') {
+                return (
+                  <TouchableOpacity
+                    key={itemIndex}
+                    style={[styles.numberButton, styles.deleteButton]}
+                    onPress={handleDelete}
+                    activeOpacity={0.6}
+                  >
+                    <Delete color={theme.colors.text} size={24} />
+                  </TouchableOpacity>
+                );
+              }
+              
+              return (
+                <TouchableOpacity
+                  key={itemIndex}
+                  style={[
+                    styles.numberButton,
+                    { backgroundColor: theme.colors.primary }
+                  ]}
+                  onPress={() => handleNumberPress(item)}
+                  activeOpacity={0.6}
+                >
+                  <Text style={styles.numberButtonText}>{item}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
       </View>
     );
   };
@@ -247,37 +256,50 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
-    marginBottom: 80,
+    gap: 16,
+    marginBottom: 60,
   },
   pinDot: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     borderWidth: 2,
   },
   numberPad: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-    gap: 20,
-    paddingBottom: 60,
+    alignItems: 'center',
     marginTop: 'auto',
+    paddingBottom: 40,
+  },
+  numberRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 24,
+    marginBottom: 16,
   },
   numberButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 3,
+      },
+      web: {
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      },
+    }),
+  },
+  emptyButton: {
+    width: 72,
+    height: 72,
   },
   deleteButton: {
     backgroundColor: 'transparent',
