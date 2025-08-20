@@ -417,6 +417,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [wallets, saveCurrentWalletId]);
 
+  const editWallet = useCallback(async (walletId: string, name: string, color?: string) => {
+    try {
+      const updatedWallets = wallets.map(w => 
+        w.id === walletId 
+          ? { ...w, name, color: color || w.color }
+          : w
+      );
+      saveWallets(updatedWallets);
+    } catch (error) {
+      console.error('Error editing wallet:', error);
+      throw error;
+    }
+  }, [wallets, saveWallets]);
+
   const deleteWallet = useCallback(async (walletId: string) => {
     try {
       const updatedWallets = wallets.filter(w => w.id !== walletId);
@@ -552,6 +566,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     importWallet,
     generateNewAddress,
     switchWallet,
+    editWallet,
     deleteWallet,
     toggleTheme,
     refreshData,
@@ -591,6 +606,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     logoutAndEraseWallet,
     saveWalletsMutation.isPending,
     switchWallet,
+    editWallet,
     deleteWallet,
     selectedCurrency,
     setCurrency,

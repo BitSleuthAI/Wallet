@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { MoreHorizontal, Check } from 'lucide-react-native';
+import { MoreHorizontal, Check, Edit3, Trash2 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
 import { platformStyles } from '@/constants/themes';
@@ -34,10 +34,12 @@ interface WalletCardProps {
   wallet?: Wallet;
   isActive?: boolean;
   onPress?: () => void;
+  onEdit?: (wallet: Wallet) => void;
 }
 
-export default function WalletCard({ wallet, isActive = false, onPress }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance } = useWallet();
+export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet();
+  const [showMenu, setShowMenu] = useState<boolean>(false);
 
   // Use provided wallet or fall back to current wallet
   const displayWallet = wallet || currentWallet;
@@ -60,7 +62,7 @@ export default function WalletCard({ wallet, isActive = false, onPress }: Wallet
             <Text style={styles.walletName}>{displayWallet.name}</Text>
             <Text style={styles.walletType}>P2WPKH</Text>
           </View>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowMenu(true)} testID="wallet-menu-button">
             <MoreHorizontal color="white" size={24} />
           </TouchableOpacity>
         </View>
@@ -90,6 +92,60 @@ export default function WalletCard({ wallet, isActive = false, onPress }: Wallet
           {isActive && <Check color="white" size={20} />}
         </View>
       </LinearGradient>
+      
+      <Modal
+        visible={showMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowMenu(false)}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setShowMenu(false)}
+        >
+          <View style={styles.menuContainer}>
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                if (onEdit && displayWallet) {
+                  onEdit(displayWallet);
+                }
+              }}
+              testID="edit-wallet-button"
+            >
+              <Edit3 color={theme.colors.text} size={20} />
+              <Text style={[styles.menuText, { color: theme.colors.text }]}>Edit</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.menuItem}
+              onPress={() => {
+                setShowMenu(false);
+                if (displayWallet) {
+                  Alert.alert(
+                    'Delete Wallet',
+                    `Are you sure you want to delete "${displayWallet.name}"? This action cannot be undone.`,
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { 
+                        text: 'Delete', 
+                        style: 'destructive',
+                        onPress: () => deleteWallet(displayWallet.id)
+                      }
+                    ]
+                  );
+                }
+              }}
+              testID="delete-wallet-button"
+            >
+              <Trash2 color="#FF3B30" size={20} />
+              <Text style={[styles.menuText, { color: '#FF3B30' }]}>Delete</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </TouchableOpacity>
   );
 }
@@ -135,5 +191,29 @@ const styles = StyleSheet.create({
   },
   footer: {
     alignItems: 'flex-end',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: platformStyles.borderRadius.medium,
+    padding: platformStyles.spacing.sm,
+    minWidth: 150,
+    ...platformStyles.cardShadow,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: platformStyles.spacing.md,
+    paddingHorizontal: platformStyles.spacing.sm,
+  },
+  menuText: {
+    marginLeft: platformStyles.spacing.sm,
+    ...platformStyles.typography.body,
+    fontWeight: '500',
   },
 });

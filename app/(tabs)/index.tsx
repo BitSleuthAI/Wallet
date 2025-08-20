@@ -8,9 +8,12 @@ import {
   RefreshControl,
   SafeAreaView,
   FlatList,
+  Modal,
+  TextInput,
+  Alert,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff, Plus } from 'lucide-react-native';
+import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff, Plus, X } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
@@ -28,6 +31,7 @@ export default function WalletScreen() {
     currentWallet,
     currentWalletId,
     switchWallet,
+    editWallet,
     balance,
     balanceUSD,
     bitcoinPrice,
@@ -49,12 +53,45 @@ export default function WalletScreen() {
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
+  const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
+  const [editName, setEditName] = useState<string>('');
+  const [editColor, setEditColor] = useState<string>('');
 
   const onRefresh = async () => {
     setRefreshing(true);
     await refreshData();
     setRefreshing(false);
   };
+
+  const handleEditWallet = (wallet: Wallet) => {
+    setEditingWallet(wallet);
+    setEditName(wallet.name);
+    setEditColor(wallet.color);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingWallet || !editName.trim()) {
+      Alert.alert('Error', 'Please enter a wallet name');
+      return;
+    }
+
+    try {
+      await editWallet(editingWallet.id, editName.trim(), editColor);
+      setEditingWallet(null);
+      setEditName('');
+      setEditColor('');
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update wallet');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingWallet(null);
+    setEditName('');
+    setEditColor('');
+  };
+
+  const walletColors = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5A2B', '#6366F1'];
 
   const formatPriceChange = (change: number) => {
     const sign = change >= 0 ? '+' : '';
@@ -193,6 +230,7 @@ export default function WalletScreen() {
                   <WalletCard 
                     wallet={item.wallet} 
                     isActive={item.wallet.id === currentWalletId}
+                    onEdit={handleEditWallet}
                   />
                 </TouchableOpacity>
               );
@@ -344,6 +382,71 @@ export default function WalletScreen() {
           )}
         </View>
       </ScrollView>
+      
+      {/* Edit Wallet Modal */}
+      <Modal
+        visible={!!editingWallet}
+        transparent
+        animationType="slide"
+        onRequestClose={handleCancelEdit}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.editModalHeader}>
+              <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
+              <TouchableOpacity onPress={handleCancelEdit}>
+                <X color={theme.colors.textSecondary} size={24} />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={styles.editModalContent}>
+              <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
+              <TextInput
+                style={[styles.editInput, { 
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text 
+                }]}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder="Enter wallet name"
+                placeholderTextColor={theme.colors.textSecondary}
+              />
+              
+              <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
+              <View style={styles.colorPicker}>
+                {walletColors.map((color) => (
+                  <TouchableOpacity
+                    key={color}
+                    style={[
+                      styles.colorOption,
+                      { backgroundColor: color },
+                      editColor === color && styles.selectedColor
+                    ]}
+                    onPress={() => setEditColor(color)}
+                  />
+                ))}
+              </View>
+            </View>
+            
+            <View style={styles.editModalActions}>
+              <TouchableOpacity
+                style={[styles.editCancelButton, { borderColor: theme.colors.border }]}
+                onPress={handleCancelEdit}
+              >
+                <Text style={[styles.editCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.editSaveButton, { backgroundColor: theme.colors.primary }]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.editSaveText}>Save</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -610,6 +713,91 @@ const styles = StyleSheet.create({
   },
   addWalletText: {
     fontSize: 14,
+    fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  editModal: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 0,
+    ...platformStyles.cardShadow,
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  editModalContent: {
+    padding: 20,
+  },
+  editLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+    marginTop: 16,
+  },
+  editInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 16,
+  },
+  colorPicker: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  colorOption: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  selectedColor: {
+    borderColor: '#000',
+    borderWidth: 3,
+  },
+  editModalActions: {
+    flexDirection: 'row',
+    padding: 20,
+    gap: 12,
+  },
+  editCancelButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  editCancelText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  editSaveButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  editSaveText: {
+    color: 'white',
+    fontSize: 16,
     fontWeight: '500',
   },
 });
