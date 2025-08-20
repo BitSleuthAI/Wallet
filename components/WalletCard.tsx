@@ -90,19 +90,19 @@ export default function WalletCard({ onPress }: WalletCardProps) {
 const styles = StyleSheet.create({
   card: {
     borderRadius: 16,
-    padding: 20,
-    width: 280,
-    height: 120,
+    padding: 24,
+    width: 320,
+    height: 160,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 24,
   },
   walletName: {
     color: 'white',
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '600',
   },
   walletType: {
@@ -111,17 +111,18 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   balanceContainer: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
   balance: {
     color: 'white',
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
   },
   balanceUSD: {
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
-    marginTop: 4,
+    fontSize: 18,
+    fontWeight: '500',
+    marginTop: 6,
   },
   footer: {
     alignItems: 'flex-end',
