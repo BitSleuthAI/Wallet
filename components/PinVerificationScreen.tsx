@@ -31,7 +31,7 @@ export default function PinVerificationScreen({
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const handleNumberPress = (number: string) => {
-    if (pin.length < 6) {
+    if (pin.length < 4) {
       const newPin = pin + number;
       setPin(newPin);
       setError('');
@@ -40,7 +40,7 @@ export default function PinVerificationScreen({
         Haptics.selectionAsync();
       }
       
-      if (newPin.length === 6) {
+      if (newPin.length === 4) {
         verifyPin(newPin);
       }
     }
@@ -88,7 +88,7 @@ export default function PinVerificationScreen({
   const renderPinDots = () => {
     return (
       <View style={styles.pinDotsContainer}>
-        {[...Array(6)].map((_, index) => (
+        {[...Array(4)].map((_, index) => (
           <View
             key={index}
             style={[
