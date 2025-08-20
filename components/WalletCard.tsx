@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { Wallet } from '@/types/wallet';
 
 // Function to generate gradient colors from a base color
 function generateGradientColors(baseColor: string): [string, string] {
@@ -29,16 +30,21 @@ function generateGradientColors(baseColor: string): [string, string] {
 }
 
 interface WalletCardProps {
+  wallet?: Wallet;
+  isActive?: boolean;
   onPress?: () => void;
 }
 
-export default function WalletCard({ onPress }: WalletCardProps) {
+export default function WalletCard({ wallet, isActive = false, onPress }: WalletCardProps) {
   const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance } = useWallet();
 
-  if (!currentWallet) return null;
+  // Use provided wallet or fall back to current wallet
+  const displayWallet = wallet || currentWallet;
+  
+  if (!displayWallet) return null;
 
   // Generate gradient colors based on wallet color
-  const [lightColor, darkColor] = generateGradientColors(currentWallet.color);
+  const [lightColor, darkColor] = generateGradientColors(displayWallet.color);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
@@ -50,7 +56,7 @@ export default function WalletCard({ onPress }: WalletCardProps) {
       >
         <View style={styles.header}>
           <View>
-            <Text style={styles.walletName}>{currentWallet.name}</Text>
+            <Text style={styles.walletName}>{displayWallet.name}</Text>
             <Text style={styles.walletType}>P2WPKH</Text>
           </View>
           <TouchableOpacity>
@@ -80,7 +86,7 @@ export default function WalletCard({ onPress }: WalletCardProps) {
         </View>
 
         <View style={styles.footer}>
-          <Check color="white" size={20} />
+          {isActive && <Check color="white" size={20} />}
         </View>
       </LinearGradient>
     </TouchableOpacity>

@@ -21,32 +21,65 @@ const CURRENCY_NAMES: Record<FiatCurrency, string> = {
 };
 
 export const [WalletProvider, useWallet] = createContextHook(() => {
-  const [currentWallet, setCurrentWallet] = useState<Wallet | null>(null);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
   const [theme, setTheme] = useState<Theme>(lightTheme);
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
   const queryClient = useQueryClient();
 
-  // Clear any potential mock data on initialization
+  // Computed current wallet
+  const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
+
+  // Migration and initialization
   useEffect(() => {
-    const clearMockData = async () => {
+    const initializeWallets = async () => {
       try {
+        // Clear any potential mock data
         await AsyncStorage.multiRemove(['mock_data', 'test_data', 'sample_data', 'dummy_data']);
         console.log('🧹 Cleared any potential mock data on initialization');
+        
+        // Check for old single wallet format and migrate
+        const oldWallet = await AsyncStorage.getItem('wallet');
+        const existingWallets = await AsyncStorage.getItem('wallets');
+        
+        if (oldWallet && !existingWallets) {
+          console.log('📦 Migrating from single wallet to multi-wallet format');
+          const wallet = JSON.parse(oldWallet);
+          const walletsArray = [wallet];
+          
+          // Save as new format
+          await AsyncStorage.setItem('wallets', JSON.stringify(walletsArray));
+          await AsyncStorage.setItem('currentWalletId', wallet.id);
+          
+          // Remove old format
+          await AsyncStorage.removeItem('wallet');
+          
+          console.log('✅ Migration completed successfully');
+        }
       } catch (error) {
-        console.warn('⚠️ Error clearing mock data on initialization:', error);
+        console.warn('⚠️ Error during wallet initialization:', error);
       }
     };
-    clearMockData();
+    initializeWallets();
   }, []);
 
-  // Load wallet from storage
-  const walletQuery = useQuery({
-    queryKey: ['wallet'],
+  // Load wallets from storage
+  const walletsQuery = useQuery({
+    queryKey: ['wallets'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem('wallet');
-      return stored ? JSON.parse(stored) : null;
+      const stored = await AsyncStorage.getItem('wallets');
+      return stored ? JSON.parse(stored) : [];
+    },
+  });
+
+  // Load current wallet ID from storage
+  const currentWalletQuery = useQuery({
+    queryKey: ['currentWalletId'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('currentWalletId');
+      return stored || null;
     },
   });
 
@@ -166,18 +199,31 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnMount: true, // Only refetch on mount
   });
 
-  // Save wallet mutation
-  const saveWalletMutation = useMutation({
-    mutationFn: async (wallet: Wallet) => {
-      await AsyncStorage.setItem('wallet', JSON.stringify(wallet));
-      return wallet;
+  // Save wallets mutation
+  const saveWalletsMutation = useMutation({
+    mutationFn: async (walletsToSave: Wallet[]) => {
+      await AsyncStorage.setItem('wallets', JSON.stringify(walletsToSave));
+      return walletsToSave;
     },
-    onSuccess: (wallet) => {
-      setCurrentWallet(wallet);
-      queryClient.invalidateQueries({ queryKey: ['wallet'] });
+    onSuccess: (walletsToSave) => {
+      setWallets(walletsToSave);
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
     },
   });
-  const { mutate: saveWallet } = saveWalletMutation;
+  const { mutate: saveWallets } = saveWalletsMutation;
+
+  // Save current wallet ID mutation
+  const saveCurrentWalletIdMutation = useMutation({
+    mutationFn: async (walletId: string) => {
+      await AsyncStorage.setItem('currentWalletId', walletId);
+      return walletId;
+    },
+    onSuccess: (walletId) => {
+      setCurrentWalletId(walletId);
+      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+    },
+  });
+  const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
 
   // Save theme mutation
   const saveThemeMutation = useMutation({
@@ -234,10 +280,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const { mutate: saveAutoLock } = saveAutoLockMutation;
 
   useEffect(() => {
-    if (walletQuery.data) {
-      setCurrentWallet(walletQuery.data);
+    if (walletsQuery.data) {
+      setWallets(walletsQuery.data);
+      // If we have wallets but no current wallet ID, set the first one as current
+      if (walletsQuery.data.length > 0 && !currentWalletId) {
+        saveCurrentWalletId(walletsQuery.data[0].id);
+      }
     }
-  }, [walletQuery.data]);
+  }, [walletsQuery.data, currentWalletId, saveCurrentWalletId]);
+
+  useEffect(() => {
+    if (currentWalletQuery.data) {
+      setCurrentWalletId(currentWalletQuery.data);
+    }
+  }, [currentWalletQuery.data]);
 
   useEffect(() => {
     if (themeQuery.data) {
@@ -266,36 +322,41 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
       const wallet = await walletService.createWallet(name, color);
-      saveWallet(wallet);
+      const updatedWallets = [...wallets, wallet];
+      saveWallets(updatedWallets);
+      saveCurrentWalletId(wallet.id);
       return wallet;
     } catch (error) {
       console.error('Error creating wallet:', error);
       throw error;
     }
-  }, [saveWallet]);
+  }, [wallets, saveWallets, saveCurrentWalletId]);
 
   const importWallet = useCallback(async (name: string, mnemonic: string, color?: string) => {
     try {
       const wallet = await walletService.importWallet(name, mnemonic, color);
-      saveWallet(wallet);
+      const updatedWallets = [...wallets, wallet];
+      saveWallets(updatedWallets);
+      saveCurrentWalletId(wallet.id);
       return wallet;
     } catch (error) {
       console.error('Error importing wallet:', error);
       throw error;
     }
-  }, [saveWallet]);
+  }, [wallets, saveWallets, saveCurrentWalletId]);
 
   const generateNewAddress = useCallback(async () => {
     if (!currentWallet) return null;
     try {
       const updatedWallet = await walletService.generateNewAddress(currentWallet);
-      saveWallet(updatedWallet);
+      const updatedWallets = wallets.map(w => w.id === updatedWallet.id ? updatedWallet : w);
+      saveWallets(updatedWallets);
       return updatedWallet.addresses[updatedWallet.addresses.length - 1];
     } catch (error) {
       console.error('Error generating new address:', error);
       throw error;
     }
-  }, [currentWallet, saveWallet]);
+  }, [currentWallet, wallets, saveWallets]);
 
   const toggleTheme = useCallback(() => {
     saveTheme(!theme.isDark);
@@ -350,13 +411,40 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient]);
 
+  const switchWallet = useCallback((walletId: string) => {
+    if (wallets.find(w => w.id === walletId)) {
+      saveCurrentWalletId(walletId);
+    }
+  }, [wallets, saveCurrentWalletId]);
+
+  const deleteWallet = useCallback(async (walletId: string) => {
+    try {
+      const updatedWallets = wallets.filter(w => w.id !== walletId);
+      saveWallets(updatedWallets);
+      
+      // If we deleted the current wallet, switch to the first available wallet
+      if (currentWalletId === walletId) {
+        if (updatedWallets.length > 0) {
+          saveCurrentWalletId(updatedWallets[0].id);
+        } else {
+          setCurrentWalletId(null);
+          await AsyncStorage.removeItem('currentWalletId');
+        }
+      }
+    } catch (error) {
+      console.error('Error deleting wallet:', error);
+      throw error;
+    }
+  }, [wallets, currentWalletId, saveWallets, saveCurrentWalletId]);
+
   const logoutAndEraseWallet = useCallback(async () => {
     try {
       console.log('🔄 Starting wallet logout and erase process...');
       
       // Clear all wallet-related data from AsyncStorage
       const keysToRemove = [
-        'wallet',
+        'wallets',
+        'currentWalletId',
         'pin',
         'biometric_enabled',
         'wallet_setup_completed',
@@ -381,7 +469,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       
       // Reset local state
       console.log('🔄 Resetting local state...');
-      setCurrentWallet(null);
+      setWallets([]);
+      setCurrentWalletId(null);
       setTheme(lightTheme); // Reset to light theme
       setSelectedCurrency('USD'); // Reset to USD
       setHideBalance(false); // Reset hide balance setting
@@ -422,8 +511,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   return useMemo(() => ({
     // Wallet data
+    wallets,
     currentWallet,
-    isLoading: walletQuery.isLoading,
+    currentWalletId,
+    isLoading: walletsQuery.isLoading || currentWalletQuery.isLoading,
     
     // Balance and price data
     balance: balanceQuery.data || 0,
@@ -460,12 +551,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     createWallet,
     importWallet,
     generateNewAddress,
+    switchWallet,
+    deleteWallet,
     toggleTheme,
     refreshData,
     logoutAndEraseWallet,
     
     // Loading states
-    isCreatingWallet: saveWalletMutation.isPending,
+    isCreatingWallet: saveWalletsMutation.isPending,
     isLoadingBalance: balanceQuery.isLoading,
     isLoadingTransactions: transactionsQuery.isLoading,
     isLoadingPrice: priceQuery.isLoading,
@@ -475,8 +568,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
     hasPriceError: !!priceQuery.error && !priceQuery.data,
   }), [
+    wallets,
     currentWallet,
-    walletQuery.isLoading,
+    currentWalletId,
+    walletsQuery.isLoading,
+    currentWalletQuery.isLoading,
     balanceQuery.data,
     balanceQuery.isLoading,
     priceQuery.data,
@@ -493,7 +589,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     toggleTheme,
     refreshData,
     logoutAndEraseWallet,
-    saveWalletMutation.isPending,
+    saveWalletsMutation.isPending,
+    switchWallet,
+    deleteWallet,
     selectedCurrency,
     setCurrency,
     formatCurrency,

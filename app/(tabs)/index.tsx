@@ -15,10 +15,18 @@ import { useWallet } from '@/hooks/wallet-store';
 import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
 import BalanceChart from '@/components/PriceChart';
+import { Wallet } from '@/types/wallet';
+
+type CarouselItem = 
+  | { type: 'wallet'; wallet: Wallet }
+  | { type: 'add' };
 
 export default function WalletScreen() {
   const {
+    wallets,
     currentWallet,
+    currentWalletId,
+    switchWallet,
     balance,
     balanceUSD,
     bitcoinPrice,
@@ -151,10 +159,10 @@ export default function WalletScreen() {
 
         {/* Wallet Carousel */}
         <View style={styles.walletCarousel}>
-          <FlatList
+          <FlatList<CarouselItem>
             horizontal
             showsHorizontalScrollIndicator={false}
-            data={[{ type: 'wallet', wallet: currentWallet }, { type: 'add' }]}
+            data={[...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }]}
             keyExtractor={(item, index) => `${item.type}-${index}`}
             renderItem={({ item }) => {
               if (item.type === 'add') {
@@ -172,9 +180,20 @@ export default function WalletScreen() {
                 );
               }
               return (
-                <View style={styles.walletCardContainer}>
-                  <WalletCard />
-                </View>
+                <TouchableOpacity 
+                  style={styles.walletCardContainer}
+                  onPress={() => {
+                    if (item.wallet.id !== currentWalletId) {
+                      switchWallet(item.wallet.id);
+                    }
+                  }}
+                  activeOpacity={0.8}
+                >
+                  <WalletCard 
+                    wallet={item.wallet} 
+                    isActive={item.wallet.id === currentWalletId}
+                  />
+                </TouchableOpacity>
               );
             }}
             contentContainerStyle={styles.carouselContent}
