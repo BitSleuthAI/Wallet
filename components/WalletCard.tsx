@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check, Edit3, Trash2 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
@@ -68,16 +68,14 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             ref={menuButtonRef}
             onPress={() => {
               menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-                const screenWidth = Dimensions.get('window').width;
                 const menuWidth = 150;
+                const padding = 20;
                 
-                // Position menu to the left of the button if it would go off screen
-                const menuX = pageX + width - menuWidth > screenWidth - 20 
-                  ? pageX - menuWidth + width 
-                  : pageX;
+                // Always position menu to the left of the button with proper spacing
+                const menuX = pageX - menuWidth + width - padding;
                 
                 setMenuPosition({ 
-                  x: Math.max(20, menuX), 
+                  x: Math.max(padding, menuX), 
                   y: pageY + height + 5 
                 });
                 setShowMenu(true);
