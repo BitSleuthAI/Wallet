@@ -343,7 +343,7 @@ export default function WalletScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Recent Transactions
             </Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => router.push('/transaction-history')}>
               <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
                 View All
               </Text>
