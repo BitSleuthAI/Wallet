@@ -1,0 +1,751 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  Switch,
+  Alert,
+  Platform,
+  Pressable,
+  TextInput,
+  ActivityIndicator,
+} from 'react-native';
+import { Stack } from 'expo-router';
+import {
+  Zap,
+  Clock,
+  DollarSign,
+  TrendingUp,
+  Settings,
+  Info,
+  RefreshCw,
+  AlertTriangle,
+  CheckCircle,
+} from 'lucide-react-native';
+import { useWallet } from '@/hooks/wallet-store';
+import { feeEstimationService, FeeEstimationService } from '@/services/fee-service';
+import type { FeeEstimate } from '@/types/wallet';
+
+type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
+
+interface FeeSettings {
+  defaultPreset: FeePreset;
+  customFeeRate: number;
+  enableRBF: boolean;
+  enableCPFP: boolean;
+  autoAdjustFees: boolean;
+  maxFeeRate: number;
+  dustThreshold: number;
+}
+
+export default function FeeSettingsScreen() {
+  const { theme } = useWallet();
+  const [feeEstimates, setFeeEstimates] = useState<FeeEstimate | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
+  const [selectedPreset, setSelectedPreset] = useState<FeePreset>('standard');
+  const [customFeeRate, setCustomFeeRate] = useState<string>('10');
+  const [settings, setSettings] = useState<FeeSettings>({
+    defaultPreset: 'standard',
+    customFeeRate: 10,
+    enableRBF: true,
+    enableCPFP: false,
+    autoAdjustFees: true,
+    maxFeeRate: 100,
+    dustThreshold: 546,
+  });
+
+  useEffect(() => {
+    loadFeeEstimates();
+  }, []);
+
+  const loadFeeEstimates = async () => {
+    try {
+      console.log('📊 Loading fee estimates...');
+      const estimates = await feeEstimationService.getFeeEstimates();
+      setFeeEstimates(estimates);
+    } catch (error) {
+      console.error('❌ Failed to load fee estimates:', error);
+      Alert.alert('Error', 'Failed to load current fee estimates');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const refreshFeeEstimates = async () => {
+    setRefreshing(true);
+    try {
+      console.log('🔄 Refreshing fee estimates...');
+      // Force refresh by creating new instance
+      const freshEstimates = await FeeEstimationService.getInstance().getFeeEstimates();
+      setFeeEstimates(freshEstimates);
+    } catch (error) {
+      console.error('❌ Failed to refresh fee estimates:', error);
+      Alert.alert('Error', 'Failed to refresh fee estimates');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const updateSetting = <K extends keyof FeeSettings>(key: K, value: FeeSettings[K]) => {
+    setSettings(prev => ({ ...prev, [key]: value }));
+  };
+
+  const getFeePresetInfo = (preset: FeePreset) => {
+    if (!feeEstimates) return { rate: 0, time: 'Unknown', description: 'Loading...' };
+
+    switch (preset) {
+      case 'economy':
+        return {
+          rate: feeEstimates.economyFee,
+          time: '3-6 hours',
+          description: 'Lowest cost, slower confirmation'
+        };
+      case 'standard':
+        return {
+          rate: feeEstimates.halfHourFee,
+          time: '30-60 min',
+          description: 'Balanced cost and speed'
+        };
+      case 'priority':
+        return {
+          rate: feeEstimates.fastestFee,
+          time: '10-20 min',
+          description: 'Fastest confirmation, higher cost'
+        };
+      case 'custom':
+        return {
+          rate: parseInt(customFeeRate) || 0,
+          time: 'Variable',
+          description: 'Set your own fee rate'
+        };
+      default:
+        return { rate: 0, time: 'Unknown', description: 'Unknown preset' };
+    }
+  };
+
+  const estimateTransactionCost = (feeRate: number) => {
+    // Estimate for a typical transaction (2 inputs, 2 outputs)
+    const estimatedSize = 250; // bytes (conservative estimate)
+    return Math.ceil(feeRate * estimatedSize);
+  };
+
+  const FeePresetCard = ({ preset, title, icon: Icon }: {
+    preset: FeePreset;
+    title: string;
+    icon: any;
+  }) => {
+    const info = getFeePresetInfo(preset);
+    const isSelected = selectedPreset === preset;
+    const estimatedCost = estimateTransactionCost(info.rate);
+
+    return (
+      <TouchableOpacity
+        style={[
+          styles.presetCard,
+          {
+            backgroundColor: theme.colors.surface,
+            borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+            borderWidth: isSelected ? 2 : 1,
+          },
+        ]}
+        onPress={() => {
+          setSelectedPreset(preset);
+          updateSetting('defaultPreset', preset);
+        }}
+      >
+        <View style={styles.presetHeader}>
+          <View style={[styles.presetIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Icon color={theme.colors.primary} size={20} />
+          </View>
+          <View style={styles.presetInfo}>
+            <Text style={[styles.presetTitle, { color: theme.colors.text }]}>
+              {title}
+            </Text>
+            <Text style={[styles.presetTime, { color: theme.colors.textSecondary }]}>
+              {info.time}
+            </Text>
+          </View>
+          {isSelected && (
+            <CheckCircle color={theme.colors.primary} size={20} />
+          )}
+        </View>
+        
+        <Text style={[styles.presetDescription, { color: theme.colors.textSecondary }]}>
+          {info.description}
+        </Text>
+        
+        <View style={styles.presetStats}>
+          <View style={styles.statItem}>
+            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              Fee Rate
+            </Text>
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {info.rate} sat/vB
+            </Text>
+          </View>
+          <View style={styles.statItem}>
+            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+              Est. Cost
+            </Text>
+            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+              {estimatedCost} sats
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  };
+
+  const SettingToggle = ({ 
+    title, 
+    subtitle, 
+    value, 
+    onValueChange, 
+    icon: Icon 
+  }: {
+    title: string;
+    subtitle: string;
+    value: boolean;
+    onValueChange: (value: boolean) => void;
+    icon: any;
+  }) => (
+    <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
+      <View style={[styles.settingIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+        <Icon color={theme.colors.primary} size={20} />
+      </View>
+      <View style={styles.settingContent}>
+        <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+          {title}
+        </Text>
+        <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+          {subtitle}
+        </Text>
+      </View>
+      {Platform.OS === 'web' ? (
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityState={{ checked: value }}
+          onPress={() => onValueChange(!value)}
+          style={[
+            styles.webSwitch,
+            {
+              backgroundColor: value ? theme.colors.primary : theme.colors.border,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.webSwitchThumb,
+              {
+                transform: [{ translateX: value ? 24 : 2 }],
+                backgroundColor: '#FFFFFF',
+              },
+            ]}
+          />
+        </Pressable>
+      ) : (
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+          thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+          ios_backgroundColor={theme.colors.border}
+        />
+      )}
+    </View>
+  );
+
+  const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
+    <View style={styles.sectionHeader}>
+      <Text style={[styles.sectionTitle, { color: theme.colors.primary }]}>
+        {title}
+      </Text>
+      {subtitle && (
+        <Text style={[styles.sectionSubtitle, { color: theme.colors.textSecondary }]}>
+          {subtitle}
+        </Text>
+      )}
+    </View>
+  );
+
+  if (loading) {
+    return (
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Stack.Screen options={{ title: 'Fee Settings' }} />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={theme.colors.primary} />
+          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+            Loading fee estimates...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Stack.Screen 
+        options={{ 
+          title: 'Fee Settings',
+          headerRight: () => (
+            <TouchableOpacity
+              onPress={refreshFeeEstimates}
+              disabled={refreshing}
+              style={styles.refreshButton}
+            >
+              <RefreshCw 
+                color={theme.colors.primary} 
+                size={20} 
+                style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
+              />
+            </TouchableOpacity>
+          ),
+        }} 
+      />
+      
+      <ScrollView style={styles.scrollView}>
+        {/* Fee Presets Section */}
+        <SectionHeader 
+          title="Fee Presets" 
+          subtitle="Choose your default transaction fee preference"
+        />
+        
+        <FeePresetCard preset="economy" title="Economy" icon={Clock} />
+        <FeePresetCard preset="standard" title="Standard" icon={Zap} />
+        <FeePresetCard preset="priority" title="Priority" icon={TrendingUp} />
+        
+        {/* Custom Fee Rate */}
+        <View style={[styles.customFeeCard, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.customFeeHeader}>
+            <View style={[styles.presetIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Settings color={theme.colors.primary} size={20} />
+            </View>
+            <View style={styles.presetInfo}>
+              <Text style={[styles.presetTitle, { color: theme.colors.text }]}>
+                Custom Fee Rate
+              </Text>
+              <Text style={[styles.presetTime, { color: theme.colors.textSecondary }]}>
+                Set your own rate
+              </Text>
+            </View>
+            {selectedPreset === 'custom' && (
+              <CheckCircle color={theme.colors.primary} size={20} />
+            )}
+          </View>
+          
+          <View style={styles.customFeeInput}>
+            <TextInput
+              style={[
+                styles.feeInput,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                },
+              ]}
+              value={customFeeRate}
+              onChangeText={(text) => {
+                setCustomFeeRate(text);
+                updateSetting('customFeeRate', parseInt(text) || 0);
+                if (selectedPreset === 'custom') {
+                  // Auto-select custom when user types
+                  setSelectedPreset('custom');
+                  updateSetting('defaultPreset', 'custom');
+                }
+              }}
+              placeholder="Enter fee rate"
+              placeholderTextColor={theme.colors.textSecondary}
+              keyboardType="numeric"
+              selectTextOnFocus
+            />
+            <Text style={[styles.feeUnit, { color: theme.colors.textSecondary }]}>
+              sat/vB
+            </Text>
+          </View>
+          
+          <TouchableOpacity
+            style={[
+              styles.customFeeButton,
+              {
+                backgroundColor: selectedPreset === 'custom' 
+                  ? theme.colors.primary + '20' 
+                  : 'transparent',
+                borderColor: theme.colors.primary,
+              },
+            ]}
+            onPress={() => {
+              setSelectedPreset('custom');
+              updateSetting('defaultPreset', 'custom');
+            }}
+          >
+            <Text style={[
+              styles.customFeeButtonText,
+              { color: theme.colors.primary },
+            ]}>
+              Use Custom Rate
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Advanced Settings */}
+        <SectionHeader 
+          title="Advanced Settings" 
+          subtitle="Configure advanced transaction features"
+        />
+        
+        <SettingToggle
+          title="Replace-by-Fee (RBF)"
+          subtitle="Allow fee bumping for unconfirmed transactions"
+          value={settings.enableRBF}
+          onValueChange={(value) => updateSetting('enableRBF', value)}
+          icon={TrendingUp}
+        />
+        
+        <SettingToggle
+          title="Child-Pays-for-Parent (CPFP)"
+          subtitle="Enable CPFP fee bumping for received transactions"
+          value={settings.enableCPFP}
+          onValueChange={(value) => updateSetting('enableCPFP', value)}
+          icon={DollarSign}
+        />
+        
+        <SettingToggle
+          title="Auto-Adjust Fees"
+          subtitle="Automatically adjust fees based on network conditions"
+          value={settings.autoAdjustFees}
+          onValueChange={(value) => updateSetting('autoAdjustFees', value)}
+          icon={Zap}
+        />
+
+        {/* Fee Limits */}
+        <SectionHeader 
+          title="Fee Limits" 
+          subtitle="Set maximum fee rates and dust thresholds"
+        />
+        
+        <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.error + '20' }]}>
+            <AlertTriangle color={theme.colors.error} size={20} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+              Maximum Fee Rate
+            </Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+              Prevent accidentally high fees
+            </Text>
+          </View>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[
+                styles.smallInput,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                },
+              ]}
+              value={settings.maxFeeRate.toString()}
+              onChangeText={(text) => updateSetting('maxFeeRate', parseInt(text) || 100)}
+              keyboardType="numeric"
+              selectTextOnFocus
+            />
+            <Text style={[styles.inputUnit, { color: theme.colors.textSecondary }]}>
+              sat/vB
+            </Text>
+          </View>
+        </View>
+        
+        <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
+          <View style={[styles.settingIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Info color={theme.colors.primary} size={20} />
+          </View>
+          <View style={styles.settingContent}>
+            <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+              Dust Threshold
+            </Text>
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+              Minimum output value in satoshis
+            </Text>
+          </View>
+          <View style={styles.inputContainer}>
+            <TextInput
+              style={[
+                styles.smallInput,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                  color: theme.colors.text,
+                },
+              ]}
+              value={settings.dustThreshold.toString()}
+              onChangeText={(text) => updateSetting('dustThreshold', parseInt(text) || 546)}
+              keyboardType="numeric"
+              selectTextOnFocus
+            />
+            <Text style={[styles.inputUnit, { color: theme.colors.textSecondary }]}>
+              sats
+            </Text>
+          </View>
+        </View>
+
+        {/* Current Network Conditions */}
+        {feeEstimates && (
+          <>
+            <SectionHeader 
+              title="Current Network Conditions" 
+              subtitle="Live fee estimates from the Bitcoin network"
+            />
+            
+            <View style={[styles.networkCard, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.networkRow}>
+                <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
+                  Economy (3-6 hours)
+                </Text>
+                <Text style={[styles.networkValue, { color: theme.colors.text }]}>
+                  {feeEstimates.economyFee} sat/vB
+                </Text>
+              </View>
+              <View style={styles.networkRow}>
+                <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
+                  Standard (30-60 min)
+                </Text>
+                <Text style={[styles.networkValue, { color: theme.colors.text }]}>
+                  {feeEstimates.halfHourFee} sat/vB
+                </Text>
+              </View>
+              <View style={styles.networkRow}>
+                <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
+                  Priority (10-20 min)
+                </Text>
+                <Text style={[styles.networkValue, { color: theme.colors.text }]}>
+                  {feeEstimates.fastestFee} sat/vB
+                </Text>
+              </View>
+            </View>
+          </>
+        )}
+        
+        <View style={styles.bottomPadding} />
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  refreshButton: {
+    padding: 8,
+  },
+  sectionHeader: {
+    marginTop: 30,
+    marginBottom: 16,
+    marginHorizontal: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  sectionSubtitle: {
+    fontSize: 14,
+    marginTop: 4,
+    lineHeight: 20,
+  },
+  presetCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  presetHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  presetIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  presetInfo: {
+    flex: 1,
+  },
+  presetTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  presetTime: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  presetDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  presetStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statItem: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statValue: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  customFeeCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  customFeeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  customFeeInput: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  feeInput: {
+    flex: 1,
+    height: 44,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    marginRight: 8,
+  },
+  feeUnit: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  customFeeButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+  },
+  customFeeButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  settingItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginVertical: 2,
+    borderRadius: 12,
+  },
+  settingIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
+  settingContent: {
+    flex: 1,
+  },
+  settingTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  settingSubtitle: {
+    fontSize: 14,
+    marginTop: 2,
+    lineHeight: 18,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  smallInput: {
+    width: 80,
+    height: 36,
+    borderWidth: 1,
+    borderRadius: 6,
+    paddingHorizontal: 8,
+    fontSize: 14,
+    textAlign: 'center',
+    marginRight: 8,
+  },
+  inputUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  webSwitch: {
+    width: 48,
+    height: 28,
+    borderRadius: 9999,
+    justifyContent: 'center',
+  },
+  webSwitchThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 9999,
+    backgroundColor: '#FFFFFF',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 1.5,
+  },
+  networkCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  networkRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  networkLabel: {
+    fontSize: 14,
+  },
+  networkValue: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  bottomPadding: {
+    height: 40,
+  },
+});

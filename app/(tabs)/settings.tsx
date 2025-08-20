@@ -261,7 +261,7 @@ export default function SettingsScreen() {
           icon={Zap}
           title="Fee Settings"
           subtitle="Configure transaction fee preferences"
-          onPress={() => console.log('Fee settings')}
+          onPress={() => router.push('/fee-settings')}
         />
 
         <SettingItem
