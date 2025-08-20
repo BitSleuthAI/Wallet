@@ -319,7 +319,7 @@ export default function SettingsScreen() {
           icon={Key}
           title="View Recovery Phrase"
           subtitle="Your BIP39 recovery phrase"
-          onPress={() => console.log('Recovery phrase')}
+          onPress={() => router.push('/view-recovery-phrase')}
         />
 
         <SettingItem
