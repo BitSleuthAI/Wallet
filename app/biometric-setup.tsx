@@ -132,20 +132,29 @@ export default function BiometricSetupScreen() {
 
   const handleSkip = () => {
     console.log('User tapped Skip for now');
-    Alert.alert(
-      'Skip Biometric Setup?',
-      'You can always enable biometric authentication later in settings. You will use your PIN to access your wallet.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Skip', 
-          onPress: () => {
-            console.log('User confirmed skip, navigating to tabs...');
-            router.replace('/(tabs)');
+    
+    // On iOS, sometimes Alert doesn't show properly, so we'll make it more reliable
+    if (Platform.OS === 'ios') {
+      // Direct navigation for iOS to ensure it works
+      console.log('iOS detected, navigating directly to tabs...');
+      router.replace('/(tabs)');
+    } else {
+      // Show confirmation dialog on other platforms
+      Alert.alert(
+        'Skip Biometric Setup?',
+        'You can always enable biometric authentication later in settings. You will use your PIN to access your wallet.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Skip', 
+            onPress: () => {
+              console.log('User confirmed skip, navigating to tabs...');
+              router.replace('/(tabs)');
+            }
           }
-        }
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const getBiometricIcon = () => {
