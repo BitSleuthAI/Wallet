@@ -268,7 +268,7 @@ export default function SettingsScreen() {
           icon={Coins}
           title="Coin Control"
           subtitle="Advanced UTXO management"
-          onPress={() => console.log('Coin control')}
+          onPress={() => router.push('/coin-control')}
         />
 
         <SettingItem
