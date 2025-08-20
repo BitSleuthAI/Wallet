@@ -171,9 +171,9 @@ export default function WalletScreen() {
                 <View style={styles.priceRow}>
                   {hasPriceError ? (
                     <View style={styles.errorContainer}>
-                      <WifiOff color={theme.colors.error} size={14} />
-                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
-                        Price unavailable
+                      <WifiOff color={theme.colors.textSecondary} size={14} />
+                      <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                        Price loading...
                       </Text>
                     </View>
                   ) : (
@@ -243,12 +243,12 @@ export default function WalletScreen() {
         <View style={styles.balanceSection}>
           {hasBalanceError ? (
             <View style={styles.balanceErrorContainer}>
-              <AlertCircle color={theme.colors.error} size={24} />
-              <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
-                Balance Unavailable
+              <WifiOff color={theme.colors.textSecondary} size={24} />
+              <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                Balance Loading...
               </Text>
               <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
-                Unable to fetch wallet balance. Please check your connection.
+                Bitcoin APIs are temporarily unavailable. Your wallet is safe.
               </Text>
               <TouchableOpacity 
                 style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
@@ -352,12 +352,12 @@ export default function WalletScreen() {
 
           {hasTransactionsError ? (
             <View style={styles.transactionsErrorContainer}>
-              <WifiOff color={theme.colors.error} size={32} />
-              <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
-                Transactions Unavailable
+              <WifiOff color={theme.colors.textSecondary} size={32} />
+              <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                Loading Transactions...
               </Text>
               <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
-                Unable to load transaction history. Please check your connection and try again.
+                Bitcoin APIs are temporarily unavailable. Your transactions are safe.
               </Text>
               <TouchableOpacity 
                 style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}

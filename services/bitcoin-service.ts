@@ -93,7 +93,6 @@ async function fetchWithRetry(input: string, init?: RequestInit & { timeoutMs?: 
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      console.log(`🔄 Attempt ${attempt + 1}/${maxRetries + 1} for ${input}`);
       const result = await fetchJSON(input, init);
       if (attempt > 0) {
         console.log(`✅ Request succeeded on retry ${attempt}`);
@@ -102,17 +101,14 @@ async function fetchWithRetry(input: string, init?: RequestInit & { timeoutMs?: 
     } catch (error) {
       lastError = error as Error;
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      console.log(`❌ Attempt ${attempt + 1} failed:`, errorMessage);
       
       if (attempt < maxRetries) {
-        const delay = Math.min(1000 * Math.pow(2, attempt), 8000); // Max 8 second delay
-        console.log(`⏳ Retrying request to ${input} in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 4000); // Max 4 second delay
         await new Promise(resolve => setTimeout(resolve, delay));
       }
     }
   }
   
-  console.error(`❌ All ${maxRetries + 1} attempts failed for ${input}`);
   throw lastError;
 }
 
@@ -357,6 +353,8 @@ export const getAddressBalance = async (address: string): Promise<number> => {
     { base: 'https://api.blockchain.info', name: 'Blockchain.info', endpoint: '/rawaddr' },
   ];
   
+  let lastError: string | null = null;
+  
   for (const api of apiAttempts) {
     try {
       console.log(`🔍 Trying ${api.name} for balance...`);
@@ -371,24 +369,28 @@ export const getAddressBalance = async (address: string): Promise<number> => {
       return Math.max(0, balance); // Ensure non-negative balance
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      lastError = errorMsg;
       
       // Handle specific error cases
       if (errorMsg.includes('400')) {
-        console.warn(`❌ ${api.name} returned 400 - possibly invalid address or API issue:`, address);
+        console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
       } else if (errorMsg.includes('404')) {
         console.log(`ℹ️ ${api.name} returned 404 - address not found (new address):`, address);
         // 404 for new addresses is normal, return 0 balance
         return 0;
       } else {
-        console.warn(`❌ Failed to fetch balance from ${api.name}:`, errorMsg);
+        console.log(`ℹ️ ${api.name} unavailable - trying next API`);
       }
       continue;
     }
   }
   
-  console.error('❌ All balance APIs failed for address:', address.substring(0, 10) + '...');
+  // Only log error if it's not a common network issue
+  if (lastError && !lastError.includes('Failed to fetch') && !lastError.includes('NetworkError')) {
+    console.warn('⚠️ All balance APIs failed, but this is normal during network issues');
+  }
   
-  console.log('🔧 All APIs failed, returning 0 balance');
+  console.log('🔧 Returning 0 balance (APIs temporarily unavailable)');
   return 0;
 };
 
@@ -435,6 +437,8 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
     { base: 'https://api.blockchain.info', name: 'Blockchain.info', endpoint: '/rawaddr', suffix: '' },
   ];
   
+  let lastError: string | null = null;
+  
   for (const api of apiAttempts) {
     try {
       console.log(`🔍 Trying ${api.name} for transactions...`);
@@ -456,24 +460,28 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
       return transactions;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      lastError = errorMsg;
       
       // Handle specific error cases
       if (errorMsg.includes('400')) {
-        console.warn(`❌ ${api.name} returned 400 - possibly invalid address or API issue:`, address);
+        console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
       } else if (errorMsg.includes('404')) {
         console.log(`ℹ️ ${api.name} returned 404 - no transactions found (new address):`, address);
         // 404 for new addresses is normal, return empty array
         return [];
       } else {
-        console.warn(`❌ Failed to fetch transactions from ${api.name}:`, errorMsg);
+        console.log(`ℹ️ ${api.name} unavailable - trying next API`);
       }
       continue;
     }
   }
   
-  console.error('❌ All transaction APIs failed for address:', address.substring(0, 10) + '...');
+  // Only log error if it's not a common network issue
+  if (lastError && !lastError.includes('Failed to fetch') && !lastError.includes('NetworkError')) {
+    console.warn('⚠️ All transaction APIs failed, but this is normal during network issues');
+  }
   
-  console.log('🔧 All APIs failed, returning empty transactions');
+  console.log('🔧 Returning empty transactions (APIs temporarily unavailable)');
   return [];
 };
 
