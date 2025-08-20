@@ -16,6 +16,7 @@ import WalletCard from '@/components/WalletCard';
 import TransactionItem from '@/components/TransactionItem';
 import BalanceChart from '@/components/PriceChart';
 import { Wallet } from '@/types/wallet';
+import { platformStyles, createButtonStyle } from '@/constants/themes';
 
 type CarouselItem = 
   | { type: 'wallet'; wallet: Wallet }
@@ -276,7 +277,10 @@ export default function WalletScreen() {
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
           <TouchableOpacity 
-            style={[styles.sendButton, { backgroundColor: theme.colors.primary }]}
+            style={[
+              createButtonStyle(theme, 'primary'),
+              styles.sendButton,
+            ]}
             onPress={() => router.push('/(tabs)/send')}
           >
             <ArrowUpRight color="white" size={20} />
@@ -284,7 +288,10 @@ export default function WalletScreen() {
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={[styles.receiveButton, { backgroundColor: theme.colors.surface }]}
+            style={[
+              createButtonStyle(theme, 'secondary'),
+              styles.receiveButton,
+            ]}
             onPress={() => router.push('/(tabs)/receive')}
           >
             <ArrowDownLeft color={theme.colors.text} size={20} />

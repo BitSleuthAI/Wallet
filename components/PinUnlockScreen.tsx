@@ -13,6 +13,7 @@ import { Delete, Lock } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { platformStyles } from '@/constants/themes';
 
 export default function PinUnlockScreen() {
   const { theme } = useWallet();
@@ -185,12 +186,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
+    paddingHorizontal: platformStyles.spacing.xl,
   },
   header: {
     alignItems: 'center',
-    marginTop: 60,
-    marginBottom: 40,
+    marginTop: platformStyles.spacing.xxxl * 2,
+    marginBottom: platformStyles.spacing.xxxl + platformStyles.spacing.sm,
   },
   lockIconContainer: {
     width: 80,
@@ -198,31 +199,29 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
+    marginBottom: platformStyles.spacing.xxl,
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
+    ...platformStyles.typography.display,
     textAlign: 'center',
-    marginBottom: 12,
+    marginBottom: platformStyles.spacing.md,
   },
   subtitle: {
-    fontSize: 16,
+    ...platformStyles.typography.bodyLarge,
     textAlign: 'center',
-    lineHeight: 24,
-    paddingHorizontal: 20,
+    paddingHorizontal: platformStyles.spacing.xl,
   },
   attemptsText: {
-    fontSize: 14,
+    ...platformStyles.typography.body,
     textAlign: 'center',
-    marginTop: 12,
+    marginTop: platformStyles.spacing.md,
     fontWeight: '600',
   },
   pinDotsContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    gap: 20,
+    gap: platformStyles.spacing.xl,
     marginBottom: 80,
   },
   pinDot: {
@@ -235,7 +234,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 20,
+    gap: platformStyles.spacing.xl,
     paddingBottom: 60,
     marginTop: 'auto',
   },
@@ -245,21 +244,13 @@ const styles = StyleSheet.create({
     borderRadius: 40,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...platformStyles.buttonShadow,
   },
   deleteButton: {
     backgroundColor: 'transparent',
   },
   numberButtonText: {
-    fontSize: 24,
-    fontWeight: '600',
+    ...platformStyles.typography.heading,
     color: 'white',
   },
 });

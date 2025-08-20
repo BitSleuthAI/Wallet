@@ -14,6 +14,7 @@ import { RefreshCw, Copy, Share as ShareIcon } from 'lucide-react-native';
 import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
 import { useWallet } from '@/hooks/wallet-store';
+import { platformStyles, createButtonStyle } from '@/constants/themes';
 
 export default function ReceiveScreen() {
   const { currentWallet, generateNewAddress, theme } = useWallet();
@@ -183,7 +184,10 @@ export default function ReceiveScreen() {
 
         {/* New Address Button */}
         <TouchableOpacity
-          style={[styles.newAddressButton, { backgroundColor: theme.colors.primary }]}
+          style={[
+            createButtonStyle(theme, 'primary'),
+            styles.newAddressButton,
+          ]}
           onPress={handleNewAddress}
         >
           <RefreshCw color="white" size={20} />
@@ -195,9 +199,9 @@ export default function ReceiveScreen() {
       <View style={styles.bottomActionButtons}>
         <TouchableOpacity
           style={[
-            styles.actionButton, 
+            createButtonStyle(theme, 'secondary'),
+            styles.actionButton,
             { 
-              backgroundColor: theme.colors.surface,
               opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
             }
           ]}
@@ -212,9 +216,9 @@ export default function ReceiveScreen() {
 
         <TouchableOpacity
           style={[
-            styles.actionButton, 
+            createButtonStyle(theme, 'secondary'),
+            styles.actionButton,
             { 
-              backgroundColor: theme.colors.surface,
               opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
             }
           ]}

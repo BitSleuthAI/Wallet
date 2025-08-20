@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
 import { Transaction } from '@/types/wallet';
 import { useWallet } from '@/hooks/wallet-store';
+import { platformStyles } from '@/constants/themes';
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -98,11 +99,12 @@ export default function TransactionItem({ transaction, onPress }: TransactionIte
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 16,
-    marginHorizontal: 20,
-    marginVertical: 4,
-    borderRadius: 12,
+    padding: platformStyles.spacing.lg,
+    marginHorizontal: platformStyles.spacing.xl,
+    marginVertical: platformStyles.spacing.xs,
+    borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'flex-start',
+    ...platformStyles.shadow,
   },
   iconContainer: {
     width: 40,
@@ -110,7 +112,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: platformStyles.spacing.md,
   },
   content: {
     flex: 1,
@@ -119,44 +121,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: platformStyles.spacing.xs,
   },
   type: {
-    fontSize: 16,
+    ...platformStyles.typography.bodyLarge,
     fontWeight: '600',
   },
   amount: {
-    fontSize: 16,
+    ...platformStyles.typography.bodyLarge,
     fontWeight: '600',
   },
   details: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: platformStyles.spacing.sm,
   },
   date: {
-    fontSize: 14,
+    ...platformStyles.typography.body,
   },
   amountUSD: {
-    fontSize: 14,
+    ...platformStyles.typography.body,
   },
   statusRow: {
-    marginBottom: 4,
+    marginBottom: platformStyles.spacing.xs,
   },
   statusBadge: {
     alignSelf: 'flex-start',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
+    paddingHorizontal: platformStyles.spacing.sm,
+    paddingVertical: platformStyles.spacing.xs,
+    borderRadius: platformStyles.borderRadius.medium,
   },
   statusText: {
     color: 'white',
-    fontSize: 12,
+    ...platformStyles.typography.caption,
     fontWeight: '500',
   },
   address: {
-    fontSize: 12,
-    marginTop: 4,
+    ...platformStyles.typography.caption,
+    marginTop: platformStyles.spacing.xs,
   },
 });

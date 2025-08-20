@@ -13,6 +13,7 @@ import {
 import { Stack, router } from 'expo-router';
 import { QrCode, ArrowUpRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
 
 export default function SendScreen() {
   const { currentWallet, balance, theme } = useWallet();
@@ -154,12 +155,8 @@ export default function SendScreen() {
           <View style={styles.inputContainer}>
             <TextInput
               style={[
+                createInputStyle(theme),
                 styles.textInput,
-                {
-                  backgroundColor: theme.colors.surface,
-                  color: theme.colors.text,
-                  borderColor: theme.colors.border,
-                }
               ]}
               placeholder="bc1q..."
               placeholderTextColor={theme.colors.textSecondary}
@@ -206,12 +203,8 @@ export default function SendScreen() {
           
           <TextInput
             style={[
+              createInputStyle(theme),
               styles.amountInput,
-              {
-                backgroundColor: theme.colors.surface,
-                color: theme.colors.text,
-                borderColor: theme.colors.border,
-              }
             ]}
             placeholder="0.00000000"
             placeholderTextColor={theme.colors.textSecondary}
@@ -316,9 +309,9 @@ export default function SendScreen() {
         {/* Review Button */}
         <TouchableOpacity
           style={[
-            styles.reviewButton, 
+            createButtonStyle(theme, 'primary'),
+            styles.reviewButton,
             { 
-              backgroundColor: theme.colors.primary,
               opacity: (!recipientAddress || !amount) ? 0.5 : 1
             }
           ]}

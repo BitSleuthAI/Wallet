@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
+import { platformStyles } from '@/constants/themes';
 
 // Function to generate gradient colors from a base color
 function generateGradientColors(baseColor: string): [string, string] {
@@ -95,11 +96,12 @@ export default function WalletCard({ wallet, isActive = false, onPress }: Wallet
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: platformStyles.borderRadius.large,
+    padding: platformStyles.spacing.xl,
     width: 320,
     height: 160,
     justifyContent: 'space-between',
+    ...platformStyles.cardShadow,
   },
   header: {
     flexDirection: 'row',
@@ -108,32 +110,28 @@ const styles = StyleSheet.create({
   },
   walletName: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: '600',
+    ...platformStyles.typography.subtitle,
     maxWidth: 200,
   },
   walletType: {
     color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 13,
-    marginTop: 2,
+    ...platformStyles.typography.caption,
+    marginTop: platformStyles.spacing.xs,
   },
   balanceContainer: {
     flex: 1,
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: platformStyles.spacing.sm,
   },
   balance: {
     color: 'white',
-    fontSize: 24,
-    fontWeight: 'bold',
-    lineHeight: 28,
+    ...platformStyles.typography.heading,
   },
   balanceUSD: {
     color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 16,
+    ...platformStyles.typography.bodyLarge,
     fontWeight: '500',
-    marginTop: 4,
-    lineHeight: 20,
+    marginTop: platformStyles.spacing.xs,
   },
   footer: {
     alignItems: 'flex-end',
