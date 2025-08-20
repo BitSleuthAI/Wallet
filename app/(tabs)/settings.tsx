@@ -32,16 +32,18 @@ import {
   EyeOff,
   Coins,
   X,
+  Check,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import type { FiatCurrency } from '@/types/wallet';
 
 export default function SettingsScreen() {
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
   const [showAutoLockModal, setShowAutoLockModal] = useState<boolean>(false);
+  const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
 
   const handleLogout = () => {
     Alert.alert(
@@ -151,7 +153,17 @@ export default function SettingsScreen() {
           icon={Wallet}
           title="Current Wallet"
           subtitle={currentWallet ? `${currentWallet.name} (${currentWallet.type})` : 'No wallet selected'}
-          onPress={() => console.log('Manage wallets')}
+          onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
+          rightElement={
+            wallets.length > 1 ? (
+              <View style={styles.walletInfo}>
+                <Text style={[styles.walletCount, { color: theme.colors.textSecondary }]}>
+                  {wallets.length} wallets
+                </Text>
+                <ChevronRight color={theme.colors.textSecondary} size={20} />
+              </View>
+            ) : undefined
+          }
         />
 
         <SettingItem
@@ -393,6 +405,64 @@ export default function SettingsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Wallet Selection Modal */}
+      <Modal
+        visible={showWalletModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowWalletModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
+                Select Wallet
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowWalletModal(false)}
+                style={styles.modalCloseButton}
+              >
+                <X color={theme.colors.textSecondary} size={24} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.currencyList}>
+              {wallets.map((wallet) => (
+                <TouchableOpacity
+                  key={wallet.id}
+                  style={[
+                    styles.walletItem,
+                    currentWallet?.id === wallet.id && {
+                      backgroundColor: theme.colors.primary + '20',
+                    },
+                  ]}
+                  onPress={() => {
+                    switchWallet(wallet.id);
+                    setShowWalletModal(false);
+                  }}
+                >
+                  <View style={[
+                    styles.walletColorIndicator,
+                    { backgroundColor: wallet.color || theme.colors.primary }
+                  ]} />
+                  <View style={styles.walletItemInfo}>
+                    <Text style={[styles.walletItemName, { color: theme.colors.text }]}>
+                      {wallet.name}
+                    </Text>
+                    <Text style={[styles.walletItemType, { color: theme.colors.textSecondary }]}>
+                      {wallet.type} • {wallet.addresses.length} address{wallet.addresses.length !== 1 ? 'es' : ''}
+                    </Text>
+                  </View>
+                  {currentWallet?.id === wallet.id && (
+                    <Check color={theme.colors.primary} size={20} />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -539,5 +609,38 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
     borderRadius: 10,
+  },
+  walletInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  walletCount: {
+    fontSize: 14,
+    marginRight: 8,
+  },
+  walletItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    marginVertical: 2,
+    borderRadius: 12,
+  },
+  walletColorIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  walletItemInfo: {
+    flex: 1,
+  },
+  walletItemName: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  walletItemType: {
+    fontSize: 14,
+    marginTop: 2,
   },
 });
