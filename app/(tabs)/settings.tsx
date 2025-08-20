@@ -155,7 +155,7 @@ export default function SettingsScreen() {
           icon={Settings}
           title="Wallet Settings"
           subtitle="Configure wallet preferences"
-          onPress={() => console.log('Wallet settings')}
+          onPress={() => router.push('/wallet-settings')}
         />
 
         <SettingItem
