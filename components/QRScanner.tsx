@@ -91,15 +91,55 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     setScanned(true);
     console.log('QR Code scanned:', data);
     
-    // Validate that the scanned data looks like a recovery phrase
-    const words = data.trim().split(/\s+/);
-    if (words.length === 12 || words.length === 24) {
-      onScan(data);
-      onClose();
-    } else {
+    try {
+      // Check if it's a Bitcoin address or URI
+      let address = data.trim();
+      
+      // Handle bitcoin: URI format
+      if (address.startsWith('bitcoin:')) {
+        const url = new URL(address);
+        address = url.pathname;
+      }
+      
+      // Basic Bitcoin address validation
+      const isValidAddress = (
+        address.startsWith('bc1') || 
+        address.startsWith('1') || 
+        address.startsWith('3') ||
+        address.startsWith('tb1') // testnet
+      ) && address.length >= 26 && address.length <= 62;
+      
+      // Check if it's a recovery phrase (12 or 24 words)
+      const words = data.trim().split(/\s+/);
+      const isRecoveryPhrase = words.length === 12 || words.length === 24;
+      
+      if (isValidAddress) {
+        onScan(data);
+        onClose();
+      } else if (isRecoveryPhrase) {
+        onScan(data);
+        onClose();
+      } else {
+        Alert.alert(
+          'Invalid QR Code',
+          'The scanned QR code does not contain a valid Bitcoin address or recovery phrase.',
+          [
+            {
+              text: 'Scan Again',
+              onPress: () => setScanned(false),
+            },
+            {
+              text: 'Cancel',
+              onPress: onClose,
+            },
+          ]
+        );
+      }
+    } catch (error) {
+      console.error('Error processing QR code:', error);
       Alert.alert(
-        'Invalid QR Code',
-        'The scanned QR code does not contain a valid recovery phrase. Recovery phrases should contain 12 or 24 words.',
+        'Error',
+        'Failed to process the QR code. Please try again.',
         [
           {
             text: 'Scan Again',
@@ -135,7 +175,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           
           <View style={styles.instructions}>
             <Text style={styles.instructionText}>
-              Position the QR code within the frame to scan your recovery phrase
+              Position the QR code within the frame to scan Bitcoin addresses or recovery phrases
             </Text>
           </View>
         </View>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -9,13 +9,16 @@ import {
   Switch,
   Alert,
   ScrollView,
+  Modal,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { QrCode, ArrowUpRight } from 'lucide-react-native';
+import { QrCode, ArrowUpRight, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
 import WalletSelector from '@/components/WalletSelector';
-import { sendTransaction } from '@/services/bitcoin-service';
+import QRScanner from '@/components/QRScanner';
+import { sendTransaction, getBitcoinPrice, isValidBitcoinAddress } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 
 export default function SendScreen() {
@@ -23,17 +26,106 @@ export default function SendScreen() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(3);
+  const [feeRate, setFeeRate] = useState(5);
   const [enableRBF, setEnableRBF] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
+  const [showQRScanner, setShowQRScanner] = useState(false);
+  const [bitcoinPrice, setBitcoinPrice] = useState<number>(0);
+  const [addressValidation, setAddressValidation] = useState<{
+    isValid: boolean;
+    message: string;
+  }>({ isValid: false, message: '' });
+  const [feeEstimates, setFeeEstimates] = useState<any>(null);
+
+  // Load Bitcoin price and fee estimates on component mount
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        const [price, fees] = await Promise.all([
+          getBitcoinPrice().catch(() => ({ usd: 0 })),
+          feeEstimationService.getFeeEstimates().catch(() => null)
+        ]);
+        setBitcoinPrice(price.usd);
+        setFeeEstimates(fees);
+        
+        // Set default fee rate based on estimates
+        if (fees) {
+          setFeeRate(fees.halfHourFee || 5);
+        }
+      } catch (error) {
+        console.warn('Failed to load initial data:', error);
+      }
+    };
+    
+    loadInitialData();
+  }, []);
+
+  // Validate Bitcoin address in real-time
+  useEffect(() => {
+    if (!recipientAddress.trim()) {
+      setAddressValidation({ isValid: false, message: '' });
+      return;
+    }
+
+    const validateAddress = () => {
+      try {
+        const isValid = isValidBitcoinAddress(recipientAddress.trim());
+        if (isValid) {
+          setAddressValidation({ 
+            isValid: true, 
+            message: 'Valid Bitcoin address' 
+          });
+        } else {
+          setAddressValidation({ 
+            isValid: false, 
+            message: 'Invalid Bitcoin address format' 
+          });
+        }
+      } catch (error) {
+        setAddressValidation({ 
+          isValid: false, 
+          message: 'Invalid address format' 
+        });
+      }
+    };
+
+    const timeoutId = setTimeout(validateAddress, 300);
+    return () => clearTimeout(timeoutId);
+  }, [recipientAddress]);
+
+  // Calculate estimated fee when inputs change
+  useEffect(() => {
+    if (amount && parseFloat(amount) > 0 && feeRate > 0) {
+      try {
+        // Estimate transaction size (1 input, 2 outputs for change)
+        const estimatedSize = 250; // bytes (conservative estimate)
+        const feeInSats = estimatedSize * feeRate;
+        const feeInBTC = feeInSats / 100000000;
+        setEstimatedFee(feeInBTC);
+      } catch (error) {
+        console.warn('Error calculating fee estimate:', error);
+        setEstimatedFee(null);
+      }
+    } else {
+      setEstimatedFee(null);
+    }
+  }, [amount, feeRate]);
 
   const handleSendMax = () => {
     try {
       if (balance > 0) {
-        // Reserve some amount for fees (rough estimate)
-        const feeEstimate = 0.0001; // ~0.0001 BTC for fees
-        const maxSendable = Math.max(0, balance - feeEstimate);
+        // Calculate more accurate fee estimate
+        const estimatedSize = 250; // bytes
+        const feeInSats = estimatedSize * feeRate;
+        const feeInBTC = feeInSats / 100000000;
+        const maxSendable = Math.max(0, balance - feeInBTC);
+        
+        if (maxSendable <= 0) {
+          Alert.alert('Error', 'Insufficient balance to cover transaction fees');
+          return;
+        }
+        
         setAmount(maxSendable.toFixed(8));
       } else {
         Alert.alert('Error', 'No balance available to send');
@@ -44,60 +136,175 @@ export default function SendScreen() {
     }
   };
 
+  const handleQRScan = (data: string) => {
+    try {
+      // Handle different QR code formats
+      let address = data.trim();
+      
+      // Handle bitcoin: URI format
+      if (address.startsWith('bitcoin:')) {
+        const url = new URL(address);
+        address = url.pathname;
+        
+        // Extract amount if present
+        const amountParam = url.searchParams.get('amount');
+        if (amountParam) {
+          setAmount(amountParam);
+        }
+      }
+      
+      setRecipientAddress(address);
+      setShowQRScanner(false);
+    } catch (error) {
+      console.error('Error parsing QR code:', error);
+      Alert.alert('Error', 'Invalid QR code format');
+    }
+  };
+
+  const convertAmount = (value: string, fromBTC: boolean): string => {
+    if (!value || !bitcoinPrice) return '';
+    
+    try {
+      const numValue = parseFloat(value);
+      if (isNaN(numValue)) return '';
+      
+      if (fromBTC) {
+        // Convert BTC to USD
+        return (numValue * bitcoinPrice).toFixed(2);
+      } else {
+        // Convert USD to BTC
+        return (numValue / bitcoinPrice).toFixed(8);
+      }
+    } catch (error) {
+      return '';
+    }
+  };
+
+  const handleAmountChange = (value: string) => {
+    setAmount(value);
+  };
+
+  const toggleCurrency = () => {
+    if (amount && bitcoinPrice) {
+      const convertedAmount = convertAmount(amount, isAmountInBTC);
+      setAmount(convertedAmount);
+    }
+    setIsAmountInBTC(!isAmountInBTC);
+  };
+
   const handleSendTransaction = async () => {
     if (isLoading) return;
     
     try {
       setIsLoading(true);
       
-      // Validate inputs
-      if (!recipientAddress || !amount) {
-        Alert.alert('Error', 'Please fill in all required fields');
+      // Comprehensive validation
+      if (!recipientAddress.trim()) {
+        Alert.alert('Error', 'Please enter a recipient address');
         return;
       }
 
-      // Validate recipient address format (basic check)
-      if (!recipientAddress.startsWith('bc1') && !recipientAddress.startsWith('1') && !recipientAddress.startsWith('3')) {
-        Alert.alert('Error', 'Invalid Bitcoin address format');
+      if (!amount.trim()) {
+        Alert.alert('Error', 'Please enter an amount');
         return;
+      }
+
+      // Validate recipient address
+      if (!addressValidation.isValid) {
+        Alert.alert('Error', 'Please enter a valid Bitcoin address');
+        return;
+      }
+
+      // Convert amount to BTC if needed
+      let amountInBTC: number;
+      if (isAmountInBTC) {
+        amountInBTC = parseFloat(amount);
+      } else {
+        // Convert USD to BTC
+        if (!bitcoinPrice) {
+          Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
+          return;
+        }
+        amountInBTC = parseFloat(amount) / bitcoinPrice;
       }
 
       // Validate amount
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
+      if (isNaN(amountInBTC) || amountInBTC <= 0) {
         Alert.alert('Error', 'Please enter a valid amount');
         return;
       }
 
-      if (amountNum > balance) {
-        Alert.alert('Error', 'Insufficient balance');
+      // Check minimum amount (dust limit)
+      const dustLimit = 0.00000546; // 546 satoshis
+      if (amountInBTC < dustLimit) {
+        Alert.alert('Error', `Amount too small. Minimum amount is ${dustLimit} BTC`);
         return;
       }
 
-      console.log('🚀 Starting transaction send process...');
+      // Check balance including estimated fee
+      const totalNeeded = amountInBTC + (estimatedFee || 0.0001);
+      if (totalNeeded > balance) {
+        Alert.alert(
+          'Insufficient Balance', 
+          `You need ${totalNeeded.toFixed(8)} BTC (including fees) but only have ${balance.toFixed(8)} BTC available.`
+        );
+        return;
+      }
+
+      console.log('🚀 Starting real Bitcoin transaction send process...');
+      console.log('Transaction details:', {
+        from: currentWallet?.name,
+        to: recipientAddress.substring(0, 20) + '...',
+        amount: amountInBTC,
+        feeRate,
+        enableRBF,
+        network: 'mainnet'
+      });
       
-      // Send the transaction
+      // Send the real transaction
       const result = await sendTransaction(
         currentWallet,
-        recipientAddress,
-        amountNum,
+        recipientAddress.trim(),
+        amountInBTC,
         feeRate,
         enableRBF
       );
       
-      console.log('✅ Transaction sent successfully:', result);
+      console.log('✅ Real Bitcoin transaction sent successfully:', result);
       
-      // Show success message
+      // Show success message with transaction details
+      const feeUSD = bitcoinPrice ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
+      const amountUSD = bitcoinPrice ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
+      
       Alert.alert(
-        'Transaction Sent!',
-        `Your Bitcoin transaction has been broadcast to the network.\n\nTransaction ID: ${result.txid.substring(0, 16)}...\nFee: ${result.fee.toFixed(8)} BTC\n\nIt may take a few minutes to confirm.`,
+        'Transaction Broadcast Successfully! 🎉',
+        `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
+        `Transaction ID: ${result.txid}\n\n` +
+        `Amount: ${amountInBTC.toFixed(8)} BTC (${amountUSD})\n` +
+        `Fee: ${result.fee.toFixed(8)} BTC (${feeUSD})\n` +
+        `Fee Rate: ${feeRate} sat/vB\n\n` +
+        `The transaction will appear in your wallet once it receives confirmations. ` +
+        `This typically takes 10-60 minutes depending on network congestion.`,
         [{ 
-          text: 'OK', 
+          text: 'View Transaction',
           onPress: () => {
             // Clear form
             setRecipientAddress('');
             setAmount('');
             setEstimatedFee(null);
+            setAddressValidation({ isValid: false, message: '' });
+            
+            // Navigate to transaction history
+            router.push('/transaction-history');
+          }
+        }, {
+          text: 'Done',
+          onPress: () => {
+            // Clear form
+            setRecipientAddress('');
+            setAmount('');
+            setEstimatedFee(null);
+            setAddressValidation({ isValid: false, message: '' });
             
             // Navigate to home to see updated balance
             router.push('/');
@@ -106,12 +313,24 @@ export default function SendScreen() {
       );
       
     } catch (error) {
-      console.error('❌ Error sending transaction:', error);
+      console.error('❌ Error sending Bitcoin transaction:', error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      // Provide more specific error messages
+      let userMessage = errorMessage;
+      if (errorMessage.includes('Insufficient funds')) {
+        userMessage = 'Insufficient funds. Please check your balance and try a smaller amount.';
+      } else if (errorMessage.includes('Invalid address')) {
+        userMessage = 'Invalid recipient address. Please check the address and try again.';
+      } else if (errorMessage.includes('Network error')) {
+        userMessage = 'Network error. Please check your internet connection and try again.';
+      } else if (errorMessage.includes('Fee too low')) {
+        userMessage = 'Transaction fee is too low. Please increase the fee rate and try again.';
+      }
       
       Alert.alert(
         'Transaction Failed',
-        `Failed to send transaction: ${errorMessage}\n\nPlease check your inputs and try again.`,
+        `Failed to send Bitcoin transaction:\n\n${userMessage}\n\nPlease check your inputs and try again.`,
         [{ text: 'OK' }]
       );
     } finally {
@@ -122,41 +341,76 @@ export default function SendScreen() {
   const handleReviewTransaction = () => {
     try {
       // Validate inputs
-      if (!recipientAddress || !amount) {
-        Alert.alert('Error', 'Please fill in all required fields');
+      if (!recipientAddress.trim()) {
+        Alert.alert('Error', 'Please enter a recipient address');
         return;
       }
 
-      // Validate recipient address format (basic check)
-      if (!recipientAddress.startsWith('bc1') && !recipientAddress.startsWith('1') && !recipientAddress.startsWith('3')) {
-        Alert.alert('Error', 'Invalid Bitcoin address format');
+      if (!amount.trim()) {
+        Alert.alert('Error', 'Please enter an amount');
         return;
+      }
+
+      // Validate recipient address
+      if (!addressValidation.isValid) {
+        Alert.alert('Error', 'Please enter a valid Bitcoin address');
+        return;
+      }
+
+      // Convert amount to BTC for display
+      let amountInBTC: number;
+      let displayAmount: string;
+      
+      if (isAmountInBTC) {
+        amountInBTC = parseFloat(amount);
+        displayAmount = `${amount} BTC`;
+        if (bitcoinPrice) {
+          const usdValue = (amountInBTC * bitcoinPrice).toFixed(2);
+          displayAmount += ` (${usdValue})`;
+        }
+      } else {
+        if (!bitcoinPrice) {
+          Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
+          return;
+        }
+        amountInBTC = parseFloat(amount) / bitcoinPrice;
+        displayAmount = `${amount} (${amountInBTC.toFixed(8)} BTC)`;
       }
 
       // Validate amount
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
+      if (isNaN(amountInBTC) || amountInBTC <= 0) {
         Alert.alert('Error', 'Please enter a valid amount');
         return;
       }
 
-      if (amountNum > balance) {
-        Alert.alert('Error', 'Insufficient balance');
+      // Check balance including estimated fee
+      const totalNeeded = amountInBTC + (estimatedFee || 0.0001);
+      if (totalNeeded > balance) {
+        Alert.alert(
+          'Insufficient Balance', 
+          `You need ${totalNeeded.toFixed(8)} BTC (including fees) but only have ${balance.toFixed(8)} BTC available.`
+        );
         return;
       }
 
-      // Calculate estimated fee
-      const estimatedTxSize = 250; // bytes (rough estimate for 1 input, 2 outputs)
-      const estimatedFeeBTC = (estimatedTxSize * feeRate) / 100000000;
+      // Format fee display
+      const feeDisplay = estimatedFee ? `${estimatedFee.toFixed(8)} BTC` : 'Calculating...';
+      const feeUSDDisplay = estimatedFee && bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : '';
       
-      // Show transaction review
+      // Show comprehensive transaction review
       Alert.alert(
-        'Review Transaction',
-        `Send ${amount} ${isAmountInBTC ? 'BTC' : 'USD'} to:\n${recipientAddress.slice(0, 20)}...\n\nEstimated Fee: ${estimatedFeeBTC.toFixed(8)} BTC (${feeRate} sat/vB)\nRBF: ${enableRBF ? 'Enabled' : 'Disabled'}\n\nThis will create and broadcast a real Bitcoin transaction.`,
+        '⚠️ Review Bitcoin Transaction',
+        `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
+        `📤 Send: ${displayAmount}\n` +
+        `📍 To: ${recipientAddress.slice(0, 30)}...\n\n` +
+        `💰 Network Fee: ${feeDisplay}${feeUSDDisplay}\n` +
+        `⚡ Fee Rate: ${feeRate} sat/vB\n` +
+        `🔄 RBF: ${enableRBF ? 'Enabled' : 'Disabled'}\n\n` +
+        `⚠️ WARNING: This transaction cannot be reversed once broadcast!`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
-            text: 'Send Transaction', 
+            text: 'Send Bitcoin', 
             style: 'destructive',
             onPress: handleSendTransaction
           },
@@ -222,17 +476,32 @@ export default function SendScreen() {
             />
             <TouchableOpacity 
               style={styles.qrButton}
-              onPress={() => {
-                Alert.alert(
-                  'QR Scanner',
-                  'QR code scanning is not available in this demo. Please enter the address manually.',
-                  [{ text: 'OK' }]
-                );
-              }}
+              onPress={() => setShowQRScanner(true)}
             >
               <QrCode color={theme.colors.textSecondary} size={20} />
             </TouchableOpacity>
           </View>
+          
+          {/* Address Validation Indicator */}
+          {recipientAddress.trim() && (
+            <View style={styles.validationContainer}>
+              {addressValidation.isValid ? (
+                <View style={styles.validationRow}>
+                  <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
+                  <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
+                    {addressValidation.message}
+                  </Text>
+                </View>
+              ) : (
+                <View style={styles.validationRow}>
+                  <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
+                  <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
+                    {addressValidation.message}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Amount */}
@@ -247,7 +516,7 @@ export default function SendScreen() {
               </Text>
               <Switch
                 value={!isAmountInBTC}
-                onValueChange={(value) => setIsAmountInBTC(!value)}
+                onValueChange={toggleCurrency}
                 trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
                 thumbColor="white"
               />
@@ -262,12 +531,21 @@ export default function SendScreen() {
               createInputStyle(theme),
               styles.amountInput,
             ]}
-            placeholder="0.00000000"
+            placeholder={isAmountInBTC ? "0.00000000" : "0.00"}
             placeholderTextColor={theme.colors.textSecondary}
             value={amount}
-            onChangeText={setAmount}
+            onChangeText={handleAmountChange}
             keyboardType="numeric"
           />
+          
+          {/* Amount conversion display */}
+          {amount && bitcoinPrice && (
+            <View style={styles.conversionContainer}>
+              <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
+                ≈ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
+              </Text>
+            </View>
+          )}
           
           <TouchableOpacity onPress={handleSendMax}>
             <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>
@@ -300,17 +578,17 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === 1 ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: feeRate === (feeEstimates?.economyFee || 1) ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(1)}
+              onPress={() => setFeeRate(feeEstimates?.economyFee || 1)}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === 1 ? 'white' : theme.colors.text }
+                { color: feeRate === (feeEstimates?.economyFee || 1) ? 'white' : theme.colors.text }
               ]}>
-                Slow\n1 sat/vB
+                Slow\n{feeEstimates?.economyFee || 1} sat/vB
               </Text>
             </TouchableOpacity>
             
@@ -318,17 +596,17 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === 5 ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: feeRate === (feeEstimates?.halfHourFee || 5) ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(5)}
+              onPress={() => setFeeRate(feeEstimates?.halfHourFee || 5)}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === 5 ? 'white' : theme.colors.text }
+                { color: feeRate === (feeEstimates?.halfHourFee || 5) ? 'white' : theme.colors.text }
               ]}>
-                Normal\n5 sat/vB
+                Normal\n{feeEstimates?.halfHourFee || 5} sat/vB
               </Text>
             </TouchableOpacity>
             
@@ -336,17 +614,17 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === 15 ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: feeRate === (feeEstimates?.fastestFee || 15) ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(15)}
+              onPress={() => setFeeRate(feeEstimates?.fastestFee || 15)}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === 15 ? 'white' : theme.colors.text }
+                { color: feeRate === (feeEstimates?.fastestFee || 15) ? 'white' : theme.colors.text }
               ]}>
-                Fast\n15 sat/vB
+                Fast\n{feeEstimates?.fastestFee || 15} sat/vB
               </Text>
             </TouchableOpacity>
           </View>
@@ -355,6 +633,7 @@ export default function SendScreen() {
             <View style={styles.feeEstimate}>
               <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                 Estimated fee: {estimatedFee.toFixed(8)} BTC
+                {bitcoinPrice && ` (${(estimatedFee * bitcoinPrice).toFixed(2)})`}
               </Text>
             </View>
           )}
@@ -382,11 +661,7 @@ export default function SendScreen() {
         <TouchableOpacity 
           style={styles.coinControlSection}
           onPress={() => {
-            Alert.alert(
-              'Coin Control',
-              'Coin control is not available in this demo. All available coins will be used automatically.',
-              [{ text: 'OK' }]
-            );
+            router.push('/coin-control');
           }}
         >
           <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
@@ -404,16 +679,28 @@ export default function SendScreen() {
             createButtonStyle(theme, 'primary'),
             styles.reviewButton,
             { 
-              opacity: (!recipientAddress || !amount || isLoading) ? 0.5 : 1
+              opacity: (!recipientAddress || !amount || isLoading || !addressValidation.isValid) ? 0.5 : 1
             }
           ]}
           onPress={handleReviewTransaction}
-          disabled={!recipientAddress || !amount || isLoading}
+          disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
         >
           <Text style={styles.reviewButtonText}>
-            {isLoading ? 'Sending...' : 'Review Transaction'}
+            {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
           </Text>
         </TouchableOpacity>
+        
+        {/* QR Scanner Modal */}
+        <Modal
+          visible={showQRScanner}
+          animationType="slide"
+          presentationStyle="fullScreen"
+        >
+          <QRScanner
+            onScan={handleQRScan}
+            onClose={() => setShowQRScanner(false)}
+          />
+        </Modal>
       </ScrollView>
     </SafeAreaView>
   );
@@ -618,5 +905,25 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  validationContainer: {
+    marginTop: 8,
+  },
+  validationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  validationText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  conversionContainer: {
+    marginTop: 4,
+    alignItems: 'flex-end',
+  },
+  conversionText: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });

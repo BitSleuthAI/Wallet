@@ -289,7 +289,7 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
 };
 
 // Validate Bitcoin address format
-const isValidBitcoinAddress = (address: string): boolean => {
+export const isValidBitcoinAddress = (address: string): boolean => {
   if (!address || typeof address !== 'string') {
     return false;
   }
@@ -608,16 +608,22 @@ export const createTransaction = async (
     // Convert amount from BTC to satoshis
     const amountSats = Math.floor(amount * 100000000);
     
-    // For demo purposes, simulate transaction creation
+    // For web platform or when no UTXOs available, create demo transaction
     if (Platform.OS === 'web' || utxos.length === 0) {
-      console.log('🎭 Creating demo transaction (web platform or no UTXOs)');
+      const isWeb = Platform.OS === 'web';
+      console.log(isWeb ? '🌐 Creating demo transaction (web platform - CORS limitations)' : '📱 Creating demo transaction (no UTXOs available)');
+      
+      if (isWeb) {
+        console.log('⚠️ Web platform cannot broadcast real transactions due to CORS restrictions');
+        console.log('📱 Use mobile app for real Bitcoin transactions');
+      }
       
       // Estimate transaction size (1 input, 2 outputs)
       const estimatedSize = 250; // bytes
       const fee = Math.ceil(estimatedSize * feeRate);
       
       // Generate a mock transaction ID
-      const mockTxId = generateMockTxId(toAddress, amount, Date.now());
+      const mockTxId = generateMockTxId(toAddress + amount.toString(), Date.now(), Math.random());
       
       // Create a mock transaction hex (this would be a real signed transaction in production)
       const mockTxHex = generateMockTxHex(mockTxId, toAddress, amountSats, fee);
@@ -625,7 +631,8 @@ export const createTransaction = async (
       console.log('✅ Demo transaction created:', {
         txid: mockTxId,
         fee: fee / 100000000, // Convert back to BTC
-        size: estimatedSize
+        size: estimatedSize,
+        note: isWeb ? 'Demo only - no real Bitcoin sent' : 'Demo - no UTXOs available'
       });
       
       return {
@@ -636,7 +643,8 @@ export const createTransaction = async (
     }
     
     // Real transaction creation for mobile with UTXOs
-    console.log('🔧 Creating real transaction with UTXOs...');
+    console.log('🔧 Creating REAL Bitcoin transaction with UTXOs for MAINNET broadcast...');
+    console.log('⚠️ This will create a real, spendable Bitcoin transaction!');
     
     // Import required libraries
     const bitcoin = require('bitcoinjs-lib');
@@ -732,10 +740,12 @@ export const createTransaction = async (
     const txHex = tx.toHex();
     const txId = tx.getId();
     
-    console.log('✅ Real transaction created:', {
+    console.log('✅ REAL Bitcoin transaction created successfully:', {
       txid: txId,
       fee: selection.fee / 100000000,
-      size: tx.byteLength()
+      size: tx.byteLength(),
+      network: 'MAINNET',
+      ready_to_broadcast: true
     });
     
     return {
@@ -764,104 +774,225 @@ const fetchTransaction = async (txid: string): Promise<string> => {
   }
 };
 
-// Generate mock transaction ID for demo
-const generateMockTxId = (toAddress: string, amount: number, timestamp: number): string => {
-  const input = `${toAddress}${amount}${timestamp}`;
+// Generate mock transaction ID for demo (web platform only)
+const generateMockTxId = (input: string, timestamp: number, random: number): string => {
+  const combinedInput = `${input}${timestamp}${random}`;
   let hash = 0;
-  for (let i = 0; i < input.length; i++) {
-    const char = input.charCodeAt(i);
+  for (let i = 0; i < combinedInput.length; i++) {
+    const char = combinedInput.charCodeAt(i);
     hash = ((hash << 5) - hash) + char;
     hash = hash & hash;
   }
   
-  // Convert to hex and pad to 64 characters
+  // Convert to hex and pad to 64 characters (valid Bitcoin txid format)
   const hexHash = Math.abs(hash).toString(16).padStart(8, '0');
-  return (hexHash + hexHash + hexHash + hexHash + hexHash + hexHash + hexHash + hexHash).substring(0, 64);
+  const fullHash = (hexHash + hexHash + hexHash + hexHash + hexHash + hexHash + hexHash + hexHash).substring(0, 64);
+  
+  // Ensure it looks like a real Bitcoin transaction ID
+  return fullHash.toLowerCase();
 };
 
-// Generate mock transaction hex for demo
+// Generate mock transaction hex for demo (web platform only)
 const generateMockTxHex = (txid: string, toAddress: string, amount: number, fee: number): string => {
-  // This is a simplified mock - real transaction hex would be much more complex
-  const version = '02000000'; // Version 2
-  const inputCount = '01'; // 1 input
-  const outputCount = '02'; // 2 outputs (recipient + change)
-  const locktime = '00000000'; // No locktime
+  // This is a simplified mock for demo purposes - real transaction hex is much more complex
+  // This is only used on web platform where real transactions cannot be broadcast
   
-  // Mock input (36 bytes hash + 4 bytes index + script + sequence)
-  const mockInput = 'a'.repeat(72) + '00000000' + '6a' + 'b'.repeat(106) + 'ffffffff';
+  const version = '02000000'; // Version 2 (4 bytes)
+  const inputCount = '01'; // 1 input (1 byte)
+  const outputCount = '02'; // 2 outputs (1 byte) - recipient + change
+  const locktime = '00000000'; // No locktime (4 bytes)
   
-  // Mock outputs
-  const recipientOutput = amount.toString(16).padStart(16, '0') + '19' + 'c'.repeat(50);
-  const changeOutput = (50000000 - amount - fee).toString(16).padStart(16, '0') + '19' + 'd'.repeat(50);
+  // Mock input: previous tx hash (32 bytes) + output index (4 bytes) + script length + script + sequence (4 bytes)
+  const mockPrevTxHash = txid.substring(0, 64); // Use part of txid as mock previous tx
+  const mockOutputIndex = '00000000';
+  const mockScriptLength = '6a'; // 106 bytes
+  const mockScript = 'b'.repeat(212); // Mock script (106 bytes = 212 hex chars)
+  const mockSequence = 'ffffffff';
+  const mockInput = mockPrevTxHash + mockOutputIndex + mockScriptLength + mockScript + mockSequence;
   
-  return version + inputCount + mockInput + outputCount + recipientOutput + changeOutput + locktime;
+  // Mock outputs: value (8 bytes) + script length + script
+  const recipientValue = amount.toString(16).padStart(16, '0');
+  const recipientScriptLength = '19'; // 25 bytes for P2WPKH
+  const recipientScript = 'c'.repeat(50); // Mock recipient script
+  const recipientOutput = recipientValue + recipientScriptLength + recipientScript;
+  
+  const changeValue = Math.max(0, 50000000 - amount - fee).toString(16).padStart(16, '0');
+  const changeScriptLength = '19'; // 25 bytes for P2WPKH
+  const changeScript = 'd'.repeat(50); // Mock change script
+  const changeOutput = changeValue + changeScriptLength + changeScript;
+  
+  const mockTxHex = version + inputCount + mockInput + outputCount + recipientOutput + changeOutput + locktime;
+  
+  // Ensure minimum length for a valid-looking transaction
+  return mockTxHex.padEnd(500, '0');
 };
 
 export const broadcastTransaction = async (txHex: string): Promise<string> => {
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  console.log('📡 Broadcasting transaction to network...');
+  console.log('📡 Broadcasting REAL Bitcoin transaction to MAINNET...');
   console.log('Transaction hex length:', txHex.length);
   
-  // For demo purposes on web or when APIs are unavailable, simulate broadcast
-  if (Platform.OS === 'web' as any) {
-    console.log('🎭 Simulating transaction broadcast (web platform)');
+  // Validate transaction hex format
+  if (!txHex || typeof txHex !== 'string' || txHex.length < 100) {
+    throw new Error('Invalid transaction hex format');
+  }
+  
+  // For web platform, we still need to simulate since CORS restrictions prevent direct broadcast
+  if (Platform.OS === 'web') {
+    console.log('🌐 Web platform detected - simulating broadcast (CORS limitations)');
+    console.log('⚠️ Note: On web, transactions cannot be broadcast due to CORS restrictions');
+    console.log('📱 Use mobile app for real Bitcoin transaction broadcasting');
     
     // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000));
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
     
-    // Extract transaction ID from hex (in real implementation, this would be calculated)
+    // Generate a realistic-looking transaction ID
     const mockTxId = generateMockTxId(txHex, Date.now(), Math.random());
     
-    console.log('✅ Demo transaction broadcast successful:', mockTxId);
+    console.log('✅ Demo transaction broadcast simulated:', mockTxId);
+    console.log('💡 This is a simulation - no real Bitcoin was sent');
     return mockTxId;
   }
   
-  // Try multiple broadcast endpoints for redundancy
+  // Real transaction broadcasting for mobile platforms
+  console.log('📱 Mobile platform - attempting REAL mainnet broadcast...');
+  
+  // Multiple broadcast endpoints for redundancy
   const broadcastEndpoints = [
-    { name: 'Blockstream', url: `${BLOCKSTREAM_API}/tx`, contentType: 'text/plain' },
-    { name: 'Mempool.space', url: `${MEMPOOL_API}/tx`, contentType: 'text/plain' },
+    { 
+      name: 'Blockstream', 
+      url: `${BLOCKSTREAM_API}/tx`, 
+      contentType: 'text/plain',
+      timeout: 30000 // 30 seconds
+    },
+    { 
+      name: 'Mempool.space', 
+      url: `${MEMPOOL_API}/tx`, 
+      contentType: 'text/plain',
+      timeout: 30000
+    },
+    {
+      name: 'BlockCypher',
+      url: 'https://api.blockcypher.com/v1/btc/main/txs/push',
+      contentType: 'application/json',
+      timeout: 30000,
+      formatBody: (hex: string) => JSON.stringify({ tx: hex })
+    }
   ];
   
   let lastError: Error | null = null;
+  let successfulBroadcast = false;
   
   for (const endpoint of broadcastEndpoints) {
     try {
-      console.log(`🔍 Trying to broadcast via ${endpoint.name}...`);
+      console.log(`🔍 Attempting REAL broadcast via ${endpoint.name}...`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), endpoint.timeout);
+      
+      const requestBody = endpoint.formatBody ? endpoint.formatBody(txHex) : txHex;
       
       const response = await fetch(endpoint.url, {
         method: 'POST',
         headers: {
           'Content-Type': endpoint.contentType,
           'User-Agent': 'BitcoinWallet/1.0',
+          'Accept': 'text/plain, application/json',
         },
-        body: txHex,
-        ...(Platform.OS === 'web' ? { 
-          mode: 'cors' as const,
-          credentials: 'omit' as const,
-        } : {}),
+        body: requestBody,
+        signal: controller.signal,
       });
+      
+      clearTimeout(timeoutId);
       
       if (!response.ok) {
         const errorText = await response.text();
-        throw new Error(`HTTP ${response.status}: ${errorText}`);
+        console.warn(`❌ ${endpoint.name} returned ${response.status}:`, errorText);
+        
+        // Parse specific error messages
+        if (errorText.includes('dust') || errorText.includes('too-small')) {
+          throw new Error('Transaction output too small (dust limit)');
+        }
+        if (errorText.includes('fee') || errorText.includes('insufficient')) {
+          throw new Error('Transaction fee too low or insufficient funds');
+        }
+        if (errorText.includes('already') || errorText.includes('duplicate')) {
+          throw new Error('Transaction already exists in mempool');
+        }
+        if (errorText.includes('invalid') || errorText.includes('malformed')) {
+          throw new Error('Invalid transaction format');
+        }
+        
+        throw new Error(`Broadcast failed: ${errorText}`);
       }
       
-      const txid = await response.text();
-      console.log(`✅ Transaction broadcast successful via ${endpoint.name}:`, txid);
-      return txid.trim();
+      let txid: string;
+      const responseText = await response.text();
+      
+      // Handle different response formats
+      if (endpoint.name === 'BlockCypher') {
+        try {
+          const jsonResponse = JSON.parse(responseText);
+          txid = jsonResponse.tx?.hash || jsonResponse.hash;
+        } catch {
+          txid = responseText.trim();
+        }
+      } else {
+        txid = responseText.trim();
+      }
+      
+      // Validate transaction ID format
+      if (!txid || txid.length !== 64 || !/^[a-fA-F0-9]{64}$/.test(txid)) {
+        console.warn(`⚠️ Invalid txid format from ${endpoint.name}:`, txid);
+        throw new Error('Invalid transaction ID returned');
+      }
+      
+      console.log(`✅ REAL Bitcoin transaction broadcast successful via ${endpoint.name}!`);
+      console.log(`🎉 Transaction ID: ${txid}`);
+      console.log(`🔗 View on blockchain: https://mempool.space/tx/${txid}`);
+      
+      successfulBroadcast = true;
+      return txid;
       
     } catch (error) {
       lastError = error as Error;
-      console.warn(`❌ Broadcast failed via ${endpoint.name}:`, error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      
+      console.warn(`❌ Broadcast failed via ${endpoint.name}:`, errorMsg);
+      
+      // If it's a transaction-specific error (not network), don't try other endpoints
+      if (errorMsg.includes('dust') || 
+          errorMsg.includes('fee') || 
+          errorMsg.includes('insufficient') ||
+          errorMsg.includes('already exists') ||
+          errorMsg.includes('invalid')) {
+        throw error;
+      }
+      
       continue;
     }
   }
   
   // All endpoints failed
-  console.error('❌ All broadcast endpoints failed');
-  throw new Error(`Failed to broadcast transaction: ${lastError?.message || 'All endpoints unavailable'}`);
+  if (!successfulBroadcast) {
+    console.error('❌ All broadcast endpoints failed for REAL transaction');
+    const errorMessage = lastError?.message || 'All broadcast endpoints unavailable';
+    
+    // Provide helpful error messages
+    if (errorMessage.includes('NetworkError') || errorMessage.includes('Failed to fetch')) {
+      throw new Error('Network error: Please check your internet connection and try again.');
+    }
+    if (errorMessage.includes('timeout') || errorMessage.includes('AbortError')) {
+      throw new Error('Request timeout: The Bitcoin network may be congested. Please try again.');
+    }
+    
+    throw new Error(`Failed to broadcast transaction: ${errorMessage}`);
+  }
+  
+  // This should never be reached, but TypeScript requires it
+  throw new Error('Unexpected error in transaction broadcast');
 };
 
 // Send transaction function that combines creation and broadcasting
@@ -872,10 +1003,38 @@ export const sendTransaction = async (
   feeRate: number, // sat/vB
   enableRBF: boolean = true
 ): Promise<{ txid: string; fee: number }> => {
-  console.log('💸 Sending Bitcoin transaction...');
+  console.log('💸 Sending REAL Bitcoin transaction on MAINNET...');
+  console.log('🚨 WARNING: This will spend real Bitcoin!');
+  
+  // Final validation before creating transaction
+  if (!fromWallet || !fromWallet.addresses || fromWallet.addresses.length === 0) {
+    throw new Error('Invalid wallet: No addresses available');
+  }
+  
+  if (!isValidBitcoinAddress(toAddress)) {
+    throw new Error('Invalid recipient Bitcoin address');
+  }
+  
+  if (amount <= 0 || amount > 21000000) { // Max 21M BTC
+    throw new Error('Invalid amount: Must be between 0 and 21,000,000 BTC');
+  }
+  
+  if (feeRate <= 0 || feeRate > 1000) { // Reasonable fee rate limits
+    throw new Error('Invalid fee rate: Must be between 1 and 1000 sat/vB');
+  }
   
   try {
+    console.log('📋 Transaction details:', {
+      from_wallet: fromWallet.name,
+      to_address: toAddress.substring(0, 20) + '...',
+      amount_btc: amount,
+      fee_rate: feeRate + ' sat/vB',
+      rbf_enabled: enableRBF,
+      network: 'MAINNET'
+    });
+    
     // Step 1: Create the transaction
+    console.log('🔨 Step 1: Creating transaction...');
     const { txHex, fee, txid: createdTxId } = await createTransaction(
       fromWallet,
       toAddress,
@@ -884,17 +1043,32 @@ export const sendTransaction = async (
       enableRBF
     );
     
-    // Step 2: Broadcast the transaction
+    console.log('✅ Transaction created successfully');
+    console.log('📡 Step 2: Broadcasting to Bitcoin network...');
+    
+    // Step 2: Broadcast the transaction to the Bitcoin network
     const broadcastTxId = await broadcastTransaction(txHex);
     
     // Use the broadcast txid if available, otherwise use the created one
     const finalTxId = broadcastTxId || createdTxId;
     
-    console.log('✅ Transaction sent successfully:', {
+    const isRealTransaction = Platform.OS !== 'web';
+    
+    console.log('🎉 Transaction processing completed:', {
       txid: finalTxId,
-      fee,
-      amount
+      fee_btc: fee,
+      amount_btc: amount,
+      network: 'MAINNET',
+      real_transaction: isRealTransaction,
+      blockchain_url: `https://mempool.space/tx/${finalTxId}`
     });
+    
+    if (isRealTransaction) {
+      console.log('✅ REAL Bitcoin transaction successfully broadcast to MAINNET!');
+      console.log('🔗 Track your transaction: https://mempool.space/tx/' + finalTxId);
+    } else {
+      console.log('🌐 Demo transaction created (web platform)');
+    }
     
     return {
       txid: finalTxId,
@@ -902,7 +1076,24 @@ export const sendTransaction = async (
     };
     
   } catch (error) {
-    console.error('❌ Error sending transaction:', error);
+    console.error('❌ Error sending Bitcoin transaction:', error);
+    
+    // Enhance error messages for better user experience
+    if (error instanceof Error) {
+      if (error.message.includes('Insufficient funds')) {
+        throw new Error('Insufficient funds: You don\'t have enough Bitcoin to complete this transaction including fees.');
+      }
+      if (error.message.includes('dust')) {
+        throw new Error('Amount too small: Bitcoin network requires a minimum amount to prevent spam.');
+      }
+      if (error.message.includes('fee')) {
+        throw new Error('Fee issue: ' + error.message + ' Try increasing the fee rate.');
+      }
+      if (error.message.includes('network') || error.message.includes('connection')) {
+        throw new Error('Network error: Unable to connect to Bitcoin network. Please check your internet connection.');
+      }
+    }
+    
     throw error;
   }
 };
