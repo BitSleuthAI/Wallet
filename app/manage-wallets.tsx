@@ -20,6 +20,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 
 type WalletColor = '#8B5CF6' | '#F59E0B' | '#10B981' | '#EF4444' | '#3B82F6' | '#F97316';
@@ -35,6 +36,7 @@ const WALLET_COLORS: WalletColor[] = [
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
+  const { hasPin } = useAutoLock();
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
   const [editName, setEditName] = useState<string>('');
@@ -182,7 +184,15 @@ export default function ManageWalletsScreen() {
       <View style={styles.bottomContainer}>
         <TouchableOpacity
           style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
-          onPress={() => router.push('/wallet-setup')}
+          onPress={() => {
+            if (hasPin) {
+              // If PIN exists, go to PIN verification first
+              router.push('/pin-verification');
+            } else {
+              // If no PIN exists, go directly to wallet setup
+              router.push('/wallet-setup');
+            }
+          }}
         >
           <Plus color="white" size={20} />
           <Text style={styles.addButtonText}>Add Wallet</Text>

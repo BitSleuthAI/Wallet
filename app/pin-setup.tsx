@@ -16,7 +16,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 
 export default function PinSetupScreen() {
-  const { theme } = useWallet();
+  const { theme, wallets } = useWallet();
   const { savePin } = useAutoLock();
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
@@ -209,7 +209,9 @@ export default function PinSetupScreen() {
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             {mode === 'setup' 
-              ? 'This 4-digit PIN will be used to unlock your wallet on this device.'
+              ? wallets.length === 0 
+                ? 'This 4-digit PIN will be used to secure all your wallets on this device.'
+                : 'This 4-digit PIN will be used to unlock your wallet on this device.'
               : 'Please enter your PIN again to confirm.'
             }
           </Text>

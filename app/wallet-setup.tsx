@@ -23,6 +23,7 @@ import * as WebBrowser from 'expo-web-browser';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 import QRScanner from '@/components/QRScanner';
 
 // Platform-specific wallet service imports
@@ -46,7 +47,8 @@ try {
 }
 
 export default function WalletSetupScreen() {
-  const { theme, importWallet } = useWallet();
+  const { theme, importWallet, wallets } = useWallet();
+  const { hasPin } = useAutoLock();
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
@@ -245,10 +247,16 @@ export default function WalletSetupScreen() {
       // Show confetti celebration
       setShowConfetti(true);
       
-      // Wait 2 seconds for confetti celebration, then navigate to PIN setup
+      // Wait 2 seconds for confetti celebration, then navigate appropriately
       setTimeout(() => {
         setShowConfetti(false);
-        router.push('/pin-setup');
+        // If this is the first wallet, go to PIN setup
+        // If PIN already exists, go to biometric setup
+        if (hasPin) {
+          router.push('/biometric-setup');
+        } else {
+          router.push('/pin-setup');
+        }
       }, 2000);
     } catch (error) {
       console.error('Import wallet error:', error);
@@ -724,7 +732,13 @@ export default function WalletSetupScreen() {
       setIsLoading(true);
       try {
         await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
-        router.push('/pin-setup');
+        // If this is the first wallet, go to PIN setup
+        // If PIN already exists, go to biometric setup
+        if (hasPin) {
+          router.push('/biometric-setup');
+        } else {
+          router.push('/pin-setup');
+        }
       } catch (error) {
         Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
       } finally {
