@@ -531,7 +531,7 @@ export default function CoinControlScreen() {
             <View style={[styles.infoFooter, { backgroundColor: theme.colors.surface }]}>
               <Info color={theme.colors.textSecondary} size={16} />
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                Coin control allows you to manage individual UTXOs. Frozen UTXOs won&apos;t be used in transactions unless manually selected.
+                Coin control allows you to manage individual UTXOs. Frozen UTXOs won't be used in transactions unless manually selected.
               </Text>
             </View>
           </>
