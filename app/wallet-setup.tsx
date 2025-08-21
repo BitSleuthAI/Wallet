@@ -160,6 +160,9 @@ export default function WalletSetupScreen() {
     }
   };
 
+  // Check if create wallet form is valid
+  const isCreateFormValid = walletName.trim() && hasStoredPhrase && acceptedTerms;
+
   const handleCreateWallet = async () => {
     if (!walletName.trim()) {
       Alert.alert('Error', 'Please enter a wallet name');
@@ -175,8 +178,6 @@ export default function WalletSetupScreen() {
       Alert.alert('Error', 'Please accept the Terms to continue');
       return;
     }
-
-
 
     // Move to confirmation page instead of creating wallet immediately
     if (!generatedMnemonic || typeof generatedMnemonic !== 'string') {
@@ -208,6 +209,9 @@ export default function WalletSetupScreen() {
     setUserInputs(['', '']);
     setMode('confirm');
   };
+
+  // Check if import wallet form is valid
+  const isImportFormValid = walletName.trim() && mnemonic.trim();
 
   const handleImportWallet = async () => {
     if (!walletName.trim()) {
@@ -527,13 +531,15 @@ export default function WalletSetupScreen() {
 
         <TouchableOpacity
           style={[styles.submitButton, { 
-            backgroundColor: theme.colors.primary,
+            backgroundColor: isCreateFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
           }]}
           onPress={handleCreateWallet}
-          disabled={isLoading}
+          disabled={isLoading || !isCreateFormValid}
         >
-          <Text style={styles.submitButtonText}>
+          <Text style={[styles.submitButtonText, {
+            color: isCreateFormValid ? 'white' : 'rgba(255, 255, 255, 0.6)'
+          }]}>
             {isLoading ? 'Creating...' : 'Confirm'}
           </Text>
         </TouchableOpacity>
@@ -661,13 +667,15 @@ export default function WalletSetupScreen() {
 
         <TouchableOpacity
           style={[styles.submitButton, { 
-            backgroundColor: theme.colors.primary,
+            backgroundColor: isImportFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
           }]}
           onPress={handleImportWallet}
-          disabled={isLoading}
+          disabled={isLoading || !isImportFormValid}
         >
-          <Text style={styles.submitButtonText}>
+          <Text style={[styles.submitButtonText, {
+            color: isImportFormValid ? 'white' : 'rgba(255, 255, 255, 0.6)'
+          }]}>
             {isLoading ? 'Importing...' : 'Import Wallet'}
           </Text>
         </TouchableOpacity>
