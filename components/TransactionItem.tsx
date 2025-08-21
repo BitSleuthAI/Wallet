@@ -75,7 +75,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
           </Text>
           {!hasPriceError && amountUSD > 0 ? (
             <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-              {isReceived ? '+' : '-'}{formatCurrency(amountUSD, false)}
+              {isReceived ? '+' : '-'}{formatCurrency(amountUSD)}
             </Text>
           ) : (
             <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
