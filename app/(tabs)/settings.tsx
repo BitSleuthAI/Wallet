@@ -179,9 +179,12 @@ export default function SettingsScreen() {
           subtitle="Set your preferred currency"
           onPress={() => setShowCurrencyModal(true)}
           rightElement={
-            <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]}>
-              {selectedCurrency} - {getCurrencyName()}
-            </Text>
+            <View style={styles.currencyContainer}>
+              <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+                {selectedCurrency} - {getCurrencyName()}
+              </Text>
+              <ChevronRight color={theme.colors.textSecondary} size={20} />
+            </View>
           }
         />
 
@@ -563,9 +566,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
     lineHeight: 18,
   },
+  currencyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: 200,
+  },
   currencyText: {
     fontSize: 14,
     marginRight: 8,
+    flexShrink: 1,
   },
   themeToggle: {
     flexDirection: 'row',
