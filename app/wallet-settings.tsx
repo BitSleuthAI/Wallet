@@ -17,11 +17,7 @@ import {
   Coins,
   Zap,
   ChevronRight,
-  Download,
-  Upload,
   Trash2,
-  Copy,
-  QrCode,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 
@@ -196,67 +192,7 @@ export default function WalletSettingsScreen() {
           onPress={() => router.push('/transaction-history')}
         />
 
-        {/* Backup & Recovery Section */}
-        <SectionHeader title="Backup & Recovery" />
 
-        <SettingItem
-          icon={Download}
-          title="Export Wallet"
-          subtitle="Export wallet data (coming soon)"
-          onPress={() => {
-            Alert.alert(
-              'Export Wallet',
-              'Wallet export functionality is coming soon. For now, make sure to backup your recovery phrase.',
-              [{ text: 'OK' }]
-            );
-          }}
-        />
-
-        <SettingItem
-          icon={Upload}
-          title="Import Wallet"
-          subtitle="Import from backup (coming soon)"
-          onPress={() => {
-            Alert.alert(
-              'Import Wallet',
-              'Wallet import functionality is coming soon.',
-              [{ text: 'OK' }]
-            );
-          }}
-        />
-
-        {/* Advanced Section */}
-        <SectionHeader title="Advanced" />
-
-        <SettingItem
-          icon={QrCode}
-          title="Wallet QR Code"
-          subtitle="Share wallet public key via QR"
-          onPress={() => {
-            Alert.alert(
-              'Wallet QR Code',
-              'QR code sharing functionality is coming soon.',
-              [{ text: 'OK' }]
-            );
-          }}
-        />
-
-        <SettingItem
-          icon={Copy}
-          title="Copy Wallet Info"
-          subtitle="Copy wallet details to clipboard"
-          onPress={() => {
-            if (currentWallet) {
-              const walletInfo = `Wallet: ${currentWallet.name}\nType: ${currentWallet.type}\nCreated: ${new Date().toLocaleDateString()}`;
-              // Note: Clipboard functionality would need expo-clipboard
-              Alert.alert(
-                'Wallet Info',
-                walletInfo,
-                [{ text: 'OK' }]
-              );
-            }
-          }}
-        />
 
         {/* Danger Zone */}
         <SectionHeader title="Danger Zone" />
