@@ -108,7 +108,7 @@ export default function TransactionDetailsScreen() {
   };
 
   const openInExplorer = () => {
-    const url = `https://blockstream.info/tx/${transaction.txid}`;
+    const url = `https://app.bitsleuth.ai/transactions/${transaction.txid}`;
     Linking.openURL(url).catch(() => {
       Alert.alert('Error', 'Failed to open block explorer');
     });
@@ -116,7 +116,7 @@ export default function TransactionDetailsScreen() {
 
   const shareTransaction = async () => {
     try {
-      const url = `https://blockstream.info/tx/${transaction.txid}`;
+      const url = `https://app.bitsleuth.ai/transactions/${transaction.txid}`;
       const message = `Bitcoin Transaction: ${transaction.txid}\n\nAmount: ${isReceived ? '+' : '-'}${transaction.amount.toFixed(8)} BTC\nStatus: ${getStatusText()}\n\nView on explorer: ${url}`;
       
       if (Platform.OS === 'web') {
