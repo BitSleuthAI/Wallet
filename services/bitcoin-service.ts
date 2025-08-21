@@ -561,7 +561,8 @@ export const createTransaction = async (
   toAddress: string,
   amount: number, // in BTC
   feeRate: number, // sat/vB
-  enableRBF: boolean = true
+  enableRBF: boolean = true,
+  selectedUTXOs?: UTXO[]
 ): Promise<{ txHex: string; fee: number; txid: string }> => {
   console.log('🔨 Creating Bitcoin transaction...');
   console.log('Parameters:', { toAddress, amount, feeRate, enableRBF });
@@ -590,16 +591,21 @@ export const createTransaction = async (
     // 3. Create and sign the transaction
     // 4. Return the signed transaction hex
     
-    console.log('📊 Fetching UTXOs for wallet addresses...');
-    const utxos: UTXO[] = [];
-    
-    // Try to fetch real UTXOs
-    for (const address of fromWallet.addresses) {
-      try {
-        const addressUTXOs = await getAddressUTXOs(address);
-        utxos.push(...addressUTXOs);
-      } catch (error) {
-        console.warn(`Failed to fetch UTXOs for ${address}:`, error);
+    console.log('📊 Preparing UTXOs for transaction...');
+    let utxos: UTXO[] = [];
+
+    if (selectedUTXOs && selectedUTXOs.length > 0) {
+      console.log(`📌 Using ${selectedUTXOs.length} user-selected UTXOs via coin control`);
+      utxos = selectedUTXOs;
+    } else {
+      console.log('🔎 Fetching UTXOs for wallet addresses (no manual selection provided)');
+      for (const address of fromWallet.addresses) {
+        try {
+          const addressUTXOs = await getAddressUTXOs(address);
+          utxos.push(...addressUTXOs);
+        } catch (error) {
+          console.warn(`Failed to fetch UTXOs for ${address}:`, error);
+        }
       }
     }
     
@@ -1001,7 +1007,8 @@ export const sendTransaction = async (
   toAddress: string,
   amount: number, // in BTC
   feeRate: number, // sat/vB
-  enableRBF: boolean = true
+  enableRBF: boolean = true,
+  selectedUTXOs?: UTXO[]
 ): Promise<{ txid: string; fee: number }> => {
   console.log('💸 Sending REAL Bitcoin transaction on MAINNET...');
   console.log('🚨 WARNING: This will spend real Bitcoin!');
@@ -1040,7 +1047,8 @@ export const sendTransaction = async (
       toAddress,
       amount,
       feeRate,
-      enableRBF
+      enableRBF,
+      selectedUTXOs
     );
     
     console.log('✅ Transaction created successfully');

@@ -12,7 +12,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import {
   Coins,
   Filter,
@@ -25,13 +25,14 @@ import {
   ChevronUp,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { getAddressUTXOs } from '@/services/bitcoin-service';
 import type { UTXO } from '@/types/wallet';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 
 export default function CoinControlScreen() {
-  const { theme } = useWallet();
+  const { theme, currentWallet, coinControl } = useWallet();
   const [utxos, setUtxos] = useState<UTXO[]>([]);
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -45,103 +46,31 @@ export default function CoinControlScreen() {
   const loadUtxos = useCallback(async () => {
     setIsLoading(true);
     try {
-      // In a real app, this would fetch UTXOs from the blockchain
-      // For now, we'll use mock data
-      await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-      
-      // Mock UTXO data for demonstration
-      const mockUtxos: UTXO[] = [
-        {
-          txid: 'a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890',
-          vout: 0,
-          value: 50000000, // 0.5 BTC
-          status: {
-            confirmed: true,
-            block_height: 800000,
-            block_time: Date.now() - 86400000 * 7, // 7 days ago
-          },
-          address: 'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-          confirmations: 144,
-          frozen: false,
-          label: 'Large UTXO',
-        },
-        {
-          txid: 'b2c3d4e5f6789012345678901234567890123456789012345678901234567890a1',
-          vout: 1,
-          value: 10000000, // 0.1 BTC
-          status: {
-            confirmed: true,
-            block_height: 799950,
-            block_time: Date.now() - 86400000 * 5, // 5 days ago
-          },
-          address: 'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
-          confirmations: 194,
-          frozen: true,
-          label: 'Frozen UTXO',
-        },
-        {
-          txid: 'c3d4e5f6789012345678901234567890123456789012345678901234567890a1b2',
-          vout: 0,
-          value: 5000000, // 0.05 BTC
-          status: {
-            confirmed: false,
-          },
-          address: 'bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l',
-          confirmations: 0,
-          frozen: false,
-          label: 'Unconfirmed',
-        },
-        {
-          txid: 'd4e5f6789012345678901234567890123456789012345678901234567890a1b2c3',
-          vout: 2,
-          value: 1000000, // 0.01 BTC
-          status: {
-            confirmed: true,
-            block_height: 799800,
-            block_time: Date.now() - 86400000 * 3, // 3 days ago
-          },
-          address: 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
-          confirmations: 344,
-          frozen: false,
-          label: 'Small UTXO',
-        },
-        {
-          txid: 'e5f6789012345678901234567890123456789012345678901234567890a1b2c3d4',
-          vout: 0,
-          value: 25000000, // 0.25 BTC
-          status: {
-            confirmed: true,
-            block_height: 799900,
-            block_time: Date.now() - 86400000 * 2, // 2 days ago
-          },
-          address: 'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el',
-          confirmations: 244,
-          frozen: false,
-        },
-        {
-          txid: 'f6789012345678901234567890123456789012345678901234567890a1b2c3d4e5',
-          vout: 1,
-          value: 500000, // 0.005 BTC
-          status: {
-            confirmed: true,
-            block_height: 799700,
-            block_time: Date.now() - 86400000 * 10, // 10 days ago
-          },
-          address: 'bc1qk0jareu4jytc0cfrhr786ewygwdh6ne0fhxujq',
-          confirmations: 444,
-          frozen: false,
-          label: 'Dust',
-        },
-      ];
-      
-      setUtxos(mockUtxos);
+      if (!currentWallet) {
+        setUtxos([]);
+        return;
+      }
+      const all: UTXO[] = [];
+      for (const addr of currentWallet.addresses) {
+        try {
+          const list = await getAddressUTXOs(addr);
+          for (const u of list) {
+            all.push({ ...u, address: addr, frozen: coinControl.isFrozen(`${u.txid}:${u.vout}`) });
+          }
+        } catch (e) {
+          console.warn('Failed to load UTXOs for address', addr, e);
+        }
+      }
+      setUtxos(all);
+      const preSelected = new Set(coinControl.getSelectedUtxoIds());
+      setSelectedUtxos(preSelected);
     } catch (error) {
       console.error('Error loading UTXOs:', error);
       Alert.alert('Error', 'Failed to load UTXOs');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [currentWallet, coinControl]);
 
   useEffect(() => {
     loadUtxos();
@@ -206,6 +135,7 @@ export default function CoinControlScreen() {
   };
 
   const toggleUtxoFreeze = (utxoId: string) => {
+    coinControl.toggleFreeze(utxoId);
     setUtxos(prev => prev.map(utxo => {
       if (`${utxo.txid}:${utxo.vout}` === utxoId) {
         return { ...utxo, frozen: !utxo.frozen };
@@ -451,18 +381,35 @@ export default function CoinControlScreen() {
     </View>
   );
 
+  const applySelection = () => {
+    const ids = Array.from(selectedUtxos);
+    coinControl.setSelected(ids);
+    router.back();
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      
       <Stack.Screen 
         options={{ 
           title: 'Coin Control',
           headerRight: () => (
-            <TouchableOpacity
-              onPress={() => setShowFilters(!showFilters)}
-              style={styles.headerButton}
-            >
-              <Filter color={theme.colors.primary} size={20} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row' }}>
+              <TouchableOpacity
+                onPress={() => setShowFilters(!showFilters)}
+                style={styles.headerButton}
+                testID="toggle-filters"
+              >
+                <Filter color={theme.colors.primary} size={20} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={applySelection}
+                style={styles.headerButton}
+                testID="apply-coin-selection"
+              >
+                <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
+              </TouchableOpacity>
+            </View>
           ),
         }} 
       />
@@ -555,6 +502,9 @@ export default function CoinControlScreen() {
           <>
             {/* Quick Actions */}
             <View style={styles.quickActions}>
+              <Text style={[{ marginRight: 12, fontWeight: '600' }, { color: theme.colors.text }]}>
+                {selectedUtxos.size} selected
+              </Text>
               <TouchableOpacity
                 style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
                 onPress={selectAllUtxos}

@@ -18,11 +18,11 @@ import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
 import WalletSelector from '@/components/WalletSelector';
 import QRScanner from '@/components/QRScanner';
-import { sendTransaction, getBitcoinPrice, isValidBitcoinAddress } from '@/services/bitcoin-service';
+import { sendTransaction, getBitcoinPrice, isValidBitcoinAddress, getAddressUTXOs } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 
 export default function SendScreen() {
-  const { currentWallet, balance, theme } = useWallet();
+  const { currentWallet, balance, theme, coinControl } = useWallet();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
@@ -37,6 +37,8 @@ export default function SendScreen() {
     message: string;
   }>({ isValid: false, message: '' });
   const [feeEstimates, setFeeEstimates] = useState<any>(null);
+  const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
+  const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
 
   // Load Bitcoin price and fee estimates on component mount
   useEffect(() => {
@@ -59,7 +61,29 @@ export default function SendScreen() {
     };
     
     loadInitialData();
-  }, []);
+  }, [currentWallet]);
+
+  useEffect(() => {
+    const fetchUtxos = async () => {
+      try {
+        if (!currentWallet) return;
+        const all: any[] = [];
+        for (const addr of currentWallet.addresses) {
+          const list = await getAddressUTXOs(addr);
+          list.forEach((u: any) => all.push({ ...u, address: addr }));
+        }
+        setAvailableUtxos(all);
+      } catch (e) {
+        console.warn('Failed to fetch UTXOs', e);
+      }
+    };
+    fetchUtxos();
+  }, [currentWallet]);
+
+  useEffect(() => {
+    const ids = coinControl.getSelectedUtxoIds();
+    setSelectedUtxoIds(ids);
+  }, [coinControl]);
 
   // Validate Bitcoin address in real-time
   useEffect(() => {
@@ -262,12 +286,14 @@ export default function SendScreen() {
       });
       
       // Send the real transaction
+      const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
       const result = await sendTransaction(
         currentWallet,
         recipientAddress.trim(),
         amountInBTC,
         feeRate,
-        enableRBF
+        enableRBF,
+        selected
       );
       
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
@@ -699,7 +725,7 @@ export default function SendScreen() {
             Coin Control
           </Text>
           <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-            Select Coins
+            {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
           </Text>
         </TouchableOpacity>
         </View>

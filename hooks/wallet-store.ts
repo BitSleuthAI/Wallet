@@ -2,7 +2,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Wallet, Theme, FiatCurrency } from '@/types/wallet';
+import { Wallet, Theme, FiatCurrency, UTXO } from '@/types/wallet';
 import { lightTheme, darkTheme } from '@/constants/themes';
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
@@ -28,6 +28,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
   const queryClient = useQueryClient();
+  const [coinControlSelected, setCoinControlSelectedState] = useState<Record<string, string[]>>({});
+  const [coinControlFrozen, setCoinControlFrozenState] = useState<Record<string, string[]>>({});
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -89,6 +91,24 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('theme');
       return stored === 'dark' ? darkTheme : lightTheme;
+    },
+  });
+
+  // Load coin control selections
+  const coinControlSelectedQuery = useQuery({
+    queryKey: ['coinControlSelected'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('coinControlSelected');
+      return stored ? JSON.parse(stored) as Record<string, string[]> : {};
+    },
+  });
+
+  // Load coin control frozen list
+  const coinControlFrozenQuery = useQuery({
+    queryKey: ['coinControlFrozen'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('coinControlFrozen');
+      return stored ? JSON.parse(stored) as Record<string, string[]> : {};
     },
   });
 
@@ -266,6 +286,32 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveHideBalance } = saveHideBalanceMutation;
 
+  // Save coin control selections
+  const saveCoinControlSelectedMutation = useMutation({
+    mutationFn: async (map: Record<string, string[]>) => {
+      await AsyncStorage.setItem('coinControlSelected', JSON.stringify(map));
+      return map;
+    },
+    onSuccess: (map) => {
+      setCoinControlSelectedState(map);
+      queryClient.invalidateQueries({ queryKey: ['coinControlSelected'] });
+    },
+  });
+  const { mutate: saveCoinControlSelected } = saveCoinControlSelectedMutation;
+
+  // Save coin control frozen
+  const saveCoinControlFrozenMutation = useMutation({
+    mutationFn: async (map: Record<string, string[]>) => {
+      await AsyncStorage.setItem('coinControlFrozen', JSON.stringify(map));
+      return map;
+    },
+    onSuccess: (map) => {
+      setCoinControlFrozenState(map);
+      queryClient.invalidateQueries({ queryKey: ['coinControlFrozen'] });
+    },
+  });
+  const { mutate: saveCoinControlFrozen } = saveCoinControlFrozenMutation;
+
   // Save auto-lock timeout mutation
   const saveAutoLockMutation = useMutation({
     mutationFn: async (timeout: number) => {
@@ -300,6 +346,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setTheme(themeQuery.data);
     }
   }, [themeQuery.data]);
+
+  useEffect(() => {
+    if (coinControlSelectedQuery.data) {
+      setCoinControlSelectedState(coinControlSelectedQuery.data);
+    }
+  }, [coinControlSelectedQuery.data]);
+
+  useEffect(() => {
+    if (coinControlFrozenQuery.data) {
+      setCoinControlFrozenState(coinControlFrozenQuery.data);
+    }
+  }, [coinControlFrozenQuery.data]);
 
   useEffect(() => {
     if (currencyQuery.data) {
@@ -373,6 +431,45 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const setAutoLockTimeoutSetting = useCallback((timeout: number) => {
     saveAutoLock(timeout);
   }, [saveAutoLock]);
+
+  const setCoinControlSelected = useCallback((ids: string[]) => {
+    if (!currentWallet) return;
+    const map = { ...(coinControlSelected || {}) } as Record<string, string[]>;
+    map[currentWallet.id] = ids;
+    saveCoinControlSelected(map);
+  }, [currentWallet, coinControlSelected, saveCoinControlSelected]);
+
+  const clearCoinControlSelected = useCallback(() => {
+    if (!currentWallet) return;
+    const map = { ...(coinControlSelected || {}) } as Record<string, string[]>;
+    map[currentWallet.id] = [];
+    saveCoinControlSelected(map);
+  }, [currentWallet, coinControlSelected, saveCoinControlSelected]);
+
+  const toggleFreezeUtxo = useCallback((utxoId: string) => {
+    if (!currentWallet) return;
+    const map = { ...(coinControlFrozen || {}) } as Record<string, string[]>;
+    const list = new Set(map[currentWallet.id] || []);
+    if (list.has(utxoId)) list.delete(utxoId); else list.add(utxoId);
+    map[currentWallet.id] = Array.from(list);
+    saveCoinControlFrozen(map);
+  }, [currentWallet, coinControlFrozen, saveCoinControlFrozen]);
+
+  const isUtxoFrozen = useCallback((utxoId: string) => {
+    if (!currentWallet) return false;
+    const list = coinControlFrozen[currentWallet.id] || [];
+    return list.includes(utxoId);
+  }, [currentWallet, coinControlFrozen]);
+
+  const getSelectedUtxoIds = useCallback(() => {
+    if (!currentWallet) return [] as string[];
+    return coinControlSelected[currentWallet.id] || [];
+  }, [currentWallet, coinControlSelected]);
+
+  const filterSelectedUtxos = useCallback((all: UTXO[]) => {
+    const ids = new Set(getSelectedUtxoIds());
+    return all.filter(u => ids.has(`${u.txid}:${u.vout}`));
+  }, [getSelectedUtxoIds]);
 
   const formatCurrency = useCallback((amount: number, showSymbol: boolean = true) => {
     const symbol = CURRENCY_SYMBOLS[selectedCurrency];
@@ -547,6 +644,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     autoLockTimeout,
     setAutoLockTimeoutSetting,
     
+    // Coin control
+    coinControl: {
+      getSelectedUtxoIds,
+      setSelected: setCoinControlSelected,
+      clearSelected: clearCoinControlSelected,
+      toggleFreeze: toggleFreezeUtxo,
+      isFrozen: isUtxoFrozen,
+      filterSelectedUtxos,
+    },
+    
     // Actions
     createWallet,
     importWallet,
@@ -603,5 +710,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     setHideBalanceSetting,
     autoLockTimeout,
     setAutoLockTimeoutSetting,
+    coinControlSelected,
+    coinControlFrozen,
+    setCoinControlSelected,
+    clearCoinControlSelected,
+    toggleFreezeUtxo,
+    isUtxoFrozen,
+    filterSelectedUtxos,
+    getSelectedUtxoIds,
   ]);
 });
