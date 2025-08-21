@@ -203,6 +203,10 @@ export default function WalletScreen() {
           <FlatList<CarouselItem>
             horizontal
             showsHorizontalScrollIndicator={false}
+            pagingEnabled={false}
+            decelerationRate="fast"
+            snapToInterval={336} // 320 (card width) + 16 (margin)
+            snapToAlignment="start"
             data={[...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }]}
             keyExtractor={(item, index) => `${item.type}-${index}`}
             renderItem={({ item }) => {
@@ -221,21 +225,18 @@ export default function WalletScreen() {
                 );
               }
               return (
-                <TouchableOpacity 
-                  style={styles.walletCardContainer}
-                  onPress={() => {
-                    if (item.wallet.id !== currentWalletId) {
-                      switchWallet(item.wallet.id);
-                    }
-                  }}
-                  activeOpacity={0.8}
-                >
+                <View style={styles.walletCardContainer}>
                   <WalletCard 
                     wallet={item.wallet} 
                     isActive={item.wallet.id === currentWalletId}
+                    onPress={() => {
+                      if (item.wallet.id !== currentWalletId) {
+                        switchWallet(item.wallet.id);
+                      }
+                    }}
                     onEdit={handleEditWallet}
                   />
-                </TouchableOpacity>
+                </View>
               );
             }}
             contentContainerStyle={styles.carouselContent}
