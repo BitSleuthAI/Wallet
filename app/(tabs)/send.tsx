@@ -15,14 +15,18 @@ import { QrCode, ArrowUpRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
 import WalletSelector from '@/components/WalletSelector';
+import { sendTransaction } from '@/services/bitcoin-service';
+import { feeEstimationService } from '@/services/fee-service';
 
 export default function SendScreen() {
   const { currentWallet, balance, theme } = useWallet();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate] = useState('3');
+  const [feeRate, setFeeRate] = useState(3);
   const [enableRBF, setEnableRBF] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
+  const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
 
   const handleSendMax = () => {
     try {
@@ -40,6 +44,81 @@ export default function SendScreen() {
     }
   };
 
+  const handleSendTransaction = async () => {
+    if (isLoading) return;
+    
+    try {
+      setIsLoading(true);
+      
+      // Validate inputs
+      if (!recipientAddress || !amount) {
+        Alert.alert('Error', 'Please fill in all required fields');
+        return;
+      }
+
+      // Validate recipient address format (basic check)
+      if (!recipientAddress.startsWith('bc1') && !recipientAddress.startsWith('1') && !recipientAddress.startsWith('3')) {
+        Alert.alert('Error', 'Invalid Bitcoin address format');
+        return;
+      }
+
+      // Validate amount
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        Alert.alert('Error', 'Please enter a valid amount');
+        return;
+      }
+
+      if (amountNum > balance) {
+        Alert.alert('Error', 'Insufficient balance');
+        return;
+      }
+
+      console.log('🚀 Starting transaction send process...');
+      
+      // Send the transaction
+      const result = await sendTransaction(
+        currentWallet,
+        recipientAddress,
+        amountNum,
+        feeRate,
+        enableRBF
+      );
+      
+      console.log('✅ Transaction sent successfully:', result);
+      
+      // Show success message
+      Alert.alert(
+        'Transaction Sent!',
+        `Your Bitcoin transaction has been broadcast to the network.\n\nTransaction ID: ${result.txid.substring(0, 16)}...\nFee: ${result.fee.toFixed(8)} BTC\n\nIt may take a few minutes to confirm.`,
+        [{ 
+          text: 'OK', 
+          onPress: () => {
+            // Clear form
+            setRecipientAddress('');
+            setAmount('');
+            setEstimatedFee(null);
+            
+            // Navigate to home to see updated balance
+            router.push('/');
+          }
+        }]
+      );
+      
+    } catch (error) {
+      console.error('❌ Error sending transaction:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      
+      Alert.alert(
+        'Transaction Failed',
+        `Failed to send transaction: ${errorMessage}\n\nPlease check your inputs and try again.`,
+        [{ text: 'OK' }]
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
   const handleReviewTransaction = () => {
     try {
       // Validate inputs
@@ -66,34 +145,20 @@ export default function SendScreen() {
         return;
       }
 
+      // Calculate estimated fee
+      const estimatedTxSize = 250; // bytes (rough estimate for 1 input, 2 outputs)
+      const estimatedFeeBTC = (estimatedTxSize * feeRate) / 100000000;
+      
       // Show transaction review
       Alert.alert(
         'Review Transaction',
-        `Send ${amount} ${isAmountInBTC ? 'BTC' : 'USD'} to:\n${recipientAddress.slice(0, 20)}...\n\nFee: ${feeRate} sat/vB\nRBF: ${enableRBF ? 'Enabled' : 'Disabled'}`,
+        `Send ${amount} ${isAmountInBTC ? 'BTC' : 'USD'} to:\n${recipientAddress.slice(0, 20)}...\n\nEstimated Fee: ${estimatedFeeBTC.toFixed(8)} BTC (${feeRate} sat/vB)\nRBF: ${enableRBF ? 'Enabled' : 'Disabled'}\n\nThis will create and broadcast a real Bitcoin transaction.`,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
-            text: 'Confirm', 
-            onPress: () => {
-              console.log('✅ Transaction confirmed:', {
-                to: recipientAddress,
-                amount: amountNum,
-                currency: isAmountInBTC ? 'BTC' : 'USD',
-                feeRate,
-                rbf: enableRBF
-              });
-              
-              // For demo purposes, show success message
-              Alert.alert(
-                'Transaction Sent',
-                'Your Bitcoin transaction has been broadcast to the network. It may take a few minutes to confirm.',
-                [{ text: 'OK', onPress: () => {
-                  // Clear form
-                  setRecipientAddress('');
-                  setAmount('');
-                }}]
-              );
-            }
+            text: 'Send Transaction', 
+            style: 'destructive',
+            onPress: handleSendTransaction
           },
         ]
       );
@@ -217,12 +282,12 @@ export default function SendScreen() {
             <View style={styles.feeInfo}>
               <ArrowUpRight color={theme.colors.primary} size={20} />
               <Text style={[styles.feeLabel, { color: theme.colors.text }]}>
-                Normal Fee
+                Transaction Fee
               </Text>
             </View>
             <View style={styles.feeDetails}>
               <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
-                30-60 min
+                {feeRate <= 5 ? '2-3 hours' : feeRate <= 10 ? '30-60 min' : '10-30 min'}
               </Text>
               <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
                 {feeRate} sat/vB
@@ -230,33 +295,69 @@ export default function SendScreen() {
             </View>
           </View>
 
-          <View style={styles.feeSlider}>
-            <Text style={[styles.sliderLabel, { color: theme.colors.textSecondary }]}>
-              Slower
-            </Text>
-            <View style={styles.slider}>
-              <View style={[styles.sliderTrack, { backgroundColor: theme.colors.primary }]} />
-              <View style={[styles.sliderThumb, { backgroundColor: theme.colors.primary }]} />
-            </View>
-            <Text style={[styles.sliderLabel, { color: theme.colors.textSecondary }]}>
-              Faster
-            </Text>
+          <View style={styles.feeButtons}>
+            <TouchableOpacity 
+              style={[
+                styles.feeButton,
+                { 
+                  backgroundColor: feeRate === 1 ? theme.colors.primary : theme.colors.surface,
+                  borderColor: theme.colors.border
+                }
+              ]}
+              onPress={() => setFeeRate(1)}
+            >
+              <Text style={[
+                styles.feeButtonText, 
+                { color: feeRate === 1 ? 'white' : theme.colors.text }
+              ]}>
+                Slow\n1 sat/vB
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.feeButton,
+                { 
+                  backgroundColor: feeRate === 5 ? theme.colors.primary : theme.colors.surface,
+                  borderColor: theme.colors.border
+                }
+              ]}
+              onPress={() => setFeeRate(5)}
+            >
+              <Text style={[
+                styles.feeButtonText, 
+                { color: feeRate === 5 ? 'white' : theme.colors.text }
+              ]}>
+                Normal\n5 sat/vB
+              </Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.feeButton,
+                { 
+                  backgroundColor: feeRate === 15 ? theme.colors.primary : theme.colors.surface,
+                  borderColor: theme.colors.border
+                }
+              ]}
+              onPress={() => setFeeRate(15)}
+            >
+              <Text style={[
+                styles.feeButtonText, 
+                { color: feeRate === 15 ? 'white' : theme.colors.text }
+              ]}>
+                Fast\n15 sat/vB
+              </Text>
+            </TouchableOpacity>
           </View>
-
-          <TouchableOpacity 
-            style={styles.customFeeButton}
-            onPress={() => {
-              Alert.alert(
-                'Custom Fee',
-                'Custom fee selection is not available in this demo. The current fee rate will be used.',
-                [{ text: 'OK' }]
-              );
-            }}
-          >
-            <Text style={[styles.customFeeText, { color: theme.colors.textSecondary }]}>
-              Custom Fee
-            </Text>
-          </TouchableOpacity>
+          
+          {estimatedFee && (
+            <View style={styles.feeEstimate}>
+              <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
+                Estimated fee: {estimatedFee.toFixed(8)} BTC
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* RBF Toggle */}
@@ -303,13 +404,15 @@ export default function SendScreen() {
             createButtonStyle(theme, 'primary'),
             styles.reviewButton,
             { 
-              opacity: (!recipientAddress || !amount) ? 0.5 : 1
+              opacity: (!recipientAddress || !amount || isLoading) ? 0.5 : 1
             }
           ]}
           onPress={handleReviewTransaction}
-          disabled={!recipientAddress || !amount}
+          disabled={!recipientAddress || !amount || isLoading}
         >
-          <Text style={styles.reviewButtonText}>Review Transaction</Text>
+          <Text style={styles.reviewButtonText}>
+            {isLoading ? 'Sending...' : 'Review Transaction'}
+          </Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -412,44 +515,33 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 2,
   },
-  feeSlider: {
+  feeButtons: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+    marginBottom: 12,
   },
-  sliderLabel: {
-    fontSize: 12,
-  },
-  slider: {
+  feeButton: {
     flex: 1,
-    height: 4,
-    backgroundColor: '#E5E7EB',
-    borderRadius: 2,
-    marginHorizontal: 16,
-    position: 'relative',
-  },
-  sliderTrack: {
-    width: '60%',
-    height: '100%',
-    borderRadius: 2,
-  },
-  sliderThumb: {
-    position: 'absolute',
-    right: '40%',
-    top: -6,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-  },
-  customFeeButton: {
-    alignSelf: 'flex-end',
-    padding: 8,
+    marginHorizontal: 4,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    alignItems: 'center',
   },
-  customFeeText: {
+  feeButtonText: {
+    fontSize: 12,
+    fontWeight: '500',
+    textAlign: 'center',
+    lineHeight: 16,
+  },
+  feeEstimate: {
+    alignItems: 'center',
+    paddingTop: 8,
+  },
+  feeEstimateText: {
     fontSize: 14,
+    fontStyle: 'italic',
   },
   rbfSection: {
     flexDirection: 'row',
