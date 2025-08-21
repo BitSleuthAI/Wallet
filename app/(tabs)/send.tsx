@@ -27,6 +27,8 @@ export default function SendScreen() {
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
   const [feeRate, setFeeRate] = useState(5);
+  const [customFeeRate, setCustomFeeRate] = useState('');
+  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal');
   const [enableRBF, setEnableRBF] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
@@ -59,6 +61,7 @@ export default function SendScreen() {
         // Set default fee rate based on estimates
         if (fees) {
           setFeeRate(fees.halfHourFee || 5);
+          setSelectedFeeType('normal');
           
           // Load fee confidence data
           try {
@@ -671,15 +674,18 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === (feeEstimates?.economyFee || 1) ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(feeEstimates?.economyFee || 1)}
+              onPress={() => {
+                setSelectedFeeType('slow');
+                setFeeRate(feeEstimates?.economyFee || 1);
+              }}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === (feeEstimates?.economyFee || 1) ? 'white' : theme.colors.text }
+                { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
               ]}>
                 {`Slow\n${feeEstimates?.economyFee || 1} sat/vB`}
               </Text>
@@ -689,15 +695,18 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === (feeEstimates?.halfHourFee || 5) ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(feeEstimates?.halfHourFee || 5)}
+              onPress={() => {
+                setSelectedFeeType('normal');
+                setFeeRate(feeEstimates?.halfHourFee || 5);
+              }}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === (feeEstimates?.halfHourFee || 5) ? 'white' : theme.colors.text }
+                { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
               ]}>
                 {`Normal\n${feeEstimates?.halfHourFee || 5} sat/vB`}
               </Text>
@@ -707,20 +716,72 @@ export default function SendScreen() {
               style={[
                 styles.feeButton,
                 { 
-                  backgroundColor: feeRate === (feeEstimates?.fastestFee || 15) ? theme.colors.primary : theme.colors.surface,
+                  backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border
                 }
               ]}
-              onPress={() => setFeeRate(feeEstimates?.fastestFee || 15)}
+              onPress={() => {
+                setSelectedFeeType('fast');
+                setFeeRate(feeEstimates?.fastestFee || 15);
+              }}
             >
               <Text style={[
                 styles.feeButtonText, 
-                { color: feeRate === (feeEstimates?.fastestFee || 15) ? 'white' : theme.colors.text }
+                { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
               ]}>
                 {`Fast\n${feeEstimates?.fastestFee || 15} sat/vB`}
               </Text>
             </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.feeButton,
+                { 
+                  backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
+                  borderColor: theme.colors.border
+                }
+              ]}
+              onPress={() => {
+                setSelectedFeeType('custom');
+                if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
+                  setFeeRate(parseFloat(customFeeRate));
+                }
+              }}
+            >
+              <Text style={[
+                styles.feeButtonText, 
+                { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
+              ]}>
+                Custom
+              </Text>
+            </TouchableOpacity>
           </View>
+          
+          {/* Custom Fee Input */}
+          {selectedFeeType === 'custom' && (
+            <View style={styles.customFeeContainer}>
+              <TextInput
+                style={[
+                  createInputStyle(theme),
+                  styles.customFeeInput,
+                ]}
+                placeholder="Enter custom fee rate"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={customFeeRate}
+                onChangeText={(text) => {
+                  setCustomFeeRate(text);
+                  const rate = parseFloat(text);
+                  if (!isNaN(rate) && rate > 0) {
+                    setFeeRate(rate);
+                  }
+                }}
+                keyboardType="numeric"
+              />
+              <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
+                sat/vB
+              </Text>
+            </View>
+          )}
           
           {estimatedFee && (
             <View style={styles.feeEstimate}>
@@ -915,18 +976,39 @@ const styles = StyleSheet.create({
   },
   feeButton: {
     flex: 1,
-    marginHorizontal: 4,
+    marginHorizontal: 2,
     paddingVertical: 12,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
   },
   feeButtonText: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: '600',
     textAlign: 'center',
     marginBottom: 2,
+  },
+  customFeeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: 'rgba(0,0,0,0.05)',
+    borderRadius: 8,
+  },
+  customFeeInput: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    marginRight: 8,
+  },
+  customFeeUnit: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   feeButtonSubtext: {
     fontSize: 11,
