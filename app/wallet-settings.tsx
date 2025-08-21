@@ -171,10 +171,6 @@ export default function WalletSettingsScreen() {
           onPress={() => router.push('/passkeys-security')}
         />
 
-
-
-
-
         {/* Transaction Settings Section */}
         <SectionHeader title="Transaction Settings" />
 
@@ -198,8 +194,6 @@ export default function WalletSettingsScreen() {
           subtitle="View all wallet transactions"
           onPress={() => router.push('/transaction-history')}
         />
-
-
 
         {/* Danger Zone */}
         <SectionHeader title="Danger Zone" />
