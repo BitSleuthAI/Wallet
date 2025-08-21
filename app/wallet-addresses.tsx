@@ -9,9 +9,10 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ArrowLeft, Copy, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -211,6 +212,21 @@ export default function WalletAddressesScreen() {
     }
   };
 
+  const openAddressExplorer = async (address: string) => {
+    try {
+      const url = `https://app.bitsleuth.ai/address/${address}`;
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('Error', 'Cannot open address explorer');
+      }
+    } catch (error) {
+      console.error('Failed to open address explorer:', error);
+      Alert.alert('Error', 'Failed to open address explorer');
+    }
+  };
+
   const refreshAddresses = async () => {
     setGeneratingAddresses(true);
     try {
@@ -233,7 +249,7 @@ export default function WalletAddressesScreen() {
   const AddressItem = ({ addressInfo }: { addressInfo: AddressInfo }) => (
     <TouchableOpacity
       style={[styles.addressItem, { backgroundColor: theme.colors.surface }]}
-      onPress={() => copyToClipboard(addressInfo.address)}
+      onPress={() => openAddressExplorer(addressInfo.address)}
       activeOpacity={0.7}
     >
       <View style={styles.addressHeader}>
@@ -291,7 +307,26 @@ export default function WalletAddressesScreen() {
         <Text style={[styles.balanceText, { color: theme.colors.textSecondary }]}>
           Balance: {formatBalance(addressInfo.balance)} BTC
         </Text>
-        <Copy color={theme.colors.textSecondary} size={16} />
+        <View style={styles.actionButtons}>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              copyToClipboard(addressInfo.address);
+            }}
+            style={styles.actionButton}
+          >
+            <Copy color={theme.colors.textSecondary} size={16} />
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={(e) => {
+              e.stopPropagation();
+              openAddressExplorer(addressInfo.address);
+            }}
+            style={styles.actionButton}
+          >
+            <ExternalLink color={theme.colors.primary} size={16} />
+          </TouchableOpacity>
+        </View>
       </View>
     </TouchableOpacity>
   );
@@ -576,5 +611,13 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionButton: {
+    padding: 4,
   },
 });
