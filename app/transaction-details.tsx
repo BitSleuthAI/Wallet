@@ -6,12 +6,11 @@ import {
   ScrollView,
   TouchableOpacity,
   Alert,
-  ActivityIndicator,
   Linking,
   Share,
   Platform,
 } from 'react-native';
-import { Stack, useLocalSearchParams } from 'expo-router';
+import { Stack, useLocalSearchParams, router } from 'expo-router';
 import {
   ArrowUpRight,
   ArrowDownLeft,
@@ -27,15 +26,14 @@ import {
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { platformStyles } from '@/constants/themes';
-import { feeEstimationService } from '@/services/fee-service';
 import * as Clipboard from 'expo-clipboard';
 
 export default function TransactionDetailsScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
   const { theme, transactions, formatCurrency, bitcoinPrice } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
-  const [isLoadingRBF, setIsLoadingRBF] = useState(false);
-  const [rbfFeeRate, setRbfFeeRate] = useState<number>(0);
+
+
 
   useEffect(() => {
     if (txid && transactions) {
@@ -44,18 +42,7 @@ export default function TransactionDetailsScreen() {
     }
   }, [txid, transactions]);
 
-  useEffect(() => {
-    const loadFeeEstimates = async () => {
-      try {
-        const fees = await feeEstimationService.getFeeEstimates();
-        setRbfFeeRate(fees.fastestFee);
-      } catch (error) {
-        console.error('Failed to load fee estimates:', error);
-        setRbfFeeRate(20); // Fallback
-      }
-    };
-    loadFeeEstimates();
-  }, []);
+
 
   if (!transaction) {
     return (
@@ -149,7 +136,7 @@ export default function TransactionDetailsScreen() {
     }
   };
 
-  const handleRBF = async () => {
+  const handleRBF = () => {
     if (!transaction.rbf || transaction.status !== 'pending') {
       Alert.alert(
         'RBF Not Available',
@@ -158,42 +145,10 @@ export default function TransactionDetailsScreen() {
       return;
     }
 
-    Alert.alert(
-      'Replace-by-Fee',
-      `This will create a new transaction with a higher fee rate (${rbfFeeRate} sat/vB) to speed up confirmation. The original transaction will be replaced.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Replace',
-          style: 'destructive',
-          onPress: performRBF,
-        },
-      ]
-    );
+    router.push(`/fee-bump?txid=${transaction.txid}`);
   };
 
-  const performRBF = async () => {
-    setIsLoadingRBF(true);
-    try {
-      // In a real implementation, you would:
-      // 1. Create a new transaction with the same outputs but higher fee
-      // 2. Sign and broadcast the replacement transaction
-      // 3. Update the transaction status
-      
-      // For now, we'll simulate the process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      Alert.alert(
-        'RBF Submitted',
-        'The replacement transaction has been submitted to the network. It may take a few minutes to propagate.'
-      );
-    } catch (error) {
-      console.error('RBF failed:', error);
-      Alert.alert('Error', 'Failed to replace transaction. Please try again.');
-    } finally {
-      setIsLoadingRBF(false);
-    }
-  };
+
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -260,15 +215,11 @@ export default function TransactionDetailsScreen() {
             <TouchableOpacity
               style={[styles.rbfButton, { backgroundColor: theme.colors.primary }]}
               onPress={handleRBF}
-              disabled={isLoadingRBF}
+              disabled={false}
             >
-              {isLoadingRBF ? (
-                <ActivityIndicator color="white" size="small" />
-              ) : (
-                <Zap color="white" size={20} />
-              )}
+              <Zap color="white" size={20} />
               <Text style={styles.rbfButtonText}>
-                {isLoadingRBF ? 'Processing...' : 'Speed Up (RBF)'}
+                Speed Up (RBF)
               </Text>
             </TouchableOpacity>
           )}
