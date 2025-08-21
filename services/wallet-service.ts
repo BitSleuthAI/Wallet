@@ -540,8 +540,8 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       xpub,
       addresses: [firstAddress],
       currentAddressIndex: 0,
-      balance: 0,
-      balanceUSD: 0,
+      balance: 0, // Always start with 0 balance - no demo data
+      balanceUSD: 0, // Always start with 0 USD balance - no demo data
       derivationPath: DERIVATION_PATH,
       gap: 20,
       createdAt: Date.now(),

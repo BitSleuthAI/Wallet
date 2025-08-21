@@ -316,12 +316,17 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       id: Date.now().toString(),
       name,
       color,
+      type: 'segwit-native',
+      addressType: 'p2wpkh',
       mnemonic: mnemonic.trim(),
       xpub: webXpub,
       addresses: [firstAddress],
       currentAddressIndex: 0,
-      balance: 0,
-      balanceUSD: 0,
+      balance: 0, // Always start with 0 balance - no demo data
+      balanceUSD: 0, // Always start with 0 USD balance - no demo data
+      derivationPath: DERIVATION_PATH,
+      gap: 20,
+      createdAt: Date.now(),
     };
     
     console.log('✅ Web: Wallet imported successfully:', wallet.id);

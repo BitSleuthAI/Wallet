@@ -38,9 +38,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     const initializeWallets = async () => {
       try {
-        // Clear any potential mock data
-        await AsyncStorage.multiRemove(['mock_data', 'test_data', 'sample_data', 'dummy_data']);
-        console.log('🧹 Cleared any potential mock data on initialization');
+        // Clear any potential mock/demo data on every initialization
+        await AsyncStorage.multiRemove([
+          'mock_data', 'test_data', 'sample_data', 'dummy_data', 
+          'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
+          'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
+        ]);
+        console.log('🧹 Cleared any potential mock/demo data on initialization');
         
         // Check for old single wallet format and migrate
         const oldWallet = await AsyncStorage.getItem('wallet');
@@ -491,10 +495,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const refreshData = useCallback(async () => {
     console.log('Refreshing wallet data...');
     try {
-      // Clear any potential cached mock data
-      await AsyncStorage.multiRemove(['mock_data', 'test_data', 'sample_data', 'dummy_data']);
+      // Clear any potential cached mock/demo data
+      await AsyncStorage.multiRemove([
+        'mock_data', 'test_data', 'sample_data', 'dummy_data',
+        'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
+        'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
+      ]);
       
-      // Clear React Query cache completely to remove any cached mock data
+      // Clear React Query cache completely to remove any cached mock/demo data
       queryClient.clear();
       
       // Invalidate queries to trigger fresh fetches
