@@ -20,6 +20,7 @@ import {
   Check,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { getWalletTypeDisplayName } from '@/types/wallet';
 
 type WalletColor = '#8B5CF6' | '#F59E0B' | '#10B981' | '#EF4444' | '#3B82F6' | '#F97316';
 
@@ -108,7 +109,7 @@ export default function ManageWalletsScreen() {
             {wallet.name}
           </Text>
           <Text style={[styles.walletType, { color: theme.colors.textSecondary }]}>
-            {wallet.type}
+            {getWalletTypeDisplayName(wallet.type)}
           </Text>
         </View>
       </View>

@@ -41,6 +41,7 @@ import {
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import type { FiatCurrency } from '@/types/wallet';
+import { getWalletTypeDisplayName } from '@/types/wallet';
 
 export default function SettingsScreen() {
   const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
@@ -160,7 +161,7 @@ export default function SettingsScreen() {
         <SettingItem
           icon={Wallet}
           title="Current Wallet"
-          subtitle={currentWallet ? `${currentWallet.name} (${currentWallet.type})` : 'No wallet selected'}
+          subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
           onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
           rightElement={
             wallets.length > 1 ? (
@@ -515,7 +516,7 @@ export default function SettingsScreen() {
                       {wallet.name}
                     </Text>
                     <Text style={[styles.walletItemType, { color: theme.colors.textSecondary }]}>
-                      {wallet.type} • {wallet.addresses.length} address{wallet.addresses.length !== 1 ? 'es' : ''}
+                      {getWalletTypeDisplayName(wallet.type)} • {wallet.addresses.length} address{wallet.addresses.length !== 1 ? 'es' : ''}
                     </Text>
                   </View>
                   {currentWallet?.id === wallet.id && (

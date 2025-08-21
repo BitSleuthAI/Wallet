@@ -2,6 +2,19 @@ export type WalletType = 'hd' | 'segwit-p2sh' | 'segwit-native' | 'legacy';
 export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh';
 export type FiatCurrency = 'USD' | 'EUR' | 'GBP';
 
+// Wallet type display names for consistent UI
+export const WALLET_TYPE_DISPLAY_NAMES: Record<WalletType, string> = {
+  'segwit-native': 'Native SegWit (P2WPKH)',
+  'segwit-p2sh': 'Nested SegWit & Script (P2SH)',
+  'legacy': 'Legacy (P2PKH)',
+  'hd': 'Taproot (P2TR)'
+};
+
+// Function to get display name for wallet type
+export const getWalletTypeDisplayName = (walletType: WalletType): string => {
+  return WALLET_TYPE_DISPLAY_NAMES[walletType] || walletType;
+};
+
 export interface Wallet {
   id: string;
   name: string;

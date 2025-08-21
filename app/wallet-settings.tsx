@@ -20,6 +20,7 @@ import {
   Trash2,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { getWalletTypeDisplayName } from '@/types/wallet';
 
 export default function WalletSettingsScreen() {
   const { 
@@ -137,7 +138,7 @@ export default function WalletSettingsScreen() {
         <SettingItem
           icon={Wallet}
           title="Current Wallet"
-          subtitle={currentWallet ? `${currentWallet.name} (${currentWallet.type})` : 'No wallet selected'}
+          subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
         />
 
         {/* Security & Privacy Section */}

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-na
 import { LinearGradient } from 'expo-linear-gradient';
 import { MoreHorizontal, Check, Edit3, Trash2 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
-import { Wallet } from '@/types/wallet';
+import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { platformStyles } from '@/constants/themes';
 
 // Function to generate gradient colors from a base color
@@ -62,7 +62,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
         <View style={styles.header}>
           <View>
             <Text style={styles.walletName}>{displayWallet.name}</Text>
-            <Text style={styles.walletType}>P2WPKH</Text>
+            <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
           </View>
           <TouchableOpacity 
             ref={menuButtonRef}
