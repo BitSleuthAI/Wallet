@@ -79,8 +79,8 @@ export default function FeeSettingsScreen() {
     setRefreshing(true);
     try {
       console.log('🔄 Refreshing fee estimates...');
-      // Force refresh by creating new instance
-      const freshEstimates = await FeeEstimationService.getInstance().getFeeEstimates();
+      // Force refresh using the new method
+      const freshEstimates = await feeEstimationService.refreshFeeEstimates();
       setFeeEstimates(freshEstimates);
     } catch (error) {
       console.error('❌ Failed to refresh fee estimates:', error);
@@ -271,6 +271,63 @@ export default function FeeSettingsScreen() {
       )}
     </View>
   );
+
+  const NetworkCongestionIndicator = () => {
+    const [congestion, setCongestion] = useState<'low' | 'medium' | 'high'>('medium');
+    
+    useEffect(() => {
+      const checkCongestion = async () => {
+        try {
+          const level = await feeEstimationService.getNetworkCongestion();
+          setCongestion(level);
+        } catch (error) {
+          console.warn('Failed to get network congestion:', error);
+        }
+      };
+      
+      if (feeEstimates) {
+        checkCongestion();
+      }
+    }, [feeEstimates]);
+    
+    const getCongestionColor = () => {
+      switch (congestion) {
+        case 'low': return '#10B981'; // Green
+        case 'medium': return '#F59E0B'; // Yellow
+        case 'high': return '#EF4444'; // Red
+        default: return theme.colors.textSecondary;
+      }
+    };
+    
+    const getCongestionText = () => {
+      switch (congestion) {
+        case 'low': return 'Low congestion - Good time to transact';
+        case 'medium': return 'Moderate congestion - Normal fees';
+        case 'high': return 'High congestion - Consider waiting';
+        default: return 'Unknown congestion level';
+      }
+    };
+    
+    return (
+      <View style={[styles.congestionCard, { backgroundColor: theme.colors.surface }]}>
+        <View style={styles.congestionHeader}>
+          <View style={[
+            styles.congestionIndicator, 
+            { backgroundColor: getCongestionColor() }
+          ]} />
+          <Text style={[styles.congestionTitle, { color: theme.colors.text }]}>
+            Network Status
+          </Text>
+        </View>
+        <Text style={[styles.congestionText, { color: theme.colors.textSecondary }]}>
+          {getCongestionText()}
+        </Text>
+        <Text style={[styles.congestionSubtext, { color: theme.colors.textSecondary }]}>
+          Last updated: {new Date().toLocaleTimeString()}
+        </Text>
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -498,13 +555,13 @@ export default function FeeSettingsScreen() {
           <>
             <SectionHeader 
               title="Current Network Conditions" 
-              subtitle="Live fee estimates from the Bitcoin network"
+              subtitle="Live fee estimates from the mempool"
             />
             
             <View style={[styles.networkCard, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.networkRow}>
                 <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
-                  Economy (3-6 hours)
+                  Economy (2-6 hours)
                 </Text>
                 <Text style={[styles.networkValue, { color: theme.colors.text }]}>
                   {feeEstimates.economyFee} sat/vB
@@ -512,7 +569,7 @@ export default function FeeSettingsScreen() {
               </View>
               <View style={styles.networkRow}>
                 <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
-                  Standard (30-60 min)
+                  Standard (20-60 min)
                 </Text>
                 <Text style={[styles.networkValue, { color: theme.colors.text }]}>
                   {feeEstimates.halfHourFee} sat/vB
@@ -520,13 +577,24 @@ export default function FeeSettingsScreen() {
               </View>
               <View style={styles.networkRow}>
                 <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
-                  Priority (10-20 min)
+                  Priority (5-20 min)
                 </Text>
                 <Text style={[styles.networkValue, { color: theme.colors.text }]}>
                   {feeEstimates.fastestFee} sat/vB
                 </Text>
               </View>
+              <View style={styles.networkRow}>
+                <Text style={[styles.networkLabel, { color: theme.colors.textSecondary }]}>
+                  Minimum (12+ hours)
+                </Text>
+                <Text style={[styles.networkValue, { color: theme.colors.text }]}>
+                  {feeEstimates.minimumFee} sat/vB
+                </Text>
+              </View>
             </View>
+            
+            {/* Network Congestion Indicator */}
+            <NetworkCongestionIndicator />
           </>
         )}
         
@@ -747,5 +815,35 @@ const styles = StyleSheet.create({
   },
   bottomPadding: {
     height: 40,
+  },
+  congestionCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  congestionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  congestionIndicator: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    marginRight: 12,
+  },
+  congestionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  congestionText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 4,
+  },
+  congestionSubtext: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
 });

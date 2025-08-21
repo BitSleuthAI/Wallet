@@ -2,9 +2,11 @@
 import { FeeEstimate, UTXO, SendTransactionParams } from '@/types/wallet';
 import { Platform } from 'react-native';
 
-// Blockstream API endpoints
+// API endpoints for fee estimation
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
 const MEMPOOL_API = 'https://mempool.space/api';
+const MEMPOOL_RECOMMENDED_API = 'https://mempool.space/api/v1/fees/recommended';
+const MEMPOOL_ESTIMATES_API = 'https://mempool.space/api/v1/fees/mempool-blocks';
 
 // Fee estimation service
 export class FeeEstimationService {
@@ -28,8 +30,137 @@ export class FeeEstimationService {
       return this.cachedFees;
     }
 
+    // Try multiple sources for fee estimation
+    const feeEstimate = await this.fetchFromMultipleSources();
+    
+    this.cachedFees = feeEstimate;
+    this.lastFetchTime = now;
+    
+    console.log('✅ Dynamic fee estimates fetched:', feeEstimate);
+    return feeEstimate;
+  }
+
+  private async fetchFromMultipleSources(): Promise<FeeEstimate> {
+    const sources = [
+      () => this.fetchFromMempoolRecommended(),
+      () => this.fetchFromMempoolEstimates(), 
+      () => this.fetchFromBlockstream(),
+    ];
+
+    for (const fetchSource of sources) {
+      try {
+        const result = await fetchSource();
+        if (result) {
+          return result;
+        }
+      } catch (error) {
+        console.warn('Fee source failed, trying next:', error);
+        continue;
+      }
+    }
+
+    // All sources failed, return fallback
+    console.warn('❌ All fee estimation sources failed, using fallback rates');
+    return this.getFallbackFees();
+  }
+
+  private async fetchFromMempoolRecommended(): Promise<FeeEstimate | null> {
     try {
-      console.log('📊 Fetching fee estimates from Blockstream...');
+      console.log('📊 Fetching recommended fees from Mempool.space...');
+      
+      const response = await fetch(MEMPOOL_RECOMMENDED_API, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitcoinWallet/1.0',
+        },
+        ...(Platform.OS === 'web' ? { 
+          mode: 'cors' as const,
+          credentials: 'omit' as const,
+        } : {}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      
+      // Mempool.space recommended API returns: { fastestFee, halfHourFee, hourFee, economyFee, minimumFee }
+      const feeEstimate: FeeEstimate = {
+        fastestFee: Math.ceil(data.fastestFee || 20),
+        halfHourFee: Math.ceil(data.halfHourFee || 15), 
+        hourFee: Math.ceil(data.hourFee || 10),
+        economyFee: Math.ceil(data.economyFee || 5),
+        minimumFee: Math.ceil(data.minimumFee || 1),
+      };
+
+      console.log('✅ Mempool.space recommended fees:', feeEstimate);
+      return feeEstimate;
+    } catch (error) {
+      console.warn('❌ Failed to fetch from Mempool.space recommended:', error);
+      return null;
+    }
+  }
+
+  private async fetchFromMempoolEstimates(): Promise<FeeEstimate | null> {
+    try {
+      console.log('📊 Fetching mempool block estimates from Mempool.space...');
+      
+      const response = await fetch(MEMPOOL_ESTIMATES_API, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitcoinWallet/1.0',
+        },
+        ...(Platform.OS === 'web' ? { 
+          mode: 'cors' as const,
+          credentials: 'omit' as const,
+        } : {}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const blocks = await response.json();
+      
+      if (!Array.isArray(blocks) || blocks.length === 0) {
+        throw new Error('Invalid mempool blocks data');
+      }
+
+      // Calculate fee estimates based on mempool blocks
+      // blocks[0] = next block, blocks[1] = second block, etc.
+      const nextBlockFee = blocks[0]?.medianFee || 20;
+      const secondBlockFee = blocks[1]?.medianFee || 15;
+      const thirdBlockFee = blocks[2]?.medianFee || 10;
+      
+      // Calculate average fees for different time horizons
+      const fastestFee = Math.ceil(nextBlockFee * 1.1); // 10% premium for fastest
+      const halfHourFee = Math.ceil((nextBlockFee + secondBlockFee) / 2);
+      const hourFee = Math.ceil((nextBlockFee + secondBlockFee + thirdBlockFee) / 3);
+      const economyFee = Math.ceil(Math.min(hourFee * 0.7, 5)); // 30% less than hour fee
+      const minimumFee = Math.max(1, Math.ceil(economyFee * 0.5)); // 50% of economy fee
+
+      const feeEstimate: FeeEstimate = {
+        fastestFee,
+        halfHourFee,
+        hourFee,
+        economyFee,
+        minimumFee,
+      };
+
+      console.log('✅ Mempool.space block estimates:', feeEstimate);
+      return feeEstimate;
+    } catch (error) {
+      console.warn('❌ Failed to fetch from Mempool.space estimates:', error);
+      return null;
+    }
+  }
+
+  private async fetchFromBlockstream(): Promise<FeeEstimate | null> {
+    try {
+      console.log('📊 Fetching fee estimates from Blockstream (fallback)...');
       
       const response = await fetch(`${BLOCKSTREAM_API}/fee-estimates`, {
         method: 'GET',
@@ -58,27 +189,23 @@ export class FeeEstimationService {
         minimumFee: Math.ceil(data['144'] || data['504'] || 1), // ~24 hours (144-504 blocks)
       };
 
-      this.cachedFees = feeEstimate;
-      this.lastFetchTime = now;
-      
-      console.log('✅ Fee estimates fetched:', feeEstimate);
+      console.log('✅ Blockstream fee estimates:', feeEstimate);
       return feeEstimate;
     } catch (error) {
-      console.warn('❌ Failed to fetch fee estimates, using defaults:', error);
-      
-      // Fallback fee estimates (sat/vB)
-      const fallbackFees: FeeEstimate = {
-        fastestFee: 20,
-        halfHourFee: 15,
-        hourFee: 10,
-        economyFee: 5,
-        minimumFee: 1,
-      };
-
-      this.cachedFees = fallbackFees;
-      this.lastFetchTime = now;
-      return fallbackFees;
+      console.warn('❌ Failed to fetch from Blockstream:', error);
+      return null;
     }
+  }
+
+  private getFallbackFees(): FeeEstimate {
+    // Conservative fallback fee estimates (sat/vB)
+    return {
+      fastestFee: 25,
+      halfHourFee: 15,
+      hourFee: 10,
+      economyFee: 5,
+      minimumFee: 1,
+    };
   }
 
   // Get recommended fee for target confirmation time
@@ -97,6 +224,76 @@ export class FeeEstimationService {
       default:
         return fees.halfHourFee;
     }
+  }
+
+  // Force refresh fee estimates (bypass cache)
+  async refreshFeeEstimates(): Promise<FeeEstimate> {
+    console.log('🔄 Force refreshing fee estimates...');
+    this.cachedFees = null;
+    this.lastFetchTime = 0;
+    return this.getFeeEstimates();
+  }
+
+  // Get current network congestion level
+  async getNetworkCongestion(): Promise<'low' | 'medium' | 'high'> {
+    try {
+      const fees = await this.getFeeEstimates();
+      const fastFee = fees.fastestFee;
+      
+      if (fastFee <= 10) {
+        return 'low';
+      } else if (fastFee <= 50) {
+        return 'medium';
+      } else {
+        return 'high';
+      }
+    } catch (error) {
+      console.warn('Failed to determine network congestion:', error);
+      return 'medium'; // Default to medium
+    }
+  }
+
+  // Get fee estimate with confidence interval
+  async getFeeWithConfidence(target: 'fast' | 'medium' | 'slow' | 'economy'): Promise<{
+    fee: number;
+    confidence: 'high' | 'medium' | 'low';
+    timeEstimate: string;
+  }> {
+    const fees = await this.getFeeEstimates();
+    const congestion = await this.getNetworkCongestion();
+    
+    let fee: number;
+    let timeEstimate: string;
+    let confidence: 'high' | 'medium' | 'low';
+    
+    switch (target) {
+      case 'fast':
+        fee = fees.fastestFee;
+        timeEstimate = congestion === 'high' ? '10-30 min' : '5-15 min';
+        confidence = congestion === 'low' ? 'high' : 'medium';
+        break;
+      case 'medium':
+        fee = fees.halfHourFee;
+        timeEstimate = congestion === 'high' ? '30-90 min' : '20-45 min';
+        confidence = 'high';
+        break;
+      case 'slow':
+        fee = fees.hourFee;
+        timeEstimate = congestion === 'high' ? '1-3 hours' : '45-90 min';
+        confidence = 'high';
+        break;
+      case 'economy':
+        fee = fees.economyFee;
+        timeEstimate = congestion === 'high' ? '3-12 hours' : '2-6 hours';
+        confidence = congestion === 'low' ? 'high' : 'medium';
+        break;
+      default:
+        fee = fees.halfHourFee;
+        timeEstimate = '30-60 min';
+        confidence = 'medium';
+    }
+    
+    return { fee, confidence, timeEstimate };
   }
 }
 

@@ -37,6 +37,11 @@ export default function SendScreen() {
     message: string;
   }>({ isValid: false, message: '' });
   const [feeEstimates, setFeeEstimates] = useState<any>(null);
+  const [feeWithConfidence, setFeeWithConfidence] = useState<{
+    fast: { fee: number; confidence: string; timeEstimate: string };
+    medium: { fee: number; confidence: string; timeEstimate: string };
+    slow: { fee: number; confidence: string; timeEstimate: string };
+  } | null>(null);
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
 
@@ -54,6 +59,23 @@ export default function SendScreen() {
         // Set default fee rate based on estimates
         if (fees) {
           setFeeRate(fees.halfHourFee || 5);
+          
+          // Load fee confidence data
+          try {
+            const [fastInfo, mediumInfo, slowInfo] = await Promise.all([
+              feeEstimationService.getFeeWithConfidence('fast'),
+              feeEstimationService.getFeeWithConfidence('medium'),
+              feeEstimationService.getFeeWithConfidence('economy')
+            ]);
+            
+            setFeeWithConfidence({
+              fast: fastInfo,
+              medium: mediumInfo,
+              slow: slowInfo
+            });
+          } catch (error) {
+            console.warn('Failed to load fee confidence data:', error);
+          }
         }
       } catch (error) {
         console.warn('Failed to load initial data:', error);
@@ -447,6 +469,20 @@ export default function SendScreen() {
       Alert.alert('Error', 'Failed to review transaction. Please try again.');
     }
   };
+  
+  const getTimeEstimateForFeeRate = (rate: number): string => {
+    if (!feeEstimates) return 'Calculating...';
+    
+    if (rate >= feeEstimates.fastestFee) {
+      return feeWithConfidence?.fast?.timeEstimate || '5-20 min';
+    } else if (rate >= feeEstimates.halfHourFee) {
+      return feeWithConfidence?.medium?.timeEstimate || '20-60 min';
+    } else if (rate >= feeEstimates.economyFee) {
+      return feeWithConfidence?.slow?.timeEstimate || '2-6 hours';
+    } else {
+      return '6+ hours';
+    }
+  };
 
   if (!currentWallet) {
     return (
@@ -622,7 +658,7 @@ export default function SendScreen() {
             </View>
             <View style={styles.feeDetails}>
               <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
-                {feeRate <= 5 ? '2-3 hours' : feeRate <= 10 ? '30-60 min' : '10-30 min'}
+                {getTimeEstimateForFeeRate(feeRate)}
               </Text>
               <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
                 {feeRate} sat/vB
@@ -887,10 +923,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   feeButtonText: {
-    fontSize: 12,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  feeButtonSubtext: {
+    fontSize: 11,
     fontWeight: '500',
     textAlign: 'center',
-    lineHeight: 16,
+    marginBottom: 2,
+  },
+  feeButtonTime: {
+    fontSize: 10,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
   feeEstimate: {
     alignItems: 'center',
