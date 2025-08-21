@@ -38,7 +38,7 @@ interface WalletCardProps {
 }
 
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet();
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet } = useWallet();
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuButtonRef = useRef<View>(null);
@@ -139,8 +139,8 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
               }}
               testID="edit-wallet-button"
             >
-              <Edit3 color={theme.colors.text} size={20} />
-              <Text style={[styles.menuText, { color: theme.colors.text }]}>Edit</Text>
+              <Edit3 color="#333333" size={20} />
+              <Text style={[styles.menuText, { color: '#333333' }]}>Edit</Text>
             </TouchableOpacity>
             
             <TouchableOpacity 
