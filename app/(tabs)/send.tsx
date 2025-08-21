@@ -681,7 +681,7 @@ export default function SendScreen() {
                 styles.feeButtonText, 
                 { color: feeRate === (feeEstimates?.economyFee || 1) ? 'white' : theme.colors.text }
               ]}>
-                Slow{"\n"}{feeEstimates?.economyFee || 1} sat/vB
+                {`Slow\n${feeEstimates?.economyFee || 1} sat/vB`}
               </Text>
             </TouchableOpacity>
             
@@ -699,7 +699,7 @@ export default function SendScreen() {
                 styles.feeButtonText, 
                 { color: feeRate === (feeEstimates?.halfHourFee || 5) ? 'white' : theme.colors.text }
               ]}>
-                Normal{"\n"}{feeEstimates?.halfHourFee || 5} sat/vB
+                {`Normal\n${feeEstimates?.halfHourFee || 5} sat/vB`}
               </Text>
             </TouchableOpacity>
             
@@ -717,7 +717,7 @@ export default function SendScreen() {
                 styles.feeButtonText, 
                 { color: feeRate === (feeEstimates?.fastestFee || 15) ? 'white' : theme.colors.text }
               ]}>
-                Fast{"\n"}{feeEstimates?.fastestFee || 15} sat/vB
+                {`Fast\n${feeEstimates?.fastestFee || 15} sat/vB`}
               </Text>
             </TouchableOpacity>
           </View>
