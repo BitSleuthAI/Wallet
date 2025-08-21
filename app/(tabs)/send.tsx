@@ -462,24 +462,55 @@ export default function SendScreen() {
           <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
             Recipient Address
           </Text>
+          
+          {/* QR Scanner and Manual Entry Options */}
+          <View style={styles.addressInputOptions}>
+            <TouchableOpacity 
+              style={[
+                styles.addressOptionButton,
+                { 
+                  backgroundColor: theme.colors.primary,
+                  flex: 1,
+                  marginRight: 8
+                }
+              ]}
+              onPress={() => setShowQRScanner(true)}
+            >
+              <QrCode color="white" size={20} />
+              <Text style={styles.addressOptionText}>Scan QR Code</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.addressOptionButton,
+                { 
+                  backgroundColor: theme.colors.surface,
+                  borderWidth: 1,
+                  borderColor: theme.colors.border,
+                  flex: 1,
+                  marginLeft: 8
+                }
+              ]}
+              onPress={() => {
+                // Focus on text input - we'll add a ref for this
+              }}
+            >
+              <Text style={[styles.addressOptionText, { color: theme.colors.text }]}>Manual Entry</Text>
+            </TouchableOpacity>
+          </View>
+          
           <View style={styles.inputContainer}>
             <TextInput
               style={[
                 createInputStyle(theme),
                 styles.textInput,
               ]}
-              placeholder="bc1q..."
+              placeholder="Enter Bitcoin address (bc1q..., 1..., 3...)"
               placeholderTextColor={theme.colors.textSecondary}
               value={recipientAddress}
               onChangeText={setRecipientAddress}
               multiline
             />
-            <TouchableOpacity 
-              style={styles.qrButton}
-              onPress={() => setShowQRScanner(true)}
-            >
-              <QrCode color={theme.colors.textSecondary} size={20} />
-            </TouchableOpacity>
           </View>
           
           {/* Address Validation Indicator */}
@@ -742,10 +773,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
     minHeight: 56,
   },
-  qrButton: {
-    position: 'absolute',
-    right: 16,
-    top: 18,
+  addressInputOptions: {
+    flexDirection: 'row',
+    marginBottom: 12,
+  },
+  addressOptionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    gap: 8,
+  },
+  addressOptionText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: '600',
   },
   amountHeader: {
     flexDirection: 'row',

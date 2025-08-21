@@ -25,23 +25,54 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     if (!permission?.granted) {
       requestPermission();
     }
-  }, [permission]);
+  }, [permission, requestPermission]);
 
   if (Platform.OS === 'web') {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.content, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            QR Scanner Not Available
+            QR Scanner
           </Text>
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
-            QR code scanning is not available on web. Please use the mobile app to scan QR codes.
+            On web, you can manually enter the Bitcoin address below or use your device&apos;s camera to scan QR codes.
           </Text>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
+            onPress={() => {
+              // Try to access camera on web
+              if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+                  .then(() => {
+                    Alert.alert(
+                      'Camera Access',
+                      'Camera access granted. You can now scan QR codes using your device camera.',
+                      [{ text: 'OK', onPress: onClose }]
+                    );
+                  })
+                  .catch(() => {
+                    Alert.alert(
+                      'Camera Not Available',
+                      'Camera access is not available on this device. Please manually enter the Bitcoin address.',
+                      [{ text: 'OK', onPress: onClose }]
+                    );
+                  });
+              } else {
+                Alert.alert(
+                  'Camera Not Supported',
+                  'Camera is not supported on this browser. Please manually enter the Bitcoin address.',
+                  [{ text: 'OK', onPress: onClose }]
+                );
+              }
+            }}
+          >
+            <Text style={styles.buttonText}>Try Camera Access</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
             onPress={onClose}
           >
-            <Text style={styles.buttonText}>Close</Text>
+            <Text style={[styles.buttonText, { color: theme.colors.text }]}>Manual Entry</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -66,7 +97,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             Camera Permission Required
           </Text>
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
-            We need camera permission to scan QR codes containing recovery phrases.
+            We need camera permission to scan QR codes containing Bitcoin addresses.
           </Text>
           <TouchableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
@@ -175,7 +206,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
           
           <View style={styles.instructions}>
             <Text style={styles.instructionText}>
-              Position the QR code within the frame to scan Bitcoin addresses or recovery phrases
+              Position the Bitcoin address QR code within the frame to scan
             </Text>
           </View>
         </View>
