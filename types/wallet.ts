@@ -122,6 +122,7 @@ export interface Theme {
     text: string;
     textSecondary: string;
     success: string;
+    warning: string;
     error: string;
     border: string;
   };
