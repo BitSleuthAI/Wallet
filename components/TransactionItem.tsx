@@ -1,16 +1,16 @@
 import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
+import { router } from 'expo-router';
 import { Transaction } from '@/types/wallet';
 import { useWallet } from '@/hooks/wallet-store';
 import { platformStyles } from '@/constants/themes';
 
 interface TransactionItemProps {
   transaction: Transaction;
-  onPress?: () => void;
 }
 
-export default function TransactionItem({ transaction, onPress }: TransactionItemProps) {
+export default function TransactionItem({ transaction }: TransactionItemProps) {
   const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet();
   
   const isReceived = transaction.type === 'received';
@@ -32,10 +32,17 @@ export default function TransactionItem({ transaction, onPress }: TransactionIte
     return `${address.slice(0, 8)}...${address.slice(-8)}`;
   };
 
+  const handlePress = () => {
+    router.push({
+      pathname: '/transaction-details',
+      params: { txid: transaction.txid },
+    });
+  };
+
   return (
     <TouchableOpacity 
       style={[styles.container, { backgroundColor: theme.colors.surface }]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       <View style={[

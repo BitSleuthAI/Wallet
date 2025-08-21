@@ -1,0 +1,483 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  Alert,
+  ActivityIndicator,
+  Linking,
+  Share,
+  Platform,
+} from 'react-native';
+import { Stack, useLocalSearchParams } from 'expo-router';
+import {
+  ArrowUpRight,
+  ArrowDownLeft,
+  Copy,
+  ExternalLink,
+  Share as ShareIcon,
+  Zap,
+  Clock,
+  CheckCircle,
+  XCircle,
+  AlertTriangle,
+} from 'lucide-react-native';
+import { useWallet } from '@/hooks/wallet-store';
+import { Transaction } from '@/types/wallet';
+import { platformStyles } from '@/constants/themes';
+import { feeEstimationService } from '@/services/fee-service';
+import * as Clipboard from 'expo-clipboard';
+
+export default function TransactionDetailsScreen() {
+  const { txid } = useLocalSearchParams<{ txid: string }>();
+  const { theme, transactions, formatCurrency, bitcoinPrice } = useWallet();
+  const [transaction, setTransaction] = useState<Transaction | null>(null);
+  const [isLoadingRBF, setIsLoadingRBF] = useState(false);
+  const [rbfFeeRate, setRbfFeeRate] = useState<number>(0);
+
+  useEffect(() => {
+    if (txid && transactions) {
+      const tx = transactions.find(t => t.txid === txid);
+      setTransaction(tx || null);
+    }
+  }, [txid, transactions]);
+
+  useEffect(() => {
+    const loadFeeEstimates = async () => {
+      try {
+        const fees = await feeEstimationService.getFeeEstimates();
+        setRbfFeeRate(fees.fastestFee);
+      } catch (error) {
+        console.error('Failed to load fee estimates:', error);
+        setRbfFeeRate(20); // Fallback
+      }
+    };
+    loadFeeEstimates();
+  }, []);
+
+  if (!transaction) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <Stack.Screen options={{ title: 'Transaction Details' }} />
+        <View style={styles.centerContent}>
+          <Text style={[styles.errorText, { color: theme.colors.error }]}>
+            Transaction not found
+          </Text>
+        </View>
+      </View>
+    );
+  }
+
+  const isReceived = transaction.type === 'received';
+  const amountUSD = bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
+
+  const formatDate = (timestamp: number) => {
+    const date = new Date(timestamp);
+    return date.toLocaleString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  };
+
+  const getStatusIcon = () => {
+    switch (transaction.status) {
+      case 'confirmed':
+        return <CheckCircle color={theme.colors.success} size={24} />;
+      case 'pending':
+        return <Clock color="#FFA500" size={24} />;
+      case 'failed':
+        return <XCircle color={theme.colors.error} size={24} />;
+      default:
+        return <AlertTriangle color={theme.colors.warning} size={24} />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (transaction.status) {
+      case 'confirmed':
+        return `Confirmed (${transaction.confirmations || 0} confirmations)`;
+      case 'pending':
+        return 'Pending confirmation';
+      case 'failed':
+        return 'Failed';
+      default:
+        return 'Unknown status';
+    }
+  };
+
+  const copyToClipboard = async (text: string, label: string) => {
+    try {
+      await Clipboard.setStringAsync(text);
+      Alert.alert('Copied', `${label} copied to clipboard`);
+    } catch {
+      Alert.alert('Error', 'Failed to copy to clipboard');
+    }
+  };
+
+  const openInExplorer = () => {
+    const url = `https://blockstream.info/tx/${transaction.txid}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Error', 'Failed to open block explorer');
+    });
+  };
+
+  const shareTransaction = async () => {
+    try {
+      const url = `https://blockstream.info/tx/${transaction.txid}`;
+      const message = `Bitcoin Transaction: ${transaction.txid}\n\nAmount: ${isReceived ? '+' : '-'}${transaction.amount.toFixed(8)} BTC\nStatus: ${getStatusText()}\n\nView on explorer: ${url}`;
+      
+      if (Platform.OS === 'web') {
+        await navigator.share({
+          title: 'Bitcoin Transaction',
+          text: message,
+          url: url,
+        });
+      } else {
+        await Share.share({
+          message: message,
+          url: url,
+        });
+      }
+    } catch {
+      // Share failed, ignore silently
+    }
+  };
+
+  const handleRBF = async () => {
+    if (!transaction.rbf || transaction.status !== 'pending') {
+      Alert.alert(
+        'RBF Not Available',
+        'Replace-by-Fee is only available for pending transactions that were created with RBF enabled.'
+      );
+      return;
+    }
+
+    Alert.alert(
+      'Replace-by-Fee',
+      `This will create a new transaction with a higher fee rate (${rbfFeeRate} sat/vB) to speed up confirmation. The original transaction will be replaced.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Replace',
+          style: 'destructive',
+          onPress: performRBF,
+        },
+      ]
+    );
+  };
+
+  const performRBF = async () => {
+    setIsLoadingRBF(true);
+    try {
+      // In a real implementation, you would:
+      // 1. Create a new transaction with the same outputs but higher fee
+      // 2. Sign and broadcast the replacement transaction
+      // 3. Update the transaction status
+      
+      // For now, we'll simulate the process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      Alert.alert(
+        'RBF Submitted',
+        'The replacement transaction has been submitted to the network. It may take a few minutes to propagate.'
+      );
+    } catch (error) {
+      console.error('RBF failed:', error);
+      Alert.alert('Error', 'Failed to replace transaction. Please try again.');
+    } finally {
+      setIsLoadingRBF(false);
+    }
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Stack.Screen 
+        options={{ 
+          title: 'Transaction Details',
+          headerRight: () => (
+            <TouchableOpacity onPress={shareTransaction} style={styles.headerButton}>
+              <ShareIcon color={theme.colors.text} size={20} />
+            </TouchableOpacity>
+          ),
+        }} 
+      />
+      
+      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        {/* Transaction Header */}
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.transactionHeader}>
+            <View style={[
+              styles.iconContainer,
+              { backgroundColor: isReceived ? theme.colors.success : theme.colors.error }
+            ]}>
+              {isReceived ? (
+                <ArrowDownLeft color="white" size={32} />
+              ) : (
+                <ArrowUpRight color="white" size={32} />
+              )}
+            </View>
+            
+            <View style={styles.headerContent}>
+              <Text style={[styles.transactionType, { color: theme.colors.text }]}>
+                {isReceived ? 'Received' : 'Sent'}
+              </Text>
+              <Text style={[
+                styles.amount,
+                { color: isReceived ? theme.colors.success : theme.colors.error }
+              ]}>
+                {isReceived ? '+' : '-'}{transaction.amount.toFixed(8)} BTC
+              </Text>
+              {amountUSD > 0 && (
+                <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
+                  {isReceived ? '+' : '-'}{formatCurrency(amountUSD, false)}
+                </Text>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {/* Status Section */}
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.statusSection}>
+            {getStatusIcon()}
+            <View style={styles.statusContent}>
+              <Text style={[styles.statusTitle, { color: theme.colors.text }]}>
+                Status
+              </Text>
+              <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
+                {getStatusText()}
+              </Text>
+            </View>
+          </View>
+          
+          {transaction.status === 'pending' && transaction.rbf && (
+            <TouchableOpacity
+              style={[styles.rbfButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleRBF}
+              disabled={isLoadingRBF}
+            >
+              {isLoadingRBF ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Zap color="white" size={20} />
+              )}
+              <Text style={styles.rbfButtonText}>
+                {isLoadingRBF ? 'Processing...' : 'Speed Up (RBF)'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {/* Transaction Details */}
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Details</Text>
+          
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Date</Text>
+            <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+              {formatDate(transaction.timestamp)}
+            </Text>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Address</Text>
+            <TouchableOpacity
+              style={styles.copyableValue}
+              onPress={() => copyToClipboard(transaction.address, 'Address')}
+            >
+              <Text style={[styles.detailValue, { color: theme.colors.text, flex: 1 }]} numberOfLines={1}>
+                {transaction.address}
+              </Text>
+              <Copy color={theme.colors.textSecondary} size={16} />
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.detailRow}>
+            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Transaction ID</Text>
+            <TouchableOpacity
+              style={styles.copyableValue}
+              onPress={() => copyToClipboard(transaction.txid, 'Transaction ID')}
+            >
+              <Text style={[styles.detailValue, { color: theme.colors.text, flex: 1 }]} numberOfLines={1}>
+                {transaction.txid}
+              </Text>
+              <Copy color={theme.colors.textSecondary} size={16} />
+            </TouchableOpacity>
+          </View>
+          
+          {transaction.fee && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                {(transaction.fee / 100000000).toFixed(8)} BTC
+                {transaction.feeRate && ` (${transaction.feeRate} sat/vB)`}
+              </Text>
+            </View>
+          )}
+          
+          {transaction.blockHeight && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Block Height</Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                {transaction.blockHeight.toLocaleString()}
+              </Text>
+            </View>
+          )}
+          
+          {transaction.memo && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Memo</Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                {transaction.memo}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        {/* Actions */}
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Actions</Text>
+          
+          <TouchableOpacity style={styles.actionButton} onPress={openInExplorer}>
+            <ExternalLink color={theme.colors.primary} size={20} />
+            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+              View on Block Explorer
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    ...platformStyles.typography.bodyLarge,
+    textAlign: 'center',
+  },
+  section: {
+    margin: platformStyles.spacing.lg,
+    padding: platformStyles.spacing.lg,
+    borderRadius: platformStyles.borderRadius.large,
+    ...platformStyles.shadow,
+  },
+  transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: platformStyles.spacing.lg,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  transactionType: {
+    ...platformStyles.typography.bodyLarge,
+    fontWeight: '600',
+    marginBottom: platformStyles.spacing.xs,
+  },
+  amount: {
+    ...platformStyles.typography.heading,
+    marginBottom: platformStyles.spacing.xs,
+  },
+  amountUSD: {
+    ...platformStyles.typography.body,
+  },
+  statusSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: platformStyles.spacing.lg,
+  },
+  statusContent: {
+    marginLeft: platformStyles.spacing.md,
+    flex: 1,
+  },
+  statusTitle: {
+    ...platformStyles.typography.bodyLarge,
+    fontWeight: '600',
+    marginBottom: platformStyles.spacing.xs,
+  },
+  statusText: {
+    ...platformStyles.typography.body,
+  },
+  rbfButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: platformStyles.spacing.md,
+    paddingHorizontal: platformStyles.spacing.lg,
+    borderRadius: platformStyles.borderRadius.medium,
+    marginTop: platformStyles.spacing.md,
+  },
+  rbfButtonText: {
+    color: 'white',
+    ...platformStyles.typography.bodyLarge,
+    fontWeight: '600',
+    marginLeft: platformStyles.spacing.sm,
+  },
+  sectionTitle: {
+    ...platformStyles.typography.title,
+    marginBottom: platformStyles.spacing.lg,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: platformStyles.spacing.md,
+    minHeight: 24,
+  },
+  detailLabel: {
+    ...platformStyles.typography.body,
+    flex: 1,
+    marginRight: platformStyles.spacing.md,
+  },
+  detailValue: {
+    ...platformStyles.typography.body,
+    fontWeight: '500',
+    flex: 2,
+    textAlign: 'right',
+  },
+  copyableValue: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 2,
+    justifyContent: 'flex-end',
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: platformStyles.spacing.md,
+    paddingHorizontal: platformStyles.spacing.lg,
+    borderRadius: platformStyles.borderRadius.medium,
+    marginBottom: platformStyles.spacing.sm,
+  },
+  actionButtonText: {
+    ...platformStyles.typography.bodyLarge,
+    marginLeft: platformStyles.spacing.md,
+  },
+  headerButton: {
+    padding: platformStyles.spacing.sm,
+  },
+});

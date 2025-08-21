@@ -111,6 +111,7 @@ function AppContent() {
       <Stack.Screen name="wallet-settings" options={{ headerShown: true }} />
       <Stack.Screen name="coin-control" options={{ headerShown: true }} />
       <Stack.Screen name="fee-settings" options={{ headerShown: true }} />
+      <Stack.Screen name="transaction-details" options={{ headerShown: true }} />
     </Stack>
   );
 }
