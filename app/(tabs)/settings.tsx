@@ -36,6 +36,7 @@ import {
   Check,
   Euro,
   PoundSterling,
+  FolderOpen,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
@@ -148,6 +149,13 @@ export default function SettingsScreen() {
       <ScrollView style={styles.scrollView}>
         {/* General Section */}
         <SectionHeader title="General" />
+        
+        <SettingItem
+          icon={FolderOpen}
+          title="Manage Wallets"
+          subtitle="Add, edit, or remove wallets"
+          onPress={() => router.push('/manage-wallets')}
+        />
         
         <SettingItem
           icon={Wallet}
