@@ -180,7 +180,7 @@ export default function SettingsScreen() {
           onPress={() => setShowCurrencyModal(true)}
           rightElement={
             <View style={styles.currencyContainer}>
-              <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+              <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
                 {selectedCurrency} - {getCurrencyName()}
               </Text>
               <ChevronRight color={theme.colors.textSecondary} size={20} />
@@ -569,12 +569,14 @@ const styles = StyleSheet.create({
   currencyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 200,
+    maxWidth: 160,
+    minWidth: 120,
   },
   currencyText: {
     fontSize: 14,
     marginRight: 8,
-    flexShrink: 1,
+    flex: 1,
+    textAlign: 'right',
   },
   themeToggle: {
     flexDirection: 'row',
