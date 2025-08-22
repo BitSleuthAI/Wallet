@@ -2,8 +2,8 @@
 import '@/services/crypto-polyfill';
 import { initializeCrypto } from '@/services/crypto-polyfill';
 import { createNobleECC } from '@/services/ecc-override';
+import { AddressType, Wallet, WalletType } from '@/types/wallet';
 import { Platform } from 'react-native';
-import { Wallet, WalletType, AddressType } from '@/types/wallet';
 
 // CRITICAL: ECC override is now active to prevent tiny-secp256k1 WASM loading
 console.log('✅ ECC override active - tiny-secp256k1 imports will be redirected to @noble/secp256k1');

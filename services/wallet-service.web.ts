@@ -235,7 +235,7 @@ export const generateMnemonic = (strength: number = 128): string => {
   } catch (error) {
     console.error('Web: Error generating mnemonic:', error);
     // Fallback
-    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
     const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
     return strength === 256 ? fallback24 : fallback12;
   }
