@@ -1,27 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Alert,
-  Platform,
-} from 'react-native';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { Stack } from 'expo-router';
 import {
+  Fingerprint,
   Key,
   Plus,
-  Trash2,
-  Fingerprint,
   Shield,
   Smartphone,
+  Trash2,
 } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
-import * as LocalAuthentication from 'expo-local-authentication';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import {
+  Alert,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface SecurityKey {
   id: string;
@@ -340,7 +340,7 @@ export default function PasskeysSecurityScreen() {
         <View style={[styles.headerCard, { backgroundColor: theme.colors.primary }]}>
           <Text style={styles.headerTitle}>Manage Your Keys</Text>
           <Text style={styles.headerSubtitle}>
-            Add a hardware security key (like a YubiKey) or a device passkey (like Face ID or Windows Hello) to add an extra layer of security to your wallet.
+            Add a hardware security key (like a YubiKey) or a device passkey (like Face ID) to add an extra layer of security to your wallet.
           </Text>
           
           {/* Empty State */}
