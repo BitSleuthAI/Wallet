@@ -9,19 +9,38 @@ import {
   Platform,
   Vibration,
 } from 'react-native';
-import { Delete, Lock } from 'lucide-react-native';
+import { Delete, Lock, Fingerprint, Shield } from 'lucide-react-native';
 import * as Haptics from 'expo-haptics';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 
 export default function PinUnlockScreen() {
   const { theme } = useWallet();
-  const { unlock } = useAutoLock();
+  const { unlock, biometricEnabled, biometricType, authenticateWithBiometric } = useAutoLock();
   const [pin, setPin] = useState('');
   const [attempts, setAttempts] = useState(0);
+  const [showBiometricButton, setShowBiometricButton] = useState(false);
 
   const maxPinLength = 4;
   const maxAttempts = 5;
+
+  // Try biometric authentication on mount if enabled
+  useEffect(() => {
+    const tryBiometric = async () => {
+      if (biometricEnabled && Platform.OS !== 'web') {
+        console.log('🔐 Attempting automatic biometric authentication...');
+        const success = await authenticateWithBiometric();
+        if (!success) {
+          // Show biometric button if automatic auth failed
+          setShowBiometricButton(true);
+        }
+      } else {
+        setShowBiometricButton(biometricEnabled && Platform.OS !== 'web');
+      }
+    };
+    
+    tryBiometric();
+  }, [biometricEnabled, authenticateWithBiometric]);
 
   const handleNumberPress = async (number: string) => {
     if (Platform.OS !== 'web') {
@@ -47,6 +66,21 @@ export default function PinUnlockScreen() {
     }
 
     setPin(prev => prev.slice(0, -1));
+  };
+
+  const handleBiometricAuth = async () => {
+    const success = await authenticateWithBiometric();
+    if (!success) {
+      // Biometric failed, user can continue with PIN
+      console.log('Biometric authentication failed, user can use PIN');
+    }
+  };
+
+  const getBiometricIcon = () => {
+    if (biometricType === 'Face ID') {
+      return <Shield color={theme.colors.primary} size={24} />;
+    }
+    return <Fingerprint color={theme.colors.primary} size={24} />;
   };
 
   useEffect(() => {
@@ -172,12 +206,31 @@ export default function PinUnlockScreen() {
             Enter PIN
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            Enter your 4-digit PIN to unlock the app
+            {showBiometricButton 
+              ? `Use ${biometricType || 'biometric'} or enter your 4-digit PIN to unlock`
+              : 'Enter your 4-digit PIN to unlock the app'
+            }
           </Text>
           {attempts > 0 && (
             <Text style={[styles.attemptsText, { color: theme.colors.error }]}>
               {maxAttempts - attempts} attempts remaining
             </Text>
+          )}
+          
+          {showBiometricButton && (
+            <TouchableOpacity
+              style={[styles.biometricButton, { 
+                backgroundColor: theme.colors.primary + '20',
+                borderColor: theme.colors.primary
+              }]}
+              onPress={handleBiometricAuth}
+              activeOpacity={0.7}
+            >
+              {getBiometricIcon()}
+              <Text style={[styles.biometricButtonText, { color: theme.colors.primary }]}>
+                Use {biometricType || 'Biometric'}
+              </Text>
+            </TouchableOpacity>
           )}
         </View>
 
@@ -285,5 +338,20 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '600',
     color: 'white',
+  },
+  biometricButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 20,
+    gap: 8,
+  },
+  biometricButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

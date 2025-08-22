@@ -15,6 +15,7 @@ import {
 import { Stack, router } from 'expo-router';
 import { QrCode, ArrowUpRight, AlertCircle, CheckCircle } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
 import WalletSelector from '@/components/WalletSelector';
 import QRScanner from '@/components/QRScanner';
@@ -23,6 +24,7 @@ import { feeEstimationService } from '@/services/fee-service';
 
 export default function SendScreen() {
   const { currentWallet, balance, theme, coinControl } = useWallet();
+  const { authenticateForTransaction } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
@@ -247,6 +249,17 @@ export default function SendScreen() {
     try {
       setIsLoading(true);
       
+      // Request biometric authentication if enabled
+      const biometricAuth = await authenticateForTransaction();
+      if (!biometricAuth) {
+        Alert.alert(
+          'Authentication Required',
+          'Biometric authentication is required to send transactions.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
       // Comprehensive validation
       if (!recipientAddress.trim()) {
         Alert.alert('Error', 'Please enter a recipient address');
@@ -463,7 +476,19 @@ export default function SendScreen() {
           { 
             text: 'Send Bitcoin', 
             style: 'destructive',
-            onPress: handleSendTransaction
+            onPress: async () => {
+            // Request biometric authentication before proceeding
+            const biometricAuth = await authenticateForTransaction();
+            if (!biometricAuth) {
+              Alert.alert(
+                'Authentication Required',
+                'Biometric authentication is required to send transactions.',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
+            handleSendTransaction();
+          }
           },
         ]
       );

@@ -12,13 +12,23 @@ import { Stack, router } from 'expo-router';
 import { ArrowLeft, Fingerprint, Shield, Check } from 'lucide-react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 
 export default function BiometricSetupScreen() {
   const { theme } = useWallet();
+  const { biometricEnabled, enableBiometric } = useAutoLock();
   const [isSupported, setIsSupported] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [hasSetupBiometric, setHasSetupBiometric] = useState(false);
+
+  // If biometric is already enabled, skip this screen
+  useEffect(() => {
+    if (biometricEnabled) {
+      console.log('Biometric already enabled, navigating to tabs...');
+      router.replace('/(tabs)');
+    }
+  }, [biometricEnabled]);
 
   useEffect(() => {
     checkBiometricSupport();
@@ -99,6 +109,8 @@ export default function BiometricSetupScreen() {
       console.log('Authentication result:', result);
 
       if (result.success) {
+        // Save biometric settings
+        await enableBiometric(biometricType);
         setHasSetupBiometric(true);
         Alert.alert(
           'Success!',

@@ -2,13 +2,16 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
+import { AppState, AppStateStatus, Platform } from 'react-native';
+import * as LocalAuthentication from 'expo-local-authentication';
 
 export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   const queryClient = useQueryClient();
   const [isLocked, setIsLocked] = useState<boolean>(false);
   const [lastActiveTime, setLastActiveTime] = useState<number>(Date.now());
   const [storedPin, setStoredPin] = useState<string | null>(null);
+  const [biometricEnabled, setBiometricEnabled] = useState<boolean>(false);
+  const [biometricType, setBiometricType] = useState<string>('');
   const lockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef<AppStateStatus>('active');
 
@@ -30,11 +33,31 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     },
   });
 
+  // Load biometric settings
+  const biometricQuery = useQuery({
+    queryKey: ['biometricSettings'],
+    queryFn: async () => {
+      const enabled = await AsyncStorage.getItem('biometricEnabled');
+      const type = await AsyncStorage.getItem('biometricType');
+      return {
+        enabled: enabled === 'true',
+        type: type || ''
+      };
+    },
+  });
+
   useEffect(() => {
     if (pinQuery.data) {
       setStoredPin(pinQuery.data);
     }
   }, [pinQuery.data]);
+
+  useEffect(() => {
+    if (biometricQuery.data) {
+      setBiometricEnabled(biometricQuery.data.enabled);
+      setBiometricType(biometricQuery.data.type);
+    }
+  }, [biometricQuery.data]);
 
   const resetLockTimer = useCallback(() => {
     const timeout = autoLockTimeoutQuery.data || 5;
@@ -116,6 +139,43 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     };
   }, [handleAppStateChange, storedPin, isLocked, resetLockTimer]);
 
+  const authenticateWithBiometric = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'web' || !biometricEnabled) {
+      return false;
+    }
+
+    try {
+      console.log('🔐 Attempting biometric authentication...');
+      
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!compatible || !enrolled) {
+        console.log('❌ Biometric not available or not enrolled');
+        return false;
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: `Use ${biometricType || 'biometric'} to unlock BitSleuth`,
+        cancelLabel: 'Use PIN',
+        fallbackLabel: 'Use PIN instead',
+      });
+
+      if (result.success) {
+        console.log('✅ Biometric authentication successful');
+        setIsLocked(false);
+        resetLockTimer();
+        return true;
+      } else {
+        console.log('❌ Biometric authentication failed:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Biometric authentication error:', error);
+      return false;
+    }
+  }, [biometricEnabled, biometricType, resetLockTimer]);
+
   const unlock = useCallback(async (enteredPin: string): Promise<boolean> => {
     if (!storedPin) {
       console.warn('No stored PIN found');
@@ -167,23 +227,100 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     }
   }, [queryClient]);
 
+  const enableBiometric = useCallback(async (type: string) => {
+    try {
+      await AsyncStorage.setItem('biometricEnabled', 'true');
+      await AsyncStorage.setItem('biometricType', type);
+      setBiometricEnabled(true);
+      setBiometricType(type);
+      // Invalidate query to refetch the new value
+      await queryClient.invalidateQueries({ queryKey: ['biometricSettings'] });
+      console.log(`✅ Biometric authentication enabled: ${type}`);
+    } catch (error) {
+      console.error('❌ Error enabling biometric:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
+  const disableBiometric = useCallback(async () => {
+    try {
+      await AsyncStorage.setItem('biometricEnabled', 'false');
+      await AsyncStorage.removeItem('biometricType');
+      setBiometricEnabled(false);
+      setBiometricType('');
+      // Invalidate query to refetch the new value
+      await queryClient.invalidateQueries({ queryKey: ['biometricSettings'] });
+      console.log('✅ Biometric authentication disabled');
+    } catch (error) {
+      console.error('❌ Error disabling biometric:', error);
+      throw error;
+    }
+  }, [queryClient]);
+
+  const authenticateForTransaction = useCallback(async (): Promise<boolean> => {
+    if (Platform.OS === 'web' || !biometricEnabled) {
+      return true; // Skip biometric for web or if not enabled
+    }
+
+    try {
+      console.log('🔐 Requesting biometric authentication for transaction...');
+      
+      const compatible = await LocalAuthentication.hasHardwareAsync();
+      const enrolled = await LocalAuthentication.isEnrolledAsync();
+      
+      if (!compatible || !enrolled) {
+        console.log('❌ Biometric not available, skipping transaction auth');
+        return true; // Allow transaction to proceed
+      }
+
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: `Use ${biometricType || 'biometric'} to authorize transaction`,
+        cancelLabel: 'Cancel',
+        fallbackLabel: 'Cancel',
+      });
+
+      if (result.success) {
+        console.log('✅ Transaction biometric authentication successful');
+        return true;
+      } else {
+        console.log('❌ Transaction biometric authentication failed:', result.error);
+        return false;
+      }
+    } catch (error) {
+      console.error('❌ Transaction biometric authentication error:', error);
+      return false;
+    }
+  }, [biometricEnabled, biometricType]);
+
   return useMemo(() => ({
     isLocked: shouldShowLockScreen,
     hasPin: !!storedPin,
+    biometricEnabled,
+    biometricType,
     unlock,
     lock,
     savePin,
     updateActivity,
     autoLockTimeout: autoLockTimeoutQuery.data || 5,
     setAutoLockTimeout,
+    authenticateWithBiometric,
+    enableBiometric,
+    disableBiometric,
+    authenticateForTransaction,
   }), [
     shouldShowLockScreen,
     storedPin,
+    biometricEnabled,
+    biometricType,
     unlock,
     lock,
     savePin,
     updateActivity,
     autoLockTimeoutQuery.data,
     setAutoLockTimeout,
+    authenticateWithBiometric,
+    enableBiometric,
+    disableBiometric,
+    authenticateForTransaction,
   ]);
 });

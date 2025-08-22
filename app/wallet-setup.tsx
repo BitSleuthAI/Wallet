@@ -48,7 +48,7 @@ try {
 
 export default function WalletSetupScreen() {
   const { theme, importWallet, wallets } = useWallet();
-  const { hasPin } = useAutoLock();
+  const { hasPin, biometricEnabled } = useAutoLock();
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
@@ -251,9 +251,14 @@ export default function WalletSetupScreen() {
       setTimeout(() => {
         setShowConfetti(false);
         // If this is the first wallet, go to PIN setup
-        // If PIN already exists, go to biometric setup
+        // If PIN already exists but biometric not set up, go to biometric setup
+        // If both PIN and biometric are set up, go directly to tabs
         if (hasPin) {
-          router.push('/biometric-setup');
+          if (biometricEnabled) {
+            router.replace('/(tabs)');
+          } else {
+            router.push('/biometric-setup');
+          }
         } else {
           router.push('/pin-setup');
         }
@@ -733,9 +738,14 @@ export default function WalletSetupScreen() {
       try {
         await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
         // If this is the first wallet, go to PIN setup
-        // If PIN already exists, go to biometric setup
+        // If PIN already exists but biometric not set up, go to biometric setup
+        // If both PIN and biometric are set up, go directly to tabs
         if (hasPin) {
-          router.push('/biometric-setup');
+          if (biometricEnabled) {
+            router.replace('/(tabs)');
+          } else {
+            router.push('/biometric-setup');
+          }
         } else {
           router.push('/pin-setup');
         }
