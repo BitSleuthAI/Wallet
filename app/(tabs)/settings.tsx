@@ -308,7 +308,7 @@ export default function SettingsScreen() {
           icon={Shield}
           title="Passkeys & Security Keys"
           subtitle="Secure with a FIDO key or passkey"
-          onPress={() => console.log('Security keys')}
+          onPress={() => router.push('/passkeys-security')}
         />
 
         {/* Privacy Section */}

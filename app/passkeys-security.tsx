@@ -19,6 +19,7 @@ import {
   Smartphone,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { useAutoLock } from '@/hooks/auto-lock-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -32,9 +33,9 @@ interface SecurityKey {
 
 export default function PasskeysSecurityScreen() {
   const { theme } = useWallet();
+  const { biometricEnabled, biometricType, enableBiometric, disableBiometric } = useAutoLock();
   const [securityKeys, setSecurityKeys] = useState<SecurityKey[]>([]);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
-  const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -47,9 +48,6 @@ export default function PasskeysSecurityScreen() {
       const stored = await AsyncStorage.getItem('securityKeys');
       const keys = stored ? JSON.parse(stored) : [];
       setSecurityKeys(keys);
-      
-      const biometricEnabledStored = await AsyncStorage.getItem('biometricEnabled');
-      setBiometricEnabled(biometricEnabledStored === 'true');
     } catch (error) {
       console.error('Error loading security keys:', error);
     } finally {
@@ -178,19 +176,25 @@ export default function PasskeysSecurityScreen() {
       // Disable biometric
       Alert.alert(
         'Disable Biometric Authentication',
-        'Are you sure you want to disable biometric authentication for transactions?',
+        'Are you sure you want to disable biometric authentication for wallet unlock and transactions?',
         [
           { text: 'Cancel', style: 'cancel' },
           {
             text: 'Disable',
             style: 'destructive',
             onPress: async () => {
-              await AsyncStorage.setItem('biometricEnabled', 'false');
-              setBiometricEnabled(false);
-              
-              // Remove biometric entry from security keys
-              const updatedKeys = securityKeys.filter(key => key.type !== 'biometric');
-              await saveSecurityKeys(updatedKeys);
+              try {
+                await disableBiometric();
+                
+                // Remove biometric entry from security keys
+                const updatedKeys = securityKeys.filter(key => key.type !== 'biometric');
+                await saveSecurityKeys(updatedKeys);
+                
+                Alert.alert('Success', 'Biometric authentication disabled!');
+              } catch (error) {
+                console.error('Error disabling biometric:', error);
+                Alert.alert('Error', 'Failed to disable biometric authentication');
+              }
             }
           }
         ]
@@ -199,21 +203,21 @@ export default function PasskeysSecurityScreen() {
       // Enable biometric
       try {
         const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Authenticate to enable biometric security',
+          promptMessage: 'Authenticate to enable biometric security for wallet unlock and transactions',
           fallbackLabel: 'Use PIN',
         });
 
         if (result.success) {
-          await AsyncStorage.setItem('biometricEnabled', 'true');
-          setBiometricEnabled(true);
+          const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
+          const isFaceID = supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
+          const biometricTypeName = Platform.OS === 'ios' ? (isFaceID ? 'Face ID' : 'Touch ID') : 'Biometric';
+          
+          await enableBiometric(biometricTypeName);
           
           // Add biometric entry to security keys
-          const biometricType = await LocalAuthentication.supportedAuthenticationTypesAsync();
-          const isFaceID = biometricType.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
-          
           const newKey: SecurityKey = {
             id: 'biometric',
-            name: Platform.OS === 'ios' ? (isFaceID ? 'Face ID' : 'Touch ID') : 'Biometric',
+            name: biometricTypeName,
             type: 'biometric',
             dateAdded: new Date().toISOString(),
           };
@@ -221,7 +225,7 @@ export default function PasskeysSecurityScreen() {
           const updatedKeys = [...securityKeys.filter(key => key.type !== 'biometric'), newKey];
           await saveSecurityKeys(updatedKeys);
           
-          Alert.alert('Success', 'Biometric authentication enabled!');
+          Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
         }
       } catch (error) {
         console.error('Error enabling biometric:', error);
@@ -240,13 +244,19 @@ export default function PasskeysSecurityScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
-            if (keyId === 'biometric') {
-              await AsyncStorage.setItem('biometricEnabled', 'false');
-              setBiometricEnabled(false);
+            try {
+              if (keyId === 'biometric') {
+                await disableBiometric();
+              }
+              
+              const updatedKeys = securityKeys.filter(key => key.id !== keyId);
+              await saveSecurityKeys(updatedKeys);
+              
+              Alert.alert('Success', `"${keyName}" has been removed successfully.`);
+            } catch (error) {
+              console.error('Error removing security key:', error);
+              Alert.alert('Error', 'Failed to remove security key');
             }
-            
-            const updatedKeys = securityKeys.filter(key => key.id !== keyId);
-            await saveSecurityKeys(updatedKeys);
           }
         }
       ]
@@ -391,10 +401,10 @@ export default function PasskeysSecurityScreen() {
               </View>
               <View style={styles.keyContent}>
                 <Text style={[styles.keyName, { color: theme.colors.text }]}>
-                  {Platform.OS === 'ios' ? 'Face ID / Touch ID' : 'Biometric Authentication'}
+                  {biometricEnabled && biometricType ? biometricType : (Platform.OS === 'ios' ? 'Face ID / Touch ID' : 'Biometric Authentication')}
                 </Text>
                 <Text style={[styles.keyDate, { color: theme.colors.textSecondary }]}>
-                  {biometricEnabled ? 'Enabled for transactions' : 'Tap to enable'}
+                  {biometricEnabled ? 'Enabled for wallet unlock and transactions' : 'Tap to enable'}
                 </Text>
               </View>
               <View style={[

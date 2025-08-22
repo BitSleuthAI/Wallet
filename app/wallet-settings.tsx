@@ -165,12 +165,7 @@ export default function WalletSettingsScreen() {
           onPress={() => router.push('/wallet-addresses')}
         />
 
-        <SettingItem
-          icon={Key}
-          title="Passkeys & Security Keys"
-          subtitle="Manage biometric and hardware security"
-          onPress={() => router.push('/passkeys-security')}
-        />
+
 
         {/* Transaction Settings Section */}
         <SectionHeader title="Transaction Settings" />
