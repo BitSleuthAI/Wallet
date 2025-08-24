@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  Platform,
-  Vibration,
-} from 'react-native';
-import { Delete, Lock, Fingerprint, Shield } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
-import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import * as Haptics from 'expo-haptics';
+import { router } from 'expo-router';
+import { Delete, Fingerprint, Lock, Shield } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View,
+} from 'react-native';
 
 export default function PinUnlockScreen() {
-  const { theme } = useWallet();
+  const { theme, logoutAndEraseWallet } = useWallet();
   const { unlock, biometricEnabled, biometricType, authenticateWithBiometric } = useAutoLock();
   const [pin, setPin] = useState('');
   const [attempts, setAttempts] = useState(0);
@@ -66,6 +67,33 @@ export default function PinUnlockScreen() {
     }
 
     setPin(prev => prev.slice(0, -1));
+  };
+
+  const handleForgotPin = () => {
+    Alert.alert(
+      'Restore Wallet',
+      'Are you sure you want to erase the current wallet and restore a new one? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Erase and Restore',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logoutAndEraseWallet();
+              // Navigate to the wallet setup screen after erasing
+              router.replace('/wallet-setup'); 
+            } catch (error) {
+              console.error('Error erasing wallet:', error);
+              Alert.alert('Error', 'Failed to erase the wallet. Please try again.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleBiometricAuth = async () => {
@@ -237,6 +265,13 @@ export default function PinUnlockScreen() {
         {renderPinDots()}
         {renderNumberPad()}
       </View>
+      <View style={styles.footer}>
+        <TouchableOpacity onPress={handleForgotPin} activeOpacity={0.7}>
+          <Text style={[styles.footerText, { color: theme.colors.primary }]}>
+            Forgot PIN? Restore Wallet
+          </Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -351,6 +386,14 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   biometricButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  footer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  footerText: {
     fontSize: 16,
     fontWeight: '600',
   },

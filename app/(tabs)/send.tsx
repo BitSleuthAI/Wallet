@@ -1,26 +1,25 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  TouchableOpacity,
-  SafeAreaView,
-  Switch,
-  Alert,
-  ScrollView,
-  Modal,
-  Platform,
-} from 'react-native';
-import { Stack, router } from 'expo-router';
-import { QrCode, ArrowUpRight, AlertCircle, CheckCircle } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
-import { platformStyles, createButtonStyle, createInputStyle } from '@/constants/themes';
-import WalletSelector from '@/components/WalletSelector';
 import QRScanner from '@/components/QRScanner';
-import { sendTransaction, getBitcoinPrice, isValidBitcoinAddress, getAddressUTXOs } from '@/services/bitcoin-service';
+import WalletSelector from '@/components/WalletSelector';
+import { createButtonStyle, createInputStyle } from '@/constants/themes';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import { getAddressUTXOs, getBitcoinPrice, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
+import { Stack, router } from 'expo-router';
+import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from 'react-native';
 
 export default function SendScreen() {
   const { currentWallet, balance, theme, coinControl } = useWallet();
@@ -553,42 +552,6 @@ export default function SendScreen() {
             Recipient Address
           </Text>
           
-          {/* QR Scanner and Manual Entry Options */}
-          <View style={styles.addressInputOptions}>
-            <TouchableOpacity 
-              style={[
-                styles.addressOptionButton,
-                { 
-                  backgroundColor: theme.colors.primary,
-                  flex: 1,
-                  marginRight: 8
-                }
-              ]}
-              onPress={() => setShowQRScanner(true)}
-            >
-              <QrCode color="white" size={20} />
-              <Text style={styles.addressOptionText}>Scan QR Code</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.addressOptionButton,
-                { 
-                  backgroundColor: theme.colors.surface,
-                  borderWidth: 1,
-                  borderColor: theme.colors.border,
-                  flex: 1,
-                  marginLeft: 8
-                }
-              ]}
-              onPress={() => {
-                // Focus on text input - we'll add a ref for this
-              }}
-            >
-              <Text style={[styles.addressOptionText, { color: theme.colors.text }]}>Manual Entry</Text>
-            </TouchableOpacity>
-          </View>
-          
           <View style={styles.inputContainer}>
             <TextInput
               style={[
@@ -601,6 +564,12 @@ export default function SendScreen() {
               onChangeText={setRecipientAddress}
               multiline
             />
+            <TouchableOpacity 
+              style={styles.qrCodeButton}
+              onPress={() => setShowQRScanner(true)}
+            >
+              <QrCode color={theme.colors.primary} size={24} />
+            </TouchableOpacity>
           </View>
           
           {/* Address Validation Indicator */}
@@ -912,6 +881,7 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    position: 'relative',
   },
   textInput: {
     flex: 1,
@@ -920,6 +890,13 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     minHeight: 56,
+    paddingRight: 50, // Add padding to avoid text overlap
+  },
+  qrCodeButton: {
+    position: 'absolute',
+    right: 12,
+    top: 16,
+    padding: 4,
   },
   addressInputOptions: {
     flexDirection: 'row',
@@ -1007,6 +984,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     alignItems: 'center',
+    justifyContent: 'center',
   },
   feeButtonText: {
     fontSize: 12,
