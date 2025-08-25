@@ -1,21 +1,21 @@
+import WalletSelector from '@/components/WalletSelector';
+import { createButtonStyle } from '@/constants/themes';
+import { useWallet } from '@/hooks/wallet-store';
+import * as Clipboard from 'expo-clipboard';
+import { Stack, router } from 'expo-router';
+import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  Share,
-  Platform,
+    Alert,
+    Platform,
+    SafeAreaView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { RefreshCw, Copy, Share as ShareIcon } from 'lucide-react-native';
-import * as Clipboard from 'expo-clipboard';
 import QRCode from 'react-native-qrcode-svg';
-import { useWallet } from '@/hooks/wallet-store';
-import { platformStyles, createButtonStyle } from '@/constants/themes';
-import WalletSelector from '@/components/WalletSelector';
 
 export default function ReceiveScreen() {
   const { currentWallet, generateNewAddress, theme } = useWallet();
@@ -36,19 +36,18 @@ export default function ReceiveScreen() {
   const handleNewAddress = async () => {
     try {
       console.log('🔄 Generating new address...');
-      const newAddress = await generateNewAddress();
-      if (newAddress && newAddress.length > 0) {
-        console.log('✅ New address generated:', newAddress);
-        setCurrentAddress(newAddress);
+      const result = await generateNewAddress();
+      if (result.success && result.address) {
+        console.log('✅ New address generated:', result.address);
+        setCurrentAddress(result.address);
         Alert.alert('Success', 'New address generated successfully');
       } else {
-        console.warn('⚠️ No address returned from generateNewAddress');
-        Alert.alert('Warning', 'Address generation returned empty result');
+        console.warn('⚠️ Address generation failed:', result.error);
+        Alert.alert('Warning', result.error || 'Address generation failed');
       }
     } catch (error) {
-      console.error('❌ Error generating new address:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      Alert.alert('Error', `Failed to generate new address: ${errorMessage}`);
+      console.error('❌ Unexpected error generating new address:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     }
   };
 

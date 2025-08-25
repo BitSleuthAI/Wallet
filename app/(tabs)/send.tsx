@@ -22,8 +22,13 @@ import {
 } from 'react-native';
 
 export default function SendScreen() {
-  const { currentWallet, balance, theme, coinControl } = useWallet();
-  const { authenticateForTransaction } = useAutoLock();
+  const { 
+    currentWallet, 
+    balance, 
+    theme, 
+    coinControl,
+  } = useWallet();
+  const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
@@ -248,12 +253,38 @@ export default function SendScreen() {
     try {
       setIsLoading(true);
       
-      // Request biometric authentication if enabled
-      const biometricAuth = await authenticateForTransaction();
-      if (!biometricAuth) {
+      // Convert amount to BTC for security assessment
+      let amountInBTC: number;
+      if (isAmountInBTC) {
+        amountInBTC = parseFloat(amount);
+      } else {
+        // Convert USD to BTC
+        if (!bitcoinPrice) {
+          Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
+          return;
+        }
+        amountInBTC = parseFloat(amount) / bitcoinPrice;
+      }
+
+      // Check if enhanced security is required for this transaction
+      const enhancedSecurityRequired = await isEnhancedSecurityRequired(amountInBTC);
+      
+      // Request appropriate level of authentication
+      let authResult: boolean;
+      if (enhancedSecurityRequired) {
+        console.log('🔐 Enhanced security required for transaction amount:', amountInBTC, 'BTC');
+        authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
+      } else {
+        console.log('🔐 Standard biometric authentication for transaction');
+        authResult = await authenticateForTransaction();
+      }
+
+      if (!authResult) {
         Alert.alert(
           'Authentication Required',
-          'Biometric authentication is required to send transactions.',
+          enhancedSecurityRequired 
+            ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
+            : 'Biometric authentication is required to send transactions.',
           [{ text: 'OK' }]
         );
         return;
@@ -274,19 +305,6 @@ export default function SendScreen() {
       if (!addressValidation.isValid) {
         Alert.alert('Error', 'Please enter a valid Bitcoin address');
         return;
-      }
-
-      // Convert amount to BTC if needed
-      let amountInBTC: number;
-      if (isAmountInBTC) {
-        amountInBTC = parseFloat(amount);
-      } else {
-        // Convert USD to BTC
-        if (!bitcoinPrice) {
-          Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
-          return;
-        }
-        amountInBTC = parseFloat(amount) / bitcoinPrice;
       }
 
       // Validate amount
@@ -319,7 +337,8 @@ export default function SendScreen() {
         amount: amountInBTC,
         feeRate,
         enableRBF,
-        network: 'mainnet'
+        network: 'mainnet',
+        enhancedSecurity: enhancedSecurityRequired
       });
       
       // Send the real transaction
@@ -476,16 +495,31 @@ export default function SendScreen() {
             text: 'Send Bitcoin', 
             style: 'destructive',
             onPress: async () => {
-            // Request biometric authentication before proceeding
-            const biometricAuth = await authenticateForTransaction();
-            if (!biometricAuth) {
+            // Check if enhanced security is required for this transaction
+            const amountInBTC = isAmountInBTC ? parseFloat(amount) : parseFloat(amount) / bitcoinPrice;
+            const enhancedSecurityRequired = await isEnhancedSecurityRequired(amountInBTC);
+            
+            // Request appropriate level of authentication
+            let authResult: boolean;
+            if (enhancedSecurityRequired) {
+              console.log('🔐 Enhanced security required for transaction review');
+              authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
+            } else {
+              console.log('🔐 Standard biometric authentication for transaction review');
+              authResult = await authenticateForTransaction();
+            }
+
+            if (!authResult) {
               Alert.alert(
                 'Authentication Required',
-                'Biometric authentication is required to send transactions.',
+                enhancedSecurityRequired 
+                  ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
+                  : 'Biometric authentication is required to send transactions.',
                 [{ text: 'OK' }]
               );
               return;
             }
+            
             handleSendTransaction();
           }
           },

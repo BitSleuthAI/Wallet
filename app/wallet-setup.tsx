@@ -243,7 +243,14 @@ export default function WalletSetupScreen() {
         console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
       }
       
-      await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
+      const result = await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
+      
+      if (!result.success) {
+        // Show error message without throwing
+        Alert.alert('Error', result.error);
+        setIsLoading(false);
+        return;
+      }
       
       // Show confetti celebration
       setShowConfetti(true);
@@ -275,8 +282,8 @@ export default function WalletSetupScreen() {
         })();
       }, 2000);
     } catch (error) {
-      console.error('Import wallet error:', error);
-      Alert.alert('Error', error instanceof Error ? error.message : 'Failed to import wallet');
+      console.error('Unexpected error during wallet import:', error);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       setIsLoading(false);
     }
   };
@@ -747,7 +754,16 @@ export default function WalletSetupScreen() {
     setTimeout(async () => {
       setIsLoading(true);
       try {
-        await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
+        const result = await importWallet(walletName.trim(), generatedMnemonic, selectedColor);
+        
+        if (!result.success) {
+          // Show error message without throwing
+          Alert.alert('Error', result.error);
+          setIsLoading(false);
+          setShowConfetti(false);
+          return;
+        }
+        
         // If this is the first wallet, go to PIN setup
         // If PIN already exists but biometric not set up, go to biometric setup
         // If both PIN and biometric are set up, go directly to tabs
@@ -769,7 +785,8 @@ export default function WalletSetupScreen() {
           router.push('/pin-setup');
         }
       } catch (error) {
-        Alert.alert('Error', error instanceof Error ? error.message : 'Failed to create wallet');
+        console.error('Unexpected error during wallet creation:', error);
+        Alert.alert('Error', 'An unexpected error occurred. Please try again.');
       } finally {
         setIsLoading(false);
         setShowConfetti(false);

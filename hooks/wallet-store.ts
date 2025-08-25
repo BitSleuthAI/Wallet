@@ -381,87 +381,80 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [autoLockQuery.data]);
 
-  const createWallet = useCallback(async (name: string, color?: string) => {
+  const createWallet = useCallback(async (name: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
     try {
       const trimmedName = name.trim();
       if (!trimmedName) {
-        throw new Error('Wallet name cannot be empty or contain only whitespace.');
+        return { success: false, error: 'Wallet name cannot be empty or contain only whitespace.' };
       }
-
       if (trimmedName.length > 50) {
-        throw new Error('Wallet name cannot exceed 50 characters.');
+        return { success: false, error: 'Wallet name cannot exceed 50 characters.' };
       }
-
       // Check if a wallet with the same name already exists (case-insensitive)
-      const existingWalletWithName = wallets.find(wallet => 
+      const existingWalletWithName = wallets.find(wallet =>
         wallet.name.toLowerCase() === trimmedName.toLowerCase()
       );
       if (existingWalletWithName) {
-        throw new Error(`A wallet with the name "${trimmedName}" already exists. Please choose a different name.`);
+        return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
       }
-
       const wallet = await walletService.createWallet(trimmedName, color);
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
-      return wallet;
+      return { success: true, wallet };
     } catch (error) {
       console.error('Error creating wallet:', error);
-      throw error;
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
     }
   }, [wallets, saveWallets, saveCurrentWalletId]);
 
-  const importWallet = useCallback(async (name: string, mnemonic: string, color?: string) => {
+  const importWallet = useCallback(async (name: string, mnemonic: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
     try {
       const trimmedName = name.trim();
       if (!trimmedName) {
-        throw new Error('Wallet name cannot be empty or contain only whitespace.');
+        return { success: false, error: 'Wallet name cannot be empty or contain only whitespace.' };
       }
-
       if (trimmedName.length > 50) {
-        throw new Error('Wallet name cannot exceed 50 characters.');
+        return { success: false, error: 'Wallet name cannot exceed 50 characters.' };
       }
-
       const trimmedMnemonic = mnemonic.trim();
       if (!trimmedMnemonic) {
-        throw new Error('Recovery phrase cannot be empty or contain only whitespace.');
+        return { success: false, error: 'Recovery phrase cannot be empty or contain only whitespace.' };
       }
-
       // Check if a wallet with the same mnemonic already exists
       const existingWallet = wallets.find(wallet => wallet.mnemonic === trimmedMnemonic);
       if (existingWallet) {
-        throw new Error(`Wallet "${existingWallet.name}" has already been imported with this recovery phrase.`);
+        return { success: false, error: `Wallet "${existingWallet.name}" has already been imported with this recovery phrase.` };
       }
-
       // Check if a wallet with the same name already exists (case-insensitive)
-      const existingWalletWithName = wallets.find(wallet => 
+      const existingWalletWithName = wallets.find(wallet =>
         wallet.name.toLowerCase() === trimmedName.toLowerCase()
       );
       if (existingWalletWithName) {
-        throw new Error(`A wallet with the name "${trimmedName}" already exists. Please choose a different name.`);
+        return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
       }
-
       const wallet = await walletService.importWallet(trimmedName, trimmedMnemonic, color);
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
-      return wallet;
+      return { success: true, wallet };
     } catch (error) {
       console.error('Error importing wallet:', error);
-      throw error;
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
     }
   }, [wallets, saveWallets, saveCurrentWalletId]);
 
-  const generateNewAddress = useCallback(async () => {
-    if (!currentWallet) return null;
+  const generateNewAddress = useCallback(async (): Promise<{ success: boolean; address?: string; error?: string }> => {
+    if (!currentWallet) return { success: false, error: 'No wallet selected' };
     try {
       const updatedWallet = await walletService.generateNewAddress(currentWallet);
       const updatedWallets = wallets.map(w => w.id === updatedWallet.id ? updatedWallet : w);
       saveWallets(updatedWallets);
-      return updatedWallet.addresses[updatedWallet.addresses.length - 1];
+      const newAddress = updatedWallet.addresses[updatedWallet.addresses.length - 1];
+      return { success: true, address: newAddress };
     } catch (error) {
       console.error('Error generating new address:', error);
-      throw error;
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate new address' };
     }
   }, [currentWallet, wallets, saveWallets]);
 

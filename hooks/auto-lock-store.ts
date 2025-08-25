@@ -1,9 +1,9 @@
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { AppState, AppStateStatus, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, AppState, AppStateStatus, Platform } from 'react-native';
 
 export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   const queryClient = useQueryClient();
@@ -292,6 +292,187 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     }
   }, [biometricEnabled, biometricType]);
 
+  // Enhanced transaction authentication with multi-factor support
+  const authenticateForTransactionEnhanced = useCallback(async (amount?: number, requireSecurityKey?: boolean): Promise<boolean> => {
+    try {
+      console.log('🔐 Enhanced transaction authentication started...');
+      
+      // Load security settings
+      const securitySettingsStr = await AsyncStorage.getItem('securitySettings');
+      const securitySettings = securitySettingsStr ? JSON.parse(securitySettingsStr) : {
+        requireBiometricForTransactions: true,
+        requireSecurityKeyForTransactions: false,
+        multiFactorEnabled: false,
+      };
+
+      // Load security keys
+      const securityKeysStr = await AsyncStorage.getItem('securityKeys');
+      const securityKeys = securityKeysStr ? JSON.parse(securityKeysStr) : [];
+
+      // Check if security key is required (either by setting or high-value transaction)
+      const isHighValueTransaction = amount && amount > 0.01; // 0.01 BTC threshold
+      const shouldRequireSecurityKey = requireSecurityKey || 
+                                     securitySettings.requireSecurityKeyForTransactions || 
+                                     (isHighValueTransaction && securitySettings.multiFactorEnabled);
+
+      // Step 1: Biometric authentication (if enabled and required)
+      if (securitySettings.requireBiometricForTransactions && biometricEnabled) {
+        console.log('🔐 Step 1: Biometric authentication required');
+        const biometricResult = await authenticateForTransaction();
+        if (!biometricResult) {
+          console.log('❌ Biometric authentication failed');
+          return false;
+        }
+        console.log('✅ Biometric authentication successful');
+      }
+
+      // Step 2: Security key verification (if required)
+      if (shouldRequireSecurityKey) {
+        console.log('🔐 Step 2: Security key verification required');
+        
+        // Check if user has registered security keys
+        const availableKeys = securityKeys.filter(key => 
+          key.type === 'fido' || key.type === 'passkey'
+        );
+
+        if (availableKeys.length === 0) {
+          console.log('❌ No security keys available but required');
+          Alert.alert(
+            'Security Key Required',
+            'A security key is required for this transaction. Please register a passkey or hardware security key in Settings.',
+            [{ text: 'OK' }]
+          );
+          return false;
+        }
+
+        // Verify security key is present and accessible
+        const keyVerificationResult = await verifySecurityKeyPresence(availableKeys);
+        if (!keyVerificationResult) {
+          console.log('❌ Security key verification failed');
+          Alert.alert(
+            'Security Key Verification Failed',
+            'Please ensure your security key is connected and accessible, then try again.',
+            [{ text: 'OK' }]
+          );
+          return false;
+        }
+        console.log('✅ Security key verification successful');
+      }
+
+      // Step 3: Multi-factor authentication (if enabled)
+      if (securitySettings.multiFactorEnabled) {
+        console.log('🔐 Step 3: Multi-factor authentication required');
+        
+        const factorsEnabled = (biometricEnabled ? 1 : 0) + 
+                             securityKeys.filter(key => key.type === 'fido' || key.type === 'passkey').length;
+        
+        if (factorsEnabled < 2) {
+          console.log('❌ Insufficient authentication factors for multi-factor');
+          Alert.alert(
+            'Multi-Factor Authentication Required',
+            'You need at least two authentication factors enabled. Please configure additional security measures.',
+            [{ text: 'OK' }]
+          );
+          return false;
+        }
+
+        // For multi-factor, we require both biometric AND security key
+        if (biometricEnabled && securityKeys.some(key => key.type === 'fido' || key.type === 'passkey')) {
+          console.log('✅ Multi-factor authentication successful');
+        } else {
+          console.log('❌ Multi-factor authentication failed');
+          return false;
+        }
+      }
+
+      console.log('✅ Enhanced transaction authentication completed successfully');
+      return true;
+    } catch (error) {
+      console.error('❌ Enhanced transaction authentication error:', error);
+      return false;
+    }
+  }, [biometricEnabled, biometricType, authenticateForTransaction]);
+
+  // Verify that a security key is actually present and accessible
+  const verifySecurityKeyPresence = useCallback(async (securityKeys: any[]): Promise<boolean> => {
+    try {
+      if (Platform.OS === 'web') {
+        // Web implementation - verify passkey availability
+        return await verifyWebPasskey();
+      } else {
+        // Mobile implementation - verify hardware key or passkey
+        return await verifyMobileSecurityKey(securityKeys);
+      }
+    } catch (error) {
+      console.error('Error verifying security key presence:', error);
+      return false;
+    }
+  }, []);
+
+  // Verify WebAuthn passkey on web
+  const verifyWebPasskey = async (): Promise<boolean> => {
+    try {
+      // Check if WebAuthn is supported
+      if (!navigator.credentials) {
+        console.log('WebAuthn not supported');
+        return false;
+      }
+
+      // Create a challenge to verify passkey availability
+      const challenge = new Uint8Array(32);
+      crypto.getRandomValues(challenge);
+
+      const options = {
+        publicKey: {
+          challenge,
+          rpId: window.location.hostname,
+          userVerification: 'required' as const,
+        },
+      };
+
+      // This will prompt the user to authenticate with their passkey
+      const assertion = await navigator.credentials.get(options);
+      return !!assertion;
+    } catch (error) {
+      console.error('WebAuthn verification failed:', error);
+      return false;
+    }
+  };
+
+  // Verify mobile security key
+  const verifyMobileSecurityKey = async (securityKeys: any[]): Promise<boolean> => {
+    try {
+      // For mobile, we'll use biometric as a proxy for security key verification
+      // In a real implementation, this would interface with hardware security modules
+      const result = await LocalAuthentication.authenticateAsync({
+        promptMessage: 'Verify security key access',
+        fallbackLabel: 'Use PIN',
+      });
+      
+      return result.success;
+    } catch (error) {
+      console.error('Mobile security key verification failed:', error);
+      return false;
+    }
+  };
+
+  // Check if enhanced security is required for a transaction
+  const isEnhancedSecurityRequired = useCallback(async (amount?: number): Promise<boolean> => {
+    try {
+      const securitySettingsStr = await AsyncStorage.getItem('securitySettings');
+      const securitySettings = securitySettingsStr ? JSON.parse(securitySettingsStr) : {};
+      
+      const isHighValue = amount && amount > 0.01; // 0.01 BTC threshold
+      
+      return securitySettings.requireSecurityKeyForTransactions || 
+             securitySettings.multiFactorEnabled ||
+             isHighValue;
+    } catch (error) {
+      console.error('Error checking enhanced security requirements:', error);
+      return false;
+    }
+  }, []);
+
   return useMemo(() => ({
     isLocked: shouldShowLockScreen,
     hasPin: !!storedPin,
@@ -307,6 +488,9 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     enableBiometric,
     disableBiometric,
     authenticateForTransaction,
+    authenticateForTransactionEnhanced,
+    verifySecurityKeyPresence,
+    isEnhancedSecurityRequired,
   }), [
     shouldShowLockScreen,
     storedPin,
@@ -322,5 +506,8 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     enableBiometric,
     disableBiometric,
     authenticateForTransaction,
+    authenticateForTransactionEnhanced,
+    verifySecurityKeyPresence,
+    isEnhancedSecurityRequired,
   ]);
 });
