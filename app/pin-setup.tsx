@@ -1,19 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  Platform,
-  Vibration,
-} from 'react-native';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Delete } from 'lucide-react-native';
-import * as Haptics from 'expo-haptics';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View,
+} from 'react-native';
 
 export default function PinSetupScreen() {
   const { theme, wallets } = useWallet();
@@ -77,8 +78,16 @@ export default function PinSetupScreen() {
         const savePinAndProceed = async () => {
           try {
             await savePin(pin);
-            setTimeout(() => {
-              router.push('/biometric-setup');
+            setTimeout(async () => {
+              // Check if biometric was previously enabled
+              const biometricWasEverEnabled = await AsyncStorage.getItem('biometricEnabled');
+              if (biometricWasEverEnabled === 'true') {
+                // Biometric was previously enabled, skip setup and go to main app
+                router.replace('/(tabs)');
+              } else {
+                // Biometric was never enabled, go to setup
+                router.push('/biometric-setup');
+              }
             }, 300);
           } catch (error) {
             console.error('Error saving PIN:', error);

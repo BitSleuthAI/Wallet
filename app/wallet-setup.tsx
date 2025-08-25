@@ -1,30 +1,31 @@
 // Import crypto polyfill first
 // import '@/services/crypto-polyfill';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import QRScanner from '@/components/QRScanner';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  TextInput,
   Alert,
-  ScrollView,
-  Platform,
-  Linking,
-  Modal,
   Clipboard,
   KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { Plus, Download, ArrowLeft, Check, QrCode, Copy, ChevronDown, AlertTriangle, Sparkles } from 'lucide-react-native';
-import * as WebBrowser from 'expo-web-browser';
 import ConfettiCannon from 'react-native-confetti-cannon';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
-import QRScanner from '@/components/QRScanner';
 
 // Platform-specific wallet service imports
 let walletService: any;
@@ -248,20 +249,30 @@ export default function WalletSetupScreen() {
       setShowConfetti(true);
       
       // Wait 2 seconds for confetti celebration, then navigate appropriately
-      setTimeout(() => {
-        setShowConfetti(false);
-        // If this is the first wallet, go to PIN setup
-        // If PIN already exists but biometric not set up, go to biometric setup
-        // If both PIN and biometric are set up, go directly to tabs
-        if (hasPin) {
-          if (biometricEnabled) {
-            router.replace('/(tabs)');
+      setTimeout(function() {
+        (async function() {
+          setShowConfetti(false);
+          // If this is the first wallet, go to PIN setup
+          // If PIN already exists but biometric not set up, go to biometric setup
+          // If both PIN and biometric are set up, go directly to tabs
+          if (hasPin) {
+            if (biometricEnabled) {
+              router.replace('/(tabs)');
+            } else {
+              // Check if biometric was ever enabled in the past
+              const biometricWasEverEnabled = await AsyncStorage.getItem('biometricEnabled');
+              if (biometricWasEverEnabled === 'true') {
+                // Biometric was previously enabled, skip setup and go to tabs
+                router.replace('/(tabs)');
+              } else {
+                // Biometric was never enabled, go to setup
+                router.push('/biometric-setup');
+              }
+            }
           } else {
-            router.push('/biometric-setup');
+            router.push('/pin-setup');
           }
-        } else {
-          router.push('/pin-setup');
-        }
+        })();
       }, 2000);
     } catch (error) {
       console.error('Import wallet error:', error);
@@ -744,7 +755,15 @@ export default function WalletSetupScreen() {
           if (biometricEnabled) {
             router.replace('/(tabs)');
           } else {
-            router.push('/biometric-setup');
+            // Check if biometric was ever enabled in the past
+            const biometricWasEverEnabled = await AsyncStorage.getItem('biometricEnabled');
+            if (biometricWasEverEnabled === 'true') {
+              // Biometric was previously enabled, skip setup and go to tabs
+              router.replace('/(tabs)');
+            } else {
+              // Biometric was never enabled, go to setup
+              router.push('/biometric-setup');
+            }
           }
         } else {
           router.push('/pin-setup');

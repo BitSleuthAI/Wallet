@@ -20,7 +20,6 @@ export default function ViewRecoveryPhrase() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [renderCount, setRenderCount] = useState(0);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -30,12 +29,6 @@ export default function ViewRecoveryPhrase() {
   useEffect(() => {
     console.log('ViewRecoveryPhrase: isPinVerified changed to:', isPinVerified);
   }, [isPinVerified]);
-
-  // Increment render count on each render
-  useEffect(() => {
-    setRenderCount(prev => prev + 1);
-    console.log('ViewRecoveryPhrase: Component rendered, count:', renderCount + 1);
-  });
 
   const handleReveal = () => {
     // Try the Alert approach first
@@ -59,11 +52,6 @@ export default function ViewRecoveryPhrase() {
       console.log('Alert failed, showing custom modal:', error);
       setShowConfirmModal(true);
     }
-  };
-
-  const handleRevealDirect = () => {
-    console.log('Direct reveal - setting isRevealed to true');
-    setIsRevealed(true);
   };
 
   const handleConfirmModal = () => {
@@ -152,7 +140,7 @@ export default function ViewRecoveryPhrase() {
         {/* QR Code Section */}
         <View style={styles.qrContainer}>
           <View style={[styles.qrWrapper, { borderColor: '#8B5CF6' }]}>
-            {isRevealed === true ? (
+            {isRevealed ? (
               <View style={styles.qrContent}>
                 <QRCode
                   value={currentWallet.mnemonic}
@@ -168,9 +156,6 @@ export default function ViewRecoveryPhrase() {
             ) : (
               <View style={styles.blurredQR}>
                 <View style={styles.blurOverlay} />
-                <Text style={[styles.blurText, { color: theme.colors.textSecondary }]}>
-                  Hidden (isRevealed: {String(isRevealed)})
-                </Text>
               </View>
             )}
           </View>
@@ -184,52 +169,23 @@ export default function ViewRecoveryPhrase() {
                 {index + 1}.
               </Text>
               <Text style={[styles.word, { color: theme.colors.text }]}>
-                {isRevealed === true ? word : '\u2022'.repeat(word.length)}
+                {isRevealed ? word : '\u2022'.repeat(word.length)}
               </Text>
             </View>
           ))}
         </View>
 
         {/* Reveal Button */}
-        {isRevealed !== true && (
-          <View style={styles.revealButtonsContainer}>
-            <TouchableOpacity
-              style={[styles.revealButton, { backgroundColor: theme.colors.surface }]}
-              onPress={handleReveal}
-              testID="reveal-button"
-            >
-              <Eye size={20} color={theme.colors.text} />
-              <Text style={[styles.revealText, { color: theme.colors.text }]}>Reveal (with Alert)</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.revealButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleRevealDirect}
-              testID="reveal-direct-button"
-            >
-              <Eye size={20} color="white" />
-              <Text style={[styles.revealText, { color: 'white' }]}>Reveal Direct</Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* Debug Info - Remove in production */}
-        <View style={styles.debugContainer}>
-          <Text style={[styles.debugText, { color: theme.colors.textSecondary }]}>
-            Debug: isRevealed = {isRevealed.toString()}, Renders = {renderCount}
-          </Text>
+        {!isRevealed && (
           <TouchableOpacity
-            style={[styles.debugButton, { backgroundColor: theme.colors.surface }]}
-            onPress={() => {
-              console.log('Debug: Toggling isRevealed from', isRevealed, 'to', !isRevealed);
-              setIsRevealed(!isRevealed);
-            }}
+            style={[styles.revealButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleReveal}
+            testID="reveal-button"
           >
-            <Text style={[styles.debugText, { color: theme.colors.text }]}>
-              Toggle Reveal (Debug)
-            </Text>
+            <Eye size={20} color="white" />
+            <Text style={[styles.revealText, { color: 'white' }]}>Reveal Recovery Phrase</Text>
           </TouchableOpacity>
-        </View>
+        )}
 
         {/* Warning Section */}
         <View style={styles.warningContainer}>
@@ -396,11 +352,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  revealButtonsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 30,
-  },
   warningContainer: {
     backgroundColor: '#FEF2F2',
     borderColor: '#FECACA',
@@ -423,23 +374,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#DC2626',
-  },
-  debugContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    marginBottom: 30,
-  },
-  debugText: {
-    fontSize: 14,
-  },
-  debugButton: {
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 8,
   },
   modalOverlay: {
     flex: 1,
@@ -490,13 +424,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
-  },
-  blurText: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: -50 }, { translateY: -50 }],
-    fontSize: 14,
-    fontWeight: '500',
   },
 });
