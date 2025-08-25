@@ -1,11 +1,11 @@
+import { darkTheme, lightTheme } from '@/constants/themes';
+import * as bitcoinService from '@/services/bitcoin-service';
+import * as walletService from '@/services/wallet-service';
+import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState, useEffect, useCallback, useMemo } from 'react';
-import { Wallet, Theme, FiatCurrency, UTXO } from '@/types/wallet';
-import { lightTheme, darkTheme } from '@/constants/themes';
-import * as walletService from '@/services/wallet-service';
-import * as bitcoinService from '@/services/bitcoin-service';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
 // Currency symbols and exchange rates
 const CURRENCY_SYMBOLS: Record<FiatCurrency, string> = {
@@ -383,7 +383,24 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const createWallet = useCallback(async (name: string, color?: string) => {
     try {
-      const wallet = await walletService.createWallet(name, color);
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        throw new Error('Wallet name cannot be empty or contain only whitespace.');
+      }
+
+      if (trimmedName.length > 50) {
+        throw new Error('Wallet name cannot exceed 50 characters.');
+      }
+
+      // Check if a wallet with the same name already exists (case-insensitive)
+      const existingWalletWithName = wallets.find(wallet => 
+        wallet.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (existingWalletWithName) {
+        throw new Error(`A wallet with the name "${trimmedName}" already exists. Please choose a different name.`);
+      }
+
+      const wallet = await walletService.createWallet(trimmedName, color);
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
@@ -396,7 +413,35 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const importWallet = useCallback(async (name: string, mnemonic: string, color?: string) => {
     try {
-      const wallet = await walletService.importWallet(name, mnemonic, color);
+      const trimmedName = name.trim();
+      if (!trimmedName) {
+        throw new Error('Wallet name cannot be empty or contain only whitespace.');
+      }
+
+      if (trimmedName.length > 50) {
+        throw new Error('Wallet name cannot exceed 50 characters.');
+      }
+
+      const trimmedMnemonic = mnemonic.trim();
+      if (!trimmedMnemonic) {
+        throw new Error('Recovery phrase cannot be empty or contain only whitespace.');
+      }
+
+      // Check if a wallet with the same mnemonic already exists
+      const existingWallet = wallets.find(wallet => wallet.mnemonic === trimmedMnemonic);
+      if (existingWallet) {
+        throw new Error(`Wallet "${existingWallet.name}" has already been imported with this recovery phrase.`);
+      }
+
+      // Check if a wallet with the same name already exists (case-insensitive)
+      const existingWalletWithName = wallets.find(wallet => 
+        wallet.name.toLowerCase() === trimmedName.toLowerCase()
+      );
+      if (existingWalletWithName) {
+        throw new Error(`A wallet with the name "${trimmedName}" already exists. Please choose a different name.`);
+      }
+
+      const wallet = await walletService.importWallet(trimmedName, trimmedMnemonic, color);
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
