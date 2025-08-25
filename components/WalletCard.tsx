@@ -1,33 +1,33 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { MoreHorizontal, Check, Edit3, Trash2 } from 'lucide-react-native';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
-import { platformStyles } from '@/constants/themes';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Check, Edit3, MoreHorizontal, Sparkles, Trash2 } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
-// Function to generate gradient colors from a base color
-function generateGradientColors(baseColor: string): [string, string] {
+// Enhanced function to generate gradient colors from a base color
+function generateGradientColors(baseColor: string): [string, string, string] {
   // Convert hex to RGB
   const hex = baseColor.replace('#', '');
   const r = parseInt(hex.substr(0, 2), 16);
   const g = parseInt(hex.substr(2, 2), 16);
   const b = parseInt(hex.substr(4, 2), 16);
   
-  // Create a lighter version (add 30 to each component, max 255)
-  const lighterR = Math.min(255, r + 30);
-  const lighterG = Math.min(255, g + 30);
-  const lighterB = Math.min(255, b + 30);
+  // Create a lighter version (add 40 to each component, max 255)
+  const lighterR = Math.min(255, r + 40);
+  const lighterG = Math.min(255, g + 40);
+  const lighterB = Math.min(255, b + 40);
   
-  // Create a darker version (subtract 40 from each component, min 0)
-  const darkerR = Math.max(0, r - 40);
-  const darkerG = Math.max(0, g - 40);
-  const darkerB = Math.max(0, b - 40);
+  // Create a darker version (subtract 50 from each component, min 0)
+  const darkerR = Math.max(0, r - 50);
+  const darkerG = Math.max(0, g - 50);
+  const darkerB = Math.max(0, b - 50);
   
   const lighterColor = `rgb(${lighterR}, ${lighterG}, ${lighterB})`;
   const darkerColor = `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
   
-  return [lighterColor, darkerColor];
+  return [baseColor, lighterColor, darkerColor];
 }
 
 interface WalletCardProps {
@@ -48,24 +48,32 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   
   if (!displayWallet) return null;
 
-  // Generate gradient colors based on wallet color
-  const [lightColor, darkColor] = generateGradientColors(displayWallet.color);
+  // Generate enhanced gradient colors based on wallet color
+  const [baseColor, lightColor, darkColor] = generateGradientColors(displayWallet.color);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={[lightColor, darkColor]}
+        colors={[baseColor, lightColor, darkColor]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
-        style={styles.card}
+        style={[styles.card, isActive && styles.activeCard]}
       >
+        {/* Decorative elements */}
+        <View style={styles.decorativeCircle1} />
+        <View style={styles.decorativeCircle2} />
+        
         <View style={styles.header}>
-          <View>
+          <View style={styles.walletInfo}>
             <Text style={styles.walletName}>{displayWallet.name}</Text>
-            <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
+            <View style={styles.walletTypeContainer}>
+              <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
+              {isActive && <Sparkles color="rgba(255, 255, 255, 0.9)" size={12} />}
+            </View>
           </View>
           <TouchableOpacity 
             ref={menuButtonRef}
+            style={styles.menuButton}
             onPress={() => {
               menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
                 const menuWidth = 150;
@@ -109,7 +117,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
         </View>
 
         <View style={styles.footer}>
-          {isActive && <Check color="white" size={20} />}
+          {isActive && (
+            <View style={styles.activeIndicator}>
+              <Check color="white" size={16} />
+              <Text style={styles.activeText}>Active</Text>
+            </View>
+          )}
         </View>
       </LinearGradient>
       
@@ -176,45 +189,111 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: platformStyles.borderRadius.large,
+    borderRadius: platformStyles.borderRadius.xl,
     padding: platformStyles.spacing.xl,
     width: 320,
     height: 160,
     justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
     ...platformStyles.cardShadow,
+  },
+  activeCard: {
+    transform: [{ scale: 1.02 }],
+    ...platformStyles.cardShadow,
+  },
+  decorativeCircle1: {
+    position: 'absolute',
+    top: -20,
+    right: -20,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  decorativeCircle2: {
+    position: 'absolute',
+    bottom: -30,
+    left: -30,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    zIndex: 1,
+  },
+  walletInfo: {
+    flex: 1,
   },
   walletName: {
     color: 'white',
     ...platformStyles.typography.subtitle,
     maxWidth: 200,
+    fontWeight: '700',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  walletTypeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: platformStyles.spacing.xs,
+    gap: 6,
   },
   walletType: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(255, 255, 255, 0.9)',
     ...platformStyles.typography.caption,
-    marginTop: platformStyles.spacing.xs,
+    fontWeight: '500',
+  },
+  menuButton: {
+    padding: 4,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   balanceContainer: {
     flex: 1,
     justifyContent: 'center',
     paddingVertical: platformStyles.spacing.sm,
+    zIndex: 1,
   },
   balance: {
     color: 'white',
     ...platformStyles.typography.heading,
+    fontWeight: '800',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   balanceUSD: {
-    color: 'rgba(255, 255, 255, 0.9)',
+    color: 'rgba(255, 255, 255, 0.95)',
     ...platformStyles.typography.bodyLarge,
-    fontWeight: '500',
+    fontWeight: '600',
     marginTop: platformStyles.spacing.xs,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 1,
   },
   footer: {
     alignItems: 'flex-end',
+    zIndex: 1,
+  },
+  activeIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: platformStyles.spacing.sm,
+    paddingVertical: platformStyles.spacing.xs,
+    borderRadius: platformStyles.borderRadius.round,
+    gap: 4,
+  },
+  activeText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,

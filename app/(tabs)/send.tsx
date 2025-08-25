@@ -1,6 +1,6 @@
 import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
-import { createButtonStyle, createInputStyle } from '@/constants/themes';
+import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs, getBitcoinPrice, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
@@ -679,7 +679,7 @@ export default function SendScreen() {
         </View>
 
         {/* Fee Section */}
-        <View style={styles.feeSection}>
+        <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.feeHeader}>
             <View style={styles.feeInfo}>
               <ArrowUpRight color={theme.colors.primary} size={20} />
@@ -703,7 +703,8 @@ export default function SendScreen() {
                 styles.feeButton,
                 { 
                   backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: theme.colors.border
+                  borderColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.border,
+                  borderWidth: 2,
                 }
               ]}
               onPress={() => {
@@ -724,7 +725,8 @@ export default function SendScreen() {
                 styles.feeButton,
                 { 
                   backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: theme.colors.border
+                  borderColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.border,
+                  borderWidth: 2,
                 }
               ]}
               onPress={() => {
@@ -745,7 +747,8 @@ export default function SendScreen() {
                 styles.feeButton,
                 { 
                   backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: theme.colors.border
+                  borderColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.border,
+                  borderWidth: 2,
                 }
               ]}
               onPress={() => {
@@ -766,7 +769,8 @@ export default function SendScreen() {
                 styles.feeButton,
                 { 
                   backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: theme.colors.border
+                  borderColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.border,
+                  borderWidth: 2,
                 }
               ]}
               onPress={() => {
@@ -790,7 +794,7 @@ export default function SendScreen() {
             <View style={styles.customFeeContainer}>
               <TextInput
                 style={[
-                  createInputStyle(theme),
+                  createInputStyle(theme, 'fun'),
                   styles.customFeeInput,
                 ]}
                 placeholder="Enter custom fee rate"
@@ -822,7 +826,7 @@ export default function SendScreen() {
         </View>
 
         {/* RBF Toggle */}
-        <View style={styles.rbfSection}>
+        <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.rbfInfo}>
             <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>
               Enable RBF
@@ -841,7 +845,7 @@ export default function SendScreen() {
 
         {/* Coin Control */}
         <TouchableOpacity 
-          style={styles.coinControlSection}
+          style={[styles.coinControlSection, { backgroundColor: theme.colors.surface }]}
           onPress={() => {
             router.push('/coin-control');
           }}
@@ -979,6 +983,9 @@ const styles = StyleSheet.create({
   },
   feeSection: {
     marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    ...platformStyles.shadow,
   },
   feeHeader: {
     flexDirection: 'row',
@@ -1009,16 +1016,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 12,
+    gap: 8,
   },
   feeButton: {
     flex: 1,
     marginHorizontal: 2,
     paddingVertical: 12,
     paddingHorizontal: 6,
-    borderRadius: 8,
-    borderWidth: 1,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
+    ...platformStyles.shadow,
   },
   feeButtonText: {
     fontSize: 12,
@@ -1033,14 +1041,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     backgroundColor: 'rgba(0,0,0,0.05)',
-    borderRadius: 8,
+    borderRadius: 12,
   },
   customFeeInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
     marginRight: 8,
   },
   customFeeUnit: {
@@ -1071,6 +1075,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+    padding: 20,
+    borderRadius: 16,
+    ...platformStyles.shadow,
   },
   rbfInfo: {
     flex: 1,
@@ -1091,8 +1098,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     marginBottom: 30,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
+    paddingHorizontal: 20,
+    borderRadius: 16,
+    ...platformStyles.shadow,
   },
   coinControlLabel: {
     fontSize: 16,

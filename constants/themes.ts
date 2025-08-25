@@ -1,5 +1,5 @@
-import { Platform } from 'react-native';
 import { Theme } from '@/types/wallet';
+import { Platform } from 'react-native';
 
 // Platform-specific constants for consistent styling
 export const platformStyles = {
@@ -113,42 +113,66 @@ export const lightTheme: Theme = {
   colors: {
     background: '#FFFFFF',
     surface: '#F8F9FA',
-    primary: '#8B5CF6',
-    secondary: '#EC4899',
+    primary: '#6366F1', // Enhanced indigo
+    secondary: '#EC4899', // Vibrant pink
+    accent: '#06B6D4', // Bright cyan
+    success: '#10B981', // Emerald green
+    warning: '#F59E0B', // Amber
+    error: '#EF4444', // Red
     text: '#1F2937',
     textSecondary: '#6B7280',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
     border: '#E5E7EB',
+    // New fun colors
+    purple: '#8B5CF6',
+    blue: '#3B82F6',
+    green: '#22C55E',
+    orange: '#F97316',
+    pink: '#F472B6',
+    yellow: '#EAB308',
+    // Gradient colors
+    gradientStart: '#6366F1',
+    gradientEnd: '#8B5CF6',
+    gradientAccent: '#EC4899',
   },
 };
 
 export const darkTheme: Theme = {
   isDark: true,
   colors: {
-    background: '#111827',
-    surface: '#1F2937',
-    primary: '#8B5CF6',
-    secondary: '#EC4899',
-    text: '#F9FAFB',
-    textSecondary: '#9CA3AF',
-    success: '#10B981',
-    warning: '#F59E0B',
-    error: '#EF4444',
-    border: '#374151',
+    background: '#0F172A', // Darker blue-tinted background
+    surface: '#1E293B', // Enhanced surface color
+    primary: '#818CF8', // Brighter indigo for dark mode
+    secondary: '#F472B6', // Brighter pink for dark mode
+    accent: '#22D3EE', // Brighter cyan for dark mode
+    success: '#34D399', // Brighter green for dark mode
+    warning: '#FBBF24', // Brighter amber for dark mode
+    error: '#F87171', // Brighter red for dark mode
+    text: '#F8FAFC',
+    textSecondary: '#CBD5E1',
+    border: '#334155',
+    // New fun colors for dark mode
+    purple: '#A78BFA',
+    blue: '#60A5FA',
+    green: '#4ADE80',
+    orange: '#FB923C',
+    pink: '#F9A8D4',
+    yellow: '#FCD34D',
+    // Gradient colors for dark mode
+    gradientStart: '#818CF8',
+    gradientEnd: '#A78BFA',
+    gradientAccent: '#F472B6',
   },
 };
 
-// Helper function to create consistent button styles
-export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary' | 'outline' = 'primary') => {
+// Enhanced button styles with gradients and fun effects
+export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary' | 'outline' | 'gradient' | 'fun' = 'primary') => {
   const baseStyle = {
     paddingVertical: platformStyles.spacing.md,
     paddingHorizontal: platformStyles.spacing.xl,
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    minHeight: 48, // Consistent touch target
+    minHeight: 48,
     ...platformStyles.buttonShadow,
   };
   
@@ -172,49 +196,111 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
         borderWidth: 1,
         borderColor: theme.colors.primary,
       };
+    case 'gradient':
+      return {
+        ...baseStyle,
+        backgroundColor: theme.colors.gradientStart,
+        // Note: For actual gradients, you'd need to use LinearGradient component
+      };
+    case 'fun':
+      return {
+        ...baseStyle,
+        backgroundColor: theme.colors.accent,
+        borderRadius: platformStyles.borderRadius.large,
+      };
     default:
       return baseStyle;
   }
 };
 
-// Helper function to create consistent input styles
-export const createInputStyle = (theme: Theme) => ({
-  borderWidth: 1,
-  borderColor: theme.colors.border,
-  borderRadius: platformStyles.borderRadius.medium,
-  paddingVertical: platformStyles.spacing.md,
-  paddingHorizontal: platformStyles.spacing.lg,
-  fontSize: platformStyles.typography.bodyLarge.fontSize,
-  lineHeight: platformStyles.typography.bodyLarge.lineHeight,
-  backgroundColor: theme.colors.surface,
-  color: theme.colors.text,
-  minHeight: 48, // Consistent touch target
-});
+// Enhanced input styles with better visual feedback
+export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'default') => {
+  const baseStyle = {
+    borderWidth: 1,
+    borderColor: theme.colors.border,
+    borderRadius: platformStyles.borderRadius.medium,
+    paddingVertical: platformStyles.spacing.md,
+    paddingHorizontal: platformStyles.spacing.lg,
+    fontSize: platformStyles.typography.bodyLarge.fontSize,
+    lineHeight: platformStyles.typography.bodyLarge.lineHeight,
+    backgroundColor: theme.colors.surface,
+    color: theme.colors.text,
+    minHeight: 48,
+  };
+  
+  if (variant === 'fun') {
+    return {
+      ...baseStyle,
+      borderColor: theme.colors.accent,
+      borderWidth: 2,
+      borderRadius: platformStyles.borderRadius.large,
+    };
+  }
+  
+  return baseStyle;
+};
 
-// Helper function to create consistent card styles
-export const createCardStyle = (theme: Theme) => ({
-  backgroundColor: theme.colors.surface,
-  borderRadius: platformStyles.borderRadius.large,
-  padding: platformStyles.spacing.lg,
-  ...platformStyles.cardShadow,
-});
+// Enhanced card styles with better shadows and fun variants
+export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 'fun' = 'default') => {
+  const baseStyle = {
+    backgroundColor: theme.colors.surface,
+    borderRadius: platformStyles.borderRadius.large,
+    padding: platformStyles.spacing.lg,
+  };
+  
+  switch (variant) {
+    case 'default':
+      return {
+        ...baseStyle,
+        ...platformStyles.shadow,
+      };
+    case 'elevated':
+      return {
+        ...baseStyle,
+        ...platformStyles.cardShadow,
+      };
+    case 'fun':
+      return {
+        ...baseStyle,
+        borderWidth: 2,
+        borderColor: theme.colors.accent,
+        borderRadius: platformStyles.borderRadius.xl,
+        ...platformStyles.cardShadow,
+      };
+    default:
+      return baseStyle;
+  }
+};
 
-// Helper function to create consistent text styles
+// Enhanced text styles with fun variants
 export const createTextStyle = (variant: keyof typeof platformStyles.typography, theme: Theme, color?: keyof Theme['colors']) => ({
   ...platformStyles.typography[variant],
   color: color ? theme.colors[color] : theme.colors.text,
 });
 
-// Helper function to create consistent icon container styles
-export const createIconContainerStyle = (size: number, backgroundColor: string) => ({
-  width: size,
-  height: size,
-  borderRadius: size / 2,
-  backgroundColor,
-  justifyContent: 'center' as const,
-  alignItems: 'center' as const,
-  ...platformStyles.shadow,
-});
+// Enhanced icon container styles with fun variants
+export const createIconContainerStyle = (size: number, backgroundColor: string, variant: 'default' | 'fun' = 'default') => {
+  const baseStyle = {
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    backgroundColor,
+    justifyContent: 'center' as const,
+    alignItems: 'center' as const,
+    ...platformStyles.shadow,
+  };
+  
+  if (variant === 'fun') {
+    return {
+      ...baseStyle,
+      borderRadius: platformStyles.borderRadius.medium,
+      borderWidth: 2,
+      borderColor: backgroundColor,
+    };
+  }
+  
+  return baseStyle;
+};
 
 // Platform-specific safe area handling
 export const getSafeAreaStyle = () => {
@@ -222,7 +308,7 @@ export const getSafeAreaStyle = () => {
     return {};
   }
   return {
-    paddingTop: Platform.OS === 'ios' ? 44 : 24, // Status bar height
+    paddingTop: Platform.OS === 'ios' ? 44 : 24,
   };
 };
 
@@ -257,7 +343,32 @@ export const triggerHapticFeedback = async (type: 'light' | 'medium' | 'heavy' |
         break;
     }
   } catch (error) {
-    // Haptics not available, fail silently
     console.log('Haptics not available:', error);
   }
 };
+
+// New fun design helpers
+export const createGradientStyle = (theme: Theme, direction: 'horizontal' | 'vertical' = 'horizontal') => ({
+  // This is a placeholder - actual gradients need LinearGradient component
+  backgroundColor: theme.colors.gradientStart,
+});
+
+export const createFunCardStyle = (theme: Theme) => ({
+  backgroundColor: theme.colors.surface,
+  borderRadius: platformStyles.borderRadius.xl,
+  padding: platformStyles.spacing.lg,
+  borderWidth: 2,
+  borderColor: theme.colors.accent,
+  ...platformStyles.cardShadow,
+});
+
+export const createAccentButtonStyle = (theme: Theme) => ({
+  paddingVertical: platformStyles.spacing.md,
+  paddingHorizontal: platformStyles.spacing.xl,
+  borderRadius: platformStyles.borderRadius.large,
+  backgroundColor: theme.colors.accent,
+  alignItems: 'center' as const,
+  justifyContent: 'center' as const,
+  minHeight: 48,
+  ...platformStyles.buttonShadow,
+});

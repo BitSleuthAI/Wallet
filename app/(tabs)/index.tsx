@@ -1,27 +1,27 @@
+import BalanceChart from '@/components/PriceChart';
+import TransactionItem from '@/components/TransactionItem';
+import WalletCard from '@/components/WalletCard';
+import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { useWallet } from '@/hooks/wallet-store';
+import { Wallet } from '@/types/wallet';
+import { Stack, router } from 'expo-router';
+import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  RefreshControl,
-  SafeAreaView,
+  Alert,
   FlatList,
   Modal,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
   TextInput,
-  Alert,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { ArrowUpRight, ArrowDownLeft, TrendingUp, AlertCircle, Wifi, WifiOff, Eye, EyeOff, Plus, X } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
-import WalletCard from '@/components/WalletCard';
-import TransactionItem from '@/components/TransactionItem';
-import BalanceChart from '@/components/PriceChart';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
-import { Wallet } from '@/types/wallet';
-import { platformStyles, createButtonStyle, lightTheme, darkTheme } from '@/constants/themes';
 
 type CarouselItem = 
   | { type: 'wallet'; wallet: Wallet }
@@ -213,14 +213,22 @@ export default function WalletScreen() {
               if (item.type === 'add') {
                 return (
                   <TouchableOpacity 
-                    style={[styles.addWalletCard, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}
+                    style={[
+                      styles.addWalletCard, 
+                      { 
+                        backgroundColor: theme.colors.surface, 
+                        borderColor: theme.colors.primary,
+                        borderWidth: 2,
+                        borderStyle: 'dashed',
+                      }
+                    ]}
                     onPress={() => router.push('/wallet-setup')}
                     activeOpacity={0.7}
                   >
                     <View style={[styles.addWalletIcon, { backgroundColor: theme.colors.primary }]}>
                       <Plus color="white" size={24} />
                     </View>
-                    <Text style={[styles.addWalletText, { color: theme.colors.text }]}>Add new wallet</Text>
+                    <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
                   </TouchableOpacity>
                 );
               }
@@ -244,7 +252,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Display */}
-        <View style={styles.balanceSection}>
+        <View style={[styles.balanceSection, { backgroundColor: theme.colors.surface }]}>
           {hasBalanceError ? (
             <View style={styles.balanceErrorContainer}>
               <WifiOff color={theme.colors.textSecondary} size={24} />
@@ -268,7 +276,7 @@ export default function WalletScreen() {
                   {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
                 </Text>
                 <TouchableOpacity 
-                  style={styles.eyeButton}
+                  style={[styles.eyeButton, { backgroundColor: theme.colors.surface }]}
                   onPress={() => setHideBalanceSetting(!hideBalance)}
                 >
                   {hideBalance ? (
@@ -294,13 +302,16 @@ export default function WalletScreen() {
         </View>
 
         {/* Time Period Selector */}
-        <View style={styles.periodSelector}>
+        <View style={[styles.periodSelector, { backgroundColor: theme.colors.surface }]}>
           {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
             <TouchableOpacity
               key={period}
               style={[
                 styles.periodButton,
-                selectedPeriod === period && { backgroundColor: theme.colors.primary },
+                selectedPeriod === period && { 
+                  backgroundColor: theme.colors.primary,
+                  transform: [{ scale: 1.05 }],
+                },
               ]}
               onPress={() => setSelectedPeriod(period)}
             >
@@ -315,7 +326,9 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Chart */}
-        <BalanceChart selectedPeriod={selectedPeriod} />
+        <View style={[styles.chartContainer, { backgroundColor: theme.colors.surface }]}>
+          <BalanceChart selectedPeriod={selectedPeriod} />
+        </View>
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
@@ -343,7 +356,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Recent Transactions */}
-        <View style={styles.transactionsSection}>
+        <View style={[styles.transactionsSection, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionsHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Recent Transactions
@@ -517,57 +530,69 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   balanceSection: {
-    alignItems: 'center',
-    paddingVertical: 20,
+    marginHorizontal: 20,
+    marginTop: 20,
+    padding: 24,
+    borderRadius: 20,
+    ...platformStyles.cardShadow,
   },
   balanceRow: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-  },
-  eyeButton: {
-    marginLeft: 12,
-    padding: 4,
+    marginBottom: 8,
   },
   mainBalance: {
-    fontSize: 36,
-    fontWeight: 'bold',
+    fontSize: 32,
+    fontWeight: '800',
+    flex: 1,
+  },
+  eyeButton: {
+    padding: 8,
+    borderRadius: 20,
+    marginLeft: 12,
   },
   btcBalance: {
     fontSize: 16,
-    marginTop: 4,
+    fontWeight: '500',
+    marginBottom: 12,
   },
   changeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
+    gap: 6,
   },
   changeText: {
     fontSize: 14,
-    marginLeft: 4,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   periodSelector: {
     flexDirection: 'row',
-    justifyContent: 'center',
+    justifyContent: 'space-between',
     marginHorizontal: 20,
-    marginBottom: 10,
+    marginTop: 20,
+    padding: 16,
+    borderRadius: 16,
+    ...platformStyles.shadow,
   },
   periodButton: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    borderRadius: 12,
+    alignItems: 'center',
     marginHorizontal: 4,
+    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   periodText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   actionButtons: {
     flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginTop: 20,
-    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 24,
+    gap: 16,
   },
   sendButton: {
     flex: 1,
@@ -575,7 +600,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    ...platformStyles.buttonShadow,
   },
   receiveButton: {
     flex: 1,
@@ -583,7 +609,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 16,
-    borderRadius: 12,
+    borderRadius: 16,
+    ...platformStyles.buttonShadow,
   },
   actionButtonText: {
     color: 'white',
@@ -599,13 +626,16 @@ const styles = StyleSheet.create({
   transactionsSection: {
     marginTop: 30,
     paddingBottom: 20,
+    marginHorizontal: 20,
+    padding: 20,
+    borderRadius: 20,
+    ...platformStyles.cardShadow,
   },
   transactionsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    marginBottom: 16,
+    marginBottom: 20,
   },
   sectionTitle: {
     fontSize: 20,
@@ -675,7 +705,8 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    ...platformStyles.buttonShadow,
   },
   retryButtonText: {
     color: 'white',
@@ -690,7 +721,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   walletCarousel: {
-    marginVertical: 10,
+    marginVertical: 20,
   },
   carouselContent: {
     paddingHorizontal: 20,
@@ -707,6 +738,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
+    backgroundColor: 'rgba(0,0,0,0.02)',
   },
   addWalletIcon: {
     width: 48,
@@ -715,6 +747,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    ...platformStyles.shadow,
   },
   addWalletText: {
     fontSize: 14,
@@ -730,7 +763,7 @@ const styles = StyleSheet.create({
   editModal: {
     width: '100%',
     maxWidth: 400,
-    borderRadius: 16,
+    borderRadius: 20,
     padding: 0,
     ...platformStyles.cardShadow,
   },
@@ -757,15 +790,17 @@ const styles = StyleSheet.create({
   },
   editInput: {
     borderWidth: 1,
-    borderRadius: 8,
-    paddingHorizontal: 12,
+    borderRadius: 12,
+    paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
+    borderColor: '#E5E7EB',
   },
   colorPicker: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+    marginTop: 8,
   },
   colorOption: {
     width: 40,
@@ -773,6 +808,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 2,
     borderColor: 'transparent',
+    ...platformStyles.shadow,
   },
   selectedColor: {
     borderColor: '#000',
@@ -786,23 +822,34 @@ const styles = StyleSheet.create({
   editCancelButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
+    borderColor: '#E5E7EB',
   },
   editCancelText: {
     fontSize: 16,
     fontWeight: '500',
+    color: '#6B7280',
   },
   editSaveButton: {
     flex: 1,
     paddingVertical: 12,
-    borderRadius: 8,
+    borderRadius: 12,
+    backgroundColor: '#8B5CF6',
     alignItems: 'center',
+    ...platformStyles.buttonShadow,
   },
   editSaveText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: '500',
+    fontWeight: '600',
+    color: 'white',
+  },
+  chartContainer: {
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...platformStyles.cardShadow,
   },
 });

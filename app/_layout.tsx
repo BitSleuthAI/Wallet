@@ -6,14 +6,16 @@ import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ActivityTracker from '@/components/ActivityTracker';
 import PinUnlockScreen from '@/components/PinUnlockScreen';
+import SplashScreen from '@/components/SplashScreen';
+import { useSplashScreen } from '@/hooks/use-splash-screen';
 
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 import React, { useEffect, Component, ReactNode, useState } from 'react';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
-SplashScreen.preventAutoHideAsync();
+ExpoSplashScreen.preventAutoHideAsync();
 
 const queryClient = new QueryClient();
 
@@ -131,6 +133,23 @@ function AppWithLock() {
   );
 }
 
+function AppWithSplash() {
+  const { isVisible, hideSplash, isReady } = useSplashScreen();
+
+  // Show splash screen while app is initializing
+  if (isVisible) {
+    return <SplashScreen onAnimationComplete={hideSplash} />;
+  }
+
+  // Show main app content when ready
+  if (isReady) {
+    return <AppWithLock />;
+  }
+
+  // Fallback loading state
+  return <SplashScreen onAnimationComplete={hideSplash} />;
+}
+
 function RootLayoutNav() {
   const [key, setKey] = useState(0);
   
@@ -157,7 +176,7 @@ function RootLayoutNav() {
     <ErrorBoundary key={key}>
       <WalletProvider>
         <AutoLockProvider>
-          <AppWithLock />
+          <AppWithSplash />
         </AutoLockProvider>
       </WalletProvider>
     </ErrorBoundary>
@@ -181,8 +200,8 @@ export default function RootLayout() {
         console.warn('⚠️ Crypto initialization error:', error);
       }
       
-      // Always hide splash screen after attempting initialization
-      SplashScreen.hideAsync();
+      // Hide Expo splash screen after crypto initialization
+      ExpoSplashScreen.hideAsync();
     };
     
     ensureCrypto();
