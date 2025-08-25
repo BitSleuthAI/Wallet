@@ -1,4 +1,4 @@
-import RNBootSplash from 'react-native-bootsplash';
+import * as ExpoSplashScreen from 'expo-splash-screen';
 
 export class SplashScreenManager {
   private static instance: SplashScreenManager;
@@ -14,7 +14,7 @@ export class SplashScreenManager {
   }
 
   /**
-   * Hide the native splash screen
+   * Hide the Expo splash screen
    * This should be called when your app is ready to show the main content
    */
   public async hide(): Promise<void> {
@@ -23,19 +23,13 @@ export class SplashScreenManager {
     }
 
     try {
-      await RNBootSplash.hide({ fade: true });
+      await ExpoSplashScreen.hideAsync();
       this.isHidden = true;
-      console.log('✅ Native splash screen hidden successfully');
+      console.log('✅ Expo splash screen hidden successfully');
     } catch (error) {
-      console.error('❌ Error hiding native splash screen:', error);
-      // Fallback: try to hide without animation
-      try {
-        await RNBootSplash.hide({ fade: false });
-        this.isHidden = true;
-        console.log('✅ Native splash screen hidden without animation');
-      } catch (fallbackError) {
-        console.error('❌ Failed to hide splash screen even without animation:', fallbackError);
-      }
+      console.error('❌ Error hiding Expo splash screen:', error);
+      // Mark as hidden even if there's an error to prevent app from being stuck
+      this.isHidden = true;
     }
   }
 

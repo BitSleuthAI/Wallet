@@ -1,6 +1,6 @@
 # 🎨 BitSleuth Wallet Splash Screen Setup Guide
 
-This guide explains how to set up the custom splash screen for your BitSleuth Wallet app using `react-native-bootsplash`.
+This guide explains how to set up the custom splash screen for your BitSleuth Wallet app using **Expo's built-in splash screen system**.
 
 ## ✨ Features
 
@@ -9,17 +9,31 @@ This guide explains how to set up the custom splash screen for your BitSleuth Wa
 - **Cross-Platform**: Consistent experience on both iOS and Android
 - **App Store Compliant**: Meets Apple App Store requirements for splash screens
 - **Professional Design**: Dark theme with Bitcoin orange accents and security icons
+- **Expo Compatible**: Uses Expo's native splash screen system for optimal performance
 
 ## 🚀 Quick Start
 
-### 1. Install Dependencies
+### 1. Dependencies
 
 The required dependencies are already installed:
-```bash
-npm install react-native-bootsplash
-```
+- `expo-splash-screen` - Built into Expo
+- `expo-linear-gradient` - For beautiful background gradients
+- `lucide-react-native` - For icons
 
-### 2. Native Configuration
+### 2. Configuration
+
+#### Expo Configuration (app.json)
+```json
+{
+  "expo": {
+    "splash": {
+      "image": "./assets/images/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0F172A"
+    }
+  }
+}
+```
 
 #### iOS Setup
 
@@ -50,12 +64,7 @@ npm install react-native-bootsplash
    - Located at: `android/app/src/main/res/drawable/splash_logo.xml`
    - Vector drawable for the BitSleuth logo
 
-### 3. React Native Configuration
-
-#### Configuration File
-- **react-native-bootsplash.config.js** (Already created)
-  - Defines splash screen settings for all platforms
-  - Uses `#0F172A` as the primary background color
+### 3. React Native Components
 
 #### Components
 - **SplashScreen.tsx** (Already created)
@@ -64,8 +73,8 @@ npm install react-native-bootsplash
 
 #### Services
 - **splash-screen-manager.ts** (Already created)
-  - Manages native splash screen lifecycle
-  - Handles hiding the native splash screen
+  - Manages Expo splash screen lifecycle
+  - Handles hiding the Expo splash screen
 
 #### Hooks
 - **use-splash-screen.ts** (Already created)
@@ -95,7 +104,7 @@ function AppWithSplash() {
 ## 🎯 How It Works
 
 ### 1. App Launch Sequence
-1. **Native Splash Screen**: Shows immediately when app launches
+1. **Expo Splash Screen**: Shows immediately when app launches (configured in app.json)
 2. **React Native Initialization**: App starts loading and initializing
 3. **Custom Splash Screen**: Shows while crypto and wallet services initialize
 4. **Main App**: Displays when everything is ready
@@ -157,8 +166,8 @@ You can adjust animation durations in `SplashScreen.tsx`:
 ### Common Issues
 
 1. **Splash Screen Not Showing**
-   - Check that `react-native-bootsplash` is properly installed
-   - Verify native configuration files are in place
+   - Check that `expo-splash-screen` is properly configured
+   - Verify app.json splash configuration
    - Ensure the splash screen manager is called correctly
 
 2. **Animation Not Working**
@@ -179,24 +188,24 @@ Enable debug logging by checking the console for:
 ## 📋 App Store Requirements
 
 This splash screen implementation meets Apple App Store requirements:
-- ✅ **No Blank Screen**: Custom splash screen prevents blank loading states
+- ✅ **No Blank Screen**: Custom splash screen prevents loading issues
 - ✅ **Branding**: Clear app identification with logo and name
 - ✅ **Professional**: High-quality design that enhances user experience
 - ✅ **Consistent**: Same experience across all devices and orientations
+- ✅ **Expo Compatible**: Uses official Expo splash screen system
 
 ## 🎉 Next Steps
 
 1. **Test on Devices**: Test the splash screen on both iOS and Android devices
-2. **Customize Branding**: Update colors, logos, or text to match your brand
-3. **Performance**: Monitor splash screen performance and adjust timing if needed
-4. **App Store**: Submit your app with confidence that the splash screen meets requirements
+2. **Customize Branding**: Update colors, logos, or text if desired
+3. **App Store Submission**: Your splash screen now meets all requirements
 
 ## 📚 Additional Resources
 
-- [react-native-bootsplash Documentation](https://github.com/zoontek/react-native-bootsplash)
+- [Expo Splash Screen Documentation](https://docs.expo.dev/versions/latest/sdk/splash-screen/)
 - [iOS Launch Screen Guidelines](https://developer.apple.com/design/human-interface-guidelines/ios/visual-design/launch-screen/)
 - [Android Splash Screen Guidelines](https://developer.android.com/guide/topics/ui/splash-screen)
 
 ---
 
-**Note**: This splash screen implementation is designed to work seamlessly with your existing BitSleuth Wallet app. All functionality has been preserved while adding a professional, branded launch experience.
+**Note**: This splash screen implementation is designed to work seamlessly with your existing BitSleuth Wallet app using Expo's native splash screen system. All functionality has been preserved while adding a professional, branded launch experience that's fully compatible with Expo.
