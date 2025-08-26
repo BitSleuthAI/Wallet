@@ -6,20 +6,23 @@ let lastTabIndex = 0;
 
 export const useTabAnimation = (tabIndex: number) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current; // Start visible
   const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Skip animation on initial mount
+    // On initial mount, ensure content is visible and in position
     if (isInitialMount.current) {
       isInitialMount.current = false;
       lastTabIndex = tabIndex;
+      // Ensure initial state is correct
+      slideAnim.setValue(0);
+      opacityAnim.setValue(1);
       return;
     }
 
     // Determine slide direction based on tab index change
     // REVERSED LOGIC: Forward navigation slides from LEFT, backward slides from RIGHT
-    const slideDirection = tabIndex > lastTabIndex ? -1 : 1; // Reversed from original
+    const slideDirection = tabIndex > lastTabIndex ? -1 : 1;
     const slideDistance = 100;
 
     // Only animate if we're actually changing tabs
