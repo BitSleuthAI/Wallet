@@ -893,7 +893,7 @@ export default function SendScreen() {
           </View>
         </ScrollView>
       </Animated.View>
-          
+      
       {/* QR Scanner Modal */}
       <Modal
         visible={showQRScanner}
