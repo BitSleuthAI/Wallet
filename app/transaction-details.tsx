@@ -1,32 +1,32 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  ScrollView,
-  TouchableOpacity,
-  Alert,
-  Linking,
-  Share,
-  Platform,
-} from 'react-native';
-import { Stack, useLocalSearchParams, router } from 'expo-router';
-import {
-  ArrowUpRight,
-  ArrowDownLeft,
-  Copy,
-  ExternalLink,
-  Share as ShareIcon,
-  Zap,
-  Clock,
-  CheckCircle,
-  XCircle,
-  AlertTriangle,
-} from 'lucide-react-native';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
-import { platformStyles } from '@/constants/themes';
 import * as Clipboard from 'expo-clipboard';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import {
+    AlertTriangle,
+    ArrowDownLeft,
+    ArrowUpRight,
+    CheckCircle,
+    Clock,
+    Copy,
+    ExternalLink,
+    Share as ShareIcon,
+    XCircle,
+    Zap,
+} from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Linking,
+    Platform,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function TransactionDetailsScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
@@ -47,7 +47,13 @@ export default function TransactionDetailsScreen() {
   if (!transaction) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Transaction Details' }} />
+        <Stack.Screen 
+        options={{ 
+          title: 'Transaction Details',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }} 
+      />
         <View style={styles.centerContent}>
           <Text style={[styles.errorText, { color: theme.colors.error }]}>
             Transaction not found

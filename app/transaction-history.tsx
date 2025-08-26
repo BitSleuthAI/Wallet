@@ -1,17 +1,17 @@
+import TransactionItem from '@/components/TransactionItem';
+import { useWallet } from '@/hooks/wallet-store';
+import { Stack } from 'expo-router';
+import { Clock } from 'lucide-react-native';
 import React from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  RefreshControl,
-  ActivityIndicator,
+    ActivityIndicator,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    View,
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { useWallet } from '@/hooks/wallet-store';
-import TransactionItem from '@/components/TransactionItem';
-import { Clock } from 'lucide-react-native';
 
 export default function TransactionHistoryScreen() {
   const { 
@@ -63,7 +63,7 @@ export default function TransactionHistoryScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Transaction History',
-          headerStyle: { backgroundColor: theme.colors.surface },
+          headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.text,
         }} 
       />

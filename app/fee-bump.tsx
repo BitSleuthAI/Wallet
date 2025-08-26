@@ -1,20 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  TextInput,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
-} from 'react-native';
-import { Stack, useLocalSearchParams, router } from 'expo-router';
-import { ArrowLeft, Check } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
-import { Transaction } from '@/types/wallet';
 import { platformStyles } from '@/constants/themes';
+import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
+import { Transaction } from '@/types/wallet';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, Check } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 type FeeOption = {
   label: string;
@@ -158,6 +158,8 @@ export default function FeeBumpScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Bump fee (RBF)',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
           headerLeft: () => (
             <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
               <ArrowLeft color={theme.colors.text} size={24} />

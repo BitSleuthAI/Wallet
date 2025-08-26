@@ -1,5 +1,6 @@
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle } from '@/constants/themes';
+import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
@@ -7,6 +8,7 @@ import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     Alert,
+    Animated,
     Platform,
     SafeAreaView,
     Share,
@@ -18,6 +20,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 
 export default function ReceiveScreen() {
+  const { animatedStyle } = useTabAnimation();
   const { currentWallet, generateNewAddress, theme } = useWallet();
   const [currentAddress, setCurrentAddress] = useState<string>(
     currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
@@ -108,7 +111,13 @@ export default function ReceiveScreen() {
   if (!currentWallet) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Receive' }} />
+        <Stack.Screen 
+          options={{ 
+            title: 'Receive',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
         <View style={styles.emptyState}>
           <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
             No Wallet Found
@@ -129,105 +138,119 @@ export default function ReceiveScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Receive' }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Receive',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }} 
+      />
       
-      <View style={styles.content}>
-        {/* To Section */}
-        <WalletSelector label="To:" />
+      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <View style={styles.content}>
+          {/* To Section */}
+          <WalletSelector label="To:" />
 
-        {/* QR Code */}
-        <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface, alignSelf: 'center' }]}>
-          <View style={styles.qrCodeWrapper}>
-            {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
-              <QRCode
-                value={currentAddress}
-                size={200}
-                backgroundColor="white"
-                color="black"
-                logo={undefined}
-                logoSize={0}
-                logoBackgroundColor="transparent"
-                logoMargin={0}
-                logoBorderRadius={0}
-                quietZone={10}
-                enableLinearGradient={false}
-              />
-            ) : (
-              <View style={styles.qrPlaceholder}>
-                <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
-                  {currentWallet ? 'Generating address...' : 'No address available'}
-                </Text>
-              </View>
-            )}
+          {/* QR Code */}
+          <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface, alignSelf: 'center' }]}>
+            <View style={styles.qrCodeWrapper}>
+              {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
+                <QRCode
+                  value={currentAddress}
+                  size={200}
+                  backgroundColor="white"
+                  color="black"
+                  logo={undefined}
+                  logoSize={0}
+                  logoBackgroundColor="transparent"
+                  logoMargin={0}
+                  logoBorderRadius={0}
+                  quietZone={10}
+                  enableLinearGradient={false}
+                />
+              ) : (
+                <View style={styles.qrPlaceholder}>
+                  <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
+                    {currentWallet ? 'Generating address...' : 'No address available'}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
+
+          {/* Address */}
+          <View style={styles.addressSection}>
+            <Text style={[styles.addressLabel, { color: theme.colors.textSecondary }]}>
+              Your Bitcoin Address
+            </Text>
+            <Text style={[styles.address, { color: theme.colors.text }]}>
+              {currentAddress || 'No address available'}
+            </Text>
+          </View>
+
+          {/* New Address Button */}
+          <TouchableOpacity
+            style={[
+              createButtonStyle(theme, 'primary'),
+              styles.newAddressButton,
+              { alignSelf: 'center' }
+            ]}
+            onPress={handleNewAddress}
+          >
+            <RefreshCw color="white" size={20} />
+            <Text style={styles.newAddressText}>New Address</Text>
+          </TouchableOpacity>
         </View>
+        
+        {/* Action Buttons - Positioned at bottom */}
+        <View style={styles.bottomActionButtons}>
+          <TouchableOpacity
+            style={[
+              createButtonStyle(theme, 'secondary'),
+              styles.actionButton,
+              { 
+                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+              }
+            ]}
+            onPress={handleCopy}
+            disabled={!currentAddress || currentAddress.length === 0}
+          >
+            <Copy color={theme.colors.text} size={20} />
+            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+              Copy
+            </Text>
+          </TouchableOpacity>
 
-        {/* Address */}
-        <View style={styles.addressSection}>
-          <Text style={[styles.addressLabel, { color: theme.colors.textSecondary }]}>
-            Your Bitcoin Address
-          </Text>
-          <Text style={[styles.address, { color: theme.colors.text }]}>
-            {currentAddress || 'No address available'}
-          </Text>
+          <TouchableOpacity
+            style={[
+              createButtonStyle(theme, 'secondary'),
+              styles.actionButton,
+              { 
+                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
+              }
+            ]}
+            onPress={handleShare}
+            disabled={!currentAddress || currentAddress.length === 0}
+          >
+            <ShareIcon color={theme.colors.text} size={20} />
+            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+              Share
+            </Text>
+          </TouchableOpacity>
         </View>
-
-        {/* New Address Button */}
-        <TouchableOpacity
-          style={[
-            createButtonStyle(theme, 'primary'),
-            styles.newAddressButton,
-            { alignSelf: 'center' }
-          ]}
-          onPress={handleNewAddress}
-        >
-          <RefreshCw color="white" size={20} />
-          <Text style={styles.newAddressText}>New Address</Text>
-        </TouchableOpacity>
-      </View>
-      
-      {/* Action Buttons - Positioned at bottom */}
-      <View style={styles.bottomActionButtons}>
-        <TouchableOpacity
-          style={[
-            createButtonStyle(theme, 'secondary'),
-            styles.actionButton,
-            { 
-              opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-            }
-          ]}
-          onPress={handleCopy}
-          disabled={!currentAddress || currentAddress.length === 0}
-        >
-          <Copy color={theme.colors.text} size={20} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-            Copy
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[
-            createButtonStyle(theme, 'secondary'),
-            styles.actionButton,
-            { 
-              opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-            }
-          ]}
-          onPress={handleShare}
-          disabled={!currentAddress || currentAddress.length === 0}
-        >
-          <ShareIcon color={theme.colors.text} size={20} />
-          <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-            Share
-          </Text>
-        </TouchableOpacity>
-      </View>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  animatedContainer: {
+    flex: 1,
+  },
+  scrollView: {
     flex: 1,
   },
   content: {

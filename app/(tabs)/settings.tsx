@@ -1,49 +1,47 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Switch,
-  Alert,
-  Platform,
-  Pressable,
-  Modal,
-} from 'react-native';
-import * as WebBrowser from 'expo-web-browser';
-import { Stack, router } from 'expo-router';
-import {
-  Wallet,
-  DollarSign,
-  Moon,
-  Sun,
-  Clock,
-  Shield,
-  Key,
-  FileKey,
-  List,
-  UserX,
-  Info,
-  ChevronRight,
-  Settings,
-  Zap,
-  Eye,
-  EyeOff,
-  Coins,
-  X,
-  Check,
-  Euro,
-  PoundSterling,
-  FolderOpen,
-} from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTabAnimation } from '@/hooks/use-tab-animation';
+import { useWallet } from '@/hooks/wallet-store';
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
+import { Stack, router } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import {
+    Check,
+    ChevronRight,
+    Clock,
+    DollarSign,
+    Euro,
+    Eye,
+    EyeOff,
+    FolderOpen,
+    Info,
+    Moon,
+    PoundSterling,
+    Settings,
+    Shield,
+    Sun,
+    UserX,
+    Wallet,
+    X
+} from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+    Alert,
+    Animated,
+    Modal,
+    Platform,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function SettingsScreen() {
+  const { animatedStyle } = useTabAnimation();
   const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
@@ -145,209 +143,217 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Settings' }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Settings',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }} 
+      />
       
-      <ScrollView style={styles.scrollView}>
-        {/* General Section */}
-        <SectionHeader title="General" />
-        
-        <SettingItem
-          icon={FolderOpen}
-          title="Manage Wallets"
-          subtitle="Add, edit, or remove wallets"
-          onPress={() => router.push('/manage-wallets')}
-        />
-        
-        <SettingItem
-          icon={Wallet}
-          title="Current Wallet"
-          subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
-          onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
-          rightElement={
-            wallets.length > 1 ? (
-              <View style={styles.walletInfo}>
-                <Text style={[styles.walletCount, { color: theme.colors.textSecondary }]}>
-                  {wallets.length} wallets
+      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+          {/* General Section */}
+          <SectionHeader title="General" />
+          
+          <SettingItem
+            icon={FolderOpen}
+            title="Manage Wallets"
+            subtitle="Add, edit, or remove wallets"
+            onPress={() => router.push('/manage-wallets')}
+          />
+          
+          <SettingItem
+            icon={Wallet}
+            title="Current Wallet"
+            subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
+            onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
+            rightElement={
+              wallets.length > 1 ? (
+                <View style={styles.walletInfo}>
+                  <Text style={[styles.walletCount, { color: theme.colors.textSecondary }]}>
+                    {wallets.length} wallets
+                  </Text>
+                  <ChevronRight color={theme.colors.textSecondary} size={20} />
+                </View>
+              ) : undefined
+            }
+          />
+
+          <SettingItem
+            icon={Settings}
+            title="Wallet Settings"
+            subtitle="Configure wallet preferences"
+            onPress={() => router.push('/wallet-settings')}
+          />
+
+          <SettingItem
+            icon={selectedCurrency === 'USD' ? DollarSign : selectedCurrency === 'EUR' ? Euro : PoundSterling}
+            title="Display Currency"
+            subtitle="Set your preferred currency"
+            onPress={() => setShowCurrencyModal(true)}
+            rightElement={
+              <View style={styles.currencyContainer}>
+                <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
+                  {selectedCurrency} - {getCurrencyName()}
                 </Text>
                 <ChevronRight color={theme.colors.textSecondary} size={20} />
               </View>
-            ) : undefined
-          }
-        />
-
-        <SettingItem
-          icon={Settings}
-          title="Wallet Settings"
-          subtitle="Configure wallet preferences"
-          onPress={() => router.push('/wallet-settings')}
-        />
-
-        <SettingItem
-          icon={selectedCurrency === 'USD' ? DollarSign : selectedCurrency === 'EUR' ? Euro : PoundSterling}
-          title="Display Currency"
-          subtitle="Set your preferred currency"
-          onPress={() => setShowCurrencyModal(true)}
-          rightElement={
-            <View style={styles.currencyContainer}>
-              <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
-                {selectedCurrency} - {getCurrencyName()}
-              </Text>
-              <ChevronRight color={theme.colors.textSecondary} size={20} />
-            </View>
-          }
-        />
-
-        <SettingItem
-          icon={hideBalance ? EyeOff : Eye}
-          title="Hide Balance"
-          subtitle="Hide wallet balance across all wallets"
-          rightElement={
-            <View style={styles.themeToggle}>
-              <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
-                {hideBalance ? 'Hidden' : 'Visible'}
-              </Text>
-              {Platform.OS === 'web' ? (
-                <Pressable
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: hideBalance }}
-                  onPress={() => setHideBalanceSetting(!hideBalance)}
-                  style={[
-                    styles.webSwitch,
-                    {
-                      backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
-                    },
-                  ]}
-                  testID="hide-balance-switch-web"
-                >
-                  <View
-                    style={[
-                      styles.webSwitchThumb,
-                      {
-                        transform: [{ translateX: hideBalance ? 24 : 2 }],
-                        backgroundColor: '#FFFFFF',
-                      },
-                    ]}
-                  />
-                </Pressable>
-              ) : (
-                <Switch
-                  value={hideBalance}
-                  onValueChange={setHideBalanceSetting}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                  thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                  ios_backgroundColor={theme.colors.border}
-                  testID="hide-balance-switch-native"
-                />
-              )}
-            </View>
-          }
-        />
-
-        <SettingItem
-          icon={theme.isDark ? Moon : Sun}
-          title="Theme"
-          subtitle="Set your preferred theme"
-          rightElement={
-            <View style={styles.themeToggle}>
-              <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
-                {theme.isDark ? 'Dark' : 'Light'}
-              </Text>
-              {Platform.OS === 'web' ? (
-                <Pressable
-                  accessibilityRole="switch"
-                  accessibilityState={{ checked: theme.isDark }}
-                  onPress={() => toggleTheme()}
-                  style={[
-                    styles.webSwitch,
-                    {
-                      backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.border,
-                    },
-                  ]}
-                  testID="theme-switch-web"
-                >
-                  <View
-                    style={[
-                      styles.webSwitchThumb,
-                      {
-                        transform: [{ translateX: theme.isDark ? 24 : 2 }],
-                        backgroundColor: '#FFFFFF',
-                      },
-                    ]}
-                  />
-                </Pressable>
-              ) : (
-                <Switch
-                  value={theme.isDark}
-                  onValueChange={toggleTheme}
-                  trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                  thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
-                  ios_backgroundColor={theme.colors.border}
-                  testID="theme-switch-native"
-                />
-              )}
-            </View>
-          }
-        />
-
-        {/* Security Section */}
-        <SectionHeader title="Security" />
-
-        <SettingItem
-          icon={Clock}
-          title="Auto-Lock"
-          subtitle="Automatically lock app after inactivity"
-          onPress={() => setShowAutoLockModal(true)}
-          rightElement={
-            <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-              {autoLockTimeout === -1 ? 'Never' : `${autoLockTimeout} min`}
-            </Text>
-          }
-        />
-
-        <SettingItem
-          icon={Shield}
-          title="Passkeys & Security Keys"
-          subtitle="Secure with a FIDO key or passkey"
-          onPress={() => router.push('/passkeys-security')}
-        />
-
-        {/* Privacy Section */}
-        <SectionHeader title="Privacy" />
-
-        <SettingItem
-          icon={UserX}
-          title="Transaction Privacy"
-          subtitle="Learn about Bitcoin anonymity"
-          onPress={() => WebBrowser.openBrowserAsync('https://www.bitsleuth.ai/glossary/transaction-privacy')}
-        />
-
-        {/* About Section */}
-        <SectionHeader title="About" />
-
-        <SettingItem
-          icon={Info}
-          title="About BitSleuth Wallet"
-          subtitle="Version 1.1.6"
-          onPress={() => router.push('/about')}
-        />
-
-        {/* Logout Button */}
-        <TouchableOpacity
-          style={[
-            styles.logoutButton, 
-            { 
-              borderColor: theme.colors.error,
-              opacity: isLoggingOut ? 0.6 : 1
             }
-          ]}
-          onPress={handleLogout}
-          disabled={isLoggingOut}
-        >
-          <Text style={[styles.logoutText, { color: theme.colors.error }]}>
-            {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
-          </Text>
-        </TouchableOpacity>
-      </ScrollView>
+          />
+
+          <SettingItem
+            icon={hideBalance ? EyeOff : Eye}
+            title="Hide Balance"
+            subtitle="Hide wallet balance across all wallets"
+            rightElement={
+              <View style={styles.themeToggle}>
+                <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
+                  {hideBalance ? 'Hidden' : 'Visible'}
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: hideBalance }}
+                    onPress={() => setHideBalanceSetting(!hideBalance)}
+                    style={[
+                      styles.webSwitch,
+                      {
+                        backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
+                      },
+                    ]}
+                    testID="hide-balance-switch-web"
+                  >
+                    <View
+                      style={[
+                        styles.webSwitchThumb,
+                        {
+                          transform: [{ translateX: hideBalance ? 24 : 2 }],
+                          backgroundColor: '#FFFFFF',
+                        },
+                      ]}
+                    />
+                  </Pressable>
+                ) : (
+                  <Switch
+                    value={hideBalance}
+                    onValueChange={setHideBalanceSetting}
+                    trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    ios_backgroundColor={theme.colors.border}
+                    testID="hide-balance-switch-native"
+                  />
+                )}
+              </View>
+            }
+          />
+
+          <SettingItem
+            icon={theme.isDark ? Moon : Sun}
+            title="Theme"
+            subtitle="Set your preferred theme"
+            rightElement={
+              <View style={styles.themeToggle}>
+                <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
+                  {theme.isDark ? 'Dark' : 'Light'}
+                </Text>
+                {Platform.OS === 'web' ? (
+                  <Pressable
+                    accessibilityRole="switch"
+                    accessibilityState={{ checked: theme.isDark }}
+                    onPress={() => toggleTheme()}
+                    style={[
+                      styles.webSwitch,
+                      {
+                        backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.border,
+                      },
+                    ]}
+                    testID="theme-switch-web"
+                  >
+                    <View
+                      style={[
+                        styles.webSwitchThumb,
+                        {
+                          transform: [{ translateX: theme.isDark ? 24 : 2 }],
+                          backgroundColor: '#FFFFFF',
+                        },
+                      ]}
+                    />
+                  </Pressable>
+                ) : (
+                  <Switch
+                    value={theme.isDark}
+                    onValueChange={toggleTheme}
+                    trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    ios_backgroundColor={theme.colors.border}
+                    testID="theme-switch-native"
+                  />
+                )}
+              </View>
+            }
+          />
+
+          {/* Security Section */}
+          <SectionHeader title="Security" />
+
+          <SettingItem
+            icon={Clock}
+            title="Auto-Lock"
+            subtitle="Automatically lock app after inactivity"
+            onPress={() => setShowAutoLockModal(true)}
+            rightElement={
+              <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
+                {autoLockTimeout === -1 ? 'Never' : `${autoLockTimeout} min`}
+              </Text>
+            }
+          />
+
+          <SettingItem
+            icon={Shield}
+            title="Passkeys & Security Keys"
+            subtitle="Secure with a FIDO key or passkey"
+            onPress={() => router.push('/passkeys-security')}
+          />
+
+          {/* Privacy Section */}
+          <SectionHeader title="Privacy" />
+
+          <SettingItem
+            icon={UserX}
+            title="Transaction Privacy"
+            subtitle="Learn about Bitcoin anonymity"
+            onPress={() => WebBrowser.openBrowserAsync('https://www.bitsleuth.ai/glossary/transaction-privacy')}
+          />
+
+          {/* About Section */}
+          <SectionHeader title="About" />
+
+          <SettingItem
+            icon={Info}
+            title="About BitSleuth Wallet"
+            subtitle="Version 1.1.6"
+            onPress={() => router.push('/about')}
+          />
+
+          {/* Logout Button */}
+          <TouchableOpacity
+            style={[
+              styles.logoutButton, 
+              { 
+                borderColor: theme.colors.error,
+                opacity: isLoggingOut ? 0.6 : 1
+              }
+            ]}
+            onPress={handleLogout}
+            disabled={isLoggingOut}
+          >
+            <Text style={[styles.logoutText, { color: theme.colors.error }]}>
+              {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
+            </Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </Animated.View>
 
       {/* Currency Selection Modal */}
       <Modal
@@ -534,6 +540,9 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  animatedContainer: {
     flex: 1,
   },
   scrollView: {

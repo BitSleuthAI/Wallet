@@ -4,26 +4,26 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Stack } from 'expo-router';
 import {
-  AlertTriangle,
-  CheckCircle,
-  Fingerprint,
-  Key,
-  Lock,
-  Plus,
-  Shield,
-  Smartphone,
-  Trash2,
+    AlertTriangle,
+    CheckCircle,
+    Fingerprint,
+    Key,
+    Lock,
+    Plus,
+    Shield,
+    Smartphone,
+    Trash2,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface SecurityKey {
@@ -434,7 +434,7 @@ export default function PasskeysSecurityScreen() {
         <Stack.Screen 
           options={{ 
             title: 'Passkeys & Security Keys',
-            headerStyle: { backgroundColor: theme.colors.surface },
+            headerStyle: { backgroundColor: theme.colors.background },
             headerTintColor: theme.colors.text,
           }} 
         />
@@ -452,7 +452,7 @@ export default function PasskeysSecurityScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Passkeys & Security Keys',
-          headerStyle: { backgroundColor: theme.colors.surface },
+          headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.text,
         }} 
       />

@@ -1,33 +1,33 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Switch,
-  Alert,
-  Platform,
-  Pressable,
-  TextInput,
-  ActivityIndicator,
-} from 'react-native';
+import { useWallet } from '@/hooks/wallet-store';
+import { feeEstimationService } from '@/services/fee-service';
+import type { FeeEstimate } from '@/types/wallet';
 import { Stack } from 'expo-router';
 import {
-  Zap,
-  Clock,
-  DollarSign,
-  TrendingUp,
-  Settings,
-  Info,
-  RefreshCw,
-  AlertTriangle,
-  CheckCircle,
+    AlertTriangle,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Info,
+    RefreshCw,
+    Settings,
+    TrendingUp,
+    Zap,
 } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
-import { feeEstimationService, FeeEstimationService } from '@/services/fee-service';
-import type { FeeEstimate } from '@/types/wallet';
+import React, { useEffect, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Platform,
+    Pressable,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
 
@@ -332,7 +332,13 @@ export default function FeeSettingsScreen() {
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Fee Settings' }} />
+        <Stack.Screen 
+        options={{ 
+          title: 'Fee Settings',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }} 
+      />
         <View style={styles.loadingContainer}>
           <ActivityIndicator size="large" color={theme.colors.primary} />
           <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>

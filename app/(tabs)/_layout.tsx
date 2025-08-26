@@ -1,7 +1,7 @@
-import { Tabs } from 'expo-router';
-import { Wallet, Send, Download, Settings } from 'lucide-react-native';
-import React from 'react';
 import { useWallet } from '@/hooks/wallet-store';
+import { Tabs } from 'expo-router';
+import { Download, Send, Settings, Wallet } from 'lucide-react-native';
+import React from 'react';
 
 export default function TabLayout() {
   const { theme } = useWallet();
@@ -20,6 +20,7 @@ export default function TabLayout() {
         },
         headerTintColor: theme.colors.text,
         headerShown: false,
+
       }}
     >
       <Tabs.Screen

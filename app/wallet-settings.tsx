@@ -1,26 +1,26 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  Alert,
-} from 'react-native';
-import { Stack, router } from 'expo-router';
-import {
-  Wallet,
-  Key,
-  FileKey,
-  List,
-  Coins,
-  Zap,
-  ChevronRight,
-  Trash2,
-} from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
+import { Stack, router } from 'expo-router';
+import {
+    ChevronRight,
+    Coins,
+    FileKey,
+    Key,
+    List,
+    Trash2,
+    Wallet,
+    Zap,
+} from 'lucide-react-native';
+import React from 'react';
+import {
+    Alert,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function WalletSettingsScreen() {
   const { 
@@ -126,7 +126,7 @@ export default function WalletSettingsScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Wallet Settings',
-          headerStyle: { backgroundColor: theme.colors.surface },
+          headerStyle: { backgroundColor: theme.colors.background },
           headerTintColor: theme.colors.text,
         }} 
       />

@@ -2,6 +2,7 @@ import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs, getBitcoinPrice, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
@@ -9,19 +10,21 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
+  const { animatedStyle } = useTabAnimation();
   const { 
     currentWallet, 
     balance, 
@@ -548,7 +551,13 @@ export default function SendScreen() {
   if (!currentWallet) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Send' }} />
+        <Stack.Screen 
+          options={{ 
+            title: 'Send',
+            headerStyle: { backgroundColor: theme.colors.background },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
         <View style={styles.emptyState}>
           <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
             No Wallet Found
@@ -569,331 +578,342 @@ export default function SendScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Send' }} />
+      <Stack.Screen 
+        options={{ 
+          title: 'Send',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }} 
+      />
       
-      <ScrollView 
-        style={styles.scrollView}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={styles.content}>
-        {/* From Section */}
-        <WalletSelector label="From:" />
+      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
+          <View style={styles.content}>
+          {/* From Section */}
+          <WalletSelector label="From:" />
 
-        {/* Recipient Address */}
-        <View style={styles.inputSection}>
-          <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-            Recipient Address
-          </Text>
-          
-          <View style={styles.inputContainer}>
+          {/* Recipient Address */}
+          <View style={styles.inputSection}>
+            <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
+              Recipient Address
+            </Text>
+            
+            <View style={styles.inputContainer}>
+              <TextInput
+                style={[
+                  createInputStyle(theme),
+                  styles.textInput,
+                ]}
+                placeholder="Enter Bitcoin address (bc1q..., 1..., 3...)"
+                placeholderTextColor={theme.colors.textSecondary}
+                value={recipientAddress}
+                onChangeText={setRecipientAddress}
+                multiline
+              />
+              <TouchableOpacity 
+                style={styles.qrCodeButton}
+                onPress={() => setShowQRScanner(true)}
+              >
+                <QrCode color={theme.colors.primary} size={24} />
+              </TouchableOpacity>
+            </View>
+            
+            {/* Address Validation Indicator */}
+            {recipientAddress.trim() && (
+              <View style={styles.validationContainer}>
+                {addressValidation.isValid ? (
+                  <View style={styles.validationRow}>
+                    <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
+                    <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
+                      {addressValidation.message}
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.validationRow}>
+                    <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
+                    <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
+                      {addressValidation.message}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+          </View>
+
+          {/* Amount */}
+          <View style={styles.inputSection}>
+            <View style={styles.amountHeader}>
+              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
+                Amount ({isAmountInBTC ? 'BTC' : 'USD'})
+              </Text>
+              <View style={styles.currencyToggle}>
+                <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
+                  BTC
+                </Text>
+                <Switch
+                  value={!isAmountInBTC}
+                  onValueChange={toggleCurrency}
+                  trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
+                  thumbColor="white"
+                />
+                <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
+                  USD
+                </Text>
+              </View>
+            </View>
+            
             <TextInput
               style={[
                 createInputStyle(theme),
-                styles.textInput,
+                styles.amountInput,
               ]}
-              placeholder="Enter Bitcoin address (bc1q..., 1..., 3...)"
+              placeholder={isAmountInBTC ? "0.00000000" : "0.00"}
               placeholderTextColor={theme.colors.textSecondary}
-              value={recipientAddress}
-              onChangeText={setRecipientAddress}
-              multiline
+              value={amount}
+              onChangeText={handleAmountChange}
+              keyboardType="numeric"
             />
-            <TouchableOpacity 
-              style={styles.qrCodeButton}
-              onPress={() => setShowQRScanner(true)}
-            >
-              <QrCode color={theme.colors.primary} size={24} />
+            
+            {/* Amount conversion display */}
+            {amount && bitcoinPrice && (
+              <View style={styles.conversionContainer}>
+                <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
+                  ≈ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
+                </Text>
+              </View>
+            )}
+            
+            <TouchableOpacity onPress={handleSendMax}>
+              <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>
+                Send Max
+              </Text>
             </TouchableOpacity>
-          </View>
-          
-          {/* Address Validation Indicator */}
-          {recipientAddress.trim() && (
-            <View style={styles.validationContainer}>
-              {addressValidation.isValid ? (
-                <View style={styles.validationRow}>
-                  <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                  <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
-                    {addressValidation.message}
-                  </Text>
-                </View>
-              ) : (
-                <View style={styles.validationRow}>
-                  <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                  <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
-                    {addressValidation.message}
-                  </Text>
-                </View>
-              )}
-            </View>
-          )}
-        </View>
-
-        {/* Amount */}
-        <View style={styles.inputSection}>
-          <View style={styles.amountHeader}>
-            <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-              Amount ({isAmountInBTC ? 'BTC' : 'USD'})
-            </Text>
-            <View style={styles.currencyToggle}>
-              <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                BTC
-              </Text>
-              <Switch
-                value={!isAmountInBTC}
-                onValueChange={toggleCurrency}
-                trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
-                thumbColor="white"
-              />
-              <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                USD
-              </Text>
-            </View>
-          </View>
-          
-          <TextInput
-            style={[
-              createInputStyle(theme),
-              styles.amountInput,
-            ]}
-            placeholder={isAmountInBTC ? "0.00000000" : "0.00"}
-            placeholderTextColor={theme.colors.textSecondary}
-            value={amount}
-            onChangeText={handleAmountChange}
-            keyboardType="numeric"
-          />
-          
-          {/* Amount conversion display */}
-          {amount && bitcoinPrice && (
-            <View style={styles.conversionContainer}>
-              <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                ≈ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
-              </Text>
-            </View>
-          )}
-          
-          <TouchableOpacity onPress={handleSendMax}>
-            <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>
-              Send Max
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* Fee Section */}
-        <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.feeHeader}>
-            <View style={styles.feeInfo}>
-              <ArrowUpRight color={theme.colors.primary} size={20} />
-              <Text style={[styles.feeLabel, { color: theme.colors.text }]}>
-                Transaction Fee
-              </Text>
-            </View>
-            <View style={styles.feeDetails}>
-              <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
-                {getTimeEstimateForFeeRate(feeRate)}
-              </Text>
-              <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
-                {feeRate} sat/vB
-              </Text>
-            </View>
           </View>
 
-          <View style={styles.feeButtons}>
-            <TouchableOpacity 
-              style={[
-                styles.feeButton,
-                { 
-                  backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.border,
-                  borderWidth: 2,
-                }
-              ]}
-              onPress={() => {
-                setSelectedFeeType('slow');
-                setFeeRate(feeEstimates?.economyFee || 1);
-              }}
-            >
-              <Text style={[
-                styles.feeButtonText, 
-                { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
-              ]}>
-                {`Slow\n${feeEstimates?.economyFee || 1} sat/vB`}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.feeButton,
-                { 
-                  backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.border,
-                  borderWidth: 2,
-                }
-              ]}
-              onPress={() => {
-                setSelectedFeeType('normal');
-                setFeeRate(feeEstimates?.halfHourFee || 5);
-              }}
-            >
-              <Text style={[
-                styles.feeButtonText, 
-                { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
-              ]}>
-                {`Normal\n${feeEstimates?.halfHourFee || 5} sat/vB`}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.feeButton,
-                { 
-                  backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.border,
-                  borderWidth: 2,
-                }
-              ]}
-              onPress={() => {
-                setSelectedFeeType('fast');
-                setFeeRate(feeEstimates?.fastestFee || 15);
-              }}
-            >
-              <Text style={[
-                styles.feeButtonText, 
-                { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
-              ]}>
-                {`Fast\n${feeEstimates?.fastestFee || 15} sat/vB`}
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                styles.feeButton,
-                { 
-                  backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.border,
-                  borderWidth: 2,
-                }
-              ]}
-              onPress={() => {
-                setSelectedFeeType('custom');
-                if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
-                  setFeeRate(parseFloat(customFeeRate));
-                }
-              }}
-            >
-              <Text style={[
-                styles.feeButtonText, 
-                { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
-              ]}>
-                Custom
-              </Text>
-            </TouchableOpacity>
-          </View>
-          
-          {/* Custom Fee Input */}
-          {selectedFeeType === 'custom' && (
-            <View style={styles.customFeeContainer}>
-              <TextInput
+          {/* Fee Section */}
+          <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.feeHeader}>
+              <View style={styles.feeInfo}>
+                <ArrowUpRight color={theme.colors.primary} size={20} />
+                <Text style={[styles.feeLabel, { color: theme.colors.text }]}>
+                  Transaction Fee
+                </Text>
+              </View>
+              <View style={styles.feeDetails}>
+                <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
+                  {getTimeEstimateForFeeRate(feeRate)}
+                </Text>
+                <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
+                  {feeRate} sat/vB
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.feeButtons}>
+              <TouchableOpacity 
                 style={[
-                  createInputStyle(theme, 'fun'),
-                  styles.customFeeInput,
+                  styles.feeButton,
+                  { 
+                    backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
+                    borderColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 2,
+                  }
                 ]}
-                placeholder="Enter custom fee rate"
-                placeholderTextColor={theme.colors.textSecondary}
-                value={customFeeRate}
-                onChangeText={(text) => {
-                  setCustomFeeRate(text);
-                  const rate = parseFloat(text);
-                  if (!isNaN(rate) && rate > 0) {
-                    setFeeRate(rate);
+                onPress={() => {
+                  setSelectedFeeType('slow');
+                  setFeeRate(feeEstimates?.economyFee || 1);
+                }}
+              >
+                <Text style={[
+                  styles.feeButtonText, 
+                  { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
+                ]}>
+                  {`Slow\n${feeEstimates?.economyFee || 1} sat/vB`}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.feeButton,
+                  { 
+                    backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
+                    borderColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 2,
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedFeeType('normal');
+                  setFeeRate(feeEstimates?.halfHourFee || 5);
+                }}
+              >
+                <Text style={[
+                  styles.feeButtonText, 
+                  { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
+                ]}>
+                  {`Normal\n${feeEstimates?.halfHourFee || 5} sat/vB`}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.feeButton,
+                  { 
+                    backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
+                    borderColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 2,
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedFeeType('fast');
+                  setFeeRate(feeEstimates?.fastestFee || 15);
+                }}
+              >
+                <Text style={[
+                  styles.feeButtonText, 
+                  { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
+                ]}>
+                  {`Fast\n${feeEstimates?.fastestFee || 15} sat/vB`}
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.feeButton,
+                  { 
+                    backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
+                    borderColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 2,
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedFeeType('custom');
+                  if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
+                    setFeeRate(parseFloat(customFeeRate));
                   }
                 }}
-                keyboardType="numeric"
-              />
-              <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
-                sat/vB
-              </Text>
+              >
+                <Text style={[
+                  styles.feeButtonText, 
+                  { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
+                ]}>
+                  Custom
+                </Text>
+              </TouchableOpacity>
             </View>
-          )}
-          
-          {estimatedFee && (
-            <View style={styles.feeEstimate}>
-              <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                Estimated fee: {estimatedFee.toFixed(8)} BTC
-                {bitcoinPrice && ` (${(estimatedFee * bitcoinPrice).toFixed(2)})`}
-              </Text>
-            </View>
-          )}
-        </View>
-
-        {/* RBF Toggle */}
-        <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.rbfInfo}>
-            <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>
-              Enable RBF
-            </Text>
-            <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>
-              Replace-by-fee allows you to increase the fee later
-            </Text>
+            
+            {/* Custom Fee Input */}
+            {selectedFeeType === 'custom' && (
+              <View style={styles.customFeeContainer}>
+                <TextInput
+                  style={[
+                    createInputStyle(theme, 'fun'),
+                    styles.customFeeInput,
+                  ]}
+                  placeholder="Enter custom fee rate"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  value={customFeeRate}
+                  onChangeText={(text) => {
+                    setCustomFeeRate(text);
+                    const rate = parseFloat(text);
+                    if (!isNaN(rate) && rate > 0) {
+                      setFeeRate(rate);
+                    }
+                  }}
+                  keyboardType="numeric"
+                />
+                <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
+                  sat/vB
+                </Text>
+              </View>
+            )}
+            
+            {estimatedFee && (
+              <View style={styles.feeEstimate}>
+                <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
+                  Estimated fee: {estimatedFee.toFixed(8)} BTC
+                  {bitcoinPrice && ` (${(estimatedFee * bitcoinPrice).toFixed(2)})`}
+                </Text>
+              </View>
+            )}
           </View>
-          <Switch
-            value={enableRBF}
-            onValueChange={setEnableRBF}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-            thumbColor="white"
-          />
-        </View>
 
-        {/* Coin Control */}
-        <TouchableOpacity 
-          style={[styles.coinControlSection, { backgroundColor: theme.colors.surface }]}
-          onPress={() => {
-            router.push('/coin-control');
-          }}
-        >
-          <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
-            Coin Control
-          </Text>
-          <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-            {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
-          </Text>
-        </TouchableOpacity>
-        </View>
+          {/* RBF Toggle */}
+          <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.rbfInfo}>
+              <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>
+                Enable RBF
+              </Text>
+              <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>
+                Replace-by-fee allows you to increase the fee later
+              </Text>
+            </View>
+            <Switch
+              value={enableRBF}
+              onValueChange={setEnableRBF}
+              trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
+              thumbColor="white"
+            />
+          </View>
 
-        {/* Review Button */}
-        <TouchableOpacity
-          style={[
-            createButtonStyle(theme, 'primary'),
-            styles.reviewButton,
-            { 
-              opacity: (!recipientAddress || !amount || isLoading || !addressValidation.isValid) ? 0.5 : 1
-            }
-          ]}
-          onPress={handleReviewTransaction}
-          disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
-        >
-          <Text style={styles.reviewButtonText}>
-            {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
-          </Text>
-        </TouchableOpacity>
-        
-        {/* QR Scanner Modal */}
-        <Modal
-          visible={showQRScanner}
-          animationType="slide"
-          presentationStyle="fullScreen"
-        >
-          <QRScanner
-            onScan={handleQRScan}
-            onClose={() => setShowQRScanner(false)}
-          />
-        </Modal>
-      </ScrollView>
+          {/* Coin Control */}
+          <TouchableOpacity 
+            style={[styles.coinControlSection, { backgroundColor: theme.colors.surface }]}
+            onPress={() => {
+              router.push('/coin-control');
+            }}
+          >
+            <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
+              Coin Control
+            </Text>
+            <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
+              {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
+            </Text>
+          </TouchableOpacity>
+          </View>
+
+          {/* Review Button */}
+          <TouchableOpacity
+            style={[
+              createButtonStyle(theme, 'primary'),
+              styles.reviewButton,
+              { 
+                opacity: (!recipientAddress || !amount || isLoading || !addressValidation.isValid) ? 0.5 : 1
+              }
+            ]}
+            onPress={handleReviewTransaction}
+            disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
+          >
+            <Text style={styles.reviewButtonText}>
+              {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
+            </Text>
+          </TouchableOpacity>
+          
+          {/* QR Scanner Modal */}
+          <Modal
+            visible={showQRScanner}
+            animationType="slide"
+            presentationStyle="fullScreen"
+          >
+            <QRScanner
+              onScan={handleQRScan}
+              onClose={() => setShowQRScanner(false)}
+            />
+          </Modal>
+        </ScrollView>
+      </Animated.View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  animatedContainer: {
     flex: 1,
   },
   scrollView: {

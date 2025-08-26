@@ -2,6 +2,7 @@ import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
@@ -9,6 +10,7 @@ import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Plus, TrendingUp, WifiOff, X 
 import React, { useState } from 'react';
 import {
   Alert,
+  Animated,
   FlatList,
   Modal,
   RefreshControl,
@@ -28,6 +30,7 @@ type CarouselItem =
   | { type: 'add' };
 
 export default function WalletScreen() {
+  const { animatedStyle } = useTabAnimation();
   const {
     wallets,
     currentWallet,
@@ -143,60 +146,67 @@ export default function WalletScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ title: 'Wallet', headerShown: false }} />
+      <Stack.Screen
+        options={{
+          title: 'Wallet',
+          headerStyle: { backgroundColor: theme.colors.background },
+          headerTintColor: theme.colors.text,
+        }}
+      />
       
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { color: theme.colors.text }]}>
-              {currentWallet.name}
-            </Text>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              Wallet balance
-            </Text>
-          </View>
-          
-          <View style={styles.priceContainer}>
-            <View style={styles.bitcoinInfo}>
-              <View style={styles.bitcoinIcon}>
-                <Text style={styles.bitcoinSymbol}>₿</Text>
-              </View>
-              <View>
-                <Text style={[styles.bitcoinLabel, { color: theme.colors.textSecondary }]}>
-                  BTC Bitcoin
-                </Text>
-                <View style={styles.priceRow}>
-                  {hasPriceError ? (
-                    <View style={styles.errorContainer}>
-                      <WifiOff color={theme.colors.textSecondary} size={14} />
-                      <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-                        Price loading...
-                      </Text>
-                    </View>
-                  ) : (
-                    <>
-                      <Text style={[styles.bitcoinPrice, { color: theme.colors.text }]}>
-                        {formatCurrency(bitcoinPrice?.usd || 0)}
-                      </Text>
-                      <Text style={[
-                        styles.priceChange,
-                        { color: (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error }
-                      ]}>
-                        {formatPriceChange(bitcoinPrice?.usd_24h_change || 0)}
-                      </Text>
-                    </>
-                  )}
+      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <ScrollView
+          style={styles.scrollView}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <View>
+              <Text style={[styles.greeting, { color: theme.colors.text }]}>
+                {currentWallet.name}
+              </Text>
+              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+                Wallet balance
+              </Text>
+            </View>
+            
+            <View style={styles.priceContainer}>
+              <View style={styles.bitcoinInfo}>
+                <View style={styles.bitcoinIcon}>
+                  <Text style={styles.bitcoinSymbol}>₿</Text>
+                </View>
+                <View>
+                  <Text style={[styles.bitcoinLabel, { color: theme.colors.textSecondary }]}>
+                    BTC Bitcoin
+                  </Text>
+                  <View style={styles.priceRow}>
+                    {hasPriceError ? (
+                      <View style={styles.errorContainer}>
+                        <WifiOff color={theme.colors.textSecondary} size={14} />
+                        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+                          Price loading...
+                        </Text>
+                      </View>
+                    ) : (
+                      <>
+                        <Text style={[styles.bitcoinPrice, { color: theme.colors.text }]}>
+                          {formatCurrency(bitcoinPrice?.usd || 0)}
+                        </Text>
+                        <Text style={[
+                          styles.priceChange,
+                          { color: (bitcoinPrice?.usd_24h_change || 0) >= 0 ? theme.colors.success : theme.colors.error }
+                        ]}>
+                          {formatPriceChange(bitcoinPrice?.usd_24h_change || 0)}
+                        </Text>
+                      </>
+                    )}
+                  </View>
                 </View>
               </View>
             </View>
           </View>
-        </View>
 
         {/* Wallet Carousel */}
         <View style={styles.walletCarousel}>
@@ -399,7 +409,8 @@ export default function WalletScreen() {
             ))
           )}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </Animated.View>
       
       {/* Edit Wallet Modal */}
       <Modal
@@ -851,5 +862,8 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     overflow: 'hidden',
     ...platformStyles.cardShadow,
+  },
+  animatedContainer: {
+    flex: 1,
   },
 });

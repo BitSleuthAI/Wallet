@@ -1,19 +1,19 @@
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
 
-import { WalletProvider } from '@/hooks/wallet-store';
-import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ActivityTracker from '@/components/ActivityTracker';
 import PinUnlockScreen from '@/components/PinUnlockScreen';
 import SplashScreen from '@/components/SplashScreen';
+import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
+import { WalletProvider, useWallet } from '@/hooks/wallet-store';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
-import React, { useEffect, Component, ReactNode, useState } from 'react';
+import React, { Component, ReactNode, useEffect, useState } from 'react';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -99,11 +99,30 @@ const errorStyles = StyleSheet.create({
 });
 
 function AppContent() {
+  const { theme } = useWallet();
+  
   return (
-    <Stack screenOptions={{ headerBackTitle: 'Back' }}>
+    <Stack 
+      screenOptions={{ 
+        headerBackTitle: 'Back',
+        headerStyle: {
+          backgroundColor: theme.colors.background,
+        },
+        headerTintColor: theme.colors.text,
+        headerTitleStyle: {
+          color: theme.colors.text,
+          fontWeight: '600',
+        },
+        headerShadowVisible: false,
+        contentStyle: {
+          backgroundColor: theme.colors.background,
+        },
+      }}
+    >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="wallet-setup" options={{ headerShown: false }} />
       <Stack.Screen name="pin-setup" options={{ headerShown: false }} />
+      <Stack.Screen name="pin-verification" options={{ headerShown: false }} />
       <Stack.Screen name="biometric-setup" options={{ headerShown: false }} />
       <Stack.Screen name="about" options={{ headerShown: true }} />
       <Stack.Screen name="view-recovery-phrase" options={{ headerShown: true }} />
@@ -115,6 +134,8 @@ function AppContent() {
       <Stack.Screen name="fee-settings" options={{ headerShown: true }} />
       <Stack.Screen name="transaction-details" options={{ headerShown: true }} />
       <Stack.Screen name="fee-bump" options={{ headerShown: true }} />
+      <Stack.Screen name="manage-wallets" options={{ headerShown: true }} />
+      <Stack.Screen name="passkeys-security" options={{ headerShown: true }} />
     </Stack>
   );
 }
