@@ -139,8 +139,6 @@ export default function SettingsScreen() {
     </Text>
   );
 
-
-
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen 
