@@ -648,11 +648,11 @@ export default function SendScreen() {
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  Amount ({isAmountInBTC ? 'BTC' : 'USD'})
+                  <Text>Amount </Text>({isAmountInBTC ? <Text>BTC</Text> : <Text>USD</Text>})
                 </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                    BTC
+                    <Text>BTC</Text>
                   </Text>
                   <Switch
                     value={!isAmountInBTC}
@@ -661,7 +661,7 @@ export default function SendScreen() {
                     thumbColor="white"
                   />
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                    USD
+                    <Text>USD</Text>
                   </Text>
                 </View>
               </View>
@@ -682,7 +682,7 @@ export default function SendScreen() {
               {amount && bitcoinPrice && (
                 <View style={styles.conversionContainer}>
                   <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                    ~ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
+                    <Text>~ </Text><Text>{convertAmount(amount, isAmountInBTC)}</Text> <Text>{isAmountInBTC ? <Text>USD</Text> : <Text>BTC</Text>}</Text>
                   </Text>
                 </View>
               )}
@@ -705,10 +705,10 @@ export default function SendScreen() {
                 </View>
                 <View style={styles.feeDetails}>
                   <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
-                    {getTimeEstimateForFeeRate(feeRate)}
+                    <Text>{getTimeEstimateForFeeRate(feeRate)}</Text>
                   </Text>
                   <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
-                    {feeRate} sat/vB
+                    <Text>{feeRate}</Text> <Text>sat/vB</Text>
                   </Text>
                 </View>
               </View>
@@ -732,7 +732,7 @@ export default function SendScreen() {
                   styles.feeButtonText, 
                   { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
                 ]}>
-                  {`Slow\n${feeEstimates?.economyFee || 1} sat/vB`}
+                  <Text>Slow</Text>{'\n'}<Text><Text>{feeEstimates?.economyFee || 1}</Text> <Text>sat/vB</Text></Text>
                 </Text>
               </TouchableOpacity>
               
@@ -754,7 +754,7 @@ export default function SendScreen() {
                   styles.feeButtonText, 
                   { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
                 ]}>
-                  {`Normal\n${feeEstimates?.halfHourFee || 5} sat/vB`}
+                  <Text>Normal</Text>{'\n'}<Text><Text>{feeEstimates?.halfHourFee || 5}</Text> <Text>sat/vB</Text></Text>
                 </Text>
               </TouchableOpacity>
               
@@ -776,7 +776,7 @@ export default function SendScreen() {
                   styles.feeButtonText, 
                   { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
                 ]}>
-                  {`Fast\n${feeEstimates?.fastestFee || 15} sat/vB`}
+                  <Text>Fast</Text>{'\n'}<Text><Text>{feeEstimates?.fastestFee || 15}</Text> <Text>sat/vB</Text></Text>
                 </Text>
               </TouchableOpacity>
               
@@ -826,7 +826,7 @@ export default function SendScreen() {
                     keyboardType="numeric"
                   />
                   <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
-                    sat/vB
+                    <Text>sat/vB</Text>
                   </Text>
                 </View>
               )}
@@ -834,8 +834,8 @@ export default function SendScreen() {
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    Estimated fee: {estimatedFee.toFixed(8)} BTC
-                    {bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
+                    <Text>Estimated fee: </Text><Text>{estimatedFee.toFixed(8)}</Text> <Text>BTC</Text>
+                    {bitcoinPrice ? <Text> (<Text>{`${(estimatedFee * bitcoinPrice).toFixed(2)}`}</Text>)</Text> : <Text></Text>}
                   </Text>
                 </View>
               )}
@@ -870,7 +870,7 @@ export default function SendScreen() {
                 Coin Control
               </Text>
               <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
+                {selectedUtxoIds.length > 0 ? <Text><Text>{selectedUtxoIds.length}</Text> <Text>selected</Text></Text> : <Text>Select Coins</Text>}
               </Text>
             </TouchableOpacity>
 
