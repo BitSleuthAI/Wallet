@@ -556,7 +556,7 @@ export default function WalletSetupScreen() {
             >
               Terms
             </Text>
-            .
+            {'. '}
           </Text>
         </View>
 
