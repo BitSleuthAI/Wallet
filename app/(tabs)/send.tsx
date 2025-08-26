@@ -891,20 +891,20 @@ export default function SendScreen() {
             </Text>
             </TouchableOpacity>
           </View>
-          
-          {/* QR Scanner Modal */}
-          <Modal
-            visible={showQRScanner}
-            animationType="slide"
-            presentationStyle="fullScreen"
-          >
-            <QRScanner
-              onScan={handleQRScan}
-              onClose={() => setShowQRScanner(false)}
-            />
-          </Modal>
         </ScrollView>
       </Animated.View>
+          
+      {/* QR Scanner Modal */}
+      <Modal
+        visible={showQRScanner}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <QRScanner
+          onScan={handleQRScan}
+          onClose={() => setShowQRScanner(false)}
+        />
+      </Modal>
     </SafeAreaView>
   );
 }
