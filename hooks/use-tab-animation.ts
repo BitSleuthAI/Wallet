@@ -6,7 +6,7 @@ let lastTabIndex = 0;
 
 export const useTabAnimation = (tabIndex: number) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(1)).current; // Start visible
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -20,14 +20,24 @@ export const useTabAnimation = (tabIndex: number) => {
       return;
     }
 
-    // Determine slide direction based on tab index change
-    // REVERSED LOGIC: Forward navigation slides from LEFT, backward slides from RIGHT
-    const slideDirection = tabIndex > lastTabIndex ? -1 : 1;
-    const slideDistance = 100;
-
     // Only animate if we're actually changing tabs
     if (tabIndex !== lastTabIndex) {
-      // Slide in from the appropriate direction with fade in
+      // Determine navigation direction
+      const isForward = tabIndex > lastTabIndex;
+      
+      // Set initial positions based on direction
+      if (isForward) {
+        // Forward: Current tab slides LEFT, new tab slides in from RIGHT
+        slideAnim.setValue(100); // Start from right
+      } else {
+        // Backward: Current tab slides RIGHT, new tab slides in from LEFT
+        slideAnim.setValue(-100); // Start from left
+      }
+      
+      // Reset opacity for smooth transition
+      opacityAnim.setValue(0);
+
+      // Animate to center position with fade in
       const slideIn = Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 0,
@@ -41,11 +51,7 @@ export const useTabAnimation = (tabIndex: number) => {
         }),
       ]);
 
-      // Start with slide out position based on direction
-      slideAnim.setValue(slideDirection * slideDistance);
-      opacityAnim.setValue(0);
-
-      // Animate in
+      // Start animation
       slideIn.start();
 
       // Update last tab index for next comparison
