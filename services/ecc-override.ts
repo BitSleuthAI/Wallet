@@ -5,25 +5,12 @@ console.log('🔧 Setting up ECC override to prevent tiny-secp256k1 WASM loading
 // Create a noble-based ECC implementation that matches tiny-secp256k1 interface
 export const createNobleECC = () => {
   try {
-    // Import @noble/secp256k1 with better error handling
-    let noble;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      noble = require('@noble/secp256k1');
-      // Handle different export patterns
-      if (noble.secp256k1) {
-        noble = noble.secp256k1;
-      } else if (noble.default) {
-        noble = noble.default;
-      }
-    } catch (importError) {
-      console.error('Failed to import @noble/secp256k1:', importError);
-      throw new Error('@noble/secp256k1 module not found');
-    }
+    const mod = require('@noble/secp256k1');
+    const noble = (mod && (mod.secp256k1 || mod.default)) ? (mod.secp256k1 ?? mod.default) : mod;
 
     if (!noble || typeof noble.getPublicKey !== 'function') {
-      console.error('secp256k1 module shape:', Object.keys(noble || {}));
-      throw new Error('@noble/secp256k1 not available or invalid');
+      console.error('secp256k1 module shape:', Object.keys(mod || {}));
+      throw new Error('@noble/secp256k1 not available');
     }
 
     // CRITICAL: Set up hash functions BEFORE any operations
@@ -38,61 +25,82 @@ export const createNobleECC = () => {
       return out;
     };
     
-    // Use simple but functional implementations for better Expo Go compatibility
-    console.log('⚠️ Using fallback hash implementations for better Expo Go compatibility');
-    
-    // Simple but functional SHA-256 implementation
-    const simpleSha256 = (data: Uint8Array): Uint8Array => {
-      const res = new Uint8Array(32);
-      for (let i = 0; i < 32; i++) {
-        let h = 0x6a09e667; // SHA-256 initial hash value
-        for (let j = 0; j < data.length; j++) {
-          h = ((h << 5) - h + data[j] + i * 0x9e3779b9) & 0xffffffff;
-        }
-        res[i] = (h >>> ((i % 4) * 8)) & 0xff;
-      }
-      return res;
-    };
-    
-    // Simple HMAC implementation
-    const simpleHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
-      // Pad or truncate key to 64 bytes
-      const blockSize = 64;
-      let k = new Uint8Array(blockSize);
-      if (key.length > blockSize) {
-        k.set(simpleSha256(key).slice(0, blockSize));
-      } else {
-        k.set(key);
-      }
-      
-      // Create inner and outer padding
-      const ipad = new Uint8Array(blockSize);
-      const opad = new Uint8Array(blockSize);
-      for (let i = 0; i < blockSize; i++) {
-        ipad[i] = k[i] ^ 0x36;
-        opad[i] = k[i] ^ 0x5c;
-      }
-      
-      // HMAC = H(opad || H(ipad || message))
-      const inner = concatBytes(ipad, data);
-      const innerHash = simpleSha256(inner);
-      const outer = concatBytes(opad, innerHash);
-      return simpleSha256(outer);
-    };
-    
-    const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-      const data = concatBytes(...msgs);
-      return simpleHmac(key, data);
-    };
-    
-    const shaImpl = (...msgs: Uint8Array[]) => {
-      const data = concatBytes(...msgs);
-      return simpleSha256(data);
-    };
-    
-    // Set up the hash functions in noble
     const etcObj = (noble as any).etc ?? {};
     const utilsObj = (noble as any).utils ?? {};
+    
+    // Try to use @noble/hashes first, fallback to simple implementations
+    let hmacImpl, shaImpl;
+    try {
+      const { sha256 } = require('@noble/hashes/sha256');
+      const { hmac } = require('@noble/hashes/hmac');
+      
+      hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        const result = hmac(sha256, key, data);
+        return result;
+      };
+      
+      shaImpl = (...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        const result = sha256(data);
+        return result;
+      };
+      
+      console.log('✅ Using @noble/hashes for ECC override hash functions');
+    } catch (hashError) {
+      console.warn('⚠️ @noble/hashes not available in ECC override, using fallback:', hashError);
+      
+      // Simple but functional SHA-256 implementation
+      const simpleSha256 = (data: Uint8Array): Uint8Array => {
+        const res = new Uint8Array(32);
+        for (let i = 0; i < 32; i++) {
+          let h = 0x6a09e667; // SHA-256 initial hash value
+          for (let j = 0; j < data.length; j++) {
+            h = ((h << 5) - h + data[j] + i * 0x9e3779b9) & 0xffffffff;
+          }
+          res[i] = (h >>> ((i % 4) * 8)) & 0xff;
+        }
+        return res;
+      };
+      
+      // Simple HMAC implementation
+      const simpleHmac = (key: Uint8Array, data: Uint8Array): Uint8Array => {
+        // Pad or truncate key to 64 bytes
+        const blockSize = 64;
+        let k = new Uint8Array(blockSize);
+        if (key.length > blockSize) {
+          k.set(simpleSha256(key).slice(0, blockSize));
+        } else {
+          k.set(key);
+        }
+        
+        // Create inner and outer padding
+        const ipad = new Uint8Array(blockSize);
+        const opad = new Uint8Array(blockSize);
+        for (let i = 0; i < blockSize; i++) {
+          ipad[i] = k[i] ^ 0x36;
+          opad[i] = k[i] ^ 0x5c;
+        }
+        
+        // HMAC = H(opad || H(ipad || message))
+        const inner = concatBytes(ipad, data);
+        const innerHash = simpleSha256(inner);
+        const outer = concatBytes(opad, innerHash);
+        return simpleSha256(outer);
+      };
+      
+      hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        const result = simpleHmac(key, data);
+        return result;
+      };
+      
+      shaImpl = (...msgs: Uint8Array[]) => {
+        const data = concatBytes(...msgs);
+        const result = simpleSha256(data);
+        return result;
+      };
+    }
     
     etcObj.hmacSha256Sync = hmacImpl;
     etcObj.sha256Sync = shaImpl;
@@ -218,7 +226,7 @@ export const createNobleECC = () => {
 
           // Ensure hash functions are available before signing
           if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
-            throw new Error('hashes.sha256 not set');
+            throw new Error('hashes.hmacSha256Sync not set');
           }
 
           const sig = noble.sign(hash, privateKey);
@@ -232,8 +240,8 @@ export const createNobleECC = () => {
           }
         } catch (err) {
           console.error('ECC sign error:', err);
-          if (err instanceof Error && (err.message.includes('Hash functions not available') || err.message.includes('hashes.sha256 not set'))) {
-            throw new Error('hashes.sha256 not set');
+          if (err instanceof Error && err.message.includes('Hash functions not available')) {
+            throw new Error('hashes.hmacSha256Sync not set');
           }
           throw err;
         }

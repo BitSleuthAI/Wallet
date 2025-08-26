@@ -1,14 +1,10 @@
 import { useFocusEffect } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
-import {
-  useAnimatedStyle,
-  useSharedValue,
-  withTiming
-} from 'react-native-reanimated';
+import { Animated } from 'react-native';
 
 export const useTabAnimation = (tabIndex: number) => {
-  const slideAnim = useSharedValue(0);
-  const opacityAnim = useSharedValue(1);
+  const slideAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
   const isInitialMount = useRef(true);
 
   useEffect(() => {
@@ -16,12 +12,12 @@ export const useTabAnimation = (tabIndex: number) => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
       // Ensure initial state is correct
-      slideAnim.value = 0;
-      opacityAnim.value = 1;
+      slideAnim.setValue(0);
+      opacityAnim.setValue(1);
       console.log(`[Tab ${tabIndex}] Initial mount, setting position to center`);
       return;
     }
-  }, [tabIndex]);
+  }, [tabIndex, slideAnim, opacityAnim]);
 
   // Use useFocusEffect to detect when this tab comes into focus
   useFocusEffect(
@@ -40,29 +36,47 @@ export const useTabAnimation = (tabIndex: number) => {
       if (shouldSlideFromRight) {
         // Slide in from RIGHT
         console.log(`[Tab ${tabIndex}] Animating in from RIGHT`);
-        slideAnim.value = 100;
-        opacityAnim.value = 0;
+        slideAnim.setValue(100);
+        opacityAnim.setValue(0);
         
-        slideAnim.value = withTiming(0, { duration: 300 });
-        opacityAnim.value = withTiming(1, { duration: 300 });
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
       } else {
         // Slide in from LEFT
         console.log(`[Tab ${tabIndex}] Animating in from LEFT`);
-        slideAnim.value = -100;
-        opacityAnim.value = 0;
+        slideAnim.setValue(-100);
+        opacityAnim.setValue(0);
         
-        slideAnim.value = withTiming(0, { duration: 300 });
-        opacityAnim.value = withTiming(1, { duration: 300 });
+        Animated.parallel([
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start();
       }
-    }, [tabIndex])
+    }, [tabIndex, slideAnim, opacityAnim])
   );
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ translateX: slideAnim.value }],
-      opacity: opacityAnim.value,
-    };
-  });
+  const animatedStyle = {
+    transform: [{ translateX: slideAnim }],
+    opacity: opacityAnim,
+  };
 
   return { animatedStyle };
 };

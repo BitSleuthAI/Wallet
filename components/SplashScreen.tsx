@@ -1,19 +1,14 @@
+import React, { useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
+  Dimensions,
+  StatusBar,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Bitcoin, Shield, Zap } from 'lucide-react-native';
-import React, { useEffect } from 'react';
-import {
-    Dimensions,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
-} from 'react-native';
-import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withTiming
-} from 'react-native-reanimated';
 
 const { width, height } = Dimensions.get('window');
 
@@ -22,64 +17,77 @@ interface SplashScreenProps {
 }
 
 export default function SplashScreen({ onAnimationComplete }: SplashScreenProps) {
-  const logoScale = useSharedValue(0);
-  const logoOpacity = useSharedValue(0);
-  const textOpacity = useSharedValue(0);
-  const iconRotation = useSharedValue(0);
-  const glowOpacity = useSharedValue(0);
+  const logoScale = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const textOpacity = useRef(new Animated.Value(0)).current;
+  const iconRotation = useRef(new Animated.Value(0)).current;
+  const glowOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const startAnimation = () => {
       // Reset values
-      logoScale.value = 0;
-      logoOpacity.value = 0;
-      textOpacity.value = 0;
-      iconRotation.value = 0;
-      glowOpacity.value = 0;
+      logoScale.setValue(0);
+      logoOpacity.setValue(0);
+      textOpacity.setValue(0);
+      iconRotation.setValue(0);
+      glowOpacity.setValue(0);
 
       // Create animation sequence
-      logoScale.value = withTiming(1, { duration: 800 });
-      logoOpacity.value = withTiming(1, { duration: 600 });
-      
-      iconRotation.value = withDelay(800, withTiming(1, { duration: 1000 }));
-      textOpacity.value = withDelay(1800, withTiming(1, { duration: 800 }));
-      glowOpacity.value = withDelay(2600, withTiming(1, { duration: 600 }));
+      const animationSequence = Animated.sequence([
+        // Logo entrance with scale and fade
+        Animated.parallel([
+          Animated.timing(logoScale, {
+            toValue: 1,
+            duration: 800,
+            useNativeDriver: true,
+          }),
+          Animated.timing(logoOpacity, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: true,
+          }),
+        ]),
+        // Icon rotation
+        Animated.timing(iconRotation, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        }),
+        // Text fade in
+        Animated.timing(textOpacity, {
+          toValue: 1,
+          duration: 800,
+          useNativeDriver: true,
+        }),
+        // Glow effect
+        Animated.timing(glowOpacity, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: true,
+        }),
+        // Hold for a moment
+        Animated.delay(500),
+      ]);
 
-      // Trigger completion callback after animation
-      setTimeout(() => {
+      animationSequence.start(() => {
+        // Animation complete, trigger callback
         if (onAnimationComplete) {
           onAnimationComplete();
         }
-      }, 3200);
+      });
     };
 
     startAnimation();
   }, [onAnimationComplete]);
 
-  // Animated styles
-  const logoAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ scale: logoScale.value }],
-      opacity: logoOpacity.value,
-    };
+  const rotateInterpolate = iconRotation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
   });
 
-  const iconAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [{ rotate: `${iconRotation.value * 360}deg` }],
-    };
-  });
-
-  const textAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: textOpacity.value,
-    };
-  });
-
-  const glowAnimatedStyle = useAnimatedStyle(() => {
-    return {
-      opacity: glowOpacity.value * 0.3,
-    };
+  const glowInterpolate = glowOpacity.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, 0.3],
   });
 
   return (
@@ -90,37 +98,103 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
       <LinearGradient
         colors={['#0F172A', '#1E293B', '#334155']}
         style={styles.background}
-      />
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Animated glow effect */}
+        <Animated.View
+          style={[
+            styles.glowEffect,
+            {
+              opacity: glowInterpolate,
+            },
+          ]}
+        />
 
-      {/* Glow effect */}
-      <Animated.View style={[styles.glow, glowAnimatedStyle]} />
+        {/* Main content container */}
+        <View style={styles.content}>
+          {/* Logo container */}
+          <Animated.View
+            style={[
+              styles.logoContainer,
+              {
+                opacity: logoOpacity,
+                transform: [{ scale: logoScale }],
+              },
+            ]}
+          >
+            {/* Bitcoin icon with rotation */}
+            <Animated.View
+              style={[
+                styles.bitcoinIcon,
+                {
+                  transform: [{ rotate: rotateInterpolate }],
+                },
+              ]}
+            >
+              <Bitcoin color="#F7931A" size={48} />
+            </Animated.View>
 
-      {/* Main content container */}
-      <View style={styles.content}>
-        {/* Logo container */}
-        <Animated.View style={[styles.logoContainer, logoAnimatedStyle]}>
-          <View style={styles.logoBackground}>
-            <Bitcoin size={60} color="#F7931A" />
-          </View>
+            {/* Security and speed icons */}
+            <View style={styles.featureIcons}>
+              <Shield color="#10B981" size={24} style={styles.featureIcon} />
+              <Zap color="#F59E0B" size={24} style={styles.featureIcon} />
+            </View>
+          </Animated.View>
+
+          {/* App name */}
+          <Animated.Text
+            style={[
+              styles.appName,
+              {
+                opacity: textOpacity,
+              },
+            ]}
+          >
+            BitSleuth
+          </Animated.Text>
+
+          {/* App tagline */}
+          <Animated.Text
+            style={[
+              styles.appTagline,
+              {
+                opacity: textOpacity,
+              },
+            ]}
+          >
+            Secure • Fast • Private
+          </Animated.Text>
+
+          {/* Loading indicator */}
+          <Animated.View
+            style={[
+              styles.loadingContainer,
+              {
+                opacity: textOpacity,
+              },
+            ]}
+          >
+            <View style={styles.loadingDots}>
+              <View style={[styles.dot, styles.dot1]} />
+              <View style={[styles.dot, styles.dot2]} />
+              <View style={[styles.dot, styles.dot3]} />
+            </View>
+          </Animated.View>
+        </View>
+
+        {/* Bottom branding */}
+        <Animated.View
+          style={[
+            styles.bottomBranding,
+            {
+              opacity: textOpacity,
+            },
+          ]}
+        >
+          <Text style={styles.bottomText}>Bitcoin Wallet</Text>
         </Animated.View>
-
-        {/* Icon rotation */}
-        <Animated.View style={[styles.iconContainer, iconAnimatedStyle]}>
-          <Shield size={40} color="#10B981" style={styles.icon} />
-          <Zap size={40} color="#F59E0B" style={styles.icon} />
-        </Animated.View>
-
-        {/* App name */}
-        <Animated.View style={[styles.textContainer, textAnimatedStyle]}>
-          <Text style={styles.appName}>BitSleuth</Text>
-          <Text style={styles.appSubtitle}>Wallet</Text>
-        </Animated.View>
-
-        {/* Tagline */}
-        <Animated.View style={[styles.taglineContainer, textAnimatedStyle]}>
-          <Text style={styles.tagline}>Secure • Fast • Smart</Text>
-        </Animated.View>
-      </View>
+      </LinearGradient>
     </View>
   );
 }
@@ -134,7 +208,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  glow: {
+  glowEffect: {
     position: 'absolute',
     top: height * 0.2,
     left: width * 0.1,
@@ -153,52 +227,73 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  logoBackground: {
+  bitcoinIcon: {
+    marginBottom: 20,
     padding: 20,
     backgroundColor: 'rgba(247, 147, 26, 0.1)',
     borderRadius: 50,
     borderWidth: 2,
     borderColor: 'rgba(247, 147, 26, 0.3)',
   },
-  iconContainer: {
+  featureIcons: {
     flexDirection: 'row',
     gap: 20,
-    marginBottom: 40,
   },
-  icon: {
+  featureIcon: {
     padding: 8,
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 20,
-  },
-  textContainer: {
-    alignItems: 'center',
-    marginBottom: 8,
   },
   appName: {
     fontSize: 48,
     fontWeight: '800',
     color: '#FFFFFF',
+    marginBottom: 8,
     textAlign: 'center',
     letterSpacing: 2,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
     textShadowOffset: { width: 0, height: 2 },
     textShadowRadius: 4,
   },
-  appSubtitle: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#CBD5E1',
-    textAlign: 'center',
-    letterSpacing: 1,
-  },
-  taglineContainer: {
-    marginBottom: 60,
-  },
-  tagline: {
+  appTagline: {
     fontSize: 18,
     fontWeight: '500',
     color: '#CBD5E1',
+    marginBottom: 60,
     textAlign: 'center',
     letterSpacing: 1,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+  },
+  loadingDots: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#6366F1',
+  },
+  dot1: {
+    animationDelay: '0ms',
+  },
+  dot2: {
+    animationDelay: '200ms',
+  },
+  dot3: {
+    animationDelay: '400ms',
+  },
+  bottomBranding: {
+    position: 'absolute',
+    bottom: 60,
+    alignItems: 'center',
+  },
+  bottomText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#94A3B8',
+    textAlign: 'center',
   },
 });
