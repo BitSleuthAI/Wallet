@@ -37,12 +37,7 @@ export const createNobleECC = () => {
       return out;
     };
     
-    const etcObj = (noble as any).etc ?? {};
-    const utilsObj = (noble as any).utils ?? {};
-    
-    // Set up hash functions - use fallback implementations for better compatibility
-    let hmacImpl, shaImpl;
-    
+    // Use simple but functional implementations for better Expo Go compatibility
     console.log('⚠️ Using fallback hash implementations for better Expo Go compatibility');
     
     // Simple but functional SHA-256 implementation
@@ -84,17 +79,19 @@ export const createNobleECC = () => {
       return simpleSha256(outer);
     };
     
-    hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
+    const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
       const data = concatBytes(...msgs);
-      const result = simpleHmac(key, data);
-      return result;
+      return simpleHmac(key, data);
     };
     
-    shaImpl = (...msgs: Uint8Array[]) => {
+    const shaImpl = (...msgs: Uint8Array[]) => {
       const data = concatBytes(...msgs);
-      const result = simpleSha256(data);
-      return result;
+      return simpleSha256(data);
     };
+    
+    // Set up the hash functions in noble
+    const etcObj = (noble as any).etc ?? {};
+    const utilsObj = (noble as any).utils ?? {};
     
     etcObj.hmacSha256Sync = hmacImpl;
     etcObj.sha256Sync = shaImpl;

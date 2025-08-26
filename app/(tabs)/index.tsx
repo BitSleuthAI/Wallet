@@ -618,7 +618,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 16,
     borderRadius: 16,
-    ...theme.shadows.small,
+    ...platformStyles.shadow,
   },
   periodButton: {
     flex: 1,

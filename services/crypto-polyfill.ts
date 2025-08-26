@@ -131,6 +131,9 @@ const patchNoble = () => {
       return false;
     }
     
+    // Use fallback implementations for better Expo Go compatibility
+    console.log('⚠️ Using fallback hash implementations for better Expo Go compatibility');
+    
     if (noble) {
       const targetEtc = (noble as any).etc ?? {};
       const targetUtils = (noble as any).utils ?? {};
