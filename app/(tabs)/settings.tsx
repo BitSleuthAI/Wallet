@@ -41,7 +41,7 @@ import {
 } from 'react-native';
 
 export default function SettingsScreen() {
-  const { animatedStyle } = useTabAnimation();
+  const { animatedStyle } = useTabAnimation(3);
   const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);

@@ -10,21 +10,21 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
-  const { animatedStyle } = useTabAnimation();
+  const { animatedStyle } = useTabAnimation(1);
   const { 
     currentWallet, 
     balance, 

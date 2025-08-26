@@ -9,18 +9,18 @@ import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Animated,
-  FlatList,
-  Modal,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    FlatList,
+    Modal,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -30,7 +30,7 @@ type CarouselItem =
   | { type: 'add' };
 
 export default function WalletScreen() {
-  const { animatedStyle } = useTabAnimation();
+  const { animatedStyle } = useTabAnimation(0);
   const {
     wallets,
     currentWallet,

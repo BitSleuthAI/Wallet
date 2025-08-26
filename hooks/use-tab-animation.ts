@@ -1,37 +1,59 @@
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 
-export const useTabAnimation = () => {
+// Simple tab index tracking
+let lastTabIndex = 0;
+
+export const useTabAnimation = (tabIndex: number) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(0)).current;
+  const isInitialMount = useRef(true);
 
   useEffect(() => {
-    // Slide in from right with fade in
-    const slideIn = Animated.parallel([
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]);
+    // Skip animation on initial mount
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      lastTabIndex = tabIndex;
+      return;
+    }
 
-    // Start with slide out position
-    slideAnim.setValue(100);
-    opacityAnim.setValue(0);
+    // Determine slide direction based on tab index change
+    // REVERSED LOGIC: Forward navigation slides from LEFT, backward slides from RIGHT
+    const slideDirection = tabIndex > lastTabIndex ? -1 : 1; // Reversed from original
+    const slideDistance = 100;
 
-    // Animate in
-    slideIn.start();
+    // Only animate if we're actually changing tabs
+    if (tabIndex !== lastTabIndex) {
+      // Slide in from the appropriate direction with fade in
+      const slideIn = Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]);
 
-    return () => {
-      // Cleanup animations
-      slideIn.stop();
-    };
-  }, [slideAnim, opacityAnim]);
+      // Start with slide out position based on direction
+      slideAnim.setValue(slideDirection * slideDistance);
+      opacityAnim.setValue(0);
+
+      // Animate in
+      slideIn.start();
+
+      // Update last tab index for next comparison
+      lastTabIndex = tabIndex;
+
+      return () => {
+        // Cleanup animations
+        slideIn.stop();
+      };
+    }
+  }, [tabIndex, slideAnim, opacityAnim]);
 
   const animatedStyle = {
     transform: [{ translateX: slideAnim }],

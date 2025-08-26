@@ -20,7 +20,6 @@ export default function TabLayout() {
         },
         headerTintColor: theme.colors.text,
         headerShown: false,
-
       }}
     >
       <Tabs.Screen
