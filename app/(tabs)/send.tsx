@@ -873,7 +873,6 @@ export default function SendScreen() {
               {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
             </Text>
           </TouchableOpacity>
-          </View>
 
           {/* Review Button */}
           <TouchableOpacity
