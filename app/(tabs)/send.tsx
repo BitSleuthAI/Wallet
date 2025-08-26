@@ -682,7 +682,7 @@ export default function SendScreen() {
             {amount && bitcoinPrice && (
               <View style={styles.conversionContainer}>
                 <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                  ≈ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
+                  ~ {convertAmount(amount, isAmountInBTC)} {isAmountInBTC ? 'USD' : 'BTC'}
                 </Text>
               </View>
             )}
