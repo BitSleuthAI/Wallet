@@ -835,7 +835,7 @@ export default function SendScreen() {
               <View style={styles.feeEstimate}>
                 <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                   Estimated fee: {estimatedFee.toFixed(8)} BTC
-                  {bitcoinPrice && ` (${(estimatedFee * bitcoinPrice).toFixed(2)})`}
+                  {bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
                 </Text>
               </View>
             )}
