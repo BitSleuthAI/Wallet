@@ -24,7 +24,7 @@ import {
 } from 'react-native';
 
 export default function SendScreen() {
-  const { animatedStyle } = useTabAnimation(1);
+  const { animatedStyle } = useTabAnimation(1); // Send tab = index 1
   const { 
     currentWallet, 
     balance, 

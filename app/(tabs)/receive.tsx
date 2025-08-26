@@ -20,7 +20,7 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 
 export default function ReceiveScreen() {
-  const { animatedStyle } = useTabAnimation(2);
+  const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
   const { currentWallet, generateNewAddress, theme } = useWallet();
   const [currentAddress, setCurrentAddress] = useState<string>(
     currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''

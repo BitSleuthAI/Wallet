@@ -30,7 +30,7 @@ type CarouselItem =
   | { type: 'add' };
 
 export default function WalletScreen() {
-  const { animatedStyle } = useTabAnimation(0);
+  const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
   const {
     wallets,
     currentWallet,

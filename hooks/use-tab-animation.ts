@@ -1,66 +1,115 @@
 import { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
 
-// Simple tab index tracking
-let lastTabIndex = 0;
+// Global animation context for coordinated tab transitions
+interface TabAnimationContext {
+  currentTab: number;
+  isAnimating: boolean;
+  direction: 'forward' | 'backward';
+  animations: Map<number, Animated.Value>;
+}
+
+const animationContext: TabAnimationContext = {
+  currentTab: 0,
+  isAnimating: false,
+  direction: 'forward',
+  animations: new Map(),
+};
 
 export const useTabAnimation = (tabIndex: number) => {
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const isInitialMount = useRef(true);
 
+  // Register this tab's animation values
+  useEffect(() => {
+    animationContext.animations.set(tabIndex, slideAnim);
+    
+    return () => {
+      animationContext.animations.delete(tabIndex);
+    };
+  }, [tabIndex, slideAnim]);
+
   useEffect(() => {
     // On initial mount, ensure content is visible and in position
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      lastTabIndex = tabIndex;
+      animationContext.currentTab = tabIndex;
       // Ensure initial state is correct
       slideAnim.setValue(0);
       opacityAnim.setValue(1);
       return;
     }
 
-    // Only animate if we're actually changing tabs
-    if (tabIndex !== lastTabIndex) {
+    // Only animate if we're actually changing tabs and not already animating
+    if (tabIndex !== animationContext.currentTab && !animationContext.isAnimating) {
+      const fromIndex = animationContext.currentTab;
+      const toIndex = tabIndex;
+      
       // Determine navigation direction
-      const isForward = tabIndex > lastTabIndex;
+      const isForward = toIndex > fromIndex;
+      const direction = isForward ? 'forward' : 'backward';
       
-      // Set initial positions based on direction
-      if (isForward) {
-        // Forward: Current tab slides LEFT, new tab slides in from RIGHT
-        slideAnim.setValue(100); // Start from right
-      } else {
-        // Backward: Current tab slides RIGHT, new tab slides in from LEFT
-        slideAnim.setValue(-100); // Start from left
-      }
+      // Update animation context
+      animationContext.isAnimating = true;
+      animationContext.direction = direction;
       
-      // Reset opacity for smooth transition
-      opacityAnim.setValue(0);
-
-      // Animate to center position with fade in
-      const slideIn = Animated.parallel([
-        Animated.timing(slideAnim, {
+      // Get the current tab's animation value
+      const currentTabAnim = animationContext.animations.get(fromIndex);
+      
+      if (currentTabAnim) {
+        // Animate the current tab OUT
+        const slideOut = Animated.timing(currentTabAnim, {
+          toValue: isForward ? -100 : 100, // Left for forward, right for backward
+          duration: 300,
+          useNativeDriver: true,
+        });
+        
+        // Animate the new tab IN
+        const slideIn = Animated.timing(slideAnim, {
           toValue: 0,
           duration: 300,
           useNativeDriver: true,
-        }),
+        });
+        
+        // Animate both simultaneously
+        const parallelAnimation = Animated.parallel([
+          slideOut,
+          slideIn,
+        ]);
+        
+        // Start the coordinated animation
+        parallelAnimation.start(() => {
+          // Animation completed, update context
+          animationContext.isAnimating = false;
+          animationContext.currentTab = toIndex;
+          
+          // Reset the old tab's position
+          currentTabAnim.setValue(0);
+        });
+        
+        // Set initial position for new tab
+        if (isForward) {
+          slideAnim.setValue(100); // Start from right
+        } else {
+          slideAnim.setValue(-100); // Start from left
+        }
+        
+        // Reset opacity for smooth transition
+        opacityAnim.setValue(0);
+        
+        // Fade in the new tab
         Animated.timing(opacityAnim, {
           toValue: 1,
           duration: 300,
           useNativeDriver: true,
-        }),
-      ]);
-
-      // Start animation
-      slideIn.start();
-
-      // Update last tab index for next comparison
-      lastTabIndex = tabIndex;
-
-      return () => {
-        // Cleanup animations
-        slideIn.stop();
-      };
+        }).start();
+        
+        return () => {
+          // Cleanup animations
+          parallelAnimation.stop();
+        };
+      }
     }
   }, [tabIndex, slideAnim, opacityAnim]);
 
