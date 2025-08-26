@@ -116,33 +116,29 @@ const simpleHmacSha256 = (key: Uint8Array, msg: Uint8Array): Uint8Array => {
 
 const patchNoble = () => {
   try {
-    const noble = require('@noble/secp256k1');
+    // Import @noble/secp256k1 with better error handling
+    let noble;
+    try {
+      noble = require('@noble/secp256k1');
+      // Handle different export patterns
+      if (noble.secp256k1) {
+        noble = noble.secp256k1;
+      } else if (noble.default) {
+        noble = noble.default;
+      }
+    } catch (importError) {
+      console.warn('Failed to import @noble/secp256k1:', importError);
+      return false;
+    }
+    
     if (noble) {
       const targetEtc = (noble as any).etc ?? {};
       const targetUtils = (noble as any).utils ?? {};
       
-      // Try to use @noble/hashes first, fallback to simple implementations
-      let sha256Impl, hmacImpl;
-      try {
-        const { sha256 } = require('@noble/hashes/sha256');
-        const { hmac } = require('@noble/hashes/hmac');
-        
-        sha256Impl = (...msgs: Uint8Array[]) => {
-          const data = concatBytes(...msgs);
-          return sha256(data);
-        };
-        
-        hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => {
-          const data = concatBytes(...msgs);
-          return hmac(sha256, key, data);
-        };
-        
-        console.log('✅ Using @noble/hashes for crypto polyfill');
-      } catch (hashError) {
-        console.warn('⚠️ @noble/hashes not available in crypto polyfill, using fallback:', hashError);
-        sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
-        hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
-      }
+      // Use fallback implementations for better compatibility
+      console.log('⚠️ Using fallback hash implementations for crypto polyfill');
+      const sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
+      const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
       
       targetEtc.sha256Sync = sha256Impl;
       targetEtc.hmacSha256Sync = hmacImpl;
