@@ -44,14 +44,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
           'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
         ]);
-        console.log('🧹 Cleared any potential mock/demo data on initialization');
+        // console.log('🧹 Cleared any potential mock/demo data on initialization');
         
         // Check for old single wallet format and migrate
         const oldWallet = await AsyncStorage.getItem('wallet');
         const existingWallets = await AsyncStorage.getItem('wallets');
         
         if (oldWallet && !existingWallets) {
-          console.log('📦 Migrating from single wallet to multi-wallet format');
+          // console.log('📦 Migrating from single wallet to multi-wallet format');
           const wallet = JSON.parse(oldWallet);
           const walletsArray = [wallet];
           
@@ -62,10 +62,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           // Remove old format
           await AsyncStorage.removeItem('wallet');
           
-          console.log('✅ Migration completed successfully');
+          // console.log('✅ Migration completed successfully');
         }
       } catch (error) {
-        console.warn('⚠️ Error during wallet initialization:', error);
+        // console.warn('⚠️ Error during wallet initialization:', error);
       }
     };
     initializeWallets();
@@ -164,7 +164,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           usd_24h_change: prices.usd_24h_change, // Keep the same percentage change
         };
       } catch (error) {
-        console.warn('Failed to fetch exchange rates, using USD prices:', error);
+        // console.warn('Failed to fetch exchange rates, using USD prices:', error);
         return prices;
       }
     },
@@ -186,7 +186,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       try {
         return await bitcoinService.getWalletBalance(currentWallet.addresses);
       } catch (error) {
-        console.warn('Balance fetch failed, returning 0:', error);
+        // console.warn('Balance fetch failed, returning 0:', error);
         return 0; // Return 0 instead of throwing
       }
     },
@@ -209,7 +209,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       try {
         return await bitcoinService.getTransactionHistory(currentWallet.addresses);
       } catch (error) {
-        console.warn('Transaction history fetch failed, returning empty array:', error);
+        // console.warn('Transaction history fetch failed, returning empty array:', error);
         return []; // Return empty array instead of throwing
       }
     },
@@ -403,7 +403,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       saveCurrentWalletId(wallet.id);
       return { success: true, wallet };
     } catch (error) {
-      console.error('Error creating wallet:', error);
+      // console.error('Error creating wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
     }
   }, [wallets, saveWallets, saveCurrentWalletId]);
@@ -439,7 +439,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       saveCurrentWalletId(wallet.id);
       return { success: true, wallet };
     } catch (error) {
-      console.error('Error importing wallet:', error);
+      // console.error('Error importing wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
     }
   }, [wallets, saveWallets, saveCurrentWalletId]);
@@ -453,7 +453,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const newAddress = updatedWallet.addresses[updatedWallet.addresses.length - 1];
       return { success: true, address: newAddress };
     } catch (error) {
-      console.error('Error generating new address:', error);
+      // console.error('Error generating new address:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to generate new address' };
     }
   }, [currentWallet, wallets, saveWallets]);
@@ -531,7 +531,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [selectedCurrency]);
 
   const refreshData = useCallback(async () => {
-    console.log('Refreshing wallet data...');
+    // console.log('Refreshing wallet data...');
     try {
       // Clear any potential cached mock/demo data
       await AsyncStorage.multiRemove([
@@ -548,9 +548,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
       
-      console.log('✅ Wallet data refresh initiated and cache cleared');
+      // console.log('✅ Wallet data refresh initiated and cache cleared');
     } catch (error) {
-      console.warn('⚠️ Error during data refresh:', error);
+      // console.warn('⚠️ Error during data refresh:', error);
     }
   }, [queryClient]);
 
@@ -569,7 +569,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       );
       saveWallets(updatedWallets);
     } catch (error) {
-      console.error('Error editing wallet:', error);
+      // console.error('Error editing wallet:', error);
       throw error;
     }
   }, [wallets, saveWallets]);
@@ -589,25 +589,25 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         }
       }
     } catch (error) {
-      console.error('Error deleting wallet:', error);
+      // console.error('Error deleting wallet:', error);
       throw error;
     }
   }, [wallets, currentWalletId, saveWallets, saveCurrentWalletId]);
 
   const logoutAndEraseWallet = useCallback(async () => {
     try {
-      console.log('🔄 Starting wallet logout and erase process...');
+      // console.log('🔄 Starting wallet logout and erase process...');
       
       // First, get all AsyncStorage keys to ensure we clear everything
       const allKeys = await AsyncStorage.getAllKeys();
-      console.log('📋 Found AsyncStorage keys:', allKeys);
+      // console.log('📋 Found AsyncStorage keys:', allKeys);
       
       // Clear all AsyncStorage data completely
-      console.log('🗑️ Clearing all AsyncStorage data...');
+      // console.log('🗑️ Clearing all AsyncStorage data...');
       await AsyncStorage.clear();
       
       // Reset local state immediately
-      console.log('🔄 Resetting local state...');
+      // console.log('🔄 Resetting local state...');
       setWallets([]);
       setCurrentWalletId(null);
       setTheme(lightTheme); // Reset to light theme
@@ -616,7 +616,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setAutoLockTimeout(15); // Reset auto-lock timeout to default
       
       // Clear all cached queries and reset query client
-      console.log('🔄 Clearing query cache...');
+      // console.log('🔄 Clearing query cache...');
       queryClient.clear();
       queryClient.resetQueries();
       queryClient.invalidateQueries();
@@ -624,30 +624,30 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Clear any global state that might persist
       if (typeof global !== 'undefined') {
         if ((global as any).ecc) {
-          console.log('🔄 Clearing global ECC state...');
+          // console.log('🔄 Clearing global ECC state...');
           delete (global as any).ecc;
         }
         
         if ((global as any).__cryptoInitialized) {
-          console.log('🔄 Resetting crypto initialization flag...');
+          // console.log('🔄 Resetting crypto initialization flag...');
           (global as any).__cryptoInitialized = false;
         }
         
         // Clear any other global wallet state
         if ((global as any).__walletState) {
-          console.log('🔄 Clearing global wallet state...');
+          // console.log('🔄 Clearing global wallet state...');
           delete (global as any).__walletState;
         }
       }
       
-      console.log('✅ Wallet data cleared successfully');
-      console.log('🔄 App state has been completely reset');
+      // console.log('✅ Wallet data cleared successfully');
+      // console.log('🔄 App state has been completely reset');
       
       // Force a small delay to ensure all async operations complete
       await new Promise(resolve => setTimeout(resolve, 100));
       
     } catch (error) {
-      console.error('❌ Error clearing wallet data:', error);
+      // console.error('❌ Error clearing wallet data:', error);
       throw new Error('Failed to clear wallet data. Please try again.');
     }
   }, [queryClient]);

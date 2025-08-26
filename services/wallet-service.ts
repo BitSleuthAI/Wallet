@@ -6,15 +6,13 @@ import { AddressType, Wallet, WalletType } from '@/types/wallet';
 import { Platform } from 'react-native';
 
 // CRITICAL: ECC override is now active to prevent tiny-secp256k1 WASM loading
-console.log('✅ ECC override active - tiny-secp256k1 imports will be redirected to @noble/secp256k1');
+
 
 // Import bip39 with better error handling
 let bip39: any;
 try {
   bip39 = require('bip39');
-  console.log('✅ Successfully loaded bip39');
 } catch (error) {
-  console.warn('⚠️ bip39 not available:', error);
   bip39 = null;
 }
 
@@ -23,7 +21,7 @@ try {
 
 // ECC implementation via shared override to ensure single, stable source on all platforms
 const createECC = () => {
-  console.log('🔧 Initializing ECC using shared noble override...');
+
   try {
     const ecc = createNobleECC();
     
@@ -51,7 +49,7 @@ const createECC = () => {
     
     // Validate point lengths (compressed should be 33, uncompressed should be 65)
     if (compressedPt.length !== 33 || uncompressedPt.length !== 65) {
-      console.warn('⚠️ Unexpected point lengths:', compressedPt.length, uncompressedPt.length);
+
       // Don't fail here as some implementations might have different formats
     }
     
@@ -63,16 +61,12 @@ const createECC = () => {
       if (!signature || signature.length === 0) {
         throw new Error('ECC signing test failed');
       }
-      console.log('✅ ECC signing test passed, signature length:', signature.length);
     } catch (signError) {
-      console.error('❌ ECC signing test failed:', signError);
       throw new Error('ECC signing functionality not working');
     }
     
-    console.log('✅ ECC self-test passed (shared override)');
     return ecc;
   } catch (err) {
-    console.error('❌ Noble ECC init failed:', err);
     throw new Error('ECC library invalid');
   }
 };
@@ -97,10 +91,8 @@ const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<v
   
   // First try to initialize crypto if not already done
   if (!(global as any).__cryptoInitialized) {
-    console.log('🔧 Crypto not initialized, attempting initialization...');
     const success = await initializeCrypto();
     if (success) {
-      console.log('✅ Crypto initialization successful');
       return;
     }
   }
@@ -108,7 +100,7 @@ const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<v
   while (Date.now() - startTime < maxWaitMs) {
     // Check if crypto initialization flag is set
     if ((global as any).__cryptoInitialized) {
-      console.log('✅ Crypto initialization flag detected');
+
       
       // Double-check that crypto is actually working
       if (typeof crypto !== 'undefined' && crypto && typeof crypto.getRandomValues === 'function') {
@@ -116,10 +108,8 @@ const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<v
           // Test crypto functionality
           const testArray = new Uint8Array(4);
           crypto.getRandomValues(testArray);
-          console.log('✅ Crypto initialization verified');
           return;
         } catch (error) {
-          console.log('Crypto test failed despite flag, waiting...', error);
         }
       }
     }
@@ -128,18 +118,16 @@ const waitForCryptoInitialization = async (maxWaitMs: number = 10000): Promise<v
     try {
       const success = await initializeCrypto();
       if (success) {
-        console.log('✅ Crypto initialization successful on retry');
         return;
       }
     } catch (error) {
-      console.log('Crypto initialization retry failed:', error);
     }
     
     // Wait 200ms before checking again
     await new Promise(resolve => setTimeout(resolve, 200));
   }
   
-  console.warn('⚠️ Crypto initialization timeout, proceeding anyway');
+
 };
 
 export const generateMnemonic = async (strength: number = 128): Promise<string> => {
@@ -149,18 +137,16 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
   
   // On web, use simple fallback to avoid crypto issues
   if (Platform.OS === 'web') {
-    console.log('Web: Using fallback mnemonic');
+
     return strength === 256 ? fallback24 : fallback12;
   }
   
   try {
-    console.log('Generating mnemonic with strength:', strength);
+
     
     // Check if crypto.getRandomValues is available
     if (typeof crypto === 'undefined' || typeof crypto.getRandomValues !== 'function') {
-      console.warn('crypto.getRandomValues not available, using fallback');
       const result = strength === 256 ? fallback24 : fallback12;
-      console.log('Successfully generated fallback mnemonic');
       return result;
     }
     
@@ -168,24 +154,22 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
     try {
       const testArray = new Uint8Array(16);
       crypto.getRandomValues(testArray);
-      console.log('✅ crypto.getRandomValues test successful, entropy check:', Array.from(testArray.slice(0, 4)));
+
       
       // Verify we have good entropy
       const uniqueValues = new Set(Array.from(testArray)).size;
       if (uniqueValues < 8) {
-        console.warn('Low entropy detected, using fallback');
+
         throw new Error('Low entropy');
       }
     } catch (cryptoError) {
-      console.error('crypto.getRandomValues test failed:', cryptoError);
       const result = strength === 256 ? fallback24 : fallback12;
-      console.log('Using fallback mnemonic due to crypto test failure');
       return result;
     }
     
     if (bip39) {
       try {
-        console.log('Using bip39 library for mnemonic generation');
+
         const result = bip39.generateMnemonic(strength);
         
         // Validate the generated mnemonic
@@ -198,48 +182,42 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
           throw new Error(`Invalid word count: expected ${strength === 256 ? 24 : 12}, got ${words.length}`);
         }
         
-        console.log('✅ Generated mnemonic successfully with', words.length, 'words');
         return result;
       } catch (bip39Error) {
-        console.error('BIP39 mnemonic generation failed:', bip39Error);
         throw bip39Error;
       }
     }
     
-    console.log('bip39 not available, using fallback');
     throw new Error('bip39 not available');
   } catch (error) {
-    console.error('❌ Error generating mnemonic:', error);
-    console.log('Using fallback mnemonic');
     const result = strength === 256 ? fallback24 : fallback12;
-    console.log('✅ Successfully generated fallback mnemonic');
     return result;
   }
 };
 
 export const validateMnemonic = (mnemonic: string): boolean => {
   try {
-    console.log('Validating mnemonic:', mnemonic.substring(0, 20) + '...');
+    // console.log('Validating mnemonic:', mnemonic.substring(0, 20) + '...');
     
     // Basic format validation first
     if (!mnemonic || typeof mnemonic !== 'string') {
-      console.log('Invalid mnemonic: not a string');
+      // console.log('Invalid mnemonic: not a string');
       return false;
     }
     
     const cleanMnemonic = mnemonic.trim().toLowerCase();
     const words = cleanMnemonic.split(/\s+/).filter(word => word.length > 0);
-    console.log('Word count:', words.length);
+    // console.log('Word count:', words.length);
     
     if (words.length !== 12 && words.length !== 24) {
-      console.log('Invalid word count:', words.length);
+      // console.log('Invalid word count:', words.length);
       return false;
     }
     
     // Check for empty or invalid words
     for (const word of words) {
       if (!word || word.length < 3 || word.length > 8) {
-        console.log('Invalid word format:', word);
+        // console.log('Invalid word format:', word);
         return false;
       }
     }
@@ -247,16 +225,16 @@ export const validateMnemonic = (mnemonic: string): boolean => {
     if (bip39) {
       try {
         const isValid = bip39.validateMnemonic(cleanMnemonic);
-        console.log('BIP39 validation result:', isValid);
+        // console.log('BIP39 validation result:', isValid);
         return isValid;
       } catch (bip39Error) {
-        console.warn('BIP39 validation failed:', bip39Error);
+        // console.warn('BIP39 validation failed:', bip39Error);
         // Fall through to basic validation
       }
     }
     
     // Enhanced fallback validation
-    console.log('Using enhanced fallback validation');
+    // console.log('Using enhanced fallback validation');
     
     // Basic word list check (simplified BIP39 word list validation)
     const commonWords = ['abandon', 'ability', 'able', 'about', 'above', 'absent', 'absorb', 'abstract', 'absurd', 'abuse'];
@@ -271,16 +249,16 @@ export const validateMnemonic = (mnemonic: string): boolean => {
     
     // Accept if most words look valid
     const isValid = validWordCount >= words.length * 0.8;
-    console.log(`Fallback validation: ${validWordCount}/${words.length} words look valid, result: ${isValid}`);
+    // console.log(`Fallback validation: ${validWordCount}/${words.length} words look valid, result: ${isValid}`);
     return isValid;
     
   } catch (error) {
-    console.error('Error validating mnemonic:', error);
+    // console.error('Error validating mnemonic:', error);
     // Final fallback - just check basic format
     try {
       const words = mnemonic.trim().split(/\s+/).filter(word => word.length > 0);
       const isValid = (words.length === 12 || words.length === 24) && words.every(word => /^[a-z]{3,8}$/.test(word.toLowerCase()));
-      console.log('Final fallback validation result:', isValid);
+      // console.log('Final fallback validation result:', isValid);
       return isValid;
     } catch {
       return false;
@@ -291,70 +269,70 @@ export const validateMnemonic = (mnemonic: string): boolean => {
 export const createWallet = async (name: string, color: string = '#8B5CF6'): Promise<Wallet> => {
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, using web service');
+    // console.log('🌐 Platform detected as web, using web service');
     const webService = require('./wallet-service.web');
     return webService.createWallet(name, color);
   }
   
-  console.log('📱 Platform detected as mobile:', Platform.OS);
+  // console.log('📱 Platform detected as mobile:', Platform.OS);
 
   try {
-    console.log('Creating new wallet:', name);
+    // console.log('Creating new wallet:', name);
     const mnemonic = await generateMnemonic();
-    console.log('✅ Mnemonic generated, importing wallet...');
+    // console.log('✅ Mnemonic generated, importing wallet...');
     return await importWallet(name, mnemonic, color);
   } catch (error) {
-    console.error('❌ Error creating wallet:', error);
+    // console.error('❌ Error creating wallet:', error);
     throw error;
   }
 };
 
 export const importWallet = async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<Wallet> => {
-  console.log('🔍 importWallet called with Platform.OS:', Platform.OS);
+  // console.log('🔍 importWallet called with Platform.OS:', Platform.OS);
   
   // On web, use the web-specific implementation
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, delegating to web service for import');
+    // console.log('🌐 Platform detected as web, delegating to web service for import');
     try {
       const webService = require('./wallet-service.web');
-      console.log('✅ Web service loaded successfully');
+      // console.log('✅ Web service loaded successfully');
       const result = await webService.importWallet(name, mnemonic, color);
-      console.log('✅ Web service importWallet completed successfully');
+      // console.log('✅ Web service importWallet completed successfully');
       return result;
     } catch (webError) {
-      console.error('❌ Error in web service:', webError);
+      // console.error('❌ Error in web service:', webError);
       throw webError;
     }
   }
   
-  console.log('📱 Platform detected as mobile for import:', Platform.OS);
+  // console.log('📱 Platform detected as mobile for import:', Platform.OS);
 
-  console.log('Starting wallet import process...');
+  // console.log('Starting wallet import process...');
   
   // Validate mnemonic first
   if (!validateMnemonic(mnemonic)) {
-    console.error('Mnemonic validation failed');
+    // console.error('Mnemonic validation failed');
     throw new Error('Invalid mnemonic phrase');
   }
-  console.log('✅ Mnemonic validation passed');
+  // console.log('✅ Mnemonic validation passed');
 
   try {
-    console.log('Attempting to import wallet on mobile platform:', Platform.OS);
+    // console.log('Attempting to import wallet on mobile platform:', Platform.OS);
     
     // Wait for crypto initialization
     await waitForCryptoInitialization();
     
     // Check if required libraries are available
     if (!bip39) {
-      console.error('BIP39 library not available');
+      // console.error('BIP39 library not available');
       throw new Error('BIP39 library not available');
     }
-    console.log('✅ BIP39 library available');
+    // console.log('✅ BIP39 library available');
     
     // ECC should be initialized globally by now, but create if missing
     let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-      console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
+      // console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
       
       // Try multiple times with delay to handle timing issues
       let attempts = 0;
@@ -364,11 +342,11 @@ export const importWallet = async (name: string, mnemonic: string, color: string
         try {
           ecc = createECC();
           (global as any).ecc = ecc;
-          console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
+          // console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
           break;
         } catch (eccError) {
           attempts++;
-          console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
+          // console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
           
           if (attempts >= maxAttempts) {
             throw eccError;
@@ -379,7 +357,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
         }
       }
     } else {
-      console.log('✅ Using existing global ECC instance');
+      // console.log('✅ Using existing global ECC instance');
     }
     
     // Import BIP32 with error handling
@@ -390,9 +368,9 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       if (!BIP32Factory) {
         throw new Error('BIP32Factory not found in bip32 module');
       }
-      console.log('✅ BIP32 module loaded');
+      // console.log('✅ BIP32 module loaded');
     } catch (bip32Error) {
-      console.error('BIP32 module loading failed:', bip32Error);
+      // console.error('BIP32 module loading failed:', bip32Error);
       throw new Error('BIP32 library not available');
     }
     
@@ -405,9 +383,9 @@ export const importWallet = async (name: string, mnemonic: string, color: string
         const { hmac } = require('@noble/hashes/hmac');
         const { sha512 } = require('@noble/hashes/sha512');
         hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
-        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+        // console.log('✅ Using @noble/hashes for HMAC-SHA512');
       } catch (hashError) {
-        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        // console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
         
         // Fallback HMAC-SHA512 implementation
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
@@ -453,65 +431,61 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with HMAC-SHA512');
+      // console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ Failed to create BIP32 factory:', e);
+      // console.error('❌ Failed to create BIP32 factory:', e);
       throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
-    console.log('✅ BIP32 factory created');
+    // console.log('✅ BIP32 factory created');
 
-    console.log('Converting mnemonic to seed...');
+    // console.log('Converting mnemonic to seed...');
     let seed;
     try {
       seed = await bip39.mnemonicToSeed(mnemonic.trim());
-      console.log('✅ Seed generated, length:', seed.length);
+      // console.log('✅ Seed generated, length:', seed.length);
     } catch (seedError) {
-      console.error('Seed generation failed:', seedError);
+      // console.error('Seed generation failed:', seedError);
       throw new Error('Failed to generate seed from mnemonic');
     }
     
-    console.log('Creating root key...');
+    // console.log('Creating root key...');
     let root;
     try {
       root = bip32.fromSeed(seed);
-      console.log('✅ Root key created');
+      // console.log('✅ Root key created');
     } catch (rootError) {
-      console.error('Root key creation failed:', rootError);
+      // console.error('Root key creation failed:', rootError);
       throw new Error('Failed to create root key from seed');
     }
     
-    console.log('Deriving account with path:', DERIVATION_PATH);
+    // console.log('Deriving account with path:', DERIVATION_PATH);
     let account;
     try {
       account = root.derivePath(DERIVATION_PATH);
-      console.log('✅ Account derived');
+      // console.log('✅ Account derived');
     } catch (deriveError) {
-      console.error('Account derivation failed:', deriveError);
+      // console.error('Account derivation failed:', deriveError);
       throw new Error('Failed to derive account from root key');
     }
     
     let xpub;
     try {
       xpub = account.neutered().toBase58();
-      console.log('✅ Extended public key generated');
+      // console.log('✅ Extended public key generated');
     } catch (xpubError) {
-      console.error('Extended public key generation failed:', xpubError);
+      // console.error('Extended public key generation failed:', xpubError);
       throw new Error('Failed to generate extended public key');
     }
 
-    console.log('Generating first address...');
+    // console.log('Generating first address...');
     let firstAddress;
     try {
-      console.log('About to call generateAddressFromXpub with xpub:', xpub.substring(0, 20) + '...');
+      // console.log('About to call generateAddressFromXpub with xpub:', xpub.substring(0, 20) + '...');
       firstAddress = await generateAddressFromXpub(xpub, 0);
-      console.log('✅ First address generated:', firstAddress);
+      // console.log('✅ First address generated:', firstAddress);
     } catch (addressError) {
-      console.error('❌ Address generation failed with error:', addressError);
-      console.error('❌ Error details:', {
-        message: addressError instanceof Error ? addressError.message : 'Unknown error',
-        stack: addressError instanceof Error ? addressError.stack : 'No stack trace',
-        xpub: xpub ? xpub.substring(0, 20) + '...' : 'undefined'
-      });
+      // console.error('❌ Address generation failed with error:', addressError);
+
       
       // Try to provide more specific error information
       if (addressError instanceof Error) {
@@ -547,10 +521,10 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       createdAt: Date.now(),
     };
 
-    console.log('✅ Wallet created successfully');
+    // console.log('✅ Wallet created successfully');
     return wallet;
   } catch (error) {
-    console.error('❌ Import wallet error:', error);
+    // console.error('❌ Import wallet error:', error);
     
     // Provide more specific error messages
     if (error instanceof Error) {
@@ -572,34 +546,34 @@ export const importWallet = async (name: string, mnemonic: string, color: string
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, using web service for address generation');
+    // console.log('🌐 Platform detected as web, using web service for address generation');
     const webService = require('./wallet-service.web');
     return webService.generateAddressFromXpub(xpub, index);
   }
   
-  console.log('📱 Platform detected as mobile for address generation:', Platform.OS);
+  // console.log('📱 Platform detected as mobile for address generation:', Platform.OS);
   
   try {
-    console.log(`Generating address from xpub for index ${index}`);
+    // console.log(`Generating address from xpub for index ${index}`);
     
     // Check if we're in Expo Go environment
     const isExpoGo = typeof __DEV__ !== 'undefined' && __DEV__ && 
                      (typeof expo !== 'undefined' || (global as any).ExpoModules !== undefined);
     
     if (isExpoGo) {
-      console.log('⚠️ Detected Expo Go environment - using simplified address generation');
+      // console.log('⚠️ Detected Expo Go environment - using simplified address generation');
       // In Expo Go, we can't use native crypto libraries reliably
       // Generate a deterministic demo address based on xpub and index
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated demo address for Expo Go:', demoAddress);
+      // console.log('✅ Generated demo address for Expo Go:', demoAddress);
       return demoAddress;
     }
     
     // ECC should be initialized globally by now, but create if missing
     let ecc = (global as any).ecc;
     if (!ecc || !ecc.isPrivate || !ecc.pointFromScalar) {
-      console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
+      // console.log('ℹ️ ECC not found or invalid on global, creating a fresh instance...');
       
       // Try multiple times with delay to handle timing issues
       let attempts = 0;
@@ -609,18 +583,18 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         try {
           ecc = createECC();
           (global as any).ecc = ecc;
-          console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
+          // console.log(`✅ ECC created successfully on attempt ${attempts + 1}`);
           break;
         } catch (eccError) {
           attempts++;
-          console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
+          // console.error(`❌ ECC creation failed on attempt ${attempts}:`, eccError);
           
           if (attempts >= maxAttempts) {
             // Fallback to demo address generation
-            console.log('⚠️ ECC creation failed, using demo address generation');
+            // console.log('⚠️ ECC creation failed, using demo address generation');
             const hash = simpleHash(xpub + index.toString());
             const demoAddress = generateDemoAddress(hash);
-            console.log('✅ Generated fallback demo address:', demoAddress);
+            // console.log('✅ Generated fallback demo address:', demoAddress);
             return demoAddress;
           }
           
@@ -629,7 +603,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         }
       }
     } else {
-      console.log('✅ Using existing global ECC instance');
+      // console.log('✅ Using existing global ECC instance');
     }
     
     const { BIP32Factory } = require('bip32');
@@ -641,9 +615,9 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         const { hmac } = require('@noble/hashes/hmac');
         const { sha512 } = require('@noble/hashes/sha512');
         hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
-        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+        // console.log('✅ Using @noble/hashes for HMAC-SHA512');
       } catch (hashError) {
-        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        // console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
         
         // Fallback HMAC-SHA512 implementation
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
@@ -689,81 +663,77 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with HMAC-SHA512');
+      // console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ Failed to create BIP32 factory:', e);
+      // console.error('❌ Failed to create BIP32 factory:', e);
       // Fallback to demo address generation
-      console.log('⚠️ BIP32 factory creation failed, using demo address generation');
+      // console.log('⚠️ BIP32 factory creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated fallback demo address:', demoAddress);
+      // console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
     const bitcoin = require('bitcoinjs-lib');
     if (typeof bitcoin.initEccLib === 'function') {
       try {
         bitcoin.initEccLib(ecc);
-        console.log('✅ bitcoinjs-lib ECC initialized with noble');
+        // console.log('✅ bitcoinjs-lib ECC initialized with noble');
       } catch (e) {
-        console.warn('⚠️ Failed to init bitcoinjs-lib ECC, continuing:', e);
+        // console.warn('⚠️ Failed to init bitcoinjs-lib ECC, continuing:', e);
       }
     }
     
-    console.log('Parsing xpub...');
+    // console.log('Parsing xpub...');
     let node;
     try {
       node = bip32.fromBase58(xpub);
-      console.log('✅ Successfully parsed xpub');
+      // console.log('✅ Successfully parsed xpub');
     } catch (xpubError) {
-      console.error('❌ Failed to parse xpub:', xpubError);
+      // console.error('❌ Failed to parse xpub:', xpubError);
       // Fallback to demo address generation
-      console.log('⚠️ xpub parsing failed, using demo address generation');
+      // console.log('⚠️ xpub parsing failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated fallback demo address:', demoAddress);
+      // console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
     
-    console.log('Deriving child key...');
+    // console.log('Deriving child key...');
     let child;
     try {
       child = node.derive(0).derive(index);
-      console.log('✅ Successfully derived child key for index', index);
+      // console.log('✅ Successfully derived child key for index', index);
     } catch (deriveError) {
-      console.error('❌ Failed to derive child key:', deriveError);
+      // console.error('❌ Failed to derive child key:', deriveError);
       // Fallback to demo address generation
-      console.log('⚠️ Child key derivation failed, using demo address generation');
+      // console.log('⚠️ Child key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated fallback demo address:', demoAddress);
+      // console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
     
-    console.log('Creating payment address...');
+    // console.log('Creating payment address...');
     const pubkey = child.publicKey;
     if (!pubkey || pubkey.length === 0) {
-      console.error('❌ Invalid public key derived - pubkey is null or empty');
-      console.error('Child object:', {
-        hasPublicKey: !!child.publicKey,
-        publicKeyLength: child.publicKey ? child.publicKey.length : 0,
-        childKeys: Object.keys(child)
-      });
+      // console.error('❌ Invalid public key derived - pubkey is null or empty');
+
       // Fallback to demo address generation
-      console.log('⚠️ Public key derivation failed, using demo address generation');
+      // console.log('⚠️ Public key derivation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated fallback demo address:', demoAddress);
+      // console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
     
-    console.log('Public key length:', pubkey.length, 'bytes');
+    // console.log('Public key length:', pubkey.length, 'bytes');
     const pubkeyBytes = Array.from(pubkey.slice(0, 10)) as number[];
-    console.log('Public key (first 10 bytes):', pubkeyBytes.map((b: number) => b.toString(16).padStart(2, '0')).join(' '));
+    // console.log('Public key (first 10 bytes):', pubkeyBytes.map((b: number) => b.toString(16).padStart(2, '0')).join(' '));
     
     try {
       // Ensure we have a proper Buffer for bitcoinjs-lib
       const pubkeyBuffer = Buffer.from(pubkey);
-      console.log('Created Buffer from public key, length:', pubkeyBuffer.length);
+      // console.log('Created Buffer from public key, length:', pubkeyBuffer.length);
       
       // Create P2WPKH (native segwit) payment
       const payment = bitcoin.payments.p2wpkh({ 
@@ -771,51 +741,47 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         network: bitcoin.networks.bitcoin // Explicitly set network
       });
       
-      console.log('Payment object created:', {
-        address: payment.address,
-        hash: payment.hash ? (Array.from(payment.hash.slice(0, 10)) as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join(' ') : 'none',
-        output: payment.output ? (Array.from(payment.output.slice(0, 10)) as number[]).map((b: number) => b.toString(16).padStart(2, '0')).join(' ') : 'none'
-      });
+
       
       if (!payment?.address) {
-        console.error('Payment object:', payment);
+        // console.error('Payment object:', payment);
         // Fallback to demo address generation
-        console.log('⚠️ Payment address creation failed, using demo address generation');
+        // console.log('⚠️ Payment address creation failed, using demo address generation');
         const hash = simpleHash(xpub + index.toString());
         const demoAddress = generateDemoAddress(hash);
-        console.log('✅ Generated fallback demo address:', demoAddress);
+        // console.log('✅ Generated fallback demo address:', demoAddress);
         return demoAddress;
       }
       
       // Validate the address format
       if (!payment.address || !payment.address.startsWith('bc1')) {
-        console.error('Generated address is invalid or not bech32:', payment.address);
+        // console.error('Generated address is invalid or not bech32:', payment.address);
         throw new Error('Invalid address format generated');
       }
       
       // Additional validation - check address length for P2WPKH
       if (payment.address.length !== 42) {
-        console.warn('Generated P2WPKH address has unexpected length:', payment.address.length, 'expected 42');
+        // console.warn('Generated P2WPKH address has unexpected length:', payment.address.length, 'expected 42');
       }
       
-      console.log('✅ Address generated successfully:', payment.address);
+      // console.log('✅ Address generated successfully:', payment.address);
       return payment.address as string;
     } catch (paymentError) {
-      console.error('❌ Payment creation failed:', paymentError);
+      // console.error('❌ Payment creation failed:', paymentError);
       // Fallback to demo address generation
-      console.log('⚠️ Payment creation failed, using demo address generation');
+      // console.log('⚠️ Payment creation failed, using demo address generation');
       const hash = simpleHash(xpub + index.toString());
       const demoAddress = generateDemoAddress(hash);
-      console.log('✅ Generated fallback demo address:', demoAddress);
+      // console.log('✅ Generated fallback demo address:', demoAddress);
       return demoAddress;
     }
   } catch (error) {
-    console.error('❌ Error generating address:', error);
+    // console.error('❌ Error generating address:', error);
     // Final fallback to demo address generation
-    console.log('⚠️ All address generation methods failed, using final demo fallback');
+    // console.log('⚠️ All address generation methods failed, using final demo fallback');
     const hash = simpleHash(xpub + index.toString());
     const demoAddress = generateDemoAddress(hash);
-    console.log('✅ Generated final fallback demo address:', demoAddress);
+    // console.log('✅ Generated final fallback demo address:', demoAddress);
     return demoAddress;
   }
 };
@@ -849,18 +815,18 @@ const generateDemoAddress = (hash: number): string => {
   ];
   
   const selectedAddress = demoAddresses[hash % demoAddresses.length];
-  console.log(`🎯 Selected demo address: ${selectedAddress}`);
+  // console.log(`🎯 Selected demo address: ${selectedAddress}`);
   return selectedAddress;
 };
 
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, using web service for new address');
+    // console.log('🌐 Platform detected as web, using web service for new address');
     const webService = require('./wallet-service.web');
     return webService.generateNewAddress(wallet);
   }
   
-  console.log('📱 Platform detected as mobile for new address generation:', Platform.OS);
+  // console.log('📱 Platform detected as mobile for new address generation:', Platform.OS);
   
   try {
     const newIndex = wallet.currentAddressIndex + 1;
@@ -871,20 +837,20 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
       currentAddressIndex: newIndex,
     };
   } catch (error) {
-    console.error('❌ Error generating new address:', error);
+    // console.error('❌ Error generating new address:', error);
     throw new Error('Failed to generate new address. This feature requires a mobile device.');
   }
 };
 
 export const getPrivateKey = async (mnemonic: string, addressIndex: number): Promise<string> => {
   if (Platform.OS === 'web') {
-    console.log('🌐 Platform detected as web, using web service for private key');
+    // console.log('🌐 Platform detected as web, using web service for private key');
     const webService = require('./wallet-service.web');
     return webService.getPrivateKey(mnemonic, addressIndex);
   }
   
   try {
-    console.log(`Getting private key for address index ${addressIndex}`);
+    // console.log(`Getting private key for address index ${addressIndex}`);
     
     if (!bip39) {
       throw new Error('BIP39 library not available');
@@ -904,9 +870,9 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
         const { hmac } = require('@noble/hashes/hmac');
         const { sha512 } = require('@noble/hashes/sha512');
         hmacSHA512Impl = (key: Uint8Array, data: Uint8Array) => hmac(sha512, key, data);
-        console.log('✅ Using @noble/hashes for HMAC-SHA512');
+        // console.log('✅ Using @noble/hashes for HMAC-SHA512');
       } catch (hashError) {
-        console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
+        // console.warn('⚠️ @noble/hashes not available, using fallback HMAC-SHA512:', hashError);
         
         // Fallback HMAC-SHA512 implementation
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
@@ -952,9 +918,9 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       bip32 = BIP32Factory(ecc, {
         hmacSHA512: hmacSHA512Impl,
       });
-      console.log('✅ BIP32 factory created with HMAC-SHA512');
+      // console.log('✅ BIP32 factory created with HMAC-SHA512');
     } catch (e) {
-      console.error('❌ Failed to create BIP32 factory:', e);
+      // console.error('❌ Failed to create BIP32 factory:', e);
       throw new Error('Cryptographic functions not properly initialized. Please restart the app.');
     }
     
@@ -970,7 +936,7 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     return child.toWIF();
   } catch (error) {
-    console.error('❌ Error getting private key:', error);
+    // console.error('❌ Error getting private key:', error);
     if (error instanceof Error && error.message.includes('ECC library invalid')) {
       throw new Error('ECC library invalid');
     }

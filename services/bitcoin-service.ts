@@ -13,19 +13,19 @@ const ensureECC = () => {
     
     const ecc = (global as any).ecc;
     if (!ecc) {
-      console.warn('⚠️ ECC library not available, some features may not work');
+      // console.warn('⚠️ ECC library not available, some features may not work');
       return;
     }
     
     const bitcoin = require('bitcoinjs-lib');
     if (typeof bitcoin.initEccLib === 'function') {
       bitcoin.initEccLib(ecc);
-      console.log('✅ ECC library initialized for bitcoin service');
+      // console.log('✅ ECC library initialized for bitcoin service');
     }
     
     eccInitialized = true;
   } catch (error) {
-    console.warn('⚠️ Failed to initialize ECC for bitcoin service:', error);
+    // console.warn('⚠️ Failed to initialize ECC for bitcoin service:', error);
   }
 };
 
@@ -45,7 +45,7 @@ const API_BASE = Platform.select({
 // Test network connectivity
 export const testNetworkConnectivity = async (): Promise<boolean> => {
   try {
-    console.log('🔍 Testing network connectivity...');
+    // console.log('🔍 Testing network connectivity...');
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
     
@@ -69,20 +69,20 @@ export const testNetworkConnectivity = async (): Promise<boolean> => {
         
         if (response.ok) {
           clearTimeout(timeoutId);
-          console.log(`✅ Network connectivity test: PASSED (${endpoint})`);
+          // console.log(`✅ Network connectivity test: PASSED (${endpoint})`);
           return true;
         }
       } catch (endpointError) {
-        console.log(`❌ Connectivity test failed for ${endpoint}:`, endpointError);
+        // console.log(`❌ Connectivity test failed for ${endpoint}:`, endpointError);
         continue;
       }
     }
     
     clearTimeout(timeoutId);
-    console.log('❌ Network connectivity test: FAILED (all endpoints)');
+    // console.log('❌ Network connectivity test: FAILED (all endpoints)');
     return false;
   } catch (error) {
-    console.warn('⚠️ Network connectivity test failed:', error);
+    // console.warn('⚠️ Network connectivity test failed:', error);
     return false;
   }
 };
@@ -95,7 +95,7 @@ async function fetchWithRetry(input: string, init?: RequestInit & { timeoutMs?: 
     try {
       const result = await fetchJSON(input, init);
       if (attempt > 0) {
-        console.log(`✅ Request succeeded on retry ${attempt}`);
+        // console.log(`✅ Request succeeded on retry ${attempt}`);
       }
       return result;
     } catch (error) {
@@ -133,14 +133,14 @@ async function fetchJSON(input: string, init?: RequestInit & { timeoutMs?: numbe
     });
     
     if (!response.ok) {
-      console.warn(`API request failed: ${response.status} ${response.statusText} for ${input}`);
+      // console.warn(`API request failed: ${response.status} ${response.statusText} for ${input}`);
       throw new Error(`API request failed: ${response.status}`);
     }
     
     const data = await response.json();
     return data;
   } catch (error) {
-    console.warn(`Network request failed for ${input}:`, error);
+    // console.warn(`Network request failed for ${input}:`, error);
     
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
@@ -172,13 +172,13 @@ function normalizeBalanceResponse(data: any, apiName: string): number {
     } else {
       // Blockstream/Mempool format
       if (!data.chain_stats) {
-        console.warn(`Invalid response format from ${apiName}:`, data);
+        // console.warn(`Invalid response format from ${apiName}:`, data);
         throw new Error('Invalid response format');
       }
       return (data.chain_stats.funded_txo_sum - data.chain_stats.spent_txo_sum) / 100000000;
     }
   } catch (error) {
-    console.warn(`Error normalizing balance response from ${apiName}:`, error);
+    // console.warn(`Error normalizing balance response from ${apiName}:`, error);
     throw error;
   }
 }
@@ -197,7 +197,7 @@ function normalizeTransactionResponse(data: any, apiName: string): any[] {
       return Array.isArray(data) ? data : [];
     }
   } catch (error) {
-    console.warn(`Error normalizing transaction response from ${apiName}:`, error);
+    // console.warn(`Error normalizing transaction response from ${apiName}:`, error);
     return [];
   }
 }
@@ -207,7 +207,7 @@ const PRICE_APIS = [
     name: 'CoinGecko',
     url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
     parser: (data: any) => {
-      console.log('CoinGecko response:', data);
+      // console.log('CoinGecko response:', data);
       return {
         usd: data.bitcoin?.usd || 0,
         usd_24h_change: data.bitcoin?.usd_24h_change || 0,
@@ -218,7 +218,7 @@ const PRICE_APIS = [
     name: 'CoinDesk',
     url: 'https://api.coindesk.com/v1/bpi/currentprice.json',
     parser: (data: any) => {
-      console.log('CoinDesk response:', data);
+      // console.log('CoinDesk response:', data);
       return {
         usd: parseFloat(data.bpi?.USD?.rate?.replace(/,/g, '') || '0'),
         usd_24h_change: 0, // CoinDesk doesn't provide 24h change
@@ -229,7 +229,7 @@ const PRICE_APIS = [
     name: 'Blockchain.info',
     url: 'https://blockchain.info/ticker',
     parser: (data: any) => {
-      console.log('Blockchain.info response:', data);
+      // console.log('Blockchain.info response:', data);
       return {
         usd: data.USD?.last || 0,
         usd_24h_change: 0, // Blockchain.info doesn't provide 24h change in this endpoint
@@ -243,7 +243,7 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
   // Try each API endpoint in sequence
   for (const api of PRICE_APIS) {
     try {
-      console.log(`💰 Fetching Bitcoin price from ${api.name}...`);
+      // console.log(`💰 Fetching Bitcoin price from ${api.name}...`);
       
 
       
@@ -275,16 +275,16 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
         throw new Error(`Invalid price data from ${api.name}: ${priceData.usd}`);
       }
       
-      console.log(`✅ Bitcoin price fetched successfully from ${api.name}:`, priceData.usd);
+      // console.log(`✅ Bitcoin price fetched successfully from ${api.name}:`, priceData.usd);
       return priceData;
     } catch (error) {
-      console.warn(`❌ Failed to fetch from ${api.name}:`, error);
+      // console.warn(`❌ Failed to fetch from ${api.name}:`, error);
       // Continue to next API
     }
   }
   
   // All APIs failed - throw error instead of returning fallback
-  console.error('⚠️ All price APIs failed');
+  // console.error('⚠️ All price APIs failed');
   throw new Error('Unable to fetch Bitcoin price from any API');
 };
 
@@ -332,16 +332,16 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   
   // Validate address format first
   if (!isValidBitcoinAddress(address)) {
-    console.warn('⚠️ Invalid Bitcoin address format:', address);
+    // console.warn('⚠️ Invalid Bitcoin address format:', address);
     return 0;
   }
   
-  console.log(`💰 Fetching balance for address: ${address.substring(0, 10)}...`);
+  // console.log(`💰 Fetching balance for address: ${address.substring(0, 10)}...`);
   
   // Always try real APIs - no mock data fallback
   const isConnected = await testNetworkConnectivity();
   if (!isConnected) {
-    console.log('🔧 No network connection, returning 0 balance');
+    // console.log('🔧 No network connection, returning 0 balance');
     return 0;
   }
   
@@ -357,7 +357,7 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   
   for (const api of apiAttempts) {
     try {
-      console.log(`🔍 Trying ${api.name} for balance...`);
+      // console.log(`🔍 Trying ${api.name} for balance...`);
       
       const url = `${api.base}${api.endpoint}/${address}`;
       const data = await fetchWithRetry(url, {
@@ -365,7 +365,7 @@ export const getAddressBalance = async (address: string): Promise<number> => {
       }, 1); // Reduced retries for faster fallback
       
       const balance = normalizeBalanceResponse(data, api.name);
-      console.log(`✅ Address balance fetched from ${api.name}:`, balance, 'BTC');
+      // console.log(`✅ Address balance fetched from ${api.name}:`, balance, 'BTC');
       return Math.max(0, balance); // Ensure non-negative balance
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -373,13 +373,13 @@ export const getAddressBalance = async (address: string): Promise<number> => {
       
       // Handle specific error cases
       if (errorMsg.includes('400')) {
-        console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
+        // console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
       } else if (errorMsg.includes('404')) {
-        console.log(`ℹ️ ${api.name} returned 404 - address not found (new address):`, address);
+        // console.log(`ℹ️ ${api.name} returned 404 - address not found (new address):`, address);
         // 404 for new addresses is normal, return 0 balance
         return 0;
       } else {
-        console.log(`ℹ️ ${api.name} unavailable - trying next API`);
+        // console.log(`ℹ️ ${api.name} unavailable - trying next API`);
       }
       continue;
     }
@@ -387,10 +387,10 @@ export const getAddressBalance = async (address: string): Promise<number> => {
   
   // Only log error if it's not a common network issue
   if (lastError && !lastError.includes('Failed to fetch') && !lastError.includes('NetworkError')) {
-    console.warn('⚠️ All balance APIs failed, but this is normal during network issues');
+    // console.warn('⚠️ All balance APIs failed, but this is normal during network issues');
   }
   
-  console.log('🔧 Returning 0 balance (APIs temporarily unavailable)');
+  // console.log('🔧 Returning 0 balance (APIs temporarily unavailable)');
   return 0;
 };
 
@@ -402,10 +402,10 @@ export const getWalletBalance = async (addresses: string[]): Promise<number> => 
     const balancePromises = addresses.map(address => getAddressBalance(address));
     const balances = await Promise.all(balancePromises);
     const totalBalance = balances.reduce((total, balance) => total + balance, 0);
-    console.log('✅ Wallet balance calculated:', totalBalance, 'BTC');
+    // console.log('✅ Wallet balance calculated:', totalBalance, 'BTC');
     return totalBalance;
   } catch (error) {
-    console.error('Error fetching wallet balance:', error);
+    // console.error('Error fetching wallet balance:', error);
     throw error;
   }
 };
@@ -416,16 +416,16 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   
   // Validate address format first
   if (!isValidBitcoinAddress(address)) {
-    console.warn('⚠️ Invalid Bitcoin address format:', address);
+    // console.warn('⚠️ Invalid Bitcoin address format:', address);
     return [];
   }
   
-  console.log(`📜 Fetching transactions for address: ${address.substring(0, 10)}...`);
+  // console.log(`📜 Fetching transactions for address: ${address.substring(0, 10)}...`);
   
   // Always try real APIs - no mock data fallback
   const isConnected = await testNetworkConnectivity();
   if (!isConnected) {
-    console.log('🔧 No network connection, returning empty transactions');
+    // console.log('🔧 No network connection, returning empty transactions');
     return [];
   }
   
@@ -441,7 +441,7 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   
   for (const api of apiAttempts) {
     try {
-      console.log(`🔍 Trying ${api.name} for transactions...`);
+      // console.log(`🔍 Trying ${api.name} for transactions...`);
       
       let url: string;
       if (api.name === 'Blockchain.info') {
@@ -456,7 +456,7 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
       }, 1); // Reduced retries for faster fallback
       
       const transactions = normalizeTransactionResponse(data, api.name);
-      console.log(`✅ Address transactions fetched from ${api.name}:`, transactions.length, 'transactions');
+      // console.log(`✅ Address transactions fetched from ${api.name}:`, transactions.length, 'transactions');
       return transactions;
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -464,13 +464,13 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
       
       // Handle specific error cases
       if (errorMsg.includes('400')) {
-        console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
+        // console.log(`ℹ️ ${api.name} returned 400 - trying next API`);
       } else if (errorMsg.includes('404')) {
-        console.log(`ℹ️ ${api.name} returned 404 - no transactions found (new address):`, address);
+        // console.log(`ℹ️ ${api.name} returned 404 - no transactions found (new address):`, address);
         // 404 for new addresses is normal, return empty array
         return [];
       } else {
-        console.log(`ℹ️ ${api.name} unavailable - trying next API`);
+        // console.log(`ℹ️ ${api.name} unavailable - trying next API`);
       }
       continue;
     }
@@ -478,10 +478,10 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
   
   // Only log error if it's not a common network issue
   if (lastError && !lastError.includes('Failed to fetch') && !lastError.includes('NetworkError')) {
-    console.warn('⚠️ All transaction APIs failed, but this is normal during network issues');
+    // console.warn('⚠️ All transaction APIs failed, but this is normal during network issues');
   }
   
-  console.log('🔧 Returning empty transactions (APIs temporarily unavailable)');
+  // console.log('🔧 Returning empty transactions (APIs temporarily unavailable)');
   return [];
 };
 
@@ -533,12 +533,12 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
       .sort((a, b) => b.timestamp - a.timestamp)
       .slice(0, 50); // Limit to 50 most recent transactions
     
-    console.log('✅ Transaction history processed:', processedTransactions.length, 'transactions');
+    // console.log('✅ Transaction history processed:', processedTransactions.length, 'transactions');
     return processedTransactions;
   } catch (error) {
-    console.error('Error fetching transaction history:', error);
+    // console.error('Error fetching transaction history:', error);
     
-    console.log('🔧 Error occurred, returning empty transaction history');
+    // console.log('🔧 Error occurred, returning empty transaction history');
     return [];
   }
 };
@@ -551,7 +551,7 @@ export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
     const data = await fetchJSON(`${API_BASE}/address/${address}/utxo`, { timeoutMs: 15000 });
     return data as UTXO[];
   } catch (error) {
-    console.error('Error fetching UTXOs:', error);
+    // console.error('Error fetching UTXOs:', error);
     return [];
   }
 };
@@ -564,8 +564,8 @@ export const createTransaction = async (
   enableRBF: boolean = true,
   selectedUTXOs?: UTXO[]
 ): Promise<{ txHex: string; fee: number; txid: string }> => {
-  console.log('🔨 Creating Bitcoin transaction...');
-  console.log('Parameters:', { toAddress, amount, feeRate, enableRBF });
+  // console.log('🔨 Creating Bitcoin transaction...');
+  // console.log('Parameters:', { toAddress, amount, feeRate, enableRBF });
   
   // Ensure ECC is initialized
   ensureECC();
@@ -591,25 +591,25 @@ export const createTransaction = async (
     // 3. Create and sign the transaction
     // 4. Return the signed transaction hex
     
-    console.log('📊 Preparing UTXOs for transaction...');
+    // console.log('📊 Preparing UTXOs for transaction...');
     let utxos: UTXO[] = [];
 
     if (selectedUTXOs && selectedUTXOs.length > 0) {
-      console.log(`📌 Using ${selectedUTXOs.length} user-selected UTXOs via coin control`);
+      // console.log(`📌 Using ${selectedUTXOs.length} user-selected UTXOs via coin control`);
       utxos = selectedUTXOs;
     } else {
-      console.log('🔎 Fetching UTXOs for wallet addresses (no manual selection provided)');
+      // console.log('🔎 Fetching UTXOs for wallet addresses (no manual selection provided)');
       for (const address of fromWallet.addresses) {
         try {
           const addressUTXOs = await getAddressUTXOs(address);
           utxos.push(...addressUTXOs);
         } catch (error) {
-          console.warn(`Failed to fetch UTXOs for ${address}:`, error);
+          // console.warn(`Failed to fetch UTXOs for ${address}:`, error);
         }
       }
     }
     
-    console.log(`Found ${utxos.length} UTXOs`);
+    // console.log(`Found ${utxos.length} UTXOs`);
     
     // Convert amount from BTC to satoshis
     const amountSats = Math.floor(amount * 100000000);
@@ -617,11 +617,11 @@ export const createTransaction = async (
     // For web platform or when no UTXOs available, create demo transaction
     if (Platform.OS === 'web' || utxos.length === 0) {
       const isWeb = Platform.OS === 'web';
-      console.log(isWeb ? '🌐 Creating demo transaction (web platform - CORS limitations)' : '📱 Creating demo transaction (no UTXOs available)');
+      // console.log(isWeb ? '🌐 Creating demo transaction (web platform - CORS limitations)' : '📱 Creating demo transaction (no UTXOs available)');
       
       if (isWeb) {
-        console.log('⚠️ Web platform cannot broadcast real transactions due to CORS restrictions');
-        console.log('📱 Use mobile app for real Bitcoin transactions');
+        // console.log('⚠️ Web platform cannot broadcast real transactions due to CORS restrictions');
+        // console.log('📱 Use mobile app for real Bitcoin transactions');
       }
       
       // Estimate transaction size (1 input, 2 outputs)
@@ -634,12 +634,7 @@ export const createTransaction = async (
       // Create a mock transaction hex (this would be a real signed transaction in production)
       const mockTxHex = generateMockTxHex(mockTxId, toAddress, amountSats, fee);
       
-      console.log('✅ Demo transaction created:', {
-        txid: mockTxId,
-        fee: fee / 100000000, // Convert back to BTC
-        size: estimatedSize,
-        note: isWeb ? 'Demo only - no real Bitcoin sent' : 'Demo - no UTXOs available'
-      });
+
       
       return {
         txHex: mockTxHex,
@@ -649,8 +644,8 @@ export const createTransaction = async (
     }
     
     // Real transaction creation for mobile with UTXOs
-    console.log('🔧 Creating REAL Bitcoin transaction with UTXOs for MAINNET broadcast...');
-    console.log('⚠️ This will create a real, spendable Bitcoin transaction!');
+    // console.log('🔧 Creating REAL Bitcoin transaction with UTXOs for MAINNET broadcast...');
+    // console.log('⚠️ This will create a real, spendable Bitcoin transaction!');
     
     // Import required libraries
     const bitcoin = require('bitcoinjs-lib');
@@ -674,11 +669,7 @@ export const createTransaction = async (
       fromWallet.addressType || 'p2wpkh'
     );
     
-    console.log('UTXO selection:', {
-      selectedUTXOs: selection.selectedUTXOs.length,
-      fee: selection.fee,
-      change: selection.change
-    });
+
     
     // Create transaction builder
     const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
@@ -700,7 +691,7 @@ export const createTransaction = async (
           sequence: enableRBF ? 0xfffffffd : 0xfffffffe, // Enable RBF if requested
         });
       } catch (error) {
-        console.warn(`Failed to add input ${utxo.txid}:${utxo.vout}:`, error);
+        // console.warn(`Failed to add input ${utxo.txid}:${utxo.vout}:`, error);
         throw new Error('Failed to prepare transaction inputs');
       }
     }
@@ -746,13 +737,7 @@ export const createTransaction = async (
     const txHex = tx.toHex();
     const txId = tx.getId();
     
-    console.log('✅ REAL Bitcoin transaction created successfully:', {
-      txid: txId,
-      fee: selection.fee / 100000000,
-      size: tx.byteLength(),
-      network: 'MAINNET',
-      ready_to_broadcast: true
-    });
+
     
     return {
       txHex,
@@ -761,7 +746,7 @@ export const createTransaction = async (
     };
     
   } catch (error) {
-    console.error('❌ Error creating transaction:', error);
+    // console.error('❌ Error creating transaction:', error);
     throw new Error(`Failed to create transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 };
@@ -775,7 +760,7 @@ const fetchTransaction = async (txid: string): Promise<string> => {
     }
     return await response.text();
   } catch (error) {
-    console.error('Error fetching transaction:', error);
+    // console.error('Error fetching transaction:', error);
     throw error;
   }
 };
@@ -837,8 +822,8 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
   // Ensure ECC is initialized for any crypto operations
   ensureECC();
   
-  console.log('📡 Broadcasting REAL Bitcoin transaction to MAINNET...');
-  console.log('Transaction hex length:', txHex.length);
+  // console.log('📡 Broadcasting REAL Bitcoin transaction to MAINNET...');
+  // console.log('Transaction hex length:', txHex.length);
   
   // Validate transaction hex format
   if (!txHex || typeof txHex !== 'string' || txHex.length < 100) {
@@ -847,9 +832,9 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
   
   // For web platform, we still need to simulate since CORS restrictions prevent direct broadcast
   if (Platform.OS === 'web') {
-    console.log('🌐 Web platform detected - simulating broadcast (CORS limitations)');
-    console.log('⚠️ Note: On web, transactions cannot be broadcast due to CORS restrictions');
-    console.log('📱 Use mobile app for real Bitcoin transaction broadcasting');
+    // console.log('🌐 Web platform detected - simulating broadcast (CORS limitations)');
+    // console.log('⚠️ Note: On web, transactions cannot be broadcast due to CORS restrictions');
+    // console.log('📱 Use mobile app for real Bitcoin transaction broadcasting');
     
     // Simulate network delay
     await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 3000));
@@ -857,13 +842,13 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
     // Generate a realistic-looking transaction ID
     const mockTxId = generateMockTxId(txHex, Date.now(), Math.random());
     
-    console.log('✅ Demo transaction broadcast simulated:', mockTxId);
-    console.log('💡 This is a simulation - no real Bitcoin was sent');
+    // console.log('✅ Demo transaction broadcast simulated:', mockTxId);
+    // console.log('💡 This is a simulation - no real Bitcoin was sent');
     return mockTxId;
   }
   
   // Real transaction broadcasting for mobile platforms
-  console.log('📱 Mobile platform - attempting REAL mainnet broadcast...');
+  // console.log('📱 Mobile platform - attempting REAL mainnet broadcast...');
   
   // Multiple broadcast endpoints for redundancy
   const broadcastEndpoints = [
@@ -893,7 +878,7 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
   
   for (const endpoint of broadcastEndpoints) {
     try {
-      console.log(`🔍 Attempting REAL broadcast via ${endpoint.name}...`);
+      // console.log(`🔍 Attempting REAL broadcast via ${endpoint.name}...`);
       
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), endpoint.timeout);
@@ -915,7 +900,7 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
       
       if (!response.ok) {
         const errorText = await response.text();
-        console.warn(`❌ ${endpoint.name} returned ${response.status}:`, errorText);
+        // console.warn(`❌ ${endpoint.name} returned ${response.status}:`, errorText);
         
         // Parse specific error messages
         if (errorText.includes('dust') || errorText.includes('too-small')) {
@@ -951,13 +936,13 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
       
       // Validate transaction ID format
       if (!txid || txid.length !== 64 || !/^[a-fA-F0-9]{64}$/.test(txid)) {
-        console.warn(`⚠️ Invalid txid format from ${endpoint.name}:`, txid);
+        // console.warn(`⚠️ Invalid txid format from ${endpoint.name}:`, txid);
         throw new Error('Invalid transaction ID returned');
       }
       
-      console.log(`✅ REAL Bitcoin transaction broadcast successful via ${endpoint.name}!`);
-      console.log(`🎉 Transaction ID: ${txid}`);
-      console.log(`🔗 View on blockchain: https://mempool.space/tx/${txid}`);
+      // console.log(`✅ REAL Bitcoin transaction broadcast successful via ${endpoint.name}!`);
+      // console.log(`🎉 Transaction ID: ${txid}`);
+      // console.log(`🔗 View on blockchain: https://mempool.space/tx/${txid}`);
       
       successfulBroadcast = true;
       return txid;
@@ -966,7 +951,7 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
       lastError = error as Error;
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       
-      console.warn(`❌ Broadcast failed via ${endpoint.name}:`, errorMsg);
+      // console.warn(`❌ Broadcast failed via ${endpoint.name}:`, errorMsg);
       
       // If it's a transaction-specific error (not network), don't try other endpoints
       if (errorMsg.includes('dust') || 
@@ -983,7 +968,7 @@ export const broadcastTransaction = async (txHex: string): Promise<string> => {
   
   // All endpoints failed
   if (!successfulBroadcast) {
-    console.error('❌ All broadcast endpoints failed for REAL transaction');
+    // console.error('❌ All broadcast endpoints failed for REAL transaction');
     const errorMessage = lastError?.message || 'All broadcast endpoints unavailable';
     
     // Provide helpful error messages
@@ -1010,8 +995,8 @@ export const sendTransaction = async (
   enableRBF: boolean = true,
   selectedUTXOs?: UTXO[]
 ): Promise<{ txid: string; fee: number }> => {
-  console.log('💸 Sending REAL Bitcoin transaction on MAINNET...');
-  console.log('🚨 WARNING: This will spend real Bitcoin!');
+  // console.log('💸 Sending REAL Bitcoin transaction on MAINNET...');
+  // console.log('🚨 WARNING: This will spend real Bitcoin!');
   
   // Final validation before creating transaction
   if (!fromWallet || !fromWallet.addresses || fromWallet.addresses.length === 0) {
@@ -1031,17 +1016,10 @@ export const sendTransaction = async (
   }
   
   try {
-    console.log('📋 Transaction details:', {
-      from_wallet: fromWallet.name,
-      to_address: toAddress.substring(0, 20) + '...',
-      amount_btc: amount,
-      fee_rate: feeRate + ' sat/vB',
-      rbf_enabled: enableRBF,
-      network: 'MAINNET'
-    });
+
     
     // Step 1: Create the transaction
-    console.log('🔨 Step 1: Creating transaction...');
+    // console.log('🔨 Step 1: Creating transaction...');
     const { txHex, fee, txid: createdTxId } = await createTransaction(
       fromWallet,
       toAddress,
@@ -1051,8 +1029,8 @@ export const sendTransaction = async (
       selectedUTXOs
     );
     
-    console.log('✅ Transaction created successfully');
-    console.log('📡 Step 2: Broadcasting to Bitcoin network...');
+    // console.log('✅ Transaction created successfully');
+    // console.log('📡 Step 2: Broadcasting to Bitcoin network...');
     
     // Step 2: Broadcast the transaction to the Bitcoin network
     const broadcastTxId = await broadcastTransaction(txHex);
@@ -1062,20 +1040,13 @@ export const sendTransaction = async (
     
     const isRealTransaction = Platform.OS !== 'web';
     
-    console.log('🎉 Transaction processing completed:', {
-      txid: finalTxId,
-      fee_btc: fee,
-      amount_btc: amount,
-      network: 'MAINNET',
-      real_transaction: isRealTransaction,
-      blockchain_url: `https://mempool.space/tx/${finalTxId}`
-    });
+
     
     if (isRealTransaction) {
-      console.log('✅ REAL Bitcoin transaction successfully broadcast to MAINNET!');
-      console.log('🔗 Track your transaction: https://mempool.space/tx/' + finalTxId);
+      // console.log('✅ REAL Bitcoin transaction successfully broadcast to MAINNET!');
+      // console.log('🔗 Track your transaction: https://mempool.space/tx/' + finalTxId);
     } else {
-      console.log('🌐 Demo transaction created (web platform)');
+      // console.log('🌐 Demo transaction created (web platform)');
     }
     
     return {
@@ -1084,7 +1055,7 @@ export const sendTransaction = async (
     };
     
   } catch (error) {
-    console.error('❌ Error sending Bitcoin transaction:', error);
+    // console.error('❌ Error sending Bitcoin transaction:', error);
     
     // Enhance error messages for better user experience
     if (error instanceof Error) {

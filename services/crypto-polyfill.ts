@@ -5,7 +5,7 @@ if (typeof global === 'undefined') {
   (globalThis as any).global = globalThis;
 }
 
-console.log('🔧 Initializing minimal crypto polyfill');
+// console.log('🔧 Initializing minimal crypto polyfill');
 
 const getRandomValues = <T extends ArrayBufferView | null>(array: T): T => {
   if (!array) return array;
@@ -137,9 +137,9 @@ const patchNoble = () => {
           return hmac(sha256, key, data);
         };
         
-        console.log('✅ Using @noble/hashes for crypto polyfill');
+        // console.log('✅ Using @noble/hashes for crypto polyfill');
       } catch (hashError) {
-        console.warn('⚠️ @noble/hashes not available in crypto polyfill, using fallback:', hashError);
+        // console.warn('⚠️ @noble/hashes not available in crypto polyfill, using fallback:', hashError);
         sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
         hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
       }
@@ -152,11 +152,11 @@ const patchNoble = () => {
       (noble as any).etc = { ...(noble as any).etc, ...targetEtc };
       (noble as any).utils = { ...(noble as any).utils, ...targetUtils };
       (global as any).__noble = noble;
-      console.log('✅ noble patched (etc.sha256Sync, etc.hmacSha256Sync)');
+      // console.log('✅ noble patched (etc.sha256Sync, etc.hmacSha256Sync)');
       return true;
     }
   } catch (e) {
-    console.error('❌ Failed to patch noble utils:', e);
+    // console.error('❌ Failed to patch noble utils:', e);
   }
   return false;
 };
@@ -166,11 +166,11 @@ let initializing = false;
 
 export const initializeCrypto = async (): Promise<boolean> => {
   if (patched) {
-    console.log('✅ Crypto already initialized, skipping');
+    // console.log('✅ Crypto already initialized, skipping');
     return true;
   }
   if (initializing) {
-    console.warn('⚠️ Crypto initialization already in progress, waiting...');
+    // console.warn('⚠️ Crypto initialization already in progress, waiting...');
     // Wait for initialization to complete
     let attempts = 0;
     while (initializing && attempts < 50) {
@@ -181,16 +181,16 @@ export const initializeCrypto = async (): Promise<boolean> => {
   }
   
   initializing = true;
-  console.log('🔧 Starting crypto initialization...');
+  // console.log('🔧 Starting crypto initialization...');
   
   try {
     // First patch noble
     if (patchNoble()) {
-      console.log('✅ Noble patched successfully');
+      // console.log('✅ Noble patched successfully');
       
       // Then create and test ECC
       try {
-        console.log('🔧 Creating ECC instance...');
+        // console.log('🔧 Creating ECC instance...');
         const ecc = createNobleECC();
         
         // Test ECC functions before storing globally
@@ -216,22 +216,22 @@ export const initializeCrypto = async (): Promise<boolean> => {
         
         // Store globally only after all tests pass
         (global as any).ecc = ecc;
-        console.log('✅ ECC instance created, tested, and stored globally');
+        // console.log('✅ ECC instance created, tested, and stored globally');
         
         patched = true;
         (global as any).__cryptoInitialized = true;
-        console.log('✅ Crypto initialization completed successfully');
+        // console.log('✅ Crypto initialization completed successfully');
         return true;
         
       } catch (eccError) {
-        console.error('❌ Failed to create or test ECC:', eccError);
+        // console.error('❌ Failed to create or test ECC:', eccError);
         throw eccError;
       }
     } else {
       throw new Error('Noble patching failed');
     }
   } catch (error) {
-    console.error('❌ Crypto initialization failed:', error);
+    // console.error('❌ Crypto initialization failed:', error);
     return false;
   } finally {
     initializing = false;
