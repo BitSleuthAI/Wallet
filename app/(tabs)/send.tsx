@@ -593,11 +593,11 @@ export default function SendScreen() {
           showsVerticalScrollIndicator={false}
         >
           <View style={styles.content}>
-          {/* From Section */}
-          <WalletSelector label="From:" />
+            {/* From Section */}
+            <WalletSelector label="From:" />
 
-          {/* Recipient Address */}
-          <View style={styles.inputSection}>
+            {/* Recipient Address */}
+            <View style={styles.inputSection}>
             <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
               Recipient Address
             </Text>
@@ -642,10 +642,10 @@ export default function SendScreen() {
                 )}
               </View>
             )}
-          </View>
+            </View>
 
-          {/* Amount */}
-          <View style={styles.inputSection}>
+            {/* Amount */}
+            <View style={styles.inputSection}>
             <View style={styles.amountHeader}>
               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
                 Amount ({isAmountInBTC ? 'BTC' : 'USD'})
@@ -692,10 +692,10 @@ export default function SendScreen() {
                 Send Max
               </Text>
             </TouchableOpacity>
-          </View>
+            </View>
 
-          {/* Fee Section */}
-          <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
+            {/* Fee Section */}
+            <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.feeHeader}>
               <View style={styles.feeInfo}>
                 <ArrowUpRight color={theme.colors.primary} size={20} />
@@ -839,10 +839,10 @@ export default function SendScreen() {
                 </Text>
               </View>
             )}
-          </View>
+            </View>
 
-          {/* RBF Toggle */}
-          <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
+            {/* RBF Toggle */}
+            <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.rbfInfo}>
               <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>
                 Enable RBF
@@ -857,10 +857,10 @@ export default function SendScreen() {
               trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
               thumbColor="white"
             />
-          </View>
+            </View>
 
-          {/* Coin Control */}
-          <TouchableOpacity 
+            {/* Coin Control */}
+            <TouchableOpacity 
             style={[styles.coinControlSection, { backgroundColor: theme.colors.surface }]}
             onPress={() => {
               router.push('/coin-control');
@@ -872,10 +872,10 @@ export default function SendScreen() {
             <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
               {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
             </Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
 
-          {/* Review Button */}
-          <TouchableOpacity
+            {/* Review Button */}
+            <TouchableOpacity
             style={[
               createButtonStyle(theme, 'primary'),
               styles.reviewButton,
@@ -889,7 +889,7 @@ export default function SendScreen() {
             <Text style={styles.reviewButtonText}>
               {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
             </Text>
-          </TouchableOpacity>
+            </TouchableOpacity>
           </View>
           
           {/* QR Scanner Modal */}
