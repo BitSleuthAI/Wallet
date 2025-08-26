@@ -1,5 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+    withTiming
+} from 'react-native-reanimated';
 
 interface EmojiReactionProps {
   action: 'success' | 'error' | 'warning' | 'loading' | 'complete' | 'milestone' | 'balance-up' | 'balance-down';
@@ -15,8 +21,8 @@ export default function EmojiReaction({
   onComplete,
 }: EmojiReactionProps) {
   const [isVisible, setIsVisible] = useState(false);
-  const scaleAnim = new Animated.Value(0);
-  const opacityAnim = new Animated.Value(0);
+  const scale = useSharedValue(0);
+  const opacity = useSharedValue(0);
 
   // Contextual emoji and message mapping
   const getReactionConfig = () => {
@@ -90,19 +96,8 @@ export default function EmojiReaction({
     setIsVisible(true);
     
     // Animate in
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 8,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
-      }),
-    ]).start();
+    scale.value = withSpring(1, { tension: 100, friction: 8 });
+    opacity.value = withTiming(1, { duration: 300 });
 
     // Auto-hide after duration
     setTimeout(() => {
@@ -111,23 +106,20 @@ export default function EmojiReaction({
   };
 
   const hideReaction = () => {
-    Animated.parallel([
-      Animated.spring(scaleAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 100,
-        friction: 8,
-      }),
-      Animated.timing(opacityAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
+    scale.value = withSpring(0, { tension: 100, friction: 8 });
+    opacity.value = withTiming(0, { duration: 200 }, () => {
       setIsVisible(false);
       onComplete?.();
     });
   };
+
+  // Animated styles
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [{ scale: scale.value }],
+      opacity: opacity.value,
+    };
+  });
 
   if (!isVisible) return null;
 
@@ -138,9 +130,8 @@ export default function EmojiReaction({
           styles.reactionContainer,
           {
             backgroundColor: config.color,
-            transform: [{ scale: scaleAnim }],
-            opacity: opacityAnim,
           },
+          animatedStyle,
         ]}
       >
         <Text style={styles.emoji}>{config.emoji}</Text>

@@ -25,7 +25,6 @@ interface MonzoCardProps {
   shadowElevation?: 'small' | 'medium' | 'large';
 }
 
-const AnimatedView = Animated.createView();
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
 export default function MonzoCard({
@@ -144,9 +143,9 @@ export default function MonzoCard({
 
   // Static card
   return (
-    <AnimatedView style={[cardStyle, { overflow: 'hidden' }]}>
+    <Animated.View style={[cardStyle, { overflow: 'hidden' }]}>
       {renderCardContent()}
-    </AnimatedView>
+    </Animated.View>
   );
 }
 
