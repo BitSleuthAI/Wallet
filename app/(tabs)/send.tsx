@@ -890,6 +890,7 @@ export default function SendScreen() {
               {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
             </Text>
           </TouchableOpacity>
+          </View>
           
           {/* QR Scanner Modal */}
           <Modal
