@@ -1,26 +1,29 @@
+import MonzoButton from '@/components/MonzoButton';
+import MonzoCard from '@/components/MonzoCard';
 import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
-import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import HapticService from '@/services/haptic-service';
 import { Wallet } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
+import { Eye, EyeOff, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -63,10 +66,34 @@ export default function WalletScreen() {
   const [editColor, setEditColor] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
 
+  // Enhanced refresh with haptics
   const onRefresh = async () => {
+    HapticService.medium();
     setRefreshing(true);
-    await refreshData();
-    setRefreshing(false);
+    try {
+      await Promise.all([
+        refreshData(),
+      ]);
+      HapticService.success();
+    } catch (error) {
+      HapticService.error();
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  // Enhanced wallet switching with haptics
+  const handleWalletSwitch = (wallet: Wallet) => {
+    HapticService.tabChange();
+    if (currentWalletId !== wallet.id) {
+      switchWallet(wallet.id);
+    }
+  };
+
+  // Enhanced add wallet with haptics
+  const handleAddWallet = () => {
+    HapticService.medium();
+    router.push('/wallet-setup');
   };
 
   const handleEditWallet = (wallet: Wallet) => {
@@ -144,6 +171,8 @@ export default function WalletScreen() {
     );
   }
 
+  const carouselItems: CarouselItem[] = [...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }];
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Stack.Screen
@@ -210,54 +239,55 @@ export default function WalletScreen() {
 
         {/* Wallet Carousel */}
         <View style={styles.walletCarousel}>
-          <FlatList<CarouselItem>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
+            Your Wallets 💼
+          </Text>
+          
+          <FlatList
+            data={carouselItems}
             horizontal
             showsHorizontalScrollIndicator={false}
-            pagingEnabled={false}
-            decelerationRate="fast"
-            snapToInterval={336} // 320 (card width) + 16 (margin)
-            snapToAlignment="start"
-            data={[...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }]}
-            keyExtractor={(item, index) => `${item.type}-${index}`}
+            contentContainerStyle={styles.carouselContent}
             renderItem={({ item }) => {
               if (item.type === 'add') {
                 return (
-                  <TouchableOpacity 
-                    style={[
-                      styles.addWalletCard, 
-                      { 
-                        backgroundColor: theme.colors.surface, 
-                        borderColor: theme.colors.primary,
-                        borderWidth: 2,
-                        borderStyle: 'dashed',
-                      }
-                    ]}
-                    onPress={() => router.push('/wallet-setup')}
-                    activeOpacity={0.7}
+                  <MonzoCard
+                    variant="fun"
+                    color="purple"
+                    onPress={handleAddWallet}
+                    style={styles.addWalletCard}
+                    hapticFeedback={true}
                   >
-                    <View style={[styles.addWalletIcon, { backgroundColor: theme.colors.primary }]}>
-                      <Plus color="white" size={24} />
+                    <View style={styles.addWalletContent}>
+                      <Text style={styles.addWalletEmoji}>➕</Text>
+                      <Text style={styles.addWalletText}>Add New Wallet</Text>
                     </View>
-                    <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
-                  </TouchableOpacity>
+                  </MonzoCard>
                 );
               }
+
+              const wallet = item.wallet;
+              const isActive = currentWallet?.id === wallet.id;
+              const walletBalance = balance || 0;
+              const walletBalanceUSD = balanceUSD || 0;
+              const priceChange = bitcoinPrice?.usd_24h_change || 0;
+
               return (
-                <View style={styles.walletCardContainer}>
-                  <WalletCard 
-                    wallet={item.wallet} 
-                    isActive={item.wallet.id === currentWalletId}
-                    onPress={() => {
-                      if (item.wallet.id !== currentWalletId) {
-                        switchWallet(item.wallet.id);
-                      }
-                    }}
-                    onEdit={handleEditWallet}
-                  />
-                </View>
+                <WalletCard
+                  key={wallet.id}
+                  wallet={wallet}
+                  isActive={isActive}
+                  onPress={() => handleWalletSwitch(wallet)}
+                  onMenuPress={() => setEditingWallet(wallet)}
+                  balance={walletBalance}
+                  balanceUSD={walletBalanceUSD}
+                  priceChange={priceChange}
+                />
               );
             }}
-            contentContainerStyle={styles.carouselContent}
+            keyExtractor={(item) => 
+              item.type === 'add' ? 'add' : item.wallet.id
+            }
           />
         </View>
 
@@ -342,27 +372,31 @@ export default function WalletScreen() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={[
-              createButtonStyle(theme, 'primary'),
-              styles.sendButton,
-            ]}
-            onPress={() => router.push('/(tabs)/send')}
-          >
-            <ArrowUpRight color="white" size={20} />
-            <Text style={styles.actionButtonText}>Send</Text>
-          </TouchableOpacity>
+          <MonzoButton
+            title="Send"
+            emoji="📤"
+            onPress={() => {
+              HapticService.buttonPress();
+              router.push('/send');
+            }}
+            variant="primary"
+            size="large"
+            hapticType="medium"
+            style={styles.actionButton}
+          />
           
-          <TouchableOpacity 
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.receiveButton,
-            ]}
-            onPress={() => router.push('/(tabs)/receive')}
-          >
-            <ArrowDownLeft color={theme.colors.text} size={20} />
-            <Text style={[styles.receiveButtonText, { color: theme.colors.text }]}>Receive</Text>
-          </TouchableOpacity>
+          <MonzoButton
+            title="Receive"
+            emoji="📥"
+            onPress={() => {
+              HapticService.buttonPress();
+              router.push('/receive');
+            }}
+            variant="secondary"
+            size="large"
+            hapticType="medium"
+            style={styles.actionButton}
+          />
         </View>
 
         {/* Recent Transactions */}
@@ -545,7 +579,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 24,
     borderRadius: 20,
-    ...platformStyles.cardShadow,
+    ...platformStyles.ios,
   },
   balanceRow: {
     flexDirection: 'row',
@@ -584,7 +618,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 16,
     borderRadius: 16,
-    ...platformStyles.shadow,
+    ...theme.shadows.small,
   },
   periodButton: {
     flex: 1,
@@ -604,6 +638,9 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 24,
     gap: 16,
+  },
+  actionButton: {
+    flex: 1,
   },
   sendButton: {
     flex: 1,
@@ -751,14 +788,12 @@ const styles = StyleSheet.create({
     marginRight: 16,
     backgroundColor: 'rgba(0,0,0,0.02)',
   },
-  addWalletIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
+  addWalletContent: {
     alignItems: 'center',
+  },
+  addWalletEmoji: {
+    fontSize: 36,
     marginBottom: 8,
-    ...platformStyles.shadow,
   },
   addWalletText: {
     fontSize: 14,
