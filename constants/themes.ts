@@ -61,6 +61,7 @@ export const lightTheme = {
     gradientEnd: colors.secondary,
     gradientAccent: colors.accent,
   },
+  typography,
   shadows: {
     small: {
       shadowColor: '#000',
@@ -108,6 +109,7 @@ export const darkTheme = {
     gradientEnd: colors.secondaryDark,
     gradientAccent: colors.accentDark,
   },
+  typography,
   shadows: {
     small: {
       shadowColor: '#000',
@@ -131,6 +133,27 @@ export const darkTheme = {
       elevation: 12,
     },
   },
+};
+
+// Typography styles
+export const typography = {
+  xs: { fontSize: 12, lineHeight: 16 },
+  sm: { fontSize: 14, lineHeight: 20 },
+  base: { fontSize: 16, lineHeight: 24 },
+  lg: { fontSize: 18, lineHeight: 28 },
+  xl: { fontSize: 20, lineHeight: 28 },
+  '2xl': { fontSize: 24, lineHeight: 32 },
+  '3xl': { fontSize: 30, lineHeight: 36 },
+  '4xl': { fontSize: 36, lineHeight: 40 },
+  // Text styles
+  caption: { fontSize: 12, lineHeight: 16, fontWeight: '400' as const },
+  body: { fontSize: 14, lineHeight: 20, fontWeight: '400' as const },
+  bodyLarge: { fontSize: 16, lineHeight: 24, fontWeight: '400' as const },
+  subtitle: { fontSize: 14, lineHeight: 20, fontWeight: '500' as const },
+  title: { fontSize: 16, lineHeight: 24, fontWeight: '600' as const },
+  titleLarge: { fontSize: 20, lineHeight: 28, fontWeight: '600' as const },
+  headline: { fontSize: 24, lineHeight: 32, fontWeight: '700' as const },
+  display: { fontSize: 30, lineHeight: 36, fontWeight: '700' as const },
 };
 
 // Enhanced button styles with Monzo-inspired design

@@ -119,12 +119,18 @@ const patchNoble = () => {
     // Import @noble/secp256k1 with better error handling
     let noble;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       noble = require('@noble/secp256k1');
       // Handle different export patterns
       if (noble.secp256k1) {
         noble = noble.secp256k1;
       } else if (noble.default) {
         noble = noble.default;
+      }
+      
+      if (!noble) {
+        console.warn('Noble secp256k1 not found after import');
+        return false;
       }
     } catch (importError) {
       console.warn('Failed to import @noble/secp256k1:', importError);
@@ -135,21 +141,30 @@ const patchNoble = () => {
     console.log('⚠️ Using fallback hash implementations for better Expo Go compatibility');
     
     if (noble) {
-      const targetEtc = (noble as any).etc ?? {};
-      const targetUtils = (noble as any).utils ?? {};
+      // Initialize etc and utils objects if they don't exist
+      if (!(noble as any).etc) {
+        (noble as any).etc = {};
+      }
+      if (!(noble as any).utils) {
+        (noble as any).utils = {};
+      }
+      
+      const targetEtc = (noble as any).etc;
+      const targetUtils = (noble as any).utils;
       
       // Use fallback implementations for better compatibility
       console.log('⚠️ Using fallback hash implementations for crypto polyfill');
       const sha256Impl = (...msgs: Uint8Array[]) => simpleSha256(concatBytes(...msgs));
       const hmacImpl = (key: Uint8Array, ...msgs: Uint8Array[]) => simpleHmacSha256(key, concatBytes(...msgs));
       
+      // Set hash functions
       targetEtc.sha256Sync = sha256Impl;
       targetEtc.hmacSha256Sync = hmacImpl;
       targetUtils.sha256Sync = targetUtils.sha256Sync ?? sha256Impl;
       targetUtils.hmacSha256Sync = targetUtils.hmacSha256Sync ?? hmacImpl;
       targetUtils.concatBytes = targetUtils.concatBytes ?? concatBytes;
-      (noble as any).etc = { ...(noble as any).etc, ...targetEtc };
-      (noble as any).utils = { ...(noble as any).utils, ...targetUtils };
+      
+      // Store globally
       (global as any).__noble = noble;
       console.log('✅ noble patched (etc.sha256Sync, etc.hmacSha256Sync)');
       return true;

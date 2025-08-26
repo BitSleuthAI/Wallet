@@ -8,6 +8,7 @@ export const createNobleECC = () => {
     // Import @noble/secp256k1 with better error handling
     let noble;
     try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       noble = require('@noble/secp256k1');
       // Handle different export patterns
       if (noble.secp256k1) {
