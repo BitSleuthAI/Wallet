@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 import { useFocusEffect } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import { Animated } from 'react-native';
@@ -8,20 +7,10 @@ export const useTabAnimation = (tabIndex: number) => {
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const isInitialMount = useRef(true);
 
-  // Register this tab's animation values
-  useEffect(() => {
-    animationContext.animations.set(tabIndex, slideAnim);
-    
-    return () => {
-      animationContext.animations.delete(tabIndex);
-    };
-  }, [tabIndex, slideAnim]);
-
   useEffect(() => {
     // On initial mount, ensure content is visible and in position
     if (isInitialMount.current) {
       isInitialMount.current = false;
-      animationContext.currentTab = tabIndex;
       // Ensure initial state is correct
       slideAnim.setValue(0);
       opacityAnim.setValue(1);
