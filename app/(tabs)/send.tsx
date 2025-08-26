@@ -621,6 +621,8 @@ export default function SendScreen() {
                 <QrCode color={theme.colors.primary} size={24} />
               </TouchableOpacity>
             </View>
+            </View>
+          </View>
             
             {/* Address Validation Indicator */}
             {recipientAddress.trim() && (
