@@ -41,7 +41,10 @@
     },
     "plugins": [
       [
-        "expo-router"
+        "expo-router",
+        {
+          "origin": "https://rork.com/"
+        }
       ],
       [
         "expo-camera",
