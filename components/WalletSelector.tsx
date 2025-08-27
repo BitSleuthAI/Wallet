@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Modal,
-  FlatList,
-  SafeAreaView,
-} from 'react-native';
-import { ChevronDown, Check } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
+import { Check, ChevronDown } from 'lucide-react-native';
+import React, { useState } from 'react';
+import {
+  FlatList,
+  Modal,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 interface WalletSelectorProps {
   label: string;
@@ -56,7 +56,10 @@ export default function WalletSelector({ label, onWalletChange }: WalletSelector
               {item.name}
             </Text>
             <Text style={[styles.walletItemBalance, { color: theme.colors.textSecondary }]}>
-              {item.balance?.toFixed(8) || '0.00000000'} BTC
+              {(() => {
+                const balance = item.balance?.toFixed(8) || '0.00000000';
+                return `${balance} BTC`;
+              })()}
             </Text>
           </View>
         </View>

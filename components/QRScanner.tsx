@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useWallet } from '@/hooks/wallet-store';
+import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
+import { X } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
   Alert,
   Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
-import { X } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
 
 interface QRScannerProps {
   onScan: (data: string) => void;
@@ -44,23 +44,26 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
               if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
                 navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
                   .then(() => {
-                    Alert.alert(
-                      'Camera Access',
-                      'Camera access granted. You can now scan QR codes using your device camera.',
-                      [{ text: 'OK', onPress: onClose }]
-                    );
+                              const successMessage = 'Camera access granted. You can now scan QR codes using your device camera.';
+          Alert.alert(
+            'Camera Access',
+            successMessage,
+            [{ text: 'OK', onPress: onClose }]
+          );
                   })
                   .catch(() => {
+                    const errorMessage = 'Camera access is not available on this device. Please manually enter the Bitcoin address.';
                     Alert.alert(
                       'Camera Not Available',
-                      'Camera access is not available on this device. Please manually enter the Bitcoin address.',
+                      errorMessage,
                       [{ text: 'OK', onPress: onClose }]
                     );
                   });
               } else {
+                const notSupportedMessage = 'Camera is not supported on this browser. Please manually enter the Bitcoin address.';
                 Alert.alert(
                   'Camera Not Supported',
-                  'Camera is not supported on this browser. Please manually enter the Bitcoin address.',
+                  notSupportedMessage,
                   [{ text: 'OK', onPress: onClose }]
                 );
               }
@@ -151,9 +154,10 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
         onScan(data);
         onClose();
       } else {
+        const invalidMessage = 'The scanned QR code does not contain a valid Bitcoin address or recovery phrase.';
         Alert.alert(
           'Invalid QR Code',
-          'The scanned QR code does not contain a valid Bitcoin address or recovery phrase.',
+          invalidMessage,
           [
             {
               text: 'Scan Again',
@@ -168,9 +172,10 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
       }
     } catch (error) {
       console.error('Error processing QR code:', error);
+      const errorMessage = 'Failed to process the QR code. Please try again.';
       Alert.alert(
         'Error',
-        'Failed to process the QR code. Please try again.',
+        errorMessage,
         [
           {
             text: 'Scan Again',
