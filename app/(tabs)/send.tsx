@@ -686,13 +686,9 @@ export default function SendScreen() {
             {/* Amount */}
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
-                                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                   {(() => {
-                     const currency = isAmountInBTC ? 'BTC' : 'USD';
-                     const labelText = `Amount (${currency})`;
-                     return labelText;
-                   })()}
-                 </Text>
+                                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
+                  Amount ({isAmountInBTC ? 'BTC' : 'USD'})
+                </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
                   <Switch
@@ -748,10 +744,7 @@ export default function SendScreen() {
                 <View style={styles.feeDetails}>
                   <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>{getTimeEstimateForFeeRate(feeRate)}</Text>
                   <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
-                    {(() => {
-                      const rate = feeRate.toString();
-                      return `${rate} sat/vB`;
-                    })()}
+                    {feeRate} sat/vB
                   </Text>
                 </View>
               </View>
@@ -775,13 +768,9 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
                   ]}>Slow</Text>
-                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
-                     {(() => {
-                       const rate = feeEstimates?.economyFee || 1;
-                       const rateText = rate.toString();
-                       return `${rateText} sat/vB`;
-                     })()}
-                   </Text>
+                                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
+                    {(feeEstimates?.economyFee || 1)} sat/vB
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -802,13 +791,9 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
                   ]}>Normal</Text>
-                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
-                     {(() => {
-                       const rate = feeEstimates?.halfHourFee || 5;
-                       const rateText = rate.toString();
-                       return `${rateText} sat/vB`;
-                     })()}
-                   </Text>
+                                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
+                    {(feeEstimates?.halfHourFee || 5)} sat/vB
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -829,13 +814,9 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
                   ]}>Fast</Text>
-                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
-                     {(() => {
-                       const rate = feeEstimates?.fastestFee || 15;
-                       const rateText = rate.toString();
-                       return `${rateText} sat/vB`;
-                     })()}
-                   </Text>
+                                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
+                    {(feeEstimates?.fastestFee || 15)} sat/vB
+                  </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -887,18 +868,9 @@ export default function SendScreen() {
               
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
-                                     <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                     {(() => {
-                       const feeAmount = estimatedFee.toFixed(8);
-                       const baseText = `Estimated fee: ${feeAmount} BTC`;
-                       if (bitcoinPrice && bitcoinPrice > 0) {
-                         const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-                         const fullText = `${baseText} ($${usdAmount})`;
-                         return fullText;
-                       }
-                       return baseText;
-                     })()}
-                   </Text>
+                                  <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
+                    Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
+                  </Text>
                 </View>
               )}
             </View>
@@ -925,16 +897,9 @@ export default function SendScreen() {
               }}
             >
               <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
-                             <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                 {(() => {
-                   if (selectedUtxoIds.length > 0) {
-                     const count = selectedUtxoIds.length;
-                     const countText = count.toString();
-                     return `${countText} selected`;
-                   }
-                   return 'Select Coins';
-                 })()}
-               </Text>
+                              <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
+                {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
+              </Text>
             </TouchableOpacity>
 
             {/* Review Button */}
