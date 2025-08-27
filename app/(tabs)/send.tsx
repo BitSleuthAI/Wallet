@@ -666,7 +666,7 @@ export default function SendScreen() {
               </View>
               
               {/* Address Validation Indicator */}
-              {recipientAddress.trim() && addressValidation.message && (
+              {!!recipientAddress.trim() && !!addressValidation.message && (
                 <View style={styles.validationContainer}>
                   {addressValidation.isValid ? (
                     <View style={styles.validationRow}>
@@ -714,7 +714,7 @@ export default function SendScreen() {
               />
               
               {/* Amount conversion display */}
-              {amount && bitcoinPrice && bitcoinPrice > 0 && (() => {
+              {!!amount && !!bitcoinPrice && bitcoinPrice > 0 && (() => {
                 const converted = convertAmount(amount, isAmountInBTC);
                 if (!converted || converted === '') return null;
                 const currency = isAmountInBTC ? 'USD' : 'BTC';
@@ -866,7 +866,7 @@ export default function SendScreen() {
                 </View>
               )}
               
-              {estimatedFee && (
+              {estimatedFee !== null && estimatedFee > 0 && (
                 <View style={styles.feeEstimate}>
                                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                     Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
