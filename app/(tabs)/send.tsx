@@ -10,17 +10,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -811,7 +811,7 @@ export default function SendScreen() {
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    {`Estimated fee: ${estimatedFee.toFixed(8)} BTC${bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}`}
+                    {`Estimated fee: ${estimatedFee.toFixed(8)} BTC${bitcoinPrice && bitcoinPrice > 0 ? ` ($${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}`}
                   </Text>
                 </View>
               )}
