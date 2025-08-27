@@ -559,12 +559,8 @@ export default function SendScreen() {
           }} 
         />
         <View style={styles.emptyState}>
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-            No Wallet Found
-          </Text>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-            Create or import a wallet to send funds
-          </Text>
+          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Wallet Found</Text>
+          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Create or import a wallet to send funds</Text>
           <TouchableOpacity
             style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
             onPress={() => router.push('/wallet-setup')}
@@ -598,9 +594,7 @@ export default function SendScreen() {
 
             {/* Recipient Address */}
             <View style={styles.inputSection}>
-              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                Recipient Address
-              </Text>
+              <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Recipient Address</Text>
               
               <View style={styles.inputContainer}>
                 <TextInput
@@ -628,16 +622,12 @@ export default function SendScreen() {
                   {addressValidation.isValid ? (
                     <View style={styles.validationRow}>
                       <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                      <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
-                        {addressValidation.message}
-                      </Text>
+                      <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>{addressValidation.message}</Text>
                     </View>
                   ) : (
                     <View style={styles.validationRow}>
                       <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                      <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
-                        {addressValidation.message}
-                      </Text>
+                      <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>{addressValidation.message}</Text>
                     </View>
                   )}
                 </View>
@@ -648,21 +638,17 @@ export default function SendScreen() {
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  <Text>Amount </Text>({isAmountInBTC ? <Text>BTC</Text> : <Text>USD</Text>})
+                  {`Amount (${isAmountInBTC ? 'BTC' : 'USD'})`}
                 </Text>
                 <View style={styles.currencyToggle}>
-                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                    <Text>BTC</Text>
-                  </Text>
+                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
                   <Switch
                     value={!isAmountInBTC}
                     onValueChange={toggleCurrency}
                     trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
                     thumbColor="white"
                   />
-                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>
-                    <Text>USD</Text>
-                  </Text>
+                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>USD</Text>
                 </View>
               </View>
               
@@ -682,15 +668,13 @@ export default function SendScreen() {
               {amount && bitcoinPrice && (
                 <View style={styles.conversionContainer}>
                   <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                    <Text>~ </Text><Text>{convertAmount(amount, isAmountInBTC)}</Text> <Text>{isAmountInBTC ? <Text>USD</Text> : <Text>BTC</Text>}</Text>
+                    {`~ ${convertAmount(amount, isAmountInBTC)} ${isAmountInBTC ? 'USD' : 'BTC'}`}
                   </Text>
                 </View>
               )}
               
               <TouchableOpacity onPress={handleSendMax}>
-                <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>
-                  Send Max
-                </Text>
+                <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>Send Max</Text>
               </TouchableOpacity>
             </View>
 
@@ -699,110 +683,105 @@ export default function SendScreen() {
               <View style={styles.feeHeader}>
                 <View style={styles.feeInfo}>
                   <ArrowUpRight color={theme.colors.primary} size={20} />
-                  <Text style={[styles.feeLabel, { color: theme.colors.text }]}>
-                    Transaction Fee
-                  </Text>
+                  <Text style={[styles.feeLabel, { color: theme.colors.text }]}>Transaction Fee</Text>
                 </View>
                 <View style={styles.feeDetails}>
-                  <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>
-                    <Text>{getTimeEstimateForFeeRate(feeRate)}</Text>
-                  </Text>
-                  <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
-                    <Text>{feeRate}</Text> <Text>sat/vB</Text>
-                  </Text>
+                  <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>{getTimeEstimateForFeeRate(feeRate)}</Text>
+                  <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>{`${feeRate} sat/vB`}</Text>
                 </View>
               </View>
 
               <View style={styles.feeButtons}>
-              <TouchableOpacity 
-                style={[
-                  styles.feeButton,
-                  { 
-                    backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
-                    borderColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.border,
-                    borderWidth: 2,
-                  }
-                ]}
-                onPress={() => {
-                  setSelectedFeeType('slow');
-                  setFeeRate(feeEstimates?.economyFee || 1);
-                }}
-              >
-                <Text style={[
-                  styles.feeButtonText, 
-                  { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
-                ]}>
-                  <Text>Slow</Text>{'\n'}<Text><Text>{feeEstimates?.economyFee || 1}</Text> <Text>sat/vB</Text></Text>
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.feeButton,
-                  { 
-                    backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
-                    borderColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.border,
-                    borderWidth: 2,
-                  }
-                ]}
-                onPress={() => {
-                  setSelectedFeeType('normal');
-                  setFeeRate(feeEstimates?.halfHourFee || 5);
-                }}
-              >
-                <Text style={[
-                  styles.feeButtonText, 
-                  { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
-                ]}>
-                  <Text>Normal</Text>{'\n'}<Text><Text>{feeEstimates?.halfHourFee || 5}</Text> <Text>sat/vB</Text></Text>
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.feeButton,
-                  { 
-                    backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
-                    borderColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.border,
-                    borderWidth: 2,
-                  }
-                ]}
-                onPress={() => {
-                  setSelectedFeeType('fast');
-                  setFeeRate(feeEstimates?.fastestFee || 15);
-                }}
-              >
-                <Text style={[
-                  styles.feeButtonText, 
-                  { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
-                ]}>
-                  <Text>Fast</Text>{'\n'}<Text><Text>{feeEstimates?.fastestFee || 15}</Text> <Text>sat/vB</Text></Text>
-                </Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity 
-                style={[
-                  styles.feeButton,
-                  { 
-                    backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
-                    borderColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.border,
-                    borderWidth: 2,
-                  }
-                ]}
-                onPress={() => {
-                  setSelectedFeeType('custom');
-                  if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
-                    setFeeRate(parseFloat(customFeeRate));
-                  }
-                }}
-              >
-                <Text style={[
-                  styles.feeButtonText, 
-                  { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
-                ]}>
-                  Custom
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[
+                    styles.feeButton,
+                    { 
+                      backgroundColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.surface,
+                      borderColor: selectedFeeType === 'slow' ? theme.colors.primary : theme.colors.border,
+                      borderWidth: 2,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedFeeType('slow');
+                    setFeeRate(feeEstimates?.economyFee || 1);
+                  }}
+                >
+                  <Text style={[
+                    styles.feeButtonText, 
+                    { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
+                  ]}>Slow</Text>
+                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
+                    {`${feeEstimates?.economyFee || 1} sat/vB`}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.feeButton,
+                    { 
+                      backgroundColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.surface,
+                      borderColor: selectedFeeType === 'normal' ? theme.colors.primary : theme.colors.border,
+                      borderWidth: 2,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedFeeType('normal');
+                    setFeeRate(feeEstimates?.halfHourFee || 5);
+                  }}
+                >
+                  <Text style={[
+                    styles.feeButtonText, 
+                    { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
+                  ]}>Normal</Text>
+                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
+                    {`${feeEstimates?.halfHourFee || 5} sat/vB`}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.feeButton,
+                    { 
+                      backgroundColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.surface,
+                      borderColor: selectedFeeType === 'fast' ? theme.colors.primary : theme.colors.border,
+                      borderWidth: 2,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedFeeType('fast');
+                    setFeeRate(feeEstimates?.fastestFee || 15);
+                  }}
+                >
+                  <Text style={[
+                    styles.feeButtonText, 
+                    { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
+                  ]}>Fast</Text>
+                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
+                    {`${feeEstimates?.fastestFee || 15} sat/vB`}
+                  </Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[
+                    styles.feeButton,
+                    { 
+                      backgroundColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.surface,
+                      borderColor: selectedFeeType === 'custom' ? theme.colors.primary : theme.colors.border,
+                      borderWidth: 2,
+                    }
+                  ]}
+                  onPress={() => {
+                    setSelectedFeeType('custom');
+                    if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
+                      setFeeRate(parseFloat(customFeeRate));
+                    }
+                  }}
+                >
+                  <Text style={[
+                    styles.feeButtonText, 
+                    { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
+                  ]}>Custom</Text>
+                </TouchableOpacity>
               </View>
               
               {/* Custom Fee Input */}
@@ -825,17 +804,14 @@ export default function SendScreen() {
                     }}
                     keyboardType="numeric"
                   />
-                  <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
-                    <Text>sat/vB</Text>
-                  </Text>
+                  <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>sat/vB</Text>
                 </View>
               )}
               
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    <Text>Estimated fee: </Text><Text>{estimatedFee.toFixed(8)}</Text> <Text>BTC</Text>
-                    {bitcoinPrice ? <Text> (<Text>{`${(estimatedFee * bitcoinPrice).toFixed(2)}`}</Text>)</Text> : <Text></Text>}
+                    {`Estimated fee: ${estimatedFee.toFixed(8)} BTC${bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}`}
                   </Text>
                 </View>
               )}
@@ -844,12 +820,8 @@ export default function SendScreen() {
             {/* RBF Toggle */}
             <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.rbfInfo}>
-                <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>
-                  Enable RBF
-                </Text>
-                <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>
-                  Replace-by-fee allows you to increase the fee later
-                </Text>
+                <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>Enable RBF</Text>
+                <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>Replace-by-fee allows you to increase the fee later</Text>
               </View>
               <Switch
                 value={enableRBF}
@@ -866,11 +838,9 @@ export default function SendScreen() {
                 router.push('/coin-control');
               }}
             >
-              <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
-                Coin Control
-              </Text>
+              <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
               <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                {selectedUtxoIds.length > 0 ? <Text><Text>{selectedUtxoIds.length}</Text> <Text>selected</Text></Text> : <Text>Select Coins</Text>}
+                {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
               </Text>
             </TouchableOpacity>
 
