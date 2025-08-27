@@ -823,7 +823,13 @@ export default function SendScreen() {
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    {`Estimated fee: ${estimatedFee.toFixed(8)} BTC${bitcoinPrice && bitcoinPrice > 0 ? ` ($${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}`}
+                    {(() => {
+                      const baseText = `Estimated fee: ${estimatedFee.toFixed(8)} BTC`;
+                      if (bitcoinPrice && bitcoinPrice > 0) {
+                        return `${baseText} ($${(estimatedFee * bitcoinPrice).toFixed(2)})`;
+                      }
+                      return baseText;
+                    })()}
                   </Text>
                 </View>
               )}
