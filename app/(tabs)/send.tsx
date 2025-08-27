@@ -673,16 +673,17 @@ export default function SendScreen() {
               />
               
               {/* Amount conversion display */}
-              {amount && bitcoinPrice && bitcoinPrice > 0 && (
-                <View style={styles.conversionContainer}>
-                  <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                    {(() => {
-                      const converted = convertAmount(amount, isAmountInBTC);
-                      return converted ? `~ ${converted} ${isAmountInBTC ? 'USD' : 'BTC'}` : null;
-                    })()}
-                  </Text>
-                </View>
-              )}
+              {amount && bitcoinPrice && bitcoinPrice > 0 && (() => {
+                const converted = convertAmount(amount, isAmountInBTC);
+                if (!converted) return null;
+                return (
+                  <View style={styles.conversionContainer}>
+                    <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
+                      {`~ ${converted} ${isAmountInBTC ? 'USD' : 'BTC'}`}
+                    </Text>
+                  </View>
+                );
+              })()}
               
               <TouchableOpacity onPress={handleSendMax}>
                 <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>Send Max</Text>
