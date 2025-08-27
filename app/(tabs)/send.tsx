@@ -10,17 +10,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -325,7 +325,8 @@ export default function SendScreen() {
       const dustLimit = 0.00000546; // 546 satoshis
       if (amountInBTC < dustLimit) {
         const dustLimitText = dustLimit.toString();
-        Alert.alert('Error', `Amount too small. Minimum amount is ${dustLimitText} BTC`);
+        const errorMessage = `Amount too small. Minimum amount is ${dustLimitText} BTC`;
+        Alert.alert('Error', errorMessage);
         return;
       }
 
@@ -374,15 +375,17 @@ export default function SendScreen() {
       const feeBTC = result.fee.toFixed(8);
       const feeRateText = feeRate.toString();
       
-      Alert.alert(
-        'Transaction Broadcast Successfully! 🎉',
-        `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
+      const successMessage = `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
         `Transaction ID: ${result.txid}\n\n` +
         `Amount: ${amountBTC} BTC (${amountUSD})\n` +
         `Fee: ${feeBTC} BTC (${feeUSD})\n` +
         `Fee Rate: ${feeRateText} sat/vB\n\n` +
         `The transaction will appear in your wallet once it receives confirmations. ` +
-        `This typically takes 10-60 minutes depending on network congestion.`,
+        `This typically takes 10-60 minutes depending on network congestion.`;
+      
+      Alert.alert(
+        'Transaction Broadcast Successfully! 🎉',
+        successMessage,
         [{ 
           text: 'View Transaction',
           onPress: () => {
@@ -462,7 +465,8 @@ export default function SendScreen() {
       
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
-        displayAmount = `${amount} BTC`;
+                 const btcText = `${amount} BTC`;
+         displayAmount = btcText;
         if (bitcoinPrice && bitcoinPrice > 0) {
           const usdValue = (amountInBTC * bitcoinPrice).toFixed(2);
           const usdDisplay = ` ($${usdValue})`;
@@ -475,7 +479,8 @@ export default function SendScreen() {
         }
         amountInBTC = parseFloat(amount) / bitcoinPrice;
         const btcAmount = amountInBTC.toFixed(8);
-        displayAmount = `${amount} (${btcAmount} BTC)`;
+        const usdBtcText = `${amount} (${btcAmount} BTC)`;
+        displayAmount = usdBtcText;
       }
 
       // Validate amount
@@ -499,31 +504,36 @@ export default function SendScreen() {
       // Format fee display
       const feeDisplay = estimatedFee ? (() => {
         const feeAmount = estimatedFee.toFixed(8);
-        return `${feeAmount} BTC`;
+        const feeText = `${feeAmount} BTC`;
+        return feeText;
       })() : 'Calculating...';
       const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
         const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-        return ` ($${usdAmount})`;
+        const usdText = ` ($${usdAmount})`;
+        return usdText;
       })() : '';
       
       // Show comprehensive transaction review
       const feeDisplayText = feeUSDDisplay ? (() => {
-        return `${feeDisplay}${feeUSDDisplay}`;
+        const combinedText = `${feeDisplay}${feeUSDDisplay}`;
+        return combinedText;
       })() : feeDisplay;
       
       const recipientPreview = recipientAddress.slice(0, 30);
       const feeRateText = feeRate.toString();
       const rbfStatus = enableRBF ? 'Enabled' : 'Disabled';
       
-      Alert.alert(
-        '⚠️ Review Bitcoin Transaction',
-        `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
+      const reviewMessage = `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
         `📤 Send: ${displayAmount}\n` +
         `📍 To: ${recipientPreview}...\n\n` +
         `💰 Network Fee: ${feeDisplayText}\n` +
         `⚡ Fee Rate: ${feeRateText} sat/vB\n` +
         `🔄 RBF: ${rbfStatus}\n\n` +
-        `⚠️ WARNING: This transaction cannot be reversed once broadcast!`,
+        `⚠️ WARNING: This transaction cannot be reversed once broadcast!`;
+      
+      Alert.alert(
+        '⚠️ Review Bitcoin Transaction',
+        reviewMessage,
         [
           { text: 'Cancel', style: 'cancel' },
           { 
@@ -676,12 +686,13 @@ export default function SendScreen() {
             {/* Amount */}
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  {(() => {
-                    const currency = isAmountInBTC ? 'BTC' : 'USD';
-                    return `Amount (${currency})`;
-                  })()}
-                </Text>
+                                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
+                   {(() => {
+                     const currency = isAmountInBTC ? 'BTC' : 'USD';
+                     const labelText = `Amount (${currency})`;
+                     return labelText;
+                   })()}
+                 </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
                   <Switch
@@ -736,7 +747,12 @@ export default function SendScreen() {
                 </View>
                 <View style={styles.feeDetails}>
                   <Text style={[styles.feeTime, { color: theme.colors.textSecondary }]}>{getTimeEstimateForFeeRate(feeRate)}</Text>
-                  <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>{`${feeRate} sat/vB`}</Text>
+                  <Text style={[styles.feeAmount, { color: theme.colors.textSecondary }]}>
+                    {(() => {
+                      const rate = feeRate.toString();
+                      return `${rate} sat/vB`;
+                    })()}
+                  </Text>
                 </View>
               </View>
 
@@ -759,12 +775,13 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
                   ]}>Slow</Text>
-                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
-                    {(() => {
-                      const rate = feeEstimates?.economyFee || 1;
-                      return `${rate} sat/vB`;
-                    })()}
-                  </Text>
+                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
+                     {(() => {
+                       const rate = feeEstimates?.economyFee || 1;
+                       const rateText = rate.toString();
+                       return `${rateText} sat/vB`;
+                     })()}
+                   </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -785,12 +802,13 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
                   ]}>Normal</Text>
-                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
-                    {(() => {
-                      const rate = feeEstimates?.halfHourFee || 5;
-                      return `${rate} sat/vB`;
-                    })()}
-                  </Text>
+                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
+                     {(() => {
+                       const rate = feeEstimates?.halfHourFee || 5;
+                       const rateText = rate.toString();
+                       return `${rateText} sat/vB`;
+                     })()}
+                   </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -811,12 +829,13 @@ export default function SendScreen() {
                     styles.feeButtonText, 
                     { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
                   ]}>Fast</Text>
-                  <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
-                    {(() => {
-                      const rate = feeEstimates?.fastestFee || 15;
-                      return `${rate} sat/vB`;
-                    })()}
-                  </Text>
+                                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
+                     {(() => {
+                       const rate = feeEstimates?.fastestFee || 15;
+                       const rateText = rate.toString();
+                       return `${rateText} sat/vB`;
+                     })()}
+                   </Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
@@ -868,17 +887,18 @@ export default function SendScreen() {
               
               {estimatedFee && (
                 <View style={styles.feeEstimate}>
-                  <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    {(() => {
-                      const feeAmount = estimatedFee.toFixed(8);
-                      const baseText = `Estimated fee: ${feeAmount} BTC`;
-                      if (bitcoinPrice && bitcoinPrice > 0) {
-                        const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-                        return `${baseText} ($${usdAmount})`;
-                      }
-                      return baseText;
-                    })()}
-                  </Text>
+                                     <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
+                     {(() => {
+                       const feeAmount = estimatedFee.toFixed(8);
+                       const baseText = `Estimated fee: ${feeAmount} BTC`;
+                       if (bitcoinPrice && bitcoinPrice > 0) {
+                         const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
+                         const fullText = `${baseText} ($${usdAmount})`;
+                         return fullText;
+                       }
+                       return baseText;
+                     })()}
+                   </Text>
                 </View>
               )}
             </View>
@@ -905,12 +925,16 @@ export default function SendScreen() {
               }}
             >
               <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
-              <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                {selectedUtxoIds.length > 0 ? (() => {
-                  const count = selectedUtxoIds.length;
-                  return `${count} selected`;
-                })() : 'Select Coins'}
-              </Text>
+                             <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
+                 {(() => {
+                   if (selectedUtxoIds.length > 0) {
+                     const count = selectedUtxoIds.length;
+                     const countText = count.toString();
+                     return `${countText} selected`;
+                   }
+                   return 'Select Coins';
+                 })()}
+               </Text>
             </TouchableOpacity>
 
             {/* Review Button */}
