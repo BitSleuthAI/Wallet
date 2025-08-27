@@ -64,7 +64,7 @@ export default function SendScreen() {
           getBitcoinPrice().catch(() => ({ usd: 0 })),
           feeEstimationService.getFeeEstimates().catch(() => null)
         ]);
-        setBitcoinPrice(price.usd);
+        setBitcoinPrice(price.usd || 0);
         setFeeEstimates(fees);
         
         // Set default fee rate based on estimates
@@ -81,9 +81,9 @@ export default function SendScreen() {
             ]);
             
             setFeeWithConfidence({
-              fast: fastInfo,
-              medium: mediumInfo,
-              slow: slowInfo
+              fast: fastInfo || { fee: 0, confidence: 'Unknown', timeEstimate: 'Unknown' },
+              medium: mediumInfo || { fee: 0, confidence: 'Unknown', timeEstimate: 'Unknown' },
+              slow: slowInfo || { fee: 0, confidence: 'Unknown', timeEstimate: 'Unknown' }
             });
           } catch (error) {
             console.warn('Failed to load fee confidence data:', error);
@@ -220,7 +220,7 @@ export default function SendScreen() {
   };
 
   const convertAmount = (value: string, fromBTC: boolean): string => {
-    if (!value || !bitcoinPrice) return '';
+    if (!value || !bitcoinPrice || bitcoinPrice <= 0) return '';
     
     try {
       const numValue = parseFloat(value);
@@ -243,9 +243,11 @@ export default function SendScreen() {
   };
 
   const toggleCurrency = () => {
-    if (amount && bitcoinPrice) {
+    if (amount && bitcoinPrice && bitcoinPrice > 0) {
       const convertedAmount = convertAmount(amount, isAmountInBTC);
-      setAmount(convertedAmount);
+      if (convertedAmount) {
+        setAmount(convertedAmount);
+      }
     }
     setIsAmountInBTC(!isAmountInBTC);
   };
@@ -262,7 +264,7 @@ export default function SendScreen() {
         amountInBTC = parseFloat(amount);
       } else {
         // Convert USD to BTC
-        if (!bitcoinPrice) {
+        if (!bitcoinPrice || bitcoinPrice <= 0) {
           Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
           return;
         }
@@ -358,8 +360,8 @@ export default function SendScreen() {
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       
       // Show success message with transaction details
-      const feeUSD = bitcoinPrice ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
-      const amountUSD = bitcoinPrice ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
+      const feeUSD = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
+      const amountUSD = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
       
       Alert.alert(
         'Transaction Broadcast Successfully! 🎉',
@@ -449,12 +451,12 @@ export default function SendScreen() {
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
         displayAmount = `${amount} BTC`;
-        if (bitcoinPrice) {
+        if (bitcoinPrice && bitcoinPrice > 0) {
           const usdValue = (amountInBTC * bitcoinPrice).toFixed(2);
-          displayAmount += ` (${usdValue})`;
+          displayAmount += ` ($${usdValue})`;
         }
       } else {
-        if (!bitcoinPrice) {
+        if (!bitcoinPrice || bitcoinPrice <= 0) {
           Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
           return;
         }
@@ -480,7 +482,7 @@ export default function SendScreen() {
 
       // Format fee display
       const feeDisplay = estimatedFee ? `${estimatedFee.toFixed(8)} BTC` : 'Calculating...';
-      const feeUSDDisplay = estimatedFee && bitcoinPrice ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : '';
+      const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? ` ($${(estimatedFee * bitcoinPrice).toFixed(2)})` : '';
       
       // Show comprehensive transaction review
       Alert.alert(
@@ -499,7 +501,7 @@ export default function SendScreen() {
             style: 'destructive',
             onPress: async () => {
             // Check if enhanced security is required for this transaction
-            const amountInBTC = isAmountInBTC ? parseFloat(amount) : parseFloat(amount) / bitcoinPrice;
+            const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
             const enhancedSecurityRequired = await isEnhancedSecurityRequired(amountInBTC);
             
             // Request appropriate level of authentication
@@ -538,11 +540,17 @@ export default function SendScreen() {
     if (!feeEstimates) return 'Calculating...';
     
     if (rate >= feeEstimates.fastestFee) {
-      return feeWithConfidence?.fast?.timeEstimate || '5-20 min';
+      return (feeWithConfidence?.fast?.timeEstimate && feeWithConfidence.fast.timeEstimate !== 'Unknown') 
+        ? feeWithConfidence.fast.timeEstimate 
+        : '5-20 min';
     } else if (rate >= feeEstimates.halfHourFee) {
-      return feeWithConfidence?.medium?.timeEstimate || '20-60 min';
+      return (feeWithConfidence?.medium?.timeEstimate && feeWithConfidence.medium.timeEstimate !== 'Unknown') 
+        ? feeWithConfidence.medium.timeEstimate 
+        : '20-60 min';
     } else if (rate >= feeEstimates.economyFee) {
-      return feeWithConfidence?.slow?.timeEstimate || '2-6 hours';
+      return (feeWithConfidence?.slow?.timeEstimate && feeWithConfidence.slow.timeEstimate !== 'Unknown') 
+        ? feeWithConfidence.slow.timeEstimate 
+        : '2-6 hours';
     } else {
       return '6+ hours';
     }
@@ -617,7 +625,7 @@ export default function SendScreen() {
               </View>
               
               {/* Address Validation Indicator */}
-              {recipientAddress.trim() && (
+              {recipientAddress.trim() && addressValidation.message && (
                 <View style={styles.validationContainer}>
                   {addressValidation.isValid ? (
                     <View style={styles.validationRow}>
@@ -665,10 +673,13 @@ export default function SendScreen() {
               />
               
               {/* Amount conversion display */}
-              {amount && bitcoinPrice && (
+              {amount && bitcoinPrice && bitcoinPrice > 0 && (
                 <View style={styles.conversionContainer}>
                   <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                    {`~ ${convertAmount(amount, isAmountInBTC)} ${isAmountInBTC ? 'USD' : 'BTC'}`}
+                    {(() => {
+                      const converted = convertAmount(amount, isAmountInBTC);
+                      return converted ? `~ ${converted} ${isAmountInBTC ? 'USD' : 'BTC'}` : null;
+                    })()}
                   </Text>
                 </View>
               )}
