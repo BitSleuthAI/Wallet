@@ -42,11 +42,11 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [bitcoinPrice, setBitcoinPrice] = useState<number>(0);
+  const [bitcoinPrice, setBitcoinPrice] = useState<number | null>(null);
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
-    message: string;
-  }>({ isValid: false, message: '' });
+    message: string | null;
+  }>({ isValid: false, message: null });
   const [feeEstimates, setFeeEstimates] = useState<any>(null);
   const [feeWithConfidence, setFeeWithConfidence] = useState<{
     fast: { fee: number; confidence: string; timeEstimate: string };
@@ -64,7 +64,7 @@ export default function SendScreen() {
           getBitcoinPrice().catch(() => ({ usd: 0 })),
           feeEstimationService.getFeeEstimates().catch(() => null)
         ]);
-        setBitcoinPrice(price.usd || 0);
+        setBitcoinPrice(price.usd && price.usd > 0 ? price.usd : null);
         setFeeEstimates(fees);
         
         // Set default fee rate based on estimates
@@ -122,7 +122,7 @@ export default function SendScreen() {
   // Validate Bitcoin address in real-time
   useEffect(() => {
     if (!recipientAddress.trim()) {
-      setAddressValidation({ isValid: false, message: '' });
+      setAddressValidation({ isValid: false, message: null });
       return;
     }
 
@@ -224,14 +224,16 @@ export default function SendScreen() {
     
     try {
       const numValue = parseFloat(value);
-      if (isNaN(numValue)) return '';
+      if (isNaN(numValue) || numValue <= 0) return '';
       
       if (fromBTC) {
         // Convert BTC to USD
-        return (numValue * bitcoinPrice).toFixed(2);
+        const result = (numValue * bitcoinPrice).toFixed(2);
+        return result && result !== '0.00' ? result : '';
       } else {
         // Convert USD to BTC
-        return (numValue / bitcoinPrice).toFixed(8);
+        const result = (numValue / bitcoinPrice).toFixed(8);
+        return result && result !== '0.00000000' ? result : '';
       }
     } catch (error) {
       return '';
@@ -321,30 +323,34 @@ export default function SendScreen() {
       // Check minimum amount (dust limit)
       const dustLimit = 0.00000546; // 546 satoshis
       if (amountInBTC < dustLimit) {
-        Alert.alert('Error', `Amount too small. Minimum amount is ${dustLimit} BTC`);
+        const dustLimitText = dustLimit.toString();
+        Alert.alert('Error', `Amount too small. Minimum amount is ${dustLimitText} BTC`);
         return;
       }
 
       // Check balance including estimated fee
       const totalNeeded = amountInBTC + (estimatedFee || 0.0001);
       if (totalNeeded > balance) {
+        const totalNeededText = totalNeeded.toFixed(8);
+        const balanceText = balance.toFixed(8);
         Alert.alert(
           'Insufficient Balance', 
-          `You need ${totalNeeded.toFixed(8)} BTC (including fees) but only have ${balance.toFixed(8)} BTC available.`
+          `You need ${totalNeededText} BTC (including fees) but only have ${balanceText} BTC available.`
         );
         return;
       }
 
       console.log('🚀 Starting real Bitcoin transaction send process...');
-      console.log('Transaction details:', {
-        from: currentWallet?.name,
-        to: recipientAddress.substring(0, 20) + '...',
-        amount: amountInBTC,
-        feeRate,
-        enableRBF,
-        network: 'mainnet',
-        enhancedSecurity: enhancedSecurityRequired
-      });
+              const truncatedAddress = recipientAddress.substring(0, 20) + '...';
+        console.log('Transaction details:', {
+          from: currentWallet?.name,
+          to: truncatedAddress,
+          amount: amountInBTC,
+          feeRate,
+          enableRBF,
+          network: 'mainnet',
+          enhancedSecurity: enhancedSecurityRequired
+        });
       
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
@@ -379,7 +385,7 @@ export default function SendScreen() {
             setRecipientAddress('');
             setAmount('');
             setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: '' });
+            setAddressValidation({ isValid: false, message: null });
             
             // Navigate to transaction history
             router.push('/transaction-history');
@@ -391,7 +397,7 @@ export default function SendScreen() {
             setRecipientAddress('');
             setAmount('');
             setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: '' });
+            setAddressValidation({ isValid: false, message: null });
             
             // Navigate to home to see updated balance
             router.push('/');
@@ -473,9 +479,11 @@ export default function SendScreen() {
       // Check balance including estimated fee
       const totalNeeded = amountInBTC + (estimatedFee || 0.0001);
       if (totalNeeded > balance) {
+        const totalNeededText = totalNeeded.toFixed(8);
+        const balanceText = balance.toFixed(8);
         Alert.alert(
           'Insufficient Balance', 
-          `You need ${totalNeeded.toFixed(8)} BTC (including fees) but only have ${balance.toFixed(8)} BTC available.`
+          `You need ${totalNeededText} BTC (including fees) but only have ${balanceText} BTC available.`
         );
         return;
       }
@@ -485,12 +493,14 @@ export default function SendScreen() {
       const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? ` ($${(estimatedFee * bitcoinPrice).toFixed(2)})` : '';
       
       // Show comprehensive transaction review
+      const feeDisplayText = feeUSDDisplay ? `${feeDisplay}${feeUSDDisplay}` : feeDisplay;
+      
       Alert.alert(
         '⚠️ Review Bitcoin Transaction',
         `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
         `📤 Send: ${displayAmount}\n` +
         `📍 To: ${recipientAddress.slice(0, 30)}...\n\n` +
-        `💰 Network Fee: ${feeDisplay}${feeUSDDisplay}\n` +
+        `💰 Network Fee: ${feeDisplayText}\n` +
         `⚡ Fee Rate: ${feeRate} sat/vB\n` +
         `🔄 RBF: ${enableRBF ? 'Enabled' : 'Disabled'}\n\n` +
         `⚠️ WARNING: This transaction cannot be reversed once broadcast!`,
@@ -675,11 +685,14 @@ export default function SendScreen() {
               {/* Amount conversion display */}
               {amount && bitcoinPrice && bitcoinPrice > 0 && (() => {
                 const converted = convertAmount(amount, isAmountInBTC);
-                if (!converted) return null;
+                if (!converted || converted === '') return null;
+                const currency = isAmountInBTC ? 'USD' : 'BTC';
+                const displayText = `~ ${converted} ${currency}`;
+                if (!displayText || displayText === '~   ') return null;
                 return (
                   <View style={styles.conversionContainer}>
                     <Text style={[styles.conversionText, { color: theme.colors.textSecondary }]}>
-                      {`~ ${converted} ${isAmountInBTC ? 'USD' : 'BTC'}`}
+                      {displayText}
                     </Text>
                   </View>
                 );
