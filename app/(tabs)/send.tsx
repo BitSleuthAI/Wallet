@@ -287,11 +287,12 @@ export default function SendScreen() {
       }
 
       if (!authResult) {
+        const authMessage = enhancedSecurityRequired 
+          ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
+          : 'Biometric authentication is required to send transactions.';
         Alert.alert(
           'Authentication Required',
-          enhancedSecurityRequired 
-            ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
-            : 'Biometric authentication is required to send transactions.',
+          authMessage,
           [{ text: 'OK' }]
         );
         return;
@@ -369,13 +370,17 @@ export default function SendScreen() {
       const feeUSD = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
       const amountUSD = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
       
+      const amountBTC = amountInBTC.toFixed(8);
+      const feeBTC = result.fee.toFixed(8);
+      const feeRateText = feeRate.toString();
+      
       Alert.alert(
         'Transaction Broadcast Successfully! 🎉',
         `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
         `Transaction ID: ${result.txid}\n\n` +
-        `Amount: ${amountInBTC.toFixed(8)} BTC (${amountUSD})\n` +
-        `Fee: ${result.fee.toFixed(8)} BTC (${feeUSD})\n` +
-        `Fee Rate: ${feeRate} sat/vB\n\n` +
+        `Amount: ${amountBTC} BTC (${amountUSD})\n` +
+        `Fee: ${feeBTC} BTC (${feeUSD})\n` +
+        `Fee Rate: ${feeRateText} sat/vB\n\n` +
         `The transaction will appear in your wallet once it receives confirmations. ` +
         `This typically takes 10-60 minutes depending on network congestion.`,
         [{ 
@@ -421,9 +426,10 @@ export default function SendScreen() {
         userMessage = 'Transaction fee is too low. Please increase the fee rate and try again.';
       }
       
+      const errorMessageText = `Failed to send Bitcoin transaction:\n\n${userMessage}\n\nPlease check your inputs and try again.`;
       Alert.alert(
         'Transaction Failed',
-        `Failed to send Bitcoin transaction:\n\n${userMessage}\n\nPlease check your inputs and try again.`,
+        errorMessageText,
         [{ text: 'OK' }]
       );
     } finally {
@@ -459,7 +465,8 @@ export default function SendScreen() {
         displayAmount = `${amount} BTC`;
         if (bitcoinPrice && bitcoinPrice > 0) {
           const usdValue = (amountInBTC * bitcoinPrice).toFixed(2);
-          displayAmount += ` ($${usdValue})`;
+          const usdDisplay = ` ($${usdValue})`;
+          displayAmount += usdDisplay;
         }
       } else {
         if (!bitcoinPrice || bitcoinPrice <= 0) {
@@ -467,7 +474,8 @@ export default function SendScreen() {
           return;
         }
         amountInBTC = parseFloat(amount) / bitcoinPrice;
-        displayAmount = `${amount} (${amountInBTC.toFixed(8)} BTC)`;
+        const btcAmount = amountInBTC.toFixed(8);
+        displayAmount = `${amount} (${btcAmount} BTC)`;
       }
 
       // Validate amount
@@ -489,20 +497,32 @@ export default function SendScreen() {
       }
 
       // Format fee display
-      const feeDisplay = estimatedFee ? `${estimatedFee.toFixed(8)} BTC` : 'Calculating...';
-      const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? ` ($${(estimatedFee * bitcoinPrice).toFixed(2)})` : '';
+      const feeDisplay = estimatedFee ? (() => {
+        const feeAmount = estimatedFee.toFixed(8);
+        return `${feeAmount} BTC`;
+      })() : 'Calculating...';
+      const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
+        const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
+        return ` ($${usdAmount})`;
+      })() : '';
       
       // Show comprehensive transaction review
-      const feeDisplayText = feeUSDDisplay ? `${feeDisplay}${feeUSDDisplay}` : feeDisplay;
+      const feeDisplayText = feeUSDDisplay ? (() => {
+        return `${feeDisplay}${feeUSDDisplay}`;
+      })() : feeDisplay;
+      
+      const recipientPreview = recipientAddress.slice(0, 30);
+      const feeRateText = feeRate.toString();
+      const rbfStatus = enableRBF ? 'Enabled' : 'Disabled';
       
       Alert.alert(
         '⚠️ Review Bitcoin Transaction',
         `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
         `📤 Send: ${displayAmount}\n` +
-        `📍 To: ${recipientAddress.slice(0, 30)}...\n\n` +
+        `📍 To: ${recipientPreview}...\n\n` +
         `💰 Network Fee: ${feeDisplayText}\n` +
-        `⚡ Fee Rate: ${feeRate} sat/vB\n` +
-        `🔄 RBF: ${enableRBF ? 'Enabled' : 'Disabled'}\n\n` +
+        `⚡ Fee Rate: ${feeRateText} sat/vB\n` +
+        `🔄 RBF: ${rbfStatus}\n\n` +
         `⚠️ WARNING: This transaction cannot be reversed once broadcast!`,
         [
           { text: 'Cancel', style: 'cancel' },
@@ -525,11 +545,12 @@ export default function SendScreen() {
             }
 
             if (!authResult) {
+              const authMessage = enhancedSecurityRequired 
+                ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
+                : 'Biometric authentication is required to send transactions.';
               Alert.alert(
                 'Authentication Required',
-                enhancedSecurityRequired 
-                  ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
-                  : 'Biometric authentication is required to send transactions.',
+                authMessage,
                 [{ text: 'OK' }]
               );
               return;
@@ -656,7 +677,10 @@ export default function SendScreen() {
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  {`Amount (${isAmountInBTC ? 'BTC' : 'USD'})`}
+                  {(() => {
+                    const currency = isAmountInBTC ? 'BTC' : 'USD';
+                    return `Amount (${currency})`;
+                  })()}
                 </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
@@ -736,7 +760,10 @@ export default function SendScreen() {
                     { color: selectedFeeType === 'slow' ? 'white' : theme.colors.text }
                   ]}>Slow</Text>
                   <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
-                    {`${feeEstimates?.economyFee || 1} sat/vB`}
+                    {(() => {
+                      const rate = feeEstimates?.economyFee || 1;
+                      return `${rate} sat/vB`;
+                    })()}
                   </Text>
                 </TouchableOpacity>
                 
@@ -759,7 +786,10 @@ export default function SendScreen() {
                     { color: selectedFeeType === 'normal' ? 'white' : theme.colors.text }
                   ]}>Normal</Text>
                   <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
-                    {`${feeEstimates?.halfHourFee || 5} sat/vB`}
+                    {(() => {
+                      const rate = feeEstimates?.halfHourFee || 5;
+                      return `${rate} sat/vB`;
+                    })()}
                   </Text>
                 </TouchableOpacity>
                 
@@ -782,7 +812,10 @@ export default function SendScreen() {
                     { color: selectedFeeType === 'fast' ? 'white' : theme.colors.text }
                   ]}>Fast</Text>
                   <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
-                    {`${feeEstimates?.fastestFee || 15} sat/vB`}
+                    {(() => {
+                      const rate = feeEstimates?.fastestFee || 15;
+                      return `${rate} sat/vB`;
+                    })()}
                   </Text>
                 </TouchableOpacity>
                 
@@ -837,9 +870,11 @@ export default function SendScreen() {
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                     {(() => {
-                      const baseText = `Estimated fee: ${estimatedFee.toFixed(8)} BTC`;
+                      const feeAmount = estimatedFee.toFixed(8);
+                      const baseText = `Estimated fee: ${feeAmount} BTC`;
                       if (bitcoinPrice && bitcoinPrice > 0) {
-                        return `${baseText} ($${(estimatedFee * bitcoinPrice).toFixed(2)})`;
+                        const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
+                        return `${baseText} ($${usdAmount})`;
                       }
                       return baseText;
                     })()}
@@ -871,7 +906,10 @@ export default function SendScreen() {
             >
               <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
               <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
+                {selectedUtxoIds.length > 0 ? (() => {
+                  const count = selectedUtxoIds.length;
+                  return `${count} selected`;
+                })() : 'Select Coins'}
               </Text>
             </TouchableOpacity>
 
