@@ -59,8 +59,6 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
         styles.container, 
         { 
           backgroundColor: theme.colors.surface,
-          borderLeftWidth: 4,
-          borderLeftColor: isReceived ? theme.colors.success : theme.colors.error,
         }
       ]}
       onPress={handlePress}
@@ -134,7 +132,6 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     padding: platformStyles.spacing.lg,
-    marginHorizontal: platformStyles.spacing.xl,
     marginVertical: platformStyles.spacing.xs,
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'flex-start',

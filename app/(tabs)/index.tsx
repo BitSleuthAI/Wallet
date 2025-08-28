@@ -281,12 +281,9 @@ export default function WalletScreen() {
             </View>
           ) : (
             <>
-              <View style={styles.balanceRow}>
-                <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-                  {hideBalance ? '********' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
-                </Text>
+              <View style={styles.balanceContainer}>
                 <TouchableOpacity 
-                  style={[styles.eyeButton, { backgroundColor: theme.colors.surface }]}
+                  style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
                   onPress={() => setHideBalanceSetting(!hideBalance)}
                 >
                   {hideBalance ? (
@@ -295,6 +292,9 @@ export default function WalletScreen() {
                     <Eye color={theme.colors.textSecondary} size={20} />
                   )}
                 </TouchableOpacity>
+                <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
+                  {hideBalance ? '********' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
+                </Text>
               </View>
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
                 {hideBalance ? 'Balance hidden' : (hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`)}
@@ -547,21 +547,23 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     ...platformStyles.cardShadow,
   },
-  balanceRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+  balanceContainer: {
+    position: 'relative',
     marginBottom: 8,
   },
   mainBalance: {
     fontSize: 32,
     fontWeight: '800',
-    flex: 1,
+    textAlign: 'center',
+    paddingRight: 50,
   },
   eyeButton: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
     padding: 8,
     borderRadius: 20,
-    marginLeft: 12,
+    zIndex: 1,
   },
   btcBalance: {
     fontSize: 16,

@@ -350,7 +350,7 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
               styles.timeLabel, 
               { 
                 color: theme.colors.textSecondary,
-                left: label.x - 20
+                left: Math.max(0, Math.min(label.x - 30, chartWidth - 60))
               }
             ]}
           >
@@ -364,8 +364,6 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginHorizontal: 20,
-    marginVertical: 10,
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -454,15 +452,16 @@ const styles = StyleSheet.create({
   },
   timeLabelsContainer: {
     position: 'relative',
-    width: chartWidth,
+    width: '100%',
     height: 20,
     marginTop: 12,
+    paddingHorizontal: chartPadding,
   },
   timeLabel: {
     position: 'absolute',
     fontSize: 11,
     fontWeight: '500',
-    width: 40,
+    width: 60,
     textAlign: 'center',
   },
 });
