@@ -30,6 +30,9 @@ export default function SendScreen() {
     balance, 
     theme, 
     coinControl,
+    selectedCurrency,
+    getCurrencySymbol,
+    bitcoinPrice: walletBitcoinPrice,
   } = useWallet();
   const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -42,7 +45,8 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  const [bitcoinPrice, setBitcoinPrice] = useState<number | null>(null);
+  // Use Bitcoin price from wallet store (already converted to selected currency)
+  const bitcoinPrice = walletBitcoinPrice?.usd || null;
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
     message: string | null;
@@ -56,15 +60,11 @@ export default function SendScreen() {
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
 
-  // Load Bitcoin price and fee estimates on component mount
+  // Load fee estimates on component mount
   useEffect(() => {
     const loadInitialData = async () => {
       try {
-        const [price, fees] = await Promise.all([
-          getBitcoinPrice().catch(() => ({ usd: 0 })),
-          feeEstimationService.getFeeEstimates().catch(() => null)
-        ]);
-        setBitcoinPrice(price.usd && price.usd > 0 ? price.usd : null);
+        const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
         
         // Set default fee rate based on estimates
@@ -90,7 +90,7 @@ export default function SendScreen() {
           }
         }
       } catch (error) {
-        console.warn('Failed to load initial data:', error);
+        console.warn('Failed to load fee estimates:', error);
       }
     };
     
@@ -227,11 +227,11 @@ export default function SendScreen() {
       if (isNaN(numValue) || numValue <= 0) return '';
       
       if (fromBTC) {
-        // Convert BTC to USD
+        // Convert BTC to selected fiat currency
         const result = (numValue * bitcoinPrice).toFixed(2);
         return result && result !== '0.00' ? result : '';
       } else {
-        // Convert USD to BTC
+        // Convert selected fiat currency to BTC
         const result = (numValue / bitcoinPrice).toFixed(8);
         return result && result !== '0.00000000' ? result : '';
       }
@@ -265,7 +265,7 @@ export default function SendScreen() {
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
       } else {
-        // Convert USD to BTC
+        // Convert selected fiat currency to BTC
         if (!bitcoinPrice || bitcoinPrice <= 0) {
           Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
           return;
@@ -368,8 +368,8 @@ export default function SendScreen() {
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       
       // Show success message with transaction details
-      const feeUSD = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
-      const amountUSD = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
+      const feeFiat = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
+      const amountFiat = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
       
       const amountBTC = amountInBTC.toFixed(8);
       const feeBTC = result.fee.toFixed(8);
@@ -377,8 +377,8 @@ export default function SendScreen() {
       
       const successMessage = `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
         `Transaction ID: ${result.txid}\n\n` +
-        `Amount: ${amountBTC} BTC (${amountUSD})\n` +
-        `Fee: ${feeBTC} BTC (${feeUSD})\n` +
+        `Amount: ${amountBTC} BTC (${getCurrencySymbol()}${amountFiat})\n` +
+        `Fee: ${feeBTC} BTC (${getCurrencySymbol()}${feeFiat})\n` +
         `Fee Rate: ${feeRateText} sat/vB\n\n` +
         `The transaction will appear in your wallet once it receives confirmations. ` +
         `This typically takes 10-60 minutes depending on network congestion.`;
@@ -465,12 +465,12 @@ export default function SendScreen() {
       
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
-                 const btcText = `${amount} BTC`;
-         displayAmount = btcText;
+        const btcText = `${amount} BTC`;
+        displayAmount = btcText;
         if (bitcoinPrice && bitcoinPrice > 0) {
-          const usdValue = (amountInBTC * bitcoinPrice).toFixed(2);
-          const usdDisplay = ` ($${usdValue})`;
-          displayAmount += usdDisplay;
+          const fiatValue = (amountInBTC * bitcoinPrice).toFixed(2);
+          const fiatDisplay = ` (${getCurrencySymbol()}${fiatValue})`;
+          displayAmount += fiatDisplay;
         }
       } else {
         if (!bitcoinPrice || bitcoinPrice <= 0) {
@@ -479,8 +479,8 @@ export default function SendScreen() {
         }
         amountInBTC = parseFloat(amount) / bitcoinPrice;
         const btcAmount = amountInBTC.toFixed(8);
-        const usdBtcText = `${amount} (${btcAmount} BTC)`;
-        displayAmount = usdBtcText;
+        const fiatBtcText = `${getCurrencySymbol()}${amount} (${btcAmount} BTC)`;
+        displayAmount = fiatBtcText;
       }
 
       // Validate amount
@@ -507,15 +507,15 @@ export default function SendScreen() {
         const feeText = `${feeAmount} BTC`;
         return feeText;
       })() : 'Calculating...';
-      const feeUSDDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
-        const usdAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-        const usdText = ` ($${usdAmount})`;
-        return usdText;
+      const feeFiatDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
+        const fiatAmount = (estimatedFee * bitcoinPrice).toFixed(2);
+        const fiatText = ` (${getCurrencySymbol()}${fiatAmount})`;
+        return fiatText;
       })() : '';
       
       // Show comprehensive transaction review
-      const feeDisplayText = feeUSDDisplay ? (() => {
-        const combinedText = `${feeDisplay}${feeUSDDisplay}`;
+      const feeDisplayText = feeFiatDisplay ? (() => {
+        const combinedText = `${feeDisplay}${feeFiatDisplay}`;
         return combinedText;
       })() : feeDisplay;
       
@@ -687,7 +687,7 @@ export default function SendScreen() {
             <View style={styles.inputSection}>
               <View style={styles.amountHeader}>
                                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                  Amount ({isAmountInBTC ? 'BTC' : 'USD'})
+                  Amount ({isAmountInBTC ? 'BTC' : selectedCurrency})
                 </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
@@ -697,7 +697,7 @@ export default function SendScreen() {
                     trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
                     thumbColor="white"
                   />
-                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>USD</Text>
+                  <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>{selectedCurrency}</Text>
                 </View>
               </View>
               
@@ -717,8 +717,9 @@ export default function SendScreen() {
               {!!amount && !!bitcoinPrice && bitcoinPrice > 0 && (() => {
                 const converted = convertAmount(amount, isAmountInBTC);
                 if (!converted || converted === '') return null;
-                const currency = isAmountInBTC ? 'USD' : 'BTC';
-                const displayText = `~ ${converted} ${currency}`;
+                const currency = isAmountInBTC ? selectedCurrency : 'BTC';
+                const symbol = isAmountInBTC ? getCurrencySymbol() : '';
+                const displayText = `~ ${symbol}${converted} ${currency}`;
                 if (!displayText || displayText === '~   ') return null;
                 return (
                   <View style={styles.conversionContainer}>
@@ -869,7 +870,7 @@ export default function SendScreen() {
               {estimatedFee !== null && estimatedFee > 0 && (
                 <View style={styles.feeEstimate}>
                                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
-                    Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
+                    Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${getCurrencySymbol()}${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
                   </Text>
                 </View>
               )}
