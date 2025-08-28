@@ -2,7 +2,7 @@ import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, Sparkles } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -86,9 +86,6 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
             <Text style={[styles.type, { color: theme.colors.text }]}>
               {isReceived ? 'Received' : 'Sent'}
             </Text>
-            {isReceived && (
-              <Sparkles color={theme.colors.success} size={12} />
-            )}
           </View>
           <Text style={[
             styles.amount,

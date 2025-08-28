@@ -2,7 +2,7 @@ import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Edit3, MoreHorizontal, Sparkles, Trash2 } from 'lucide-react-native';
+import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -68,7 +68,6 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             <Text style={styles.walletName}>{displayWallet.name}</Text>
             <View style={styles.walletTypeContainer}>
               <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
-              {isActive && <Sparkles color="rgba(255, 255, 255, 0.9)" size={12} />}
             </View>
           </View>
           <TouchableOpacity 
