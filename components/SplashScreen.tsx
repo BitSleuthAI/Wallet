@@ -1,16 +1,13 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Bitcoin } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
     Animated,
-    Dimensions,
     StatusBar,
     StyleSheet,
     Text,
     View,
 } from 'react-native';
-
-const { width, height } = Dimensions.get('window');
+import Svg, { Path, G, Circle } from 'react-native-svg';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
@@ -22,8 +19,7 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
   const textOpacity = useRef(new Animated.Value(0)).current;
   const bitcoinRotation = useRef(new Animated.Value(0)).current;
   const magnifyingGlassScale = useRef(new Animated.Value(0)).current;
-  const glowOpacity = useRef(new Animated.Value(0)).current;
-  const versionOpacity = useRef(new Animated.Value(0)).current;
+  const shimmerAnimation = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const startAnimation = () => {
@@ -33,16 +29,41 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
       textOpacity.setValue(0);
       bitcoinRotation.setValue(0);
       magnifyingGlassScale.setValue(0);
-      glowOpacity.setValue(0);
-      versionOpacity.setValue(0);
+      shimmerAnimation.setValue(0);
+
+      // Start continuous bitcoin rotation
+      Animated.loop(
+        Animated.timing(bitcoinRotation, {
+          toValue: 1,
+          duration: 3000,
+          useNativeDriver: true,
+        })
+      ).start();
+
+      // Start shimmer effect
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(shimmerAnimation, {
+            toValue: 1,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+          Animated.timing(shimmerAnimation, {
+            toValue: 0,
+            duration: 2000,
+            useNativeDriver: true,
+          }),
+        ])
+      ).start();
 
       // Create animation sequence
       const animationSequence = Animated.sequence([
-        // Magnifying glass entrance
+        // Magnifying glass entrance with bounce
         Animated.parallel([
-          Animated.timing(magnifyingGlassScale, {
+          Animated.spring(magnifyingGlassScale, {
             toValue: 1,
-            duration: 800,
+            tension: 20,
+            friction: 7,
             useNativeDriver: true,
           }),
           Animated.timing(logoOpacity, {
@@ -51,32 +72,14 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
             useNativeDriver: true,
           }),
         ]),
-        // Bitcoin symbol starts spinning
-        Animated.timing(bitcoinRotation, {
-          toValue: 1,
-          duration: 2000,
-          useNativeDriver: true,
-        }),
         // Text fade in
         Animated.timing(textOpacity, {
           toValue: 1,
           duration: 800,
           useNativeDriver: true,
         }),
-        // Version info fade in
-        Animated.timing(versionOpacity, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
-        // Glow effect
-        Animated.timing(glowOpacity, {
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
         // Hold for a moment
-        Animated.delay(800),
+        Animated.delay(1500),
       ]);
 
       animationSequence.start(() => {
@@ -88,39 +91,29 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
     };
 
     startAnimation();
-  }, [onAnimationComplete]);
+  }, [onAnimationComplete, bitcoinRotation, logoOpacity, logoScale, magnifyingGlassScale, shimmerAnimation, textOpacity]);
 
   const rotateInterpolate = bitcoinRotation.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
 
-  const glowInterpolate = glowOpacity.interpolate({
+  const shimmerOpacity = shimmerAnimation.interpolate({
     inputRange: [0, 1],
-    outputRange: [0, 0.3],
+    outputRange: [0.3, 0.6],
   });
 
   return (
     <View style={styles.container}>
       <StatusBar hidden />
       
-      {/* Background gradient - dark blue theme */}
+      {/* Background gradient matching the logo */}
       <LinearGradient
-        colors={['#0B1426', '#1A2332', '#2D3748']}
+        colors={['#FF8A3D', '#FF6B5C', '#FF5E7B']}
         style={styles.background}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Animated glow effect */}
-        <Animated.View
-          style={[
-            styles.glowEffect,
-            {
-              opacity: glowInterpolate,
-            },
-          ]}
-        />
-
         {/* Main content container */}
         <View style={styles.content}>
           {/* Magnifying Glass Logo Container */}
@@ -133,64 +126,71 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
               },
             ]}
           >
-            {/* Magnifying Glass */}
-            <View style={styles.magnifyingGlass}>
-              {/* Glass circle */}
-              <View style={styles.glassCircle}>
-                {/* Spinning Bitcoin symbol inside */}
-                <Animated.View
-                  style={[
-                    styles.bitcoinContainer,
-                    {
-                      transform: [{ rotate: rotateInterpolate }],
-                    },
-                  ]}
-                >
-                  <Bitcoin color="#F7931A" size={32} />
-                </Animated.View>
-              </View>
+            {/* Professional Magnifying Glass SVG */}
+            <Svg width={180} height={180} viewBox="0 0 180 180">
+              {/* Glass circle with gradient effect */}
+              <Circle
+                cx="75"
+                cy="75"
+                r="55"
+                stroke="white"
+                strokeWidth="12"
+                fill="none"
+              />
+              {/* Glass shine effect */}
+              <Animated.View
+                style={{
+                  opacity: shimmerOpacity,
+                }}
+              >
+                <Circle
+                  cx="60"
+                  cy="60"
+                  r="15"
+                  fill="rgba(255, 255, 255, 0.4)"
+                />
+              </Animated.View>
               {/* Handle */}
-              <View style={styles.glassHandle} />
-            </View>
+              <G transform="translate(110, 110)">
+                <Path
+                  d="M 0 0 L 35 35 Q 40 40 45 35 L 50 30 Q 55 25 50 20 L 15 -15 Q 10 -20 5 -15 L 0 -10 Q -5 -5 0 0 Z"
+                  fill="white"
+                />
+              </G>
+            </Svg>
+            
+            {/* Spinning Bitcoin symbol positioned in center of magnifying glass */}
+            <Animated.View
+              style={[
+                styles.bitcoinContainer,
+                {
+                  transform: [{ rotate: rotateInterpolate }],
+                },
+              ]}
+            >
+              <Svg width={60} height={60} viewBox="0 0 24 24">
+                <Path
+                  d="M11.767 12.57c-2.118-.31-2.74-.498-2.74-1.04 0-.498.498-.87 1.452-.87 1.04 0 1.452.373 1.493 1.163h1.928c-.083-1.204-.83-2.328-2.349-2.659V7h-2v2.206c-1.328.29-2.393 1.163-2.393 2.493 0 1.599 1.328 2.401 3.27 2.86 1.743.415 2.09.996 2.09 1.62 0 .456-.332 1.203-1.452 1.203-1.107 0-1.556-.498-1.62-1.163H7.518c.083 1.412 1.162 2.206 2.533 2.472V21h2v-2.289c1.33-.249 2.393-1.04 2.393-2.41 0-1.902-1.62-2.533-3.677-2.97z"
+                  fill="white"
+                />
+                <Path
+                  d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"
+                  fill="white"
+                />
+              </Svg>
+            </Animated.View>
           </Animated.View>
 
-          {/* App name with 3D effect */}
-          <Animated.Text
-            style={[
-              styles.appName,
-              {
-                opacity: textOpacity,
-              },
-            ]}
-          >
-            BitSleuth
-          </Animated.Text>
+          {/* App name */}
+          <Animated.View style={{ opacity: textOpacity }}>
+            <Text style={styles.appName}>BitSleuth</Text>
+          </Animated.View>
 
           {/* App tagline */}
-          <Animated.Text
-            style={[
-              styles.appTagline,
-              {
-                opacity: textOpacity,
-              },
-            ]}
-          >
-            secure • private • trusted
-          </Animated.Text>
+          <Animated.View style={{ opacity: textOpacity }}>
+            <Text style={styles.appTagline}>Your Bitcoin Wallet</Text>
+          </Animated.View>
         </View>
-
-        {/* Bottom branding with version */}
-        <Animated.View
-          style={[
-            styles.bottomBranding,
-            {
-              opacity: versionOpacity,
-            },
-          ]}
-        >
-          <Text style={styles.versionText}>v1.1.6</Text>
-          <Text style={styles.bottomText}>Bitcoin Wallet</Text>
-        </Animated.View>
       </LinearGradient>
     </View>
   );
@@ -205,16 +205,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  glowEffect: {
-    position: 'absolute',
-    top: height * 0.15,
-    left: width * 0.15,
-    right: width * 0.15,
-    height: height * 0.5,
-    backgroundColor: '#F7931A',
-    borderRadius: 200,
-    opacity: 0.1,
-  },
   content: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -222,100 +212,45 @@ const styles = StyleSheet.create({
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: 50,
-  },
-  magnifyingGlass: {
-    alignItems: 'center',
     justifyContent: 'center',
-  },
-  glassCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderWidth: 3,
-    borderColor: '#F7931A',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#F7931A',
+    marginBottom: 60,
+    width: 180,
+    height: 180,
+    shadowColor: 'rgba(0, 0, 0, 0.3)',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 10,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowRadius: 20,
+    elevation: 15,
   },
   bitcoinContainer: {
+    position: 'absolute',
+    top: 45,
+    left: 45,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  glassHandle: {
-    width: 20,
-    height: 30,
-    backgroundColor: '#F7931A',
-    borderRadius: 10,
-    marginTop: -5,
-    marginLeft: 25,
-    shadowColor: '#F7931A',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 4,
-  },
   appName: {
-    fontSize: 52,
-    fontWeight: '900',
+    fontSize: 48,
+    fontWeight: '800',
     color: '#FFFFFF',
-    marginBottom: 12,
+    marginBottom: 8,
     textAlign: 'center',
-    letterSpacing: 3,
-    // 3D text effect with multiple shadows
-    textShadowColor: 'rgba(0, 0, 0, 0.8)',
-    textShadowOffset: { width: 0, height: 4 },
-    textShadowRadius: 8,
-    // Additional shadow for more depth
-    shadowColor: '#F7931A',
-    shadowOffset: {
-      width: 2,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 8,
+    letterSpacing: 2,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 6,
   },
   appTagline: {
     fontSize: 18,
-    fontWeight: '500',
-    color: '#CBD5E1',
-    marginBottom: 80,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    letterSpacing: 1.5,
-    textShadowColor: 'rgba(0, 0, 0, 0.5)',
+    letterSpacing: 1,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
-  },
-  bottomBranding: {
-    position: 'absolute',
-    bottom: 80,
-    alignItems: 'center',
-  },
-  versionText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 4,
-    letterSpacing: 1,
-  },
-  bottomText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#94A3B8',
-    textAlign: 'center',
-    letterSpacing: 1,
+    textShadowRadius: 3,
   },
 });
