@@ -2,11 +2,13 @@ import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import {
     Alert,
@@ -97,7 +99,7 @@ export default function WalletScreen() {
     setEditColor('');
   };
 
-  const walletColors = ['#8B5CF6', '#EC4899', '#10B981', '#F59E0B', '#EF4444', '#3B82F6', '#8B5A2B', '#6366F1'];
+
 
   const formatPriceChange = (change: number) => {
     const sign = change >= 0 ? '+' : '';
@@ -444,17 +446,31 @@ export default function WalletScreen() {
               
               <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
               <View style={styles.colorPicker}>
-                {walletColors.map((color) => (
-                  <TouchableOpacity
-                    key={color}
-                    style={[
-                      styles.colorOption,
-                      { backgroundColor: color },
-                      editColor === color && styles.selectedColor
-                    ]}
-                    onPress={() => setEditColor(color)}
-                  />
-                ))}
+                {WALLET_COLOR_PALETTE.map((colorOption) => {
+                  const gradientColors = colorOption.gradient;
+                  return (
+                    <TouchableOpacity
+                      key={colorOption.id}
+                      style={[
+                        styles.colorOption,
+                        editColor === colorOption.base && styles.selectedColor
+                      ]}
+                      onPress={() => setEditColor(colorOption.base)}
+                    >
+                      <LinearGradient
+                        colors={gradientColors}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.colorGradient}
+                      />
+                      {editColor === colorOption.base && (
+                        <View style={styles.colorCheckmark}>
+                          <Check color="white" size={16} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
             
@@ -816,16 +832,30 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   colorOption: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     borderColor: 'transparent',
+    overflow: 'hidden',
+    justifyContent: 'center',
+    alignItems: 'center',
     ...platformStyles.shadow,
   },
   selectedColor: {
-    borderColor: '#000',
+    borderColor: '#007AFF',
     borderWidth: 3,
+  },
+  colorGradient: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: 22,
+  },
+  colorCheckmark: {
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    borderRadius: 12,
+    padding: 2,
   },
   editModalActions: {
     flexDirection: 'row',
