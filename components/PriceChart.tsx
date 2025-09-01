@@ -238,9 +238,13 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
   const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
   const balanceChange = lastBalance - firstBalance;
   const isPositive = balanceChange >= 0;
-  const chartColor = isPositive ? '#8B5CF6' : '#EF4444';
-  const gradientStartColor = isPositive ? '#8B5CF6' : '#EF4444';
-  const gradientEndColor = isPositive ? 'rgba(139, 92, 246, 0.1)' : 'rgba(239, 68, 68, 0.1)';
+  // Use orange for light theme, purple for dark theme
+  const positiveColor = theme.isDark ? '#8B5CF6' : '#FB923C';
+  const chartColor = isPositive ? positiveColor : '#EF4444';
+  const gradientStartColor = isPositive ? positiveColor : '#EF4444';
+  const gradientEndColor = isPositive ? 
+    (theme.isDark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(251, 146, 60, 0.1)') : 
+    'rgba(239, 68, 68, 0.1)';
   
   const { linePath, gradientPath } = createPath(balanceHistory);
   const timeLabels = getTimeRangeLabels(balanceHistory);
