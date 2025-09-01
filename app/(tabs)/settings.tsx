@@ -141,7 +141,7 @@ export default function SettingsScreen() {
   );
 
   return (
-    <GradientBackground theme={theme} variant="subtle" direction="vertical">
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
           options={{ 
