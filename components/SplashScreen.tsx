@@ -88,21 +88,21 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
             ]}
           >
             {/* Static Magnifying Glass Logo - Exact replica of the provided image */}
-            <Svg width={180} height={180} viewBox="0 0 200 200">
+            <Svg width={180} height={180} viewBox="0 0 24 24">
               {/* Main magnifying glass circle */}
               <Circle
-                cx="80"
-                cy="80"
-                r="60"
+                cx="10.5"
+                cy="10.5"
+                r="7.5"
                 stroke="white"
-                strokeWidth="16"
+                strokeWidth="2"
                 fill="none"
               />
-              {/* Handle of magnifying glass */}
+              {/* Handle of magnifying glass - straight diagonal line */}
               <Path
-                d="M 125 125 L 170 170 Q 175 175 180 170 L 185 165 Q 190 160 185 155 L 140 110"
+                d="M 16.5 16.5 L 21 21"
                 stroke="white"
-                strokeWidth="16"
+                strokeWidth="2"
                 strokeLinecap="round"
                 fill="none"
               />
