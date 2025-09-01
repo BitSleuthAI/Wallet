@@ -138,5 +138,27 @@ export interface Theme {
     warning: string;
     error: string;
     border: string;
+    accent: string;
+    // Gradient colors
+    gradientStart: string;
+    gradientEnd: string;
+    gradientAccent: string;
+    // Glow effects
+    glowPrimary: string;
+    glowSecondary: string;
+    glowAccent: string;
+    // Additional colors
+    purple: string;
+    blue: string;
+    green: string;
+    orange: string;
+    pink: string;
+    yellow: string;
+    // Surface variants
+    surfaceLight: string;
+    surfaceDark: string;
+    // Card backgrounds
+    cardBackground: string;
+    cardBorder: string;
   };
 }

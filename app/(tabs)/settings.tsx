@@ -1,6 +1,7 @@
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import { GradientBackground } from '@/components/GradientBackground';
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
@@ -140,16 +141,17 @@ export default function SettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Settings',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-      
-      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+    <GradientBackground theme={theme} variant="subtle" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Settings',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+        
+        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* General Section */}
           <SectionHeader title="General" />
@@ -533,6 +535,7 @@ export default function SettingsScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </GradientBackground>
   );
 }
 

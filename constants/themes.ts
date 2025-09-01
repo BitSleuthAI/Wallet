@@ -111,56 +111,78 @@ export const platformStyles = {
 export const lightTheme: Theme = {
   isDark: false,
   colors: {
-    background: '#FFFFFF',
-    surface: '#F8F9FA',
-    primary: '#6366F1', // Enhanced indigo
-    secondary: '#EC4899', // Vibrant pink
-    accent: '#06B6D4', // Bright cyan
-    success: '#10B981', // Emerald green
-    warning: '#F59E0B', // Amber
-    error: '#EF4444', // Red
-    text: '#1F2937',
+    // Base colors with gradient-inspired tones
+    background: '#FEFEFE',
+    surface: '#FFFFFF',
+    primary: '#FF8A65', // Coral orange inspired by gradient
+    secondary: '#FF6B6B', // Warm red-orange
+    accent: '#FFB74D', // Golden orange
+    success: '#10B981',
+    warning: '#F59E0B',
+    error: '#EF4444',
+    text: '#1A1A1A',
     textSecondary: '#6B7280',
-    border: '#E5E7EB',
-    // New fun colors
+    border: '#F0F0F0',
+    // Gradient colors - inspired by the orange/coral gradient image
+    gradientStart: '#FF8A65', // Coral orange
+    gradientEnd: '#FF6B6B', // Warm red-orange
+    gradientAccent: '#FFB74D', // Golden accent
+    // Glow effects for light theme (subtle)
+    glowPrimary: 'rgba(255, 138, 101, 0.15)',
+    glowSecondary: 'rgba(255, 107, 107, 0.15)',
+    glowAccent: 'rgba(255, 183, 77, 0.15)',
+    // Additional colors
     purple: '#8B5CF6',
     blue: '#3B82F6',
     green: '#22C55E',
-    orange: '#F97316',
-    pink: '#F472B6',
-    yellow: '#EAB308',
-    // Gradient colors
-    gradientStart: '#6366F1',
-    gradientEnd: '#8B5CF6',
-    gradientAccent: '#EC4899',
+    orange: '#FF8A65',
+    pink: '#FF6B6B',
+    yellow: '#FFB74D',
+    // Surface variants
+    surfaceLight: '#FAFAFA',
+    surfaceDark: '#F5F5F5',
+    // Card backgrounds with subtle gradient feel
+    cardBackground: '#FFFFFF',
+    cardBorder: '#FFE5DB',
   },
 };
 
 export const darkTheme: Theme = {
   isDark: true,
   colors: {
-    background: '#0F172A', // Darker blue-tinted background
-    surface: '#1E293B', // Enhanced surface color
-    primary: '#818CF8', // Brighter indigo for dark mode
-    secondary: '#F472B6', // Brighter pink for dark mode
-    accent: '#22D3EE', // Brighter cyan for dark mode
-    success: '#34D399', // Brighter green for dark mode
-    warning: '#FBBF24', // Brighter amber for dark mode
-    error: '#F87171', // Brighter red for dark mode
-    text: '#F8FAFC',
-    textSecondary: '#CBD5E1',
-    border: '#334155',
-    // New fun colors for dark mode
-    purple: '#A78BFA',
-    blue: '#60A5FA',
-    green: '#4ADE80',
-    orange: '#FB923C',
-    pink: '#F9A8D4',
-    yellow: '#FCD34D',
-    // Gradient colors for dark mode
-    gradientStart: '#818CF8',
-    gradientEnd: '#A78BFA',
-    gradientAccent: '#F472B6',
+    // Deep dark background with purple undertones
+    background: '#0A0A0F',
+    surface: '#1A1A2E',
+    primary: '#B794F4', // Vibrant purple
+    secondary: '#F687B3', // Pink glow
+    accent: '#9F7AEA', // Deep purple accent
+    success: '#48BB78',
+    warning: '#ED8936',
+    error: '#FC8181',
+    text: '#F7FAFC',
+    textSecondary: '#A0AEC0',
+    border: '#2D3748',
+    // Gradient colors - inspired by the purple glow image
+    gradientStart: '#B794F4', // Vibrant purple
+    gradientEnd: '#9F7AEA', // Deep purple
+    gradientAccent: '#F687B3', // Pink accent
+    // Glow effects for dark theme (prominent)
+    glowPrimary: 'rgba(183, 148, 244, 0.4)',
+    glowSecondary: 'rgba(246, 135, 179, 0.4)',
+    glowAccent: 'rgba(159, 122, 234, 0.4)',
+    // Additional colors with glow variants
+    purple: '#B794F4',
+    blue: '#63B3ED',
+    green: '#48BB78',
+    orange: '#ED8936',
+    pink: '#F687B3',
+    yellow: '#F6E05E',
+    // Surface variants with subtle glow
+    surfaceLight: '#252538',
+    surfaceDark: '#16162A',
+    // Card backgrounds with glow effect
+    cardBackground: '#1F1F33',
+    cardBorder: '#3A3A5C',
   },
 };
 

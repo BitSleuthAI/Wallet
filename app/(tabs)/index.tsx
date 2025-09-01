@@ -1,6 +1,7 @@
 import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
+import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -147,16 +148,17 @@ export default function WalletScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          title: 'Wallet',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }}
-      />
-      
-      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen
+          options={{
+            title: 'Wallet',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }}
+        />
+        
+        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView
           style={styles.scrollView}
           refreshControl={
@@ -264,7 +266,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Display */}
-        <View style={[styles.balanceSection, { backgroundColor: theme.colors.surface }]}>
+        <GradientCard theme={theme} style={styles.balanceSection} variant={theme.isDark ? 'glow' : 'primary'}>
           {hasBalanceError ? (
             <View style={styles.balanceErrorContainer}>
               <WifiOff color={theme.colors.textSecondary} size={24} />
@@ -311,7 +313,7 @@ export default function WalletScreen() {
               )}
             </>
           )}
-        </View>
+        </GradientCard>
 
         {/* Time Period Selector */}
         <View style={[styles.periodSelector, { backgroundColor: theme.colors.surface }]}>
@@ -493,6 +495,7 @@ export default function WalletScreen() {
         </View>
       </Modal>
     </SafeAreaView>
+    </GradientBackground>
   );
 }
 
