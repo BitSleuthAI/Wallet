@@ -1,4 +1,5 @@
 import WalletSelector from '@/components/WalletSelector';
+import { GradientBackground } from '@/components/GradientBackground';
 import { createButtonStyle } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
@@ -137,16 +138,17 @@ export default function ReceiveScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Receive',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-      
-      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Receive',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+        
+        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
         <View style={styles.content}>
           {/* To Section */}
           <WalletSelector label="To:" />
@@ -238,14 +240,16 @@ export default function ReceiveScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-      </Animated.View>
-    </SafeAreaView>
+        </Animated.View>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   animatedContainer: {
     flex: 1,

@@ -1,5 +1,6 @@
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
+import { GradientBackground } from '@/components/GradientBackground';
 import { Stack, router } from 'expo-router';
 import {
     ChevronRight,
@@ -122,16 +123,17 @@ export default function WalletSettingsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Wallet Settings',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-      
-      <ScrollView style={styles.scrollView}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Wallet Settings',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+        
+        <ScrollView style={styles.scrollView}>
         {/* Wallet Info Section */}
         <SectionHeader title="Wallet Information" />
         
@@ -202,15 +204,17 @@ export default function WalletSettingsScreen() {
           danger={true}
         />
 
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
-    </SafeAreaView>
+          <View style={styles.bottomSpacing} />
+        </ScrollView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   scrollView: {
     flex: 1,

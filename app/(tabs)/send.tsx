@@ -1,5 +1,6 @@
 import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
+import { GradientBackground } from '@/components/GradientBackground';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -622,22 +623,23 @@ export default function SendScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Send',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-      
-      <Animated.View style={[styles.animatedContainer, animatedStyle]}>
-        <ScrollView 
-          style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={styles.content}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Send',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+        
+        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+          <ScrollView 
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.content}>
             {/* From Section */}
             <WalletSelector label="From:" />
 
@@ -921,26 +923,28 @@ export default function SendScreen() {
             </TouchableOpacity>
           </View>
         </ScrollView>
-      </Animated.View>
-      
-      {/* QR Scanner Modal */}
-      <Modal
-        visible={showQRScanner}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <QRScanner
-          onScan={handleQRScan}
-          onClose={() => setShowQRScanner(false)}
-        />
-      </Modal>
-    </SafeAreaView>
+        </Animated.View>
+        
+        {/* QR Scanner Modal */}
+        <Modal
+          visible={showQRScanner}
+          animationType="slide"
+          presentationStyle="fullScreen"
+        >
+          <QRScanner
+            onScan={handleQRScan}
+            onClose={() => setShowQRScanner(false)}
+          />
+        </Modal>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   animatedContainer: {
     flex: 1,

@@ -46,36 +46,39 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
           return [theme.colors.background, theme.colors.surface];
       }
     } else {
+      // Light mode with vibrant orange gradient
       switch (variant) {
         case 'primary':
+          // Beautiful orange gradient for light mode
           return [
-            theme.colors.background,
-            `${theme.colors.glowPrimary}`,
-            theme.colors.background,
+            '#FFE5DB',  // Light peach
+            '#FFD4C4',  // Soft coral
+            '#FFC3AD',  // Warm peach
+            '#FFB296',  // Light orange
           ];
         case 'secondary':
           return [
-            theme.colors.surfaceLight,
-            theme.colors.background,
-            theme.colors.surfaceLight,
+            '#FFE5DB',
+            '#FFDDD2',
+            '#FFE5DB',
           ];
         case 'accent':
           return [
-            `${theme.colors.glowAccent}`,
-            theme.colors.background,
-            `${theme.colors.glowPrimary}`,
+            '#FFC3AD',
+            '#FFD4C4',
+            '#FFB296',
           ];
         case 'subtle':
-          return [theme.colors.background, theme.colors.surfaceLight];
+          return ['#FFF5F0', '#FFE5DB'];
         case 'glow':
           return [
-            theme.colors.background,
-            `${theme.colors.glowPrimary}`,
-            `${theme.colors.glowSecondary}`,
-            theme.colors.background,
+            '#FFE5DB',
+            '#FFC3AD',
+            '#FFB296',
+            '#FFE5DB',
           ];
         default:
-          return [theme.colors.background, theme.colors.surface];
+          return ['#FFE5DB', '#FFD4C4'];
       }
     }
   };
