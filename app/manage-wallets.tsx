@@ -22,17 +22,8 @@ import {
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
-
-type WalletColor = '#8B5CF6' | '#F59E0B' | '#10B981' | '#EF4444' | '#3B82F6' | '#F97316';
-
-const WALLET_COLORS: WalletColor[] = [
-  '#8B5CF6', // Purple
-  '#F59E0B', // Amber
-  '#10B981', // Emerald
-  '#EF4444', // Red
-  '#3B82F6', // Blue
-  '#F97316', // Orange
-];
+import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
@@ -40,7 +31,7 @@ export default function ManageWalletsScreen() {
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
   const [editName, setEditName] = useState<string>('');
-  const [editColor, setEditColor] = useState<WalletColor>('#8B5CF6');
+  const [editColor, setEditColor] = useState<string>('#8B5CF6');
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
   const handleEditWallet = (wallet: any) => {
@@ -100,11 +91,11 @@ export default function ManageWalletsScreen() {
   const WalletItem = ({ wallet }: { wallet: any }) => (
     <View style={[styles.walletItem, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.walletInfo}>
-        <View
-          style={[
-            styles.walletColorIndicator,
-            { backgroundColor: wallet.color || theme.colors.primary },
-          ]}
+        <LinearGradient
+          colors={getWalletGradient(wallet.color || theme.colors.primary)}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.walletColorIndicator}
         />
         <View style={styles.walletDetails}>
           <Text style={[styles.walletName, { color: theme.colors.text }]}>
@@ -141,19 +132,22 @@ export default function ManageWalletsScreen() {
     <View style={styles.colorPicker}>
       <Text style={[styles.colorPickerLabel, { color: theme.colors.text }]}>Color</Text>
       <View style={styles.colorOptions}>
-        {WALLET_COLORS.map((color) => (
+        {WALLET_COLOR_PALETTE.map((colorOption) => (
           <TouchableOpacity
-            key={color}
-            style={[
-              styles.colorOption,
-              { backgroundColor: color },
-              editColor === color && styles.selectedColorOption,
-            ]}
-            onPress={() => setEditColor(color)}
+            key={colorOption.id}
+            style={styles.colorOptionContainer}
+            onPress={() => setEditColor(colorOption.base)}
           >
-            {editColor === color && (
-              <Check color="white" size={16} />
-            )}
+            <LinearGradient
+              colors={colorOption.gradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.colorOption}
+            >
+              {editColor === colorOption.base && (
+                <Check color="white" size={16} />
+              )}
+            </LinearGradient>
           </TouchableOpacity>
         ))}
       </View>
@@ -403,6 +397,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 12,
+  },
+  colorOptionContainer: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    borderRadius: 20,
   },
   colorOption: {
     width: 40,

@@ -5,6 +5,7 @@ import QRScanner from '@/components/QRScanner';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
@@ -53,7 +54,7 @@ export default function WalletSetupScreen() {
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');
   const [mnemonic, setMnemonic] = useState('');
-  const [selectedColor, setSelectedColor] = useState('#8B5CF6');
+  const [selectedColor, setSelectedColor] = useState(WALLET_COLOR_PALETTE[0].base);
   const [isLoading, setIsLoading] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
   const [wordCount, setWordCount] = useState<12 | 24>(12);
@@ -64,39 +65,6 @@ export default function WalletSetupScreen() {
   const [confirmationWords, setConfirmationWords] = useState<{word: string, position: number}[]>([]);
   const [userInputs, setUserInputs] = useState<string[]>(['', '']);
   const [showConfetti, setShowConfetti] = useState(false);
-
-  const walletColors = [
-    '#8B5CF6', // Purple
-    '#F59E0B', // Amber
-    '#EC4899', // Pink
-    '#F97316', // Orange
-    '#10B981', // Emerald
-    '#3B82F6', // Blue
-  ];
-
-  // Function to generate gradient colors from a base color
-  const generateGradientColors = (baseColor: string): [string, string] => {
-    // Convert hex to RGB
-    const hex = baseColor.replace('#', '');
-    const r = parseInt(hex.substr(0, 2), 16);
-    const g = parseInt(hex.substr(2, 2), 16);
-    const b = parseInt(hex.substr(4, 2), 16);
-    
-    // Create a lighter version (add 30 to each component, max 255)
-    const lighterR = Math.min(255, r + 30);
-    const lighterG = Math.min(255, g + 30);
-    const lighterB = Math.min(255, b + 30);
-    
-    // Create a darker version (subtract 40 from each component, min 0)
-    const darkerR = Math.max(0, r - 40);
-    const darkerG = Math.max(0, g - 40);
-    const darkerB = Math.max(0, b - 40);
-    
-    const lighterColor = `rgb(${lighterR}, ${lighterG}, ${lighterB})`;
-    const darkerColor = `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
-    
-    return [lighterColor, darkerColor];
-  };
 
   const openLink = async (url: string) => {
     try {
@@ -452,27 +420,24 @@ export default function WalletSetupScreen() {
           Color
         </Text>
         <View style={styles.colorPicker}>
-          {walletColors.map((color) => {
-            const [lightColor, darkColor] = generateGradientColors(color);
-            return (
-              <TouchableOpacity
-                key={color}
-                style={styles.colorOptionContainer}
-                onPress={() => setSelectedColor(color)}
+          {WALLET_COLOR_PALETTE.map((colorOption) => (
+            <TouchableOpacity
+              key={colorOption.id}
+              style={styles.colorOptionContainer}
+              onPress={() => setSelectedColor(colorOption.base)}
+            >
+              <LinearGradient
+                colors={colorOption.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.colorOption}
               >
-                <LinearGradient
-                  colors={[lightColor, darkColor]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.colorOption}
-                >
-                  {selectedColor === color && (
-                    <Check color="white" size={20} />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
+                {selectedColor === colorOption.base && (
+                  <Check color="white" size={20} />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <Text style={[styles.label, { color: theme.colors.text }]}>
@@ -635,27 +600,24 @@ export default function WalletSetupScreen() {
           Color
         </Text>
         <View style={styles.colorPicker}>
-          {walletColors.map((color) => {
-            const [lightColor, darkColor] = generateGradientColors(color);
-            return (
-              <TouchableOpacity
-                key={color}
-                style={styles.colorOptionContainer}
-                onPress={() => setSelectedColor(color)}
+          {WALLET_COLOR_PALETTE.map((colorOption) => (
+            <TouchableOpacity
+              key={colorOption.id}
+              style={styles.colorOptionContainer}
+              onPress={() => setSelectedColor(colorOption.base)}
+            >
+              <LinearGradient
+                colors={colorOption.gradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.colorOption}
               >
-                <LinearGradient
-                  colors={[lightColor, darkColor]}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.colorOption}
-                >
-                  {selectedColor === color && (
-                    <Check color="white" size={20} />
-                  )}
-                </LinearGradient>
-              </TouchableOpacity>
-            );
-          })}
+                {selectedColor === colorOption.base && (
+                  <Check color="white" size={20} />
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
+          ))}
         </View>
 
         <View style={styles.recoveryPhraseSection}>

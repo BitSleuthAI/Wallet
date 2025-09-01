@@ -1,34 +1,11 @@
 import { platformStyles } from '@/constants/themes';
+import { getWalletGradient } from '@/constants/wallet-colors';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-
-// Enhanced function to generate gradient colors from a base color
-function generateGradientColors(baseColor: string): [string, string, string] {
-  // Convert hex to RGB
-  const hex = baseColor.replace('#', '');
-  const r = parseInt(hex.substr(0, 2), 16);
-  const g = parseInt(hex.substr(2, 2), 16);
-  const b = parseInt(hex.substr(4, 2), 16);
-  
-  // Create a lighter version (add 40 to each component, max 255)
-  const lighterR = Math.min(255, r + 40);
-  const lighterG = Math.min(255, g + 40);
-  const lighterB = Math.min(255, b + 40);
-  
-  // Create a darker version (subtract 50 from each component, min 0)
-  const darkerR = Math.max(0, r - 50);
-  const darkerG = Math.max(0, g - 50);
-  const darkerB = Math.max(0, b - 50);
-  
-  const lighterColor = `rgb(${lighterR}, ${lighterG}, ${lighterB})`;
-  const darkerColor = `rgb(${darkerR}, ${darkerG}, ${darkerB})`;
-  
-  return [baseColor, lighterColor, darkerColor];
-}
 
 interface WalletCardProps {
   wallet?: Wallet;
@@ -49,12 +26,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   if (!displayWallet) return null;
 
   // Generate enhanced gradient colors based on wallet color
-  const [baseColor, lightColor, darkColor] = generateGradientColors(displayWallet.color);
+  const gradientColors = getWalletGradient(displayWallet.color);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
-        colors={[baseColor, lightColor, darkColor]}
+        colors={gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={[styles.card, isActive && styles.activeCard]}
