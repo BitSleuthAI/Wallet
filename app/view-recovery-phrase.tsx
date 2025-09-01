@@ -139,7 +139,7 @@ export default function ViewRecoveryPhrase() {
       >
         {/* QR Code Section */}
         <View style={styles.qrContainer}>
-          <View style={[styles.qrWrapper, { borderColor: '#8B5CF6' }]}>
+          <View style={[styles.qrWrapper, { borderColor: theme.colors.primary }]}>
             {isRevealed ? (
               <View style={styles.qrContent}>
                 <QRCode

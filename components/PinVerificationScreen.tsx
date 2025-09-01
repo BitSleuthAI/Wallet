@@ -94,8 +94,8 @@ export default function PinVerificationScreen({
             style={[
               styles.pinDot,
               {
-                backgroundColor: index < pin.length ? '#8B5CF6' : 'transparent',
-                borderColor: index < pin.length ? '#8B5CF6' : theme.colors.border,
+                backgroundColor: index < pin.length ? theme.colors.primary : 'transparent',
+                borderColor: index < pin.length ? theme.colors.primary : theme.colors.border,
               },
             ]}
           />

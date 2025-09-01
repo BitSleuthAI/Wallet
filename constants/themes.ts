@@ -132,7 +132,7 @@ export const lightTheme: Theme = {
     glowSecondary: 'rgba(255, 107, 107, 0.15)',
     glowAccent: 'rgba(255, 183, 77, 0.15)',
     // Additional colors
-    purple: '#8B5CF6',
+    purple: '#FF8A65',
     blue: '#3B82F6',
     green: '#22C55E',
     orange: '#FF8A65',
