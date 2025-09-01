@@ -188,7 +188,13 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
 
           {/* App tagline */}
           <Animated.View style={{ opacity: textOpacity }}>
-            <Text style={styles.appTagline}>Your Bitcoin Wallet</Text>
+            <Text style={styles.appTagline}>secure • private • trusted</Text>
+          </Animated.View>
+
+          {/* Version and description */}
+          <Animated.View style={[styles.versionContainer, { opacity: textOpacity }]}>
+            <Text style={styles.versionText}>v1.1.6</Text>
+            <Text style={styles.walletText}>Bitcoin Wallet</Text>
           </Animated.View>
         </View>
       </LinearGradient>
@@ -244,13 +250,30 @@ const styles = StyleSheet.create({
     textShadowRadius: 6,
   },
   appTagline: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 16,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.95)',
     textAlign: 'center',
-    letterSpacing: 1,
+    letterSpacing: 2,
     textShadowColor: 'rgba(0, 0, 0, 0.15)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+    marginBottom: 40,
+  },
+  versionContainer: {
+    position: 'absolute',
+    bottom: 60,
+    alignItems: 'center',
+  },
+  versionText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 4,
+  },
+  walletText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 });
