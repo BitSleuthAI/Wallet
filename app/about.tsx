@@ -10,6 +10,7 @@ import {
 import { Stack } from 'expo-router';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { GradientBackground } from '@/components/GradientBackground';
 
 interface DropdownSectionProps {
   title: string;
@@ -62,22 +63,23 @@ export default function AboutScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'About BitSleuth Wallet',
-          headerBackTitle: 'Settings',
-          headerStyle: {
-            backgroundColor: theme.colors.background,
-          },
-          headerTintColor: theme.colors.primary,
-          headerTitleStyle: {
-            color: theme.colors.text,
-          },
-        }} 
-      />
-      
-      <ScrollView style={styles.scrollView}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'About BitSleuth Wallet',
+            headerBackTitle: 'Settings',
+            headerStyle: {
+              backgroundColor: 'transparent',
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+            },
+          }} 
+        />
+        
+        <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
@@ -140,8 +142,9 @@ export default function AboutScreen() {
           <BulletPoint text="Email support: support@bitsleuth.ai" />
           <BulletPoint text="Follow us on social media for updates" />
         </DropdownSection>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

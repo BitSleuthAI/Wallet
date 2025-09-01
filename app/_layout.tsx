@@ -106,8 +106,9 @@ function AppContent() {
       screenOptions={{ 
         headerBackTitle: 'Back',
         headerStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: 'transparent',
         },
+        headerTransparent: true,
         headerTintColor: theme.colors.text,
         headerTitleStyle: {
           color: theme.colors.text,
@@ -115,7 +116,7 @@ function AppContent() {
         },
         headerShadowVisible: false,
         contentStyle: {
-          backgroundColor: theme.colors.background,
+          backgroundColor: 'transparent',
         },
       }}
     >

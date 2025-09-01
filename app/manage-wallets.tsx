@@ -24,6 +24,7 @@ import { useAutoLock } from '@/hooks/auto-lock-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
@@ -155,19 +156,22 @@ export default function ManageWalletsScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Manage Wallets',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft color={theme.colors.text} size={24} />
-            </TouchableOpacity>
-          ),
-        }} 
-      />
-      
-      <ScrollView style={styles.scrollView}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Manage Wallets',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+            headerLeft: () => (
+              <TouchableOpacity onPress={() => router.back()}>
+                <ArrowLeft color={theme.colors.text} size={24} />
+              </TouchableOpacity>
+            ),
+          }} 
+        />
+        
+        <ScrollView style={styles.scrollView}>
         <View style={styles.walletsList}>
           {wallets.map((wallet) => (
             <WalletItem key={wallet.id} wallet={wallet} />
@@ -267,7 +271,8 @@ export default function ManageWalletsScreen() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
