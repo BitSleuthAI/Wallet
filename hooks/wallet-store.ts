@@ -5,7 +5,7 @@ import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 // Currency symbols and exchange rates
 const CURRENCY_SYMBOLS: Record<FiatCurrency, string> = {
@@ -30,6 +30,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const queryClient = useQueryClient();
   const [coinControlSelected, setCoinControlSelectedState] = useState<Record<string, string[]>>({});
   const [coinControlFrozen, setCoinControlFrozenState] = useState<Record<string, string[]>>({});
+  const hasSetInitialWallet = useRef(false);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -337,10 +338,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   // Separate effect to handle setting initial wallet ID
   useEffect(() => {
-    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletId && !currentWalletQuery.isLoading) {
-      saveCurrentWalletId(walletsQuery.data[0].id);
+    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletId && !currentWalletQuery.isLoading && !hasSetInitialWallet.current) {
+      hasSetInitialWallet.current = true;
+      // Use direct AsyncStorage call to avoid mutation cycle
+      AsyncStorage.setItem('currentWalletId', walletsQuery.data[0].id).then(() => {
+        setCurrentWalletId(walletsQuery.data[0].id);
+      });
     }
-  }, [walletsQuery.data, currentWalletId, currentWalletQuery.isLoading, saveCurrentWalletId]);
+  }, [walletsQuery.data, currentWalletId, currentWalletQuery.isLoading]);
 
   useEffect(() => {
     if (currentWalletQuery.data) {
