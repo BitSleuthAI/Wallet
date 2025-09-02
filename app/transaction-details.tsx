@@ -180,9 +180,8 @@ export default function TransactionDetailsScreen() {
       <ScrollView 
         style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
-        automaticallyAdjustContentInsets={true}
-        contentOffset={{ x: 0, y: 0 }}
+        contentInsetAdjustmentBehavior="never"
+        automaticallyAdjustContentInsets={false}
       >
         {/* Transaction Header */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
@@ -333,7 +332,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingTop: 100, // Add padding to account for transparent header
+    paddingTop: 90, // Reduced padding to move content higher
   },
   centerContent: {
     flex: 1,
