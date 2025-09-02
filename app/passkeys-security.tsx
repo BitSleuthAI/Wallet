@@ -703,6 +703,8 @@ const styles = StyleSheet.create({
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
+    paddingHorizontal: 20,
+    borderRadius: 12,
   },
   emptyStateTitle: {
     fontSize: 18,
@@ -715,6 +717,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.7)',
     marginBottom: 24,
+    textAlign: 'center',
   },
   addKeyButton: {
     flexDirection: 'row',
