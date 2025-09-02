@@ -301,7 +301,7 @@ export default function WalletScreen() {
                   )}
                 </TouchableOpacity>
                 <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-                  {hideBalance ? '********' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
+                  {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
                 </Text>
               </View>
               <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
