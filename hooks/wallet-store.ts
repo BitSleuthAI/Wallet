@@ -332,13 +332,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     if (walletsQuery.data) {
       setWallets(walletsQuery.data);
-      // If we have wallets but no current wallet ID, set the first one as current
-      if (walletsQuery.data.length > 0 && !currentWalletId) {
-        saveCurrentWalletId(walletsQuery.data[0].id);
-      }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [walletsQuery.data, currentWalletId]);
+  }, [walletsQuery.data]);
+
+  // Separate effect to handle setting initial wallet ID
+  useEffect(() => {
+    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletId && !currentWalletQuery.isLoading) {
+      saveCurrentWalletId(walletsQuery.data[0].id);
+    }
+  }, [walletsQuery.data, currentWalletId, currentWalletQuery.isLoading, saveCurrentWalletId]);
 
   useEffect(() => {
     if (currentWalletQuery.data) {
