@@ -169,7 +169,13 @@ export default function TransactionDetailsScreen() {
         }} 
       />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <ScrollView 
+        style={styles.scrollView} 
+        showsVerticalScrollIndicator={false}
+        contentInsetAdjustmentBehavior="automatic"
+        automaticallyAdjustContentInsets={true}
+        contentOffset={{ x: 0, y: 0 }}
+      >
         {/* Transaction Header */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionHeader}>
