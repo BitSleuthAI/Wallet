@@ -15,6 +15,7 @@ import {
     Vibration,
     View,
 } from 'react-native';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function PinSetupScreen() {
   const { theme, wallets } = useWallet();
@@ -200,36 +201,38 @@ export default function PinSetupScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      <TouchableOpacity
-        style={styles.backButton}
-        onPress={() => router.back()}
-        activeOpacity={0.7}
-      >
-        <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          activeOpacity={0.7}
+        >
+          <ArrowLeft color={theme.colors.text} size={24} />
+        </TouchableOpacity>
 
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            {mode === 'setup' ? 'Set a PIN' : 'Confirm PIN'}
-          </Text>
-          <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-            {mode === 'setup' 
-              ? wallets.length === 0 
-                ? 'This 4-digit PIN will be used to secure all your wallets on this device.'
-                : 'This 4-digit PIN will be used to unlock your wallet on this device.'
-              : 'Please enter your PIN again to confirm.'
-            }
-          </Text>
+        <View style={styles.content}>
+          <View style={styles.header}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>
+              {mode === 'setup' ? 'Set a PIN' : 'Confirm PIN'}
+            </Text>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+              {mode === 'setup' 
+                ? wallets.length === 0 
+                  ? 'This 4-digit PIN will be used to secure all your wallets on this device.'
+                  : 'This 4-digit PIN will be used to unlock your wallet on this device.'
+                : 'Please enter your PIN again to confirm.'
+              }
+            </Text>
+          </View>
+
+          {renderPinDots(mode === 'setup' ? pin : confirmPin)}
+          {renderNumberPad()}
         </View>
-
-        {renderPinDots(mode === 'setup' ? pin : confirmPin)}
-        {renderNumberPad()}
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

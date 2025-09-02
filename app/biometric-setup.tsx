@@ -13,6 +13,7 @@ import { ArrowLeft, Fingerprint, Shield, Check } from 'lucide-react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function BiometricSetupScreen() {
   const { theme } = useWallet();
@@ -187,17 +188,18 @@ export default function BiometricSetupScreen() {
 
   if (hasSetupBiometric) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ headerShown: false }} />
-        
-        <View style={styles.content}>
-          <View style={styles.successContainer}>
-            <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-              <Check color={theme.colors.primary} size={48} />
-            </View>
-            
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-              All Set!
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen options={{ headerShown: false }} />
+          
+          <View style={styles.content}>
+            <View style={styles.successContainer}>
+              <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Check color={theme.colors.primary} size={48} />
+              </View>
+              
+              <Text style={[styles.title, { color: theme.colors.text }]}>
+                All Set!
             </Text>
             
             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
@@ -213,13 +215,15 @@ export default function BiometricSetupScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </SafeAreaView>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
       
       <TouchableOpacity
         style={styles.backButton}
@@ -314,7 +318,8 @@ export default function BiometricSetupScreen() {
           </TouchableOpacity>
         </View>
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

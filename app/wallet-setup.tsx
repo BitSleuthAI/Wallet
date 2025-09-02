@@ -7,6 +7,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
+import { GradientBackground } from '@/components/GradientBackground';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
@@ -826,34 +827,36 @@ export default function WalletSetupScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen options={{ headerShown: false }} />
-      
-      {mode === 'select' && renderSelectMode()}
-      {mode === 'create' && renderCreateMode()}
-      {mode === 'import' && renderImportMode()}
-      {mode === 'confirm' && renderConfirmMode()}
-      
-      {showConfetti && Platform.OS !== 'web' && (
-        <ConfettiCannon
-          count={200}
-          origin={{x: -10, y: 0}}
-          autoStart={true}
-          fadeOut={true}
-        />
-      )}
-      
-      <Modal
-        visible={showQRScanner}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <QRScanner
-          onScan={handleQRScan}
-          onClose={() => setShowQRScanner(false)}
-        />
-      </Modal>
-    </SafeAreaView>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen options={{ headerShown: false }} />
+        
+        {mode === 'select' && renderSelectMode()}
+        {mode === 'create' && renderCreateMode()}
+        {mode === 'import' && renderImportMode()}
+        {mode === 'confirm' && renderConfirmMode()}
+        
+        {showConfetti && Platform.OS !== 'web' && (
+          <ConfettiCannon
+            count={200}
+            origin={{x: -10, y: 0}}
+            autoStart={true}
+            fadeOut={true}
+          />
+        )}
+        
+        <Modal
+          visible={showQRScanner}
+          animationType="slide"
+          presentationStyle="fullScreen"
+        >
+          <QRScanner
+            onScan={handleQRScan}
+            onClose={() => setShowQRScanner(false)}
+          />
+        </Modal>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
