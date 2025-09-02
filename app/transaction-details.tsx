@@ -1,3 +1,4 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
@@ -46,11 +47,12 @@ export default function TransactionDetailsScreen() {
 
   if (!transaction) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <GradientBackground theme={theme} style={styles.container}>
         <Stack.Screen 
         options={{ 
           title: 'Transaction Details',
-          headerStyle: { backgroundColor: theme.colors.background },
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTransparent: true,
           headerTintColor: theme.colors.text,
         }} 
       />
@@ -59,7 +61,7 @@ export default function TransactionDetailsScreen() {
             Transaction not found
           </Text>
         </View>
-      </View>
+      </GradientBackground>
     );
   }
 
@@ -157,10 +159,13 @@ export default function TransactionDetailsScreen() {
 
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <GradientBackground theme={theme} style={styles.container}>
       <Stack.Screen 
         options={{ 
           title: 'Transaction Details',
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTransparent: true,
+          headerTintColor: theme.colors.text,
           headerRight: () => (
             <TouchableOpacity onPress={shareTransaction} style={styles.headerButton}>
               <ShareIcon color={theme.colors.text} size={20} />
@@ -315,7 +320,7 @@ export default function TransactionDetailsScreen() {
           </TouchableOpacity>
         </View>
       </ScrollView>
-    </View>
+    </GradientBackground>
   );
 }
 
@@ -325,6 +330,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingTop: 100, // Add padding to account for transparent header
   },
   centerContent: {
     flex: 1,
