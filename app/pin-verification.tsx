@@ -3,6 +3,7 @@ import { SafeAreaView } from 'react-native';
 import { Stack, router } from 'expo-router';
 import PinVerificationScreen from '@/components/PinVerificationScreen';
 import { useWallet } from '@/hooks/wallet-store';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function PinVerificationRoute() {
   const { theme } = useWallet();
@@ -17,14 +18,16 @@ export default function PinVerificationRoute() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-      <Stack.Screen options={{ headerShown: false }} />
-      <PinVerificationScreen
-        title="Add Wallet"
-        subtitle="Enter your PIN to add a new wallet"
-        onSuccess={handleSuccess}
-        onBack={handleBack}
-      />
-    </SafeAreaView>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={{ flex: 1 }}>
+        <Stack.Screen options={{ headerShown: false }} />
+        <PinVerificationScreen
+          title="Add Wallet"
+          subtitle="Enter your PIN to add a new wallet"
+          onSuccess={handleSuccess}
+          onBack={handleBack}
+        />
+      </SafeAreaView>
+    </GradientBackground>
   );
 }

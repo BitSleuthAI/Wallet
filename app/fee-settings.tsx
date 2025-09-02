@@ -2,6 +2,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack } from 'expo-router';
+import { GradientBackground } from '@/components/GradientBackground';
 import {
     AlertTriangle,
     CheckCircle,
@@ -331,44 +332,49 @@ export default function FeeSettingsScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen 
-        options={{ 
-          title: 'Fee Settings',
-          headerStyle: { backgroundColor: theme.colors.background },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-            Loading fee estimates...
-          </Text>
-        </View>
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen 
+          options={{ 
+            title: 'Fee Settings',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              Loading fee estimates...
+            </Text>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Fee Settings',
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={refreshFeeEstimates}
-              disabled={refreshing}
-              style={styles.refreshButton}
-            >
-              <RefreshCw 
-                color={theme.colors.primary} 
-                size={20} 
-                style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
-              />
-            </TouchableOpacity>
-          ),
-        }} 
-      />
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Fee Settings',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={refreshFeeEstimates}
+                disabled={refreshing}
+                style={styles.refreshButton}
+              >
+                <RefreshCw 
+                  color={theme.colors.primary} 
+                  size={20} 
+                  style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
+                />
+              </TouchableOpacity>
+            ),
+          }} 
+        />
       
       <ScrollView style={styles.scrollView}>
         {/* Fee Presets Section */}
@@ -606,7 +612,8 @@ export default function FeeSettingsScreen() {
         
         <View style={styles.bottomPadding} />
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

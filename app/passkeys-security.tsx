@@ -2,6 +2,7 @@ import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { GradientBackground } from '@/components/GradientBackground';
 import { Stack } from 'expo-router';
 import {
     AlertTriangle,
@@ -448,11 +449,12 @@ export default function PasskeysSecurityScreen() {
   }
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
-        options={{ 
-          title: 'Passkeys & Security Keys',
-          headerStyle: { backgroundColor: theme.colors.background },
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
+          options={{ 
+            title: 'Passkeys & Security Keys',
+            headerStyle: { backgroundColor: 'transparent' },
           headerTintColor: theme.colors.text,
         }} 
       />
@@ -661,7 +663,8 @@ export default function PasskeysSecurityScreen() {
 
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
