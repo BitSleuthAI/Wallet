@@ -12,6 +12,7 @@ import {
     Text,
     View,
 } from 'react-native';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function TransactionHistoryScreen() {
   const { 
@@ -59,8 +60,9 @@ export default function TransactionHistoryScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
+    <GradientBackground theme={theme} variant="primary">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
         options={{ 
           title: 'Transaction History',
           headerStyle: { backgroundColor: theme.colors.background },
@@ -129,7 +131,8 @@ export default function TransactionHistoryScreen() {
         {/* Bottom spacing */}
         <View style={styles.bottomSpacing} />
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

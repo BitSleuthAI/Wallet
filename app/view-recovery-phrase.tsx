@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ViewRecoveryPhrase() {
   const { currentWallet, theme } = useWallet();
@@ -74,48 +75,53 @@ export default function ViewRecoveryPhrase() {
 
   if (!isPinVerified) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen
-          options={{
-            headerShown: false,
-          }}
-        />
-        <PinVerificationScreen
-          title="Recovery Phrase"
-          subtitle="Confirm your PIN to view the recovery phrase."
-          onSuccess={handlePinSuccess}
-          onBack={handleBack}
-        />
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <PinVerificationScreen
+            title="Recovery Phrase"
+            subtitle="Confirm your PIN to view the recovery phrase."
+            onSuccess={handlePinSuccess}
+            onBack={handleBack}
+          />
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   if (!currentWallet) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen
-          options={{
-            headerShown: false,
-          }}
-        />
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: theme.colors.text }]}>
-            No wallet found. Please create or import a wallet first.
-          </Text>
-        </View>
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.colors.text }]}>
+              No wallet found. Please create or import a wallet first.
+            </Text>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   const mnemonicWords = currentWallet.mnemonic.split(' ');
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
+    <GradientBackground theme={theme} variant="primary">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen
+          options={{
+            headerShown: false,
+          }}
+        />
       
       {/* Custom Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
@@ -234,7 +240,8 @@ export default function ViewRecoveryPhrase() {
           </View>
         </View>
       </Modal>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

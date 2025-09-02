@@ -18,6 +18,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
+import { GradientBackground } from '@/components/GradientBackground';
 
 interface AddressInfo {
   address: string;
@@ -364,8 +365,9 @@ export default function WalletAddressesScreen() {
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen 
+    <GradientBackground theme={theme} variant="primary">
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
         options={{ 
           title: 'Wallet Addresses',
           headerLeft: () => (
@@ -454,7 +456,8 @@ export default function WalletAddressesScreen() {
           </View>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

@@ -16,6 +16,7 @@ import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
 import { useWallet } from '@/hooks/wallet-store';
 import PinVerificationScreen from '@/components/PinVerificationScreen';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function GenerateXPUBScreen() {
   const { currentWallet, theme } = useWallet();
@@ -51,46 +52,51 @@ export default function GenerateXPUBScreen() {
 
   if (!isPinVerified) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen
-          options={{
-            headerShown: false,
-          }}
-        />
-        <PinVerificationScreen
-          title="Extended Public Key (XPUB)"
-          subtitle="Confirm your PIN to view your XPUB."
-          onSuccess={handlePinSuccess}
-          onBack={handleGoBack}
-        />
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <PinVerificationScreen
+            title="Extended Public Key (XPUB)"
+            subtitle="Confirm your PIN to view your XPUB."
+            onSuccess={handlePinSuccess}
+            onBack={handleGoBack}
+          />
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
   if (!currentWallet) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <GradientBackground theme={theme} variant="primary">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.colors.text }]}>
+              No wallet found. Please create or import a wallet first.
+            </Text>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  return (
+    <GradientBackground theme={theme} variant="primary">
+      <SafeAreaView style={styles.container}>
         <Stack.Screen
           options={{
             headerShown: false,
           }}
         />
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: theme.colors.text }]}>
-            No wallet found. Please create or import a wallet first.
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerShown: false,
-        }}
-      />
       
       {/* Custom Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
@@ -175,7 +181,8 @@ export default function GenerateXPUBScreen() {
           </Text>
         </View>
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 

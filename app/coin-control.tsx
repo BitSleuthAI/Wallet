@@ -27,6 +27,7 @@ import {
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs } from '@/services/bitcoin-service';
 import type { UTXO } from '@/types/wallet';
+import { GradientBackground } from '@/components/GradientBackground';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
@@ -388,9 +389,10 @@ export default function CoinControlScreen() {
   };
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      
-      <Stack.Screen 
+    <GradientBackground theme={theme} variant="primary">
+      <SafeAreaView style={styles.container}>
+        
+        <Stack.Screen 
         options={{ 
           title: 'Coin Control',
           headerRight: () => (
@@ -537,7 +539,8 @@ export default function CoinControlScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </GradientBackground>
   );
 }
 
