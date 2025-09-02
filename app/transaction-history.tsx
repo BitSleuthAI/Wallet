@@ -65,8 +65,11 @@ export default function TransactionHistoryScreen() {
         <Stack.Screen 
         options={{ 
           title: 'Transaction History',
-          headerStyle: { backgroundColor: theme.colors.background },
+          headerStyle: { 
+            backgroundColor: 'transparent',
+          },
           headerTintColor: theme.colors.text,
+          headerTransparent: true,
         }} 
       />
       
@@ -119,10 +122,6 @@ export default function TransactionHistoryScreen() {
               <TransactionItem
                 key={`${transaction.txid}-${index}`}
                 transaction={transaction}
-                onPress={() => {
-                  console.log('Transaction details:', transaction);
-                  // TODO: Navigate to transaction details screen
-                }}
               />
             ))}
           </View>
@@ -139,6 +138,7 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 60,
   },
   scrollView: {
     flex: 1,
@@ -190,6 +190,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   transactionsList: {
+    paddingHorizontal: 16,
     paddingBottom: 20,
   },
   bottomSpacing: {

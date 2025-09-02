@@ -72,9 +72,9 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
         }
       ]}>
         {isReceived ? (
-          <ArrowDownLeft color="white" size={20} />
+          <ArrowDownLeft color="white" size={18} />
         ) : (
-          <ArrowUpRight color="white" size={20} />
+          <ArrowUpRight color="white" size={18} />
         )}
       </View>
 
@@ -131,20 +131,21 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.lg,
+    padding: platformStyles.spacing.md,
     marginVertical: platformStyles.spacing.xs,
+    marginHorizontal: platformStyles.spacing.xs,
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'flex-start',
     ...platformStyles.shadow,
     position: 'relative',
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: platformStyles.spacing.md,
+    marginRight: platformStyles.spacing.sm,
     ...platformStyles.shadow,
   },
   content: {
@@ -162,12 +163,12 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   type: {
-    ...platformStyles.typography.bodyLarge,
-    fontWeight: '700',
+    ...platformStyles.typography.body,
+    fontWeight: '600',
   },
   amount: {
-    ...platformStyles.typography.bodyLarge,
-    fontWeight: '700',
+    ...platformStyles.typography.body,
+    fontWeight: '600',
   },
   details: {
     flexDirection: 'row',
@@ -176,11 +177,11 @@ const styles = StyleSheet.create({
     marginBottom: platformStyles.spacing.sm,
   },
   date: {
-    ...platformStyles.typography.body,
+    ...platformStyles.typography.caption,
     fontWeight: '500',
   },
   amountUSD: {
-    ...platformStyles.typography.body,
+    ...platformStyles.typography.caption,
     fontWeight: '500',
   },
   statusRow: {
