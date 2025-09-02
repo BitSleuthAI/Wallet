@@ -9,13 +9,13 @@ import {
   Alert,
   Platform,
   ActivityIndicator,
-  Linking,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
+import * as WebBrowser from 'expo-web-browser';
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
 import { GradientBackground } from '@/components/GradientBackground';
@@ -216,12 +216,7 @@ export default function WalletAddressesScreen() {
   const openAddressExplorer = async (address: string) => {
     try {
       const url = `https://app.bitsleuth.ai/address/${address}`;
-      const supported = await Linking.canOpenURL(url);
-      if (supported) {
-        await Linking.openURL(url);
-      } else {
-        Alert.alert('Error', 'Cannot open address explorer');
-      }
+      await WebBrowser.openBrowserAsync(url);
     } catch (error) {
       console.error('Failed to open address explorer:', error);
       Alert.alert('Error', 'Failed to open address explorer');

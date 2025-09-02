@@ -4,6 +4,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
 import {
     AlertTriangle,
     ArrowDownLeft,
@@ -19,7 +20,6 @@ import {
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
-    Linking,
     Platform,
     ScrollView,
     Share,
@@ -115,11 +115,14 @@ export default function TransactionDetailsScreen() {
     }
   };
 
-  const openInExplorer = () => {
-    const url = `https://app.bitsleuth.ai/transactions/${transaction.txid}`;
-    Linking.openURL(url).catch(() => {
+  const openInExplorer = async () => {
+    try {
+      const url = `https://app.bitsleuth.ai/transactions/${transaction.txid}`;
+      await WebBrowser.openBrowserAsync(url);
+    } catch (error) {
+      console.error('Failed to open block explorer:', error);
       Alert.alert('Error', 'Failed to open block explorer');
-    });
+    }
   };
 
   const shareTransaction = async () => {
