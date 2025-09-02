@@ -337,7 +337,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         saveCurrentWalletId(walletsQuery.data[0].id);
       }
     }
-  }, [walletsQuery.data, currentWalletId, saveCurrentWalletId]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [walletsQuery.data, currentWalletId]);
 
   useEffect(() => {
     if (currentWalletQuery.data) {
@@ -756,8 +757,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     setHideBalanceSetting,
     autoLockTimeout,
     setAutoLockTimeoutSetting,
-    coinControlSelected,
-    coinControlFrozen,
     setCoinControlSelected,
     clearCoinControlSelected,
     toggleFreezeUtxo,
