@@ -138,7 +138,7 @@ export default function AboutScreen() {
         </DropdownSection>
 
         <DropdownSection title="Contact & Support">
-          <BulletPoint text="Visit our website: wallet.bitsleuth.ai" />
+          <BulletPoint text="Visit our website: www.bitsleuth.ai" />
           <BulletPoint text="Email support: support@bitsleuth.ai" />
           <BulletPoint text="Follow us on social media for updates" />
         </DropdownSection>
