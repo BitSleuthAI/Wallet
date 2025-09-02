@@ -600,25 +600,27 @@ export default function SendScreen() {
 
   if (!currentWallet) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Send',
-            headerStyle: { backgroundColor: theme.colors.background },
-            headerTintColor: theme.colors.text,
-          }} 
-        />
-        <View style={styles.emptyState}>
-          <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Wallet Found</Text>
-          <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Create or import a wallet to send funds</Text>
-          <TouchableOpacity
-            style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
-            onPress={() => router.push('/wallet-setup')}
-          >
-            <Text style={styles.setupButtonText}>Setup Wallet</Text>
-          </TouchableOpacity>
-        </View>
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen 
+            options={{ 
+              title: 'Send',
+              headerStyle: { backgroundColor: 'transparent' },
+              headerTintColor: theme.colors.text,
+            }} 
+          />
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Wallet Found</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Create or import a wallet to send funds</Text>
+            <TouchableOpacity
+              style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
+              onPress={() => router.push('/wallet-setup')}
+            >
+              <Text style={styles.setupButtonText}>Setup Wallet</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
     );
   }
 
