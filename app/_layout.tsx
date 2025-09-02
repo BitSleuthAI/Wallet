@@ -107,6 +107,8 @@ function AppContent() {
         headerBackTitle: 'Back',
         headerStyle: {
           backgroundColor: 'transparent',
+          borderBottomWidth: 0,
+          elevation: 0,
         },
         headerTransparent: true,
         headerTintColor: theme.colors.text,
