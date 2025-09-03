@@ -339,7 +339,13 @@ export default function WalletSetupScreen() {
   };
 
   const renderCreateMode = () => (
-    <ScrollView style={styles.content}>
+    <ScrollView 
+      style={styles.content}
+      contentContainerStyle={[
+        styles.scrollContent,
+        Platform.OS === 'android' && { paddingBottom: 100 }
+      ]}
+    >
       <TouchableOpacity
         style={styles.backButton}
         onPress={handleBackFromCreate}
