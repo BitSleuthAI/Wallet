@@ -15,6 +15,7 @@ import {
 import React from 'react';
 import {
     Alert,
+    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -218,6 +219,7 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   sectionHeader: {
     fontSize: 18,
