@@ -419,7 +419,11 @@ export default function CoinControlScreen() {
       
       <AndroidSafeContainer style={styles.contentContainer}>
         {/* Summary Stats */}
-        <View style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]}>
+        <View style={[
+          styles.summaryContainer,
+          { backgroundColor: theme.colors.surface },
+          Platform.OS === 'android' ? { marginTop: 8 } : null,
+        ]}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Total UTXOs</Text>
