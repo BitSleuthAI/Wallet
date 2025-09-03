@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -165,7 +166,13 @@ export default function ManageWalletsScreen() {
             headerStyle: { backgroundColor: 'transparent' },
             headerTintColor: theme.colors.text,
             headerLeft: () => (
-              <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
+              <TouchableOpacity 
+                onPress={() => {
+                  console.log('Back button pressed - navigating to settings');
+                  router.push('/(tabs)/settings');
+                }}
+                testID="manage-wallets-back-button"
+              >
                 <ArrowLeft color={theme.colors.text} size={24} />
               </TouchableOpacity>
             ),
@@ -173,7 +180,10 @@ export default function ManageWalletsScreen() {
         />
         
         <ScrollView style={styles.scrollView}>
-          <AndroidSafeContainer style={styles.walletsList}>
+          <AndroidSafeContainer 
+            style={styles.walletsList}
+            customTopPadding={Platform.OS === 'android' ? 100 : undefined}
+          >
             {wallets.map((wallet) => (
               <WalletItem key={wallet.id} wallet={wallet} />
             ))}
