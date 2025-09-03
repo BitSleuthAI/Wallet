@@ -9,6 +9,7 @@ import {
   Alert,
   TextInput,
   Modal,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import {
@@ -285,6 +286,7 @@ const styles = StyleSheet.create({
   },
   walletsList: {
     padding: 20,
+    paddingTop: Platform.OS === 'android' ? 40 : 20,
   },
   walletItem: {
     flexDirection: 'row',
