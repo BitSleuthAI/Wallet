@@ -345,7 +345,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         setCurrentWalletId(walletsQuery.data[0].id);
       });
     }
-  }, [walletsQuery.data, currentWalletId, currentWalletQuery.isLoading]);
+  }, [walletsQuery.data, currentWalletQuery.isLoading]);
 
   useEffect(() => {
     if (currentWalletQuery.data) {
