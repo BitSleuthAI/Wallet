@@ -416,8 +416,9 @@ export default function CoinControlScreen() {
         }} 
       />
       
-      {/* Summary Stats */}
-      <View style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]}>
+      <View style={styles.contentContainer}>
+        {/* Summary Stats */}
+        <View style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryLabel, { color: theme.colors.textSecondary }]}>Total UTXOs</Text>
@@ -539,6 +540,7 @@ export default function CoinControlScreen() {
           </>
         )}
       </ScrollView>
+      </View>
       </SafeAreaView>
     </GradientBackground>
   );
@@ -547,6 +549,10 @@ export default function CoinControlScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  contentContainer: {
+    flex: 1,
+    paddingTop: Platform.OS === 'android' ? 8 : 0,
   },
   headerButton: {
     padding: 8,
