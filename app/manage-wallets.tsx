@@ -286,7 +286,7 @@ const styles = StyleSheet.create({
   },
   walletsList: {
     padding: 20,
-    paddingTop: Platform.OS === 'android' ? 40 : 20,
+    paddingTop: Platform.OS === 'android' ? 60 : 20,
   },
   walletItem: {
     flexDirection: 'row',
