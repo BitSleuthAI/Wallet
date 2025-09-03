@@ -28,6 +28,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs } from '@/services/bitcoin-service';
 import type { UTXO } from '@/types/wallet';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
@@ -416,7 +417,7 @@ export default function CoinControlScreen() {
         }} 
       />
       
-      <View style={styles.contentContainer}>
+      <AndroidSafeContainer style={styles.contentContainer}>
         {/* Summary Stats */}
         <View style={[styles.summaryContainer, { backgroundColor: theme.colors.surface }]}>
         <View style={styles.summaryRow}>
@@ -534,13 +535,13 @@ export default function CoinControlScreen() {
             <View style={[styles.infoFooter, { backgroundColor: theme.colors.surface }]}>
               <Info color={theme.colors.textSecondary} size={16} />
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                Coin control allows you to manage individual UTXOs. Frozen UTXOs won't be used in transactions unless manually selected.
+                Coin control allows you to manage individual UTXOs. Frozen UTXOs won&apos;t be used in transactions unless manually selected.
               </Text>
             </View>
           </>
         )}
       </ScrollView>
-      </View>
+      </AndroidSafeContainer>
       </SafeAreaView>
     </GradientBackground>
   );
@@ -552,7 +553,6 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
   },
   headerButton: {
     padding: 8,
@@ -651,7 +651,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingBottom: Platform.OS === 'android' ? 80 : 20,
   },
   loadingContainer: {
     flex: 1,

@@ -1,6 +1,7 @@
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { Stack, router } from 'expo-router';
 import {
     ChevronRight,
@@ -15,7 +16,6 @@ import {
 import React from 'react';
 import {
     Alert,
-    Platform,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -134,7 +134,8 @@ export default function WalletSettingsScreen() {
           }} 
         />
         
-        <ScrollView style={styles.scrollView}>
+        <AndroidSafeContainer style={styles.scrollContainer}>
+          <ScrollView style={styles.scrollView}>
         {/* Wallet Info Section */}
         <SectionHeader title="Wallet Information" />
         
@@ -206,7 +207,8 @@ export default function WalletSettingsScreen() {
         />
 
           <View style={styles.bottomSpacing} />
-        </ScrollView>
+          </ScrollView>
+        </AndroidSafeContainer>
       </SafeAreaView>
     </GradientBackground>
   );
@@ -217,10 +219,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
+  scrollContainer: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
-    paddingBottom: Platform.OS === 'android' ? 80 : 20,
   },
   sectionHeader: {
     fontSize: 18,

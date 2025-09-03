@@ -3,6 +3,7 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack } from 'expo-router';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import {
     AlertTriangle,
     CheckCircle,
@@ -376,7 +377,8 @@ export default function FeeSettingsScreen() {
           }} 
         />
       
-      <ScrollView style={styles.scrollView}>
+      <AndroidSafeContainer style={styles.scrollContainer}>
+        <ScrollView style={styles.scrollView}>
         {/* Fee Presets Section */}
         <SectionHeader 
           title="Fee Presets" 
@@ -611,7 +613,8 @@ export default function FeeSettingsScreen() {
         )}
         
         <View style={styles.bottomPadding} />
-      </ScrollView>
+        </ScrollView>
+      </AndroidSafeContainer>
       </SafeAreaView>
     </GradientBackground>
   );
@@ -621,10 +624,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContainer: {
+    flex: 1,
+  },
   scrollView: {
     flex: 1,
-    paddingTop: Platform.OS === 'android' ? 40 : 0,
-    paddingBottom: Platform.OS === 'android' ? 80 : 20,
   },
   loadingContainer: {
     flex: 1,
