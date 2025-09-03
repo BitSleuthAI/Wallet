@@ -92,17 +92,25 @@ export default function BiometricSetupScreen() {
       console.log('Biometric enrolled check:', enrolled);
       
       if (!enrolled) {
+        const setupMessage = Platform.OS === 'android'
+          ? 'Please set up biometric authentication in your device settings first, then try again.'
+          : `Please set up ${biometricType} in your device settings first, then try again.`;
+        
         Alert.alert(
           'Biometric Not Set Up',
-          `Please set up ${biometricType} in your device settings first, then try again.`,
+          setupMessage,
           [{ text: 'OK' }]
         );
         setIsLoading(false);
         return;
       }
       
+      const promptMessage = Platform.OS === 'android'
+        ? 'Enable biometric authentication for wallet access'
+        : `Enable ${biometricType} for wallet access`;
+      
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: `Enable ${biometricType} for wallet access`,
+        promptMessage,
         cancelLabel: 'Cancel',
         fallbackLabel: 'Use PIN instead',
       });
@@ -113,9 +121,13 @@ export default function BiometricSetupScreen() {
         // Save biometric settings
         await enableBiometric(biometricType);
         setHasSetupBiometric(true);
+        const successMessage = Platform.OS === 'android' 
+          ? 'Biometric authentication has been enabled for your wallet.'
+          : `${biometricType} has been enabled for your wallet.`;
+        
         Alert.alert(
           'Success!',
-          `${biometricType} has been enabled for your wallet.`,
+          successMessage,
           [
             {
               text: 'Continue',
@@ -178,12 +190,36 @@ export default function BiometricSetupScreen() {
   };
 
   const getBiometricDescription = () => {
-    if (biometricType === 'Face ID') {
+    if (Platform.OS === 'android') {
+      return 'Use biometric authentication to quickly and securely access your wallet without entering your PIN every time.';
+    } else if (biometricType === 'Face ID') {
       return 'Use Face ID to quickly and securely access your wallet without entering your PIN every time.';
     } else if (biometricType === 'Touch ID') {
       return 'Use Touch ID to quickly and securely access your wallet without entering your PIN every time.';
     }
     return 'Use biometric authentication to quickly and securely access your wallet without entering your PIN every time.';
+  };
+
+  const getBiometricTitle = () => {
+    if (Platform.OS === 'android') {
+      return 'Enable Biometric';
+    } else if (biometricType === 'Face ID') {
+      return 'Enable Face ID';
+    } else if (biometricType === 'Touch ID') {
+      return 'Enable Touch ID';
+    }
+    return 'Enable Biometric';
+  };
+
+  const getBiometricButtonText = () => {
+    if (Platform.OS === 'android') {
+      return 'Enable Biometric';
+    } else if (biometricType === 'Face ID') {
+      return 'Enable Face ID';
+    } else if (biometricType === 'Touch ID') {
+      return 'Enable Touch ID';
+    }
+    return 'Enable Biometric';
   };
 
   if (hasSetupBiometric) {
@@ -203,7 +239,7 @@ export default function BiometricSetupScreen() {
             </Text>
             
             <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-              Your wallet is now secured with {biometricType} and PIN protection.
+              Your wallet is now secured with {Platform.OS === 'android' ? 'biometric authentication' : biometricType} and PIN protection.
             </Text>
             
             <TouchableOpacity
@@ -240,7 +276,7 @@ export default function BiometricSetupScreen() {
           </View>
           
           <Text style={[styles.title, { color: theme.colors.text }]}>
-            Enable {biometricType}
+            {getBiometricTitle()}
           </Text>
           
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
@@ -290,7 +326,7 @@ export default function BiometricSetupScreen() {
               activeOpacity={0.7}
             >
               <Text style={styles.enableButtonText}>
-                {isLoading ? 'Setting up...' : `Enable ${biometricType}`}
+                {isLoading ? 'Setting up...' : getBiometricButtonText()}
               </Text>
             </TouchableOpacity>
           ) : (
