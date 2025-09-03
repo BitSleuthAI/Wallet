@@ -10,8 +10,8 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { ArrowLeft, Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
+import { Stack } from 'expo-router';
+import { Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -366,29 +366,8 @@ export default function WalletAddressesScreen() {
         <Stack.Screen 
         options={{ 
           title: 'Wallet Addresses',
-          headerLeft: () => (
-            <TouchableOpacity
-              onPress={() => {
-                console.log('Back button pressed on WalletAddresses - attempting router.back() with fallback');
-                try {
-                  if ((router as any).canGoBack?.()) {
-                    router.back();
-                  } else {
-                    router.replace('/(tabs)/settings');
-                  }
-                } catch (error) {
-                  console.error('router.back() failed, replacing to settings:', error);
-                  router.replace('/(tabs)/settings');
-                }
-              }}
-              testID="wallet-addresses-back-button"
-              accessibilityRole="button"
-              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-              style={styles.backButton}
-            >
-              <ArrowLeft color={theme.colors.text} size={24} />
-            </TouchableOpacity>
-          ),
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTintColor: theme.colors.text,
           headerRight: () => (
             <TouchableOpacity
               onPress={refreshAddresses}
