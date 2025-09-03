@@ -220,6 +220,7 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? 40 : 0,
+    paddingBottom: Platform.OS === 'android' ? 80 : 20,
   },
   sectionHeader: {
     fontSize: 18,
