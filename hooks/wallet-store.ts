@@ -31,6 +31,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [coinControlSelected, setCoinControlSelectedState] = useState<Record<string, string[]>>({});
   const [coinControlFrozen, setCoinControlFrozenState] = useState<Record<string, string[]>>({});
   const hasSetInitialWallet = useRef(false);
+  const currentWalletIdRef = useRef<string | null>(null);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -336,9 +337,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [walletsQuery.data]);
 
+  // Update ref when currentWalletId changes
+  useEffect(() => {
+    currentWalletIdRef.current = currentWalletId;
+  }, [currentWalletId]);
+
   // Separate effect to handle setting initial wallet ID
   useEffect(() => {
-    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletId && !currentWalletQuery.isLoading && !hasSetInitialWallet.current) {
+    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletIdRef.current && !currentWalletQuery.isLoading && !hasSetInitialWallet.current) {
       hasSetInitialWallet.current = true;
       // Use direct AsyncStorage call to avoid mutation cycle
       AsyncStorage.setItem('currentWalletId', walletsQuery.data[0].id).then(() => {
