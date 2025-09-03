@@ -11,6 +11,7 @@ import { Stack } from 'expo-router';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 interface DropdownSectionProps {
   title: string;
@@ -79,7 +80,8 @@ export default function AboutScreen() {
           }} 
         />
         
-        <ScrollView style={styles.scrollView}>
+        <AndroidSafeContainer>
+          <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
@@ -142,7 +144,8 @@ export default function AboutScreen() {
           <BulletPoint text="Email support: support@bitsleuth.ai" />
           <BulletPoint text="Follow us on social media for updates" />
         </DropdownSection>
-        </ScrollView>
+          </ScrollView>
+        </AndroidSafeContainer>
       </SafeAreaView>
     </GradientBackground>
   );
