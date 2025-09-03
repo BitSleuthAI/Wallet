@@ -171,11 +171,14 @@ export default function PinSetupScreen() {
                 return (
                   <TouchableOpacity
                     key={itemIndex}
-                    style={[styles.numberButton, styles.deleteButton]}
+                    style={[
+                      styles.numberButton,
+                      { backgroundColor: theme.colors.primary }
+                    ]}
                     onPress={handleDelete}
                     activeOpacity={0.6}
                   >
-                    <Delete color={theme.colors.text} size={24} />
+                    <Delete color="white" size={24} />
                   </TouchableOpacity>
                 );
               }
@@ -315,9 +318,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
   },
-  deleteButton: {
-    backgroundColor: 'transparent',
-  },
+
   numberButtonText: {
     fontSize: 24,
     fontWeight: '600',
