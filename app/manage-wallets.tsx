@@ -78,10 +78,12 @@ export default function ManageWalletsScreen() {
           onPress: async () => {
             setIsDeleting(true);
             try {
+              console.log('Deleting wallet:', wallet.id, wallet.name);
               await deleteWallet(wallet.id);
+              console.log('Wallet deleted successfully');
             } catch (error) {
               console.error('Error deleting wallet:', error);
-              Alert.alert('Error', 'Failed to delete wallet');
+              Alert.alert('Error', 'Failed to delete wallet. Please try again.');
             } finally {
               setIsDeleting(false);
             }
