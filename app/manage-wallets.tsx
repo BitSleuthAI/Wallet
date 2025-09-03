@@ -168,10 +168,11 @@ export default function ManageWalletsScreen() {
             headerLeft: () => (
               <TouchableOpacity 
                 onPress={() => {
-                  console.log('Back button pressed - navigating to settings');
-                  router.push('/(tabs)/settings');
+                  console.log('Back button pressed - navigating back');
+                  router.back();
                 }}
                 testID="manage-wallets-back-button"
+                style={styles.backButton}
               >
                 <ArrowLeft color={theme.colors.text} size={24} />
               </TouchableOpacity>
@@ -450,5 +451,9 @@ const styles = StyleSheet.create({
   modalButtonText: {
     fontSize: 16,
     fontWeight: '600',
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
   },
 });
