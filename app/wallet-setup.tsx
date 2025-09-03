@@ -828,8 +828,12 @@ export default function WalletSetupScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen options={{ headerShown: false }} />
+      <View style={{ flex: 1, backgroundColor: 'transparent' }}>
+        <SafeAreaView style={[
+          styles.container,
+          Platform.OS === 'android' && { paddingTop: 20 }
+        ]}>
+          <Stack.Screen options={{ headerShown: false }} />
         
         {mode === 'select' && renderSelectMode()}
         {mode === 'create' && renderCreateMode()}
@@ -855,7 +859,8 @@ export default function WalletSetupScreen() {
             onClose={() => setShowQRScanner(false)}
           />
         </Modal>
-      </SafeAreaView>
+        </SafeAreaView>
+      </View>
     </GradientBackground>
   );
 }
