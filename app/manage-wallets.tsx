@@ -165,7 +165,7 @@ export default function ManageWalletsScreen() {
             headerStyle: { backgroundColor: 'transparent' },
             headerTintColor: theme.colors.text,
             headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()}>
+              <TouchableOpacity onPress={() => router.push('/(tabs)/settings')}>
                 <ArrowLeft color={theme.colors.text} size={24} />
               </TouchableOpacity>
             ),
