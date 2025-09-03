@@ -158,7 +158,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
       }
 
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: `Use ${biometricType || 'biometric'} to unlock BitSleuth`,
+        promptMessage: `Use ${Platform.OS === 'android' ? 'biometric' : (biometricType || 'biometric')} to unlock BitSleuth`,
         cancelLabel: 'Use PIN',
         fallbackLabel: 'Use PIN instead',
       });
@@ -276,7 +276,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
       }
 
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: `Use ${biometricType || 'biometric'} to authorize transaction`,
+        promptMessage: `Use ${Platform.OS === 'android' ? 'biometric' : (biometricType || 'biometric')} to authorize transaction`,
         cancelLabel: 'Cancel',
         fallbackLabel: 'Cancel',
       });
