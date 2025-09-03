@@ -19,6 +19,7 @@ import * as WebBrowser from 'expo-web-browser';
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 interface AddressInfo {
   address: string;
@@ -388,21 +389,22 @@ export default function WalletAddressesScreen() {
         }} 
       />
       
-      {/* Tab Navigation */}
-      <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
-        <TabButton
-          title="Receiving"
-          isActive={selectedTab === 'receiving'}
-          onPress={() => setSelectedTab('receiving')}
-        />
-        <TabButton
-          title="Change"
-          isActive={selectedTab === 'change'}
-          onPress={() => setSelectedTab('change')}
-        />
-      </View>
-      
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <AndroidSafeContainer style={styles.contentContainer}>
+        {/* Tab Navigation */}
+        <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
+          <TabButton
+            title="Receiving"
+            isActive={selectedTab === 'receiving'}
+            onPress={() => setSelectedTab('receiving')}
+          />
+          <TabButton
+            title="Change"
+            isActive={selectedTab === 'change'}
+            onPress={() => setSelectedTab('change')}
+          />
+        </View>
+        
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {addressesQuery.isLoading ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
@@ -450,7 +452,8 @@ export default function WalletAddressesScreen() {
             </Text>
           </View>
         )}
-      </ScrollView>
+        </ScrollView>
+      </AndroidSafeContainer>
       </SafeAreaView>
     </GradientBackground>
   );
@@ -458,6 +461,9 @@ export default function WalletAddressesScreen() {
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  contentContainer: {
     flex: 1,
   },
   backButton: {
