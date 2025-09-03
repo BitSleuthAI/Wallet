@@ -82,7 +82,7 @@ export default function AboutScreen() {
         
         <AndroidSafeContainer>
           <ScrollView style={styles.scrollView}>
-        <View style={styles.header}>
+            <View style={styles.header}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
           </Text>
