@@ -126,18 +126,20 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', handleAppStateChange);
     
-    // Initialize timer when component mounts
-    if (storedPin && !isLocked) {
-      resetLockTimer();
-    }
-
     return () => {
       subscription?.remove();
       if (lockTimeoutRef.current) {
         clearTimeout(lockTimeoutRef.current);
       }
     };
-  }, [handleAppStateChange, storedPin, isLocked, resetLockTimer]);
+  }, [handleAppStateChange]);
+
+  // Separate effect for initializing timer to avoid circular dependency
+  useEffect(() => {
+    if (storedPin && !isLocked && autoLockTimeoutQuery.data !== undefined) {
+      resetLockTimer();
+    }
+  }, [storedPin, isLocked, autoLockTimeoutQuery.data, resetLockTimer]);
 
   const authenticateWithBiometric = useCallback(async (): Promise<boolean> => {
     if (Platform.OS === 'web' || !biometricEnabled) {
@@ -331,7 +333,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
         console.log('🔐 Step 2: Security key verification required');
         
         // Check if user has registered security keys
-        const availableKeys = securityKeys.filter(key => 
+        const availableKeys = securityKeys.filter((key: any) => 
           key.type === 'fido' || key.type === 'passkey'
         );
 
@@ -364,7 +366,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
         console.log('🔐 Step 3: Multi-factor authentication required');
         
         const factorsEnabled = (biometricEnabled ? 1 : 0) + 
-                             securityKeys.filter(key => key.type === 'fido' || key.type === 'passkey').length;
+                             securityKeys.filter((key: any) => key.type === 'fido' || key.type === 'passkey').length;
         
         if (factorsEnabled < 2) {
           console.log('❌ Insufficient authentication factors for multi-factor');
@@ -377,7 +379,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
         }
 
         // For multi-factor, we require both biometric AND security key
-        if (biometricEnabled && securityKeys.some(key => key.type === 'fido' || key.type === 'passkey')) {
+        if (biometricEnabled && securityKeys.some((key: any) => key.type === 'fido' || key.type === 'passkey')) {
           console.log('✅ Multi-factor authentication successful');
         } else {
           console.log('❌ Multi-factor authentication failed');
@@ -391,7 +393,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
       console.error('❌ Enhanced transaction authentication error:', error);
       return false;
     }
-  }, [biometricEnabled, biometricType, authenticateForTransaction]);
+  }, [biometricEnabled, authenticateForTransaction]);
 
   // Verify that a security key is actually present and accessible
   const verifySecurityKeyPresence = useCallback(async (securityKeys: any[]): Promise<boolean> => {
