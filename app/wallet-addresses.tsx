@@ -369,14 +369,21 @@ export default function WalletAddressesScreen() {
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => {
-                console.log('Back button pressed - navigating to wallet settings');
+                console.log('Back button pressed on WalletAddresses - attempting router.back() with fallback');
                 try {
-                  router.push('/wallet-settings');
+                  if ((router as any).canGoBack?.()) {
+                    router.back();
+                  } else {
+                    router.replace('/(tabs)/settings');
+                  }
                 } catch (error) {
-                  console.error('Navigation error, trying router.back():', error);
-                  router.back();
+                  console.error('router.back() failed, replacing to settings:', error);
+                  router.replace('/(tabs)/settings');
                 }
               }}
+              testID="wallet-addresses-back-button"
+              accessibilityRole="button"
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
               style={styles.backButton}
             >
               <ArrowLeft color={theme.colors.text} size={24} />
@@ -397,9 +404,11 @@ export default function WalletAddressesScreen() {
         }} 
       />
       
-      <AndroidSafeContainer style={styles.contentContainer}>
+      <AndroidSafeContainer style={styles.contentContainer} customTopPadding={Platform.OS === 'android' ? 100 : undefined}>
+        {/* iOS spacer below header to avoid overlap */}
+        {Platform.OS === 'ios' ? <View style={{ height: 16 }} /> : null}
         {/* Tab Navigation */}
-        <View style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
+        <View testID="addresses-tab-container" style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
           <TabButton
             title="Receiving"
             isActive={selectedTab === 'receiving'}

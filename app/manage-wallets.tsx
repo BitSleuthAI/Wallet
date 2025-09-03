@@ -168,15 +168,21 @@ export default function ManageWalletsScreen() {
             headerLeft: () => (
               <TouchableOpacity 
                 onPress={() => {
-                  console.log('Back button pressed - attempting router.back()');
+                  console.log('Back button pressed - attempting router.back() with fallback');
                   try {
-                    router.back();
+                    if ((router as any).canGoBack?.()) {
+                      router.back();
+                    } else {
+                      router.replace('/(tabs)/settings');
+                    }
                   } catch (error) {
                     console.error('router.back() failed, replacing to settings:', error);
                     router.replace('/(tabs)/settings');
                   }
                 }}
                 testID="manage-wallets-back-button"
+                accessibilityRole="button"
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
                 style={styles.backButton}
               >
                 <ArrowLeft color={theme.colors.text} size={24} />
