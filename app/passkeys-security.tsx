@@ -505,7 +505,7 @@ export default function PasskeysSecurityScreen() {
                 Require Biometric for Transactions
               </Text>
               <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Face ID/Touch ID required before sending funds
+                {Platform.OS === 'ios' ? 'Face ID/Touch ID' : 'Biometric'} required before sending funds
               </Text>
             </View>
             <TouchableOpacity
@@ -575,7 +575,7 @@ export default function PasskeysSecurityScreen() {
               </View>
               <View style={styles.keyContent}>
                 <Text style={[styles.keyName, { color: theme.colors.text }]}>
-                  {biometricEnabled && biometricType ? biometricType : (Platform.OS === 'ios' ? 'Face ID / Touch ID' : 'Biometric Authentication')}
+                  {biometricEnabled && biometricType ? biometricType : (Platform.OS === 'ios' ? 'Face ID / Touch ID' : 'Biometric')}
                 </Text>
                 <Text style={[styles.keyDate, { color: theme.colors.textSecondary }]}>
                   {biometricEnabled ? 'Enabled for wallet unlock and transactions' : 'Tap to enable'}
