@@ -11,7 +11,7 @@ import {
   Modal,
   Platform,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   Edit3,
   Trash2,
@@ -30,6 +30,7 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
   const { hasPin } = useAutoLock();
+  const router = useRouter();
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
   const [editingWallet, setEditingWallet] = useState<any>(null);
   const [editName, setEditName] = useState<string>('');
@@ -166,6 +167,15 @@ export default function ManageWalletsScreen() {
             title: 'Manage Wallets',
             headerStyle: { backgroundColor: 'transparent' },
             headerTintColor: theme.colors.text,
+            headerLeft: Platform.OS === 'android' ? () => (
+              <TouchableOpacity
+                onPress={() => router.back()}
+                style={styles.backButton}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+              >
+                <Text style={[styles.backButtonText, { color: theme.colors.text }]}>← Back</Text>
+              </TouchableOpacity>
+            ) : undefined,
           }} 
         />
         
@@ -444,5 +454,9 @@ const styles = StyleSheet.create({
   backButton: {
     padding: 8,
     marginLeft: -8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

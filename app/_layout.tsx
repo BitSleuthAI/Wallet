@@ -12,7 +12,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 ExpoSplashScreen.preventAutoHideAsync();
@@ -104,11 +104,9 @@ function AppContent() {
   return (
     <Stack 
       screenOptions={{ 
-        headerBackTitle: 'Back',
+        headerBackTitle: Platform.OS === 'ios' ? 'Back' : '',
         headerStyle: {
           backgroundColor: 'transparent',
-          borderBottomWidth: 0,
-          elevation: 0,
         },
         headerTransparent: true,
         headerTintColor: theme.colors.text,
@@ -120,6 +118,8 @@ function AppContent() {
         contentStyle: {
           backgroundColor: 'transparent',
         },
+        gestureEnabled: true,
+        animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade_from_bottom',
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

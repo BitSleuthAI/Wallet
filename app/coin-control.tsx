@@ -12,7 +12,7 @@ import {
   Platform,
   Pressable,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import {
   Coins,
   Filter,
@@ -35,6 +35,7 @@ type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 
 export default function CoinControlScreen() {
   const { theme, currentWallet, coinControl } = useWallet();
+  const router = useRouter();
   const [utxos, setUtxos] = useState<UTXO[]>([]);
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -396,6 +397,17 @@ export default function CoinControlScreen() {
         <Stack.Screen 
         options={{ 
           title: 'Coin Control',
+          headerStyle: { backgroundColor: 'transparent' },
+          headerTintColor: theme.colors.text,
+          headerLeft: Platform.OS === 'android' ? () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={[styles.backButtonText, { color: theme.colors.text }]}>← Back</Text>
+            </TouchableOpacity>
+          ) : undefined,
           headerRight: () => (
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
@@ -778,5 +790,13 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginLeft: 8,
     flex: 1,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });

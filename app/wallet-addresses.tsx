@@ -10,7 +10,7 @@ import {
   Platform,
   ActivityIndicator,
 } from 'react-native';
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
 import { Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
@@ -35,6 +35,7 @@ interface AddressInfo {
 
 export default function WalletAddressesScreen() {
   const { theme, currentWallet } = useWallet();
+  const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
 
@@ -368,6 +369,15 @@ export default function WalletAddressesScreen() {
           title: 'Wallet Addresses',
           headerStyle: { backgroundColor: 'transparent' },
           headerTintColor: theme.colors.text,
+          headerLeft: Platform.OS === 'android' ? () => (
+            <TouchableOpacity
+              onPress={() => router.back()}
+              style={styles.backButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            >
+              <Text style={[styles.backButtonText, { color: theme.colors.text }]}>← Back</Text>
+            </TouchableOpacity>
+          ) : undefined,
           headerRight: () => (
             <TouchableOpacity
               onPress={refreshAddresses}
@@ -619,5 +629,9 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 4,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
