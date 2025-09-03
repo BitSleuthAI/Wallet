@@ -1,6 +1,7 @@
 import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
+import FeedbackPopup from '@/components/FeedbackPopup';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
@@ -10,7 +11,7 @@ import { Wallet } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Alert,
     Animated,
@@ -58,6 +59,9 @@ export default function WalletScreen() {
     selectedCurrency,
     hideBalance,
     setHideBalanceSetting,
+    shouldShowFeedbackPrompt,
+    markFeedbackPromptShown,
+    markFeedbackPromptDismissed,
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -65,6 +69,7 @@ export default function WalletScreen() {
   const [editName, setEditName] = useState<string>('');
   const [editColor, setEditColor] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
+  const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -105,6 +110,24 @@ export default function WalletScreen() {
   const formatPriceChange = (change: number) => {
     const sign = change >= 0 ? '+' : '';
     return `${sign}${change.toFixed(2)}%`;
+  };
+
+  // Handle feedback prompt display
+  useEffect(() => {
+    if (shouldShowFeedbackPrompt && !showFeedbackPopup) {
+      // Show feedback popup after a short delay to avoid interrupting user flow
+      const timer = setTimeout(() => {
+        setShowFeedbackPopup(true);
+        markFeedbackPromptShown();
+      }, 2000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [shouldShowFeedbackPrompt, showFeedbackPopup, markFeedbackPromptShown]);
+
+  const handleFeedbackDismiss = () => {
+    setShowFeedbackPopup(false);
+    markFeedbackPromptDismissed();
   };
 
   // Show loading state while wallet is being loaded
@@ -498,6 +521,12 @@ export default function WalletScreen() {
           </View>
         </View>
       </Modal>
+      
+      {/* Feedback Popup */}
+      <FeedbackPopup 
+        visible={showFeedbackPopup} 
+        onDismiss={handleFeedbackDismiss} 
+      />
     </SafeAreaView>
     </GradientBackground>
   );

@@ -32,6 +32,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [coinControlFrozen, setCoinControlFrozenState] = useState<Record<string, string[]>>({});
   const hasSetInitialWallet = useRef(false);
   const currentWalletIdRef = useRef<string | null>(null);
+  const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -142,6 +143,22 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('autoLockTimeout');
       return stored ? parseInt(stored, 10) : 15;
+    },
+  });
+
+  // Load feedback tracking data
+  const feedbackTrackingQuery = useQuery({
+    queryKey: ['feedbackTracking'],
+    queryFn: async () => {
+      const firstUsed = await AsyncStorage.getItem('appFirstUsed');
+      const feedbackShown = await AsyncStorage.getItem('feedbackPromptShown');
+      const feedbackDismissed = await AsyncStorage.getItem('feedbackPromptDismissed');
+      
+      return {
+        firstUsed: firstUsed ? parseInt(firstUsed, 10) : null,
+        feedbackShown: feedbackShown === 'true',
+        feedbackDismissed: feedbackDismissed === 'true',
+      };
     },
   });
 
@@ -330,6 +347,51 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
   const { mutate: saveAutoLock } = saveAutoLockMutation;
+
+  // Track first app usage and feedback prompt
+  useEffect(() => {
+    const trackFirstUsage = async () => {
+      const firstUsed = await AsyncStorage.getItem('appFirstUsed');
+      if (!firstUsed) {
+        const now = Date.now();
+        await AsyncStorage.setItem('appFirstUsed', now.toString());
+        queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
+      }
+    };
+    trackFirstUsage();
+  }, [queryClient]);
+
+  // Mark feedback prompt as shown
+  const markFeedbackPromptShown = useCallback(async () => {
+    await AsyncStorage.setItem('feedbackPromptShown', 'true');
+    setFeedbackPromptShown(true);
+    queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
+  }, [queryClient]);
+
+  // Mark feedback prompt as dismissed
+  const markFeedbackPromptDismissed = useCallback(async () => {
+    await AsyncStorage.setItem('feedbackPromptDismissed', 'true');
+    queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
+  }, [queryClient]);
+
+  // Check if feedback prompt should be shown (after 3 weeks of usage)
+  const shouldShowFeedbackPrompt = useMemo(() => {
+    if (!feedbackTrackingQuery.data) return false;
+    
+    const { firstUsed, feedbackShown, feedbackDismissed } = feedbackTrackingQuery.data;
+    
+    // Don't show if already shown or dismissed
+    if (feedbackShown || feedbackDismissed) return false;
+    
+    // Don't show if first usage not tracked
+    if (!firstUsed) return false;
+    
+    // Show after 3 weeks (21 days) of usage
+    const threeWeeksInMs = 21 * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    
+    return (now - firstUsed) >= threeWeeksInMs;
+  }, [feedbackTrackingQuery.data]);
 
   useEffect(() => {
     if (walletsQuery.data) {
@@ -735,6 +797,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     hasBalanceError: !!balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null),
     hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
     hasPriceError: !!priceQuery.error && !priceQuery.data,
+    
+    // Feedback tracking
+    shouldShowFeedbackPrompt,
+    markFeedbackPromptShown,
+    markFeedbackPromptDismissed,
   }), [
     wallets,
     currentWallet,
@@ -776,5 +843,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isUtxoFrozen,
     filterSelectedUtxos,
     getSelectedUtxoIds,
+    shouldShowFeedbackPrompt,
+    markFeedbackPromptShown,
+    markFeedbackPromptDismissed,
   ]);
 });
