@@ -567,7 +567,15 @@ export default function WalletSetupScreen() {
       >
       <TouchableOpacity
         style={styles.backButton}
-        onPress={() => setMode('select')}
+        onPress={() => {
+          console.log('Import back button pressed');
+          if (router.canGoBack()) {
+            router.back();
+          } else {
+            setMode('select');
+          }
+        }}
+        activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
       </TouchableOpacity>
