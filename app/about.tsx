@@ -84,7 +84,7 @@ export default function AboutScreen() {
           style={styles.scrollView}
           contentContainerStyle={[
             styles.scrollContent,
-            Platform.OS === 'ios' && { paddingTop: 60 }
+            Platform.OS === 'ios' && { paddingTop: 75 }
           ]}
         >
             <View style={styles.header}>
