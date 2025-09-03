@@ -14,6 +14,7 @@ import {
     Vibration,
     View,
 } from 'react-native';
+import { GradientBackground } from '@/components/GradientBackground';
 
 export default function PinUnlockScreen() {
   const { theme, logoutAndEraseWallet } = useWallet();
@@ -111,6 +112,13 @@ export default function PinUnlockScreen() {
     return <Fingerprint color={theme.colors.primary} size={24} />;
   };
 
+  const getBiometricText = () => {
+    if (Platform.OS === 'android') {
+      return 'Biometric';
+    }
+    return biometricType || 'Biometric';
+  };
+
   useEffect(() => {
     if (pin.length === maxPinLength) {
       // Auto-verify PIN when 4 digits are entered
@@ -194,11 +202,15 @@ export default function PinUnlockScreen() {
                 return (
                   <TouchableOpacity
                     key={itemIndex}
-                    style={[styles.numberButton, styles.deleteButton]}
+                    style={[
+                      styles.numberButton, 
+                      styles.deleteButton,
+                      { backgroundColor: theme.colors.primary }
+                    ]}
                     onPress={handleDelete}
                     activeOpacity={0.6}
                   >
-                    <Delete color={theme.colors.text} size={24} />
+                    <Delete color="white" size={24} />
                   </TouchableOpacity>
                 );
               }
@@ -223,10 +235,9 @@ export default function PinUnlockScreen() {
     );
   };
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <View style={styles.content}>
-        <View style={styles.header}>
+  const renderContent = () => (
+    <View style={styles.content}>
+      <View style={styles.header}>
           <View style={[styles.lockIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
             <Lock color={theme.colors.primary} size={32} />
           </View>
@@ -235,7 +246,7 @@ export default function PinUnlockScreen() {
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             {showBiometricButton 
-              ? `Use ${biometricType || 'biometric'} or enter your 4-digit PIN to unlock`
+              ? `Use ${getBiometricText()} or enter your 4-digit PIN to unlock`
               : 'Enter your 4-digit PIN to unlock the app'
             }
           </Text>
@@ -256,15 +267,15 @@ export default function PinUnlockScreen() {
             >
               {getBiometricIcon()}
               <Text style={[styles.biometricButtonText, { color: theme.colors.primary }]}>
-                Use {biometricType || 'Biometric'}
+                Use {getBiometricText()}
               </Text>
             </TouchableOpacity>
           )}
         </View>
 
-        {renderPinDots()}
-        {renderNumberPad()}
-      </View>
+      {renderPinDots()}
+      {renderNumberPad()}
+      
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleForgotPin} activeOpacity={0.7}>
           <Text style={[styles.footerText, { color: theme.colors.primary }]}>
@@ -272,6 +283,22 @@ export default function PinUnlockScreen() {
           </Text>
         </TouchableOpacity>
       </View>
+    </View>
+  );
+
+  if (Platform.OS === 'android') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <GradientBackground theme={theme} variant="primary">
+          {renderContent()}
+        </GradientBackground>
+      </SafeAreaView>
+    );
+  }
+
+  return (
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      {renderContent()}
     </SafeAreaView>
   );
 }
@@ -286,8 +313,8 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    marginTop: 64,
-    marginBottom: 40,
+    marginTop: Platform.OS === 'android' ? 20 : 64,
+    marginBottom: Platform.OS === 'android' ? 20 : 40,
   },
   lockIconContainer: {
     width: 80,
@@ -322,7 +349,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    marginBottom: 60,
+    marginBottom: Platform.OS === 'android' ? 30 : 60,
   },
   pinDot: {
     width: 16,
@@ -333,7 +360,7 @@ const styles = StyleSheet.create({
   numberPad: {
     alignItems: 'center',
     marginTop: 'auto',
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'android' ? 20 : 40,
   },
   numberRow: {
     flexDirection: 'row',
@@ -367,7 +394,7 @@ const styles = StyleSheet.create({
     height: 72,
   },
   deleteButton: {
-    backgroundColor: 'transparent',
+    // backgroundColor will be set dynamically to theme.colors.primary
   },
   numberButtonText: {
     fontSize: 24,
@@ -390,8 +417,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   footer: {
-    padding: 20,
+    padding: Platform.OS === 'android' ? 10 : 20,
     alignItems: 'center',
+    paddingBottom: Platform.OS === 'android' ? 20 : 20,
   },
   footerText: {
     fontSize: 16,
