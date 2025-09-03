@@ -286,19 +286,11 @@ export default function PinUnlockScreen() {
     </View>
   );
 
-  if (Platform.OS === 'android') {
-    return (
-      <SafeAreaView style={styles.container}>
-        <GradientBackground theme={theme} variant="primary">
-          {renderContent()}
-        </GradientBackground>
-      </SafeAreaView>
-    );
-  }
-
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {renderContent()}
+    <SafeAreaView style={styles.container}>
+      <GradientBackground theme={theme} variant="primary">
+        {renderContent()}
+      </GradientBackground>
     </SafeAreaView>
   );
 }
