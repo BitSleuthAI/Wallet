@@ -5,6 +5,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
+  Platform,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
@@ -79,7 +80,13 @@ export default function AboutScreen() {
       />
       
       <AndroidSafeContainer style={styles.container}>
-        <ScrollView style={styles.scrollView}>
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={[
+            styles.scrollContent,
+            Platform.OS === 'ios' && { paddingTop: 20 }
+          ]}
+        >
             <View style={styles.header}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
@@ -154,6 +161,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   header: {
     paddingHorizontal: 20,
