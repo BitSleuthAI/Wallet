@@ -168,8 +168,13 @@ export default function ManageWalletsScreen() {
             headerLeft: () => (
               <TouchableOpacity 
                 onPress={() => {
-                  console.log('Back button pressed - navigating back');
-                  router.back();
+                  console.log('Back button pressed - navigating to settings');
+                  try {
+                    router.push('/(tabs)/settings');
+                  } catch (error) {
+                    console.error('Navigation error, trying router.back():', error);
+                    router.back();
+                  }
                 }}
                 testID="manage-wallets-back-button"
                 style={styles.backButton}

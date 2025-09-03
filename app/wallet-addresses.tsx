@@ -368,7 +368,15 @@ export default function WalletAddressesScreen() {
           title: 'Wallet Addresses',
           headerLeft: () => (
             <TouchableOpacity
-              onPress={() => router.back()}
+              onPress={() => {
+                console.log('Back button pressed - navigating to wallet settings');
+                try {
+                  router.push('/wallet-settings');
+                } catch (error) {
+                  console.error('Navigation error, trying router.back():', error);
+                  router.back();
+                }
+              }}
               style={styles.backButton}
             >
               <ArrowLeft color={theme.colors.text} size={24} />
