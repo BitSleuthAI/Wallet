@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
 } from 'react-native';
 import { Stack } from 'expo-router';
@@ -65,23 +64,22 @@ export default function AboutScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            title: 'About BitSleuth Wallet',
-            headerBackTitle: 'Settings',
-            headerStyle: {
-              backgroundColor: 'transparent',
-            },
-            headerTintColor: theme.colors.text,
-            headerTitleStyle: {
-              color: theme.colors.text,
-            },
-          }} 
-        />
-        
-        <AndroidSafeContainer>
-          <ScrollView style={styles.scrollView}>
+      <Stack.Screen 
+        options={{ 
+          title: 'About BitSleuth Wallet',
+          headerBackTitle: 'Settings',
+          headerStyle: {
+            backgroundColor: 'transparent',
+          },
+          headerTintColor: theme.colors.text,
+          headerTitleStyle: {
+            color: theme.colors.text,
+          },
+        }} 
+      />
+      
+      <AndroidSafeContainer style={styles.container}>
+        <ScrollView style={styles.scrollView}>
             <View style={styles.header}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
@@ -144,9 +142,8 @@ export default function AboutScreen() {
           <BulletPoint text="Email support: support@bitsleuth.ai" />
           <BulletPoint text="Follow us on social media for updates" />
         </DropdownSection>
-          </ScrollView>
-        </AndroidSafeContainer>
-      </SafeAreaView>
+        </ScrollView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
