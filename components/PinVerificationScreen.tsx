@@ -125,12 +125,15 @@ export default function PinVerificationScreen({
                 return (
                   <TouchableOpacity
                     key={itemIndex}
-                    style={[styles.numberButton, styles.deleteButton]}
+                    style={[
+                      styles.numberButton,
+                      { backgroundColor: theme.colors.primary },
+                    ]}
                     onPress={handleDelete}
                     disabled={isLoading}
                     activeOpacity={0.6}
                   >
-                    <Delete size={24} color={theme.colors.text} />
+                    <Delete size={24} color="#FFFFFF" />
                   </TouchableOpacity>
                 );
               }
@@ -297,9 +300,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
   },
-  deleteButton: {
-    backgroundColor: 'transparent',
-  },
+
   numberText: {
     fontSize: 24,
     fontWeight: '600',
