@@ -302,11 +302,12 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: 20,
+    justifyContent: 'center',
   },
   header: {
     alignItems: 'center',
-    marginTop: Platform.OS === 'android' ? 20 : 64,
-    marginBottom: Platform.OS === 'android' ? 20 : 40,
+    marginTop: Platform.OS === 'android' ? 10 : 64,
+    marginBottom: Platform.OS === 'android' ? 10 : 40,
   },
   lockIconContainer: {
     width: 80,
@@ -341,7 +342,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
-    marginBottom: Platform.OS === 'android' ? 30 : 60,
+    marginBottom: Platform.OS === 'android' ? 20 : 60,
   },
   pinDot: {
     width: 16,
@@ -351,8 +352,7 @@ const styles = StyleSheet.create({
   },
   numberPad: {
     alignItems: 'center',
-    marginTop: 'auto',
-    paddingBottom: Platform.OS === 'android' ? 20 : 40,
+    marginVertical: Platform.OS === 'android' ? 10 : 20,
   },
   numberRow: {
     flexDirection: 'row',
@@ -411,7 +411,8 @@ const styles = StyleSheet.create({
   footer: {
     padding: Platform.OS === 'android' ? 10 : 20,
     alignItems: 'center',
-    paddingBottom: Platform.OS === 'android' ? 20 : 20,
+    paddingBottom: Platform.OS === 'android' ? 80 : 20,
+    marginTop: 'auto',
   },
   footerText: {
     fontSize: 16,
