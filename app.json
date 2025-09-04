@@ -60,7 +60,19 @@
         {
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID."
         }
-      ]
+      ],
+      [
+        "@react-native-firebase/app",
+        {
+          "ios": {
+            "useFrameworks": "static"
+          },
+          "android": {
+            "googleServicesFile": "./android/app/google-services.json"
+          }
+        }
+      ],
+      "@react-native-firebase/crashlytics"
     ],
     "experiments": {
       "typedRoutes": true

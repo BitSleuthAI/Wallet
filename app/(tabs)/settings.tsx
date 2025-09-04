@@ -1,12 +1,14 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import { GradientBackground } from '@/components/GradientBackground';
+import crashlyticsService from '@/services/crashlytics-service';
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
+    Bug,
     Check,
     ChevronRight,
     Clock,
@@ -21,6 +23,7 @@ import {
     Settings,
     Shield,
     Sun,
+    TestTube,
     UserX,
     Wallet,
     X
@@ -50,6 +53,38 @@ export default function SettingsScreen() {
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
 
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
+
+  // Crashlytics test functions
+  const testCrashlyticsLog = () => {
+    crashlyticsService.log('Test log message from settings screen');
+    Alert.alert('Success', 'Test log sent to Crashlytics');
+  };
+
+  const testCrashlyticsError = () => {
+    const testError = new Error('Test error from settings screen');
+    crashlyticsService.recordError(testError, {
+      testContext: 'settings_screen',
+      timestamp: new Date().toISOString(),
+    });
+    Alert.alert('Success', 'Test error sent to Crashlytics');
+  };
+
+  const testCrashlyticsCrash = () => {
+    Alert.alert(
+      'Test Crash',
+      'This will force the app to crash for testing purposes. The app will restart automatically.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Crash App', 
+          style: 'destructive',
+          onPress: () => {
+            crashlyticsService.crash();
+          }
+        }
+      ]
+    );
+  };
 
   const handleLogout = () => {
     if (isLoggingOut) return; // Prevent multiple logout attempts
@@ -334,6 +369,31 @@ export default function SettingsScreen() {
             title="About BitSleuth Wallet"
             subtitle="Version 1.1.6"
             onPress={() => router.push('/about')}
+          />
+
+          {/* Crashlytics Testing Section */}
+          <SectionHeader title="Crashlytics Testing" />
+
+          <SettingItem
+            icon={TestTube}
+            title="Test Log"
+            subtitle="Send a test log to Crashlytics"
+            onPress={testCrashlyticsLog}
+          />
+
+          <SettingItem
+            icon={Bug}
+            title="Test Error"
+            subtitle="Send a test error to Crashlytics"
+            onPress={testCrashlyticsError}
+          />
+
+          <SettingItem
+            icon={Bug}
+            title="Test Crash"
+            subtitle="Force app crash for testing"
+            onPress={testCrashlyticsCrash}
+            iconColor="#FF6B6B"
           />
 
           {/* Logout Button */}

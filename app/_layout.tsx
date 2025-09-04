@@ -12,8 +12,11 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View, Platform } from 'react-native';
+import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+
+// Firebase imports
+import crashlytics from '@react-native-firebase/crashlytics';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -31,11 +34,19 @@ class ErrorBoundary extends Component<
 
   static getDerivedStateFromError(error: Error) {
     console.error('ErrorBoundary caught error:', error);
+    // Report to Crashlytics
+    crashlytics().recordError(error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary componentDidCatch:', error, errorInfo);
+    // Report to Crashlytics with additional context
+    crashlytics().recordError(error);
+    crashlytics().setAttributes({
+      errorBoundary: 'true',
+      componentStack: errorInfo.componentStack || 'unknown',
+    });
   }
 
   render() {
@@ -209,26 +220,58 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    // Initialize crypto synchronously on app start
-    const ensureCrypto = async () => {
-      console.log('🚀 Initializing crypto in RootLayout...');
+    // Initialize crypto and Firebase Crashlytics on app start
+    const initializeApp = async () => {
+      console.log('🚀 Initializing app in RootLayout...');
       
       try {
+        // Initialize crypto
         const success = await initializeCrypto();
         if (success) {
           console.log('✅ Crypto initialized successfully');
         } else {
           console.warn('⚠️ Crypto initialization failed, but continuing');
         }
+
+        // Initialize Firebase Crashlytics
+        try {
+          // Enable crash collection (disabled by default in debug builds)
+          await crashlytics().setCrashlyticsCollectionEnabled(true);
+          
+          // Set user identifier for better crash tracking
+          crashlytics().setUserId('anonymous');
+          
+          // Set custom attributes
+          crashlytics().setAttributes({
+            platform: Platform.OS,
+            version: '1.1.6',
+            buildNumber: '1',
+            appName: 'BitSleuth Wallet',
+          });
+          
+          // Android-specific initialization
+          if (Platform.OS === 'android') {
+            // Enable automatic data collection for Android
+            crashlytics().setAttribute('android_auto_collection', 'enabled');
+            console.log('✅ Android Crashlytics configuration applied');
+          }
+          
+          console.log('✅ Firebase Crashlytics initialized successfully');
+        } catch (crashlyticsError) {
+          console.warn('⚠️ Crashlytics initialization error:', crashlyticsError);
+        }
+        
       } catch (error) {
-        console.warn('⚠️ Crypto initialization error:', error);
+        console.warn('⚠️ App initialization error:', error);
+        // Report initialization errors to Crashlytics
+        crashlytics().recordError(error as Error);
       }
       
-      // Hide Expo splash screen after crypto initialization
+      // Hide Expo splash screen after initialization
       ExpoSplashScreen.hideAsync();
     };
     
-    ensureCrypto();
+    initializeApp();
   }, []);
 
   return (
