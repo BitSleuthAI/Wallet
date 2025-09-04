@@ -426,7 +426,6 @@ export default function CoinControlScreen() {
         <View style={[
           styles.summaryContainer,
           { backgroundColor: theme.colors.surface },
-          Platform.OS === 'android' ? { marginTop: 16 } : null,
         ]}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
@@ -566,7 +565,9 @@ const styles = StyleSheet.create({
     padding: 8,
   },
   summaryContainer: {
-    margin: 16,
+    marginHorizontal: 16,
+    marginTop: 20,
+    marginBottom: 16,
     padding: 16,
     borderRadius: 12,
   },
