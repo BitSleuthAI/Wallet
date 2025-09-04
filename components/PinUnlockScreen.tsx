@@ -246,8 +246,8 @@ export default function PinUnlockScreen() {
           </Text>
           <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
             {showBiometricButton 
-              ? `Use ${getBiometricText()} or enter your 4-digit PIN to unlock`
-              : 'Enter your 4-digit PIN to unlock the app'
+              ? `Use ${getBiometricText()} to unlock BitSleuth`
+              : 'Enter your 4-digit PIN to unlock BitSleuth'
             }
           </Text>
           {attempts > 0 && (

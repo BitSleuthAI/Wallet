@@ -15,8 +15,22 @@ import React, { Component, ReactNode, useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Firebase imports
-import crashlytics from '@react-native-firebase/crashlytics';
+// Firebase imports - with fallback for web/missing native module
+let crashlytics: any = null;
+try {
+  crashlytics = require('@react-native-firebase/crashlytics').default;
+} catch (error) {
+  console.warn('Firebase Crashlytics not available:', error);
+  // Create a mock crashlytics object for fallback
+  crashlytics = () => ({
+    recordError: (error: Error) => console.error('Mock Crashlytics - Error:', error),
+    setAttributes: (attrs: any) => console.log('Mock Crashlytics - Attributes:', attrs),
+    setAttribute: (key: string, value: string) => console.log('Mock Crashlytics - Attribute:', key, value),
+    setUserId: (id: string) => console.log('Mock Crashlytics - User ID:', id),
+    setCrashlyticsCollectionEnabled: (enabled: boolean) => console.log('Mock Crashlytics - Collection enabled:', enabled),
+    log: (message: string) => console.log('Mock Crashlytics - Log:', message)
+  });
+}
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -34,19 +48,27 @@ class ErrorBoundary extends Component<
 
   static getDerivedStateFromError(error: Error) {
     console.error('ErrorBoundary caught error:', error);
-    // Report to Crashlytics
-    crashlytics().recordError(error);
+    // Report to Crashlytics if available
+    try {
+      crashlytics().recordError(error);
+    } catch (e) {
+      console.warn('Failed to report error to Crashlytics:', e);
+    }
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary componentDidCatch:', error, errorInfo);
-    // Report to Crashlytics with additional context
-    crashlytics().recordError(error);
-    crashlytics().setAttributes({
-      errorBoundary: 'true',
-      componentStack: errorInfo.componentStack || 'unknown',
-    });
+    // Report to Crashlytics with additional context if available
+    try {
+      crashlytics().recordError(error);
+      crashlytics().setAttributes({
+        errorBoundary: 'true',
+        componentStack: errorInfo.componentStack || 'unknown',
+      });
+    } catch (e) {
+      console.warn('Failed to report error to Crashlytics:', e);
+    }
   }
 
   render() {
@@ -233,38 +255,46 @@ export default function RootLayout() {
           console.warn('⚠️ Crypto initialization failed, but continuing');
         }
 
-        // Initialize Firebase Crashlytics
+        // Initialize Firebase Crashlytics if available
         try {
-          // Enable crash collection (disabled by default in debug builds)
-          await crashlytics().setCrashlyticsCollectionEnabled(true);
-          
-          // Set user identifier for better crash tracking
-          crashlytics().setUserId('anonymous');
-          
-          // Set custom attributes
-          crashlytics().setAttributes({
-            platform: Platform.OS,
-            version: '1.1.6',
-            buildNumber: '1',
-            appName: 'BitSleuth Wallet',
-          });
-          
-          // Android-specific initialization
-          if (Platform.OS === 'android') {
-            // Enable automatic data collection for Android
-            crashlytics().setAttribute('android_auto_collection', 'enabled');
-            console.log('✅ Android Crashlytics configuration applied');
+          if (crashlytics) {
+            // Enable crash collection (disabled by default in debug builds)
+            await crashlytics().setCrashlyticsCollectionEnabled(true);
+            
+            // Set user identifier for better crash tracking
+            crashlytics().setUserId('anonymous');
+            
+            // Set custom attributes
+            crashlytics().setAttributes({
+              platform: Platform.OS,
+              version: '1.1.6',
+              buildNumber: '1',
+              appName: 'BitSleuth Wallet',
+            });
+            
+            // Android-specific initialization
+            if (Platform.OS === 'android') {
+              // Enable automatic data collection for Android
+              crashlytics().setAttribute('android_auto_collection', 'enabled');
+              console.log('✅ Android Crashlytics configuration applied');
+            }
+            
+            console.log('✅ Firebase Crashlytics initialized successfully');
+          } else {
+            console.log('⚠️ Firebase Crashlytics not available - using mock implementation');
           }
-          
-          console.log('✅ Firebase Crashlytics initialized successfully');
         } catch (crashlyticsError) {
           console.warn('⚠️ Crashlytics initialization error:', crashlyticsError);
         }
         
       } catch (error) {
         console.warn('⚠️ App initialization error:', error);
-        // Report initialization errors to Crashlytics
-        crashlytics().recordError(error as Error);
+        // Report initialization errors to Crashlytics if available
+        try {
+          crashlytics().recordError(error as Error);
+        } catch (e) {
+          console.warn('Failed to report initialization error to Crashlytics:', e);
+        }
       }
       
       // Hide Expo splash screen after initialization

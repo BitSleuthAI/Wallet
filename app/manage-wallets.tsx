@@ -58,7 +58,7 @@ export default function ManageWalletsScreen() {
     }
   };
 
-  const handleDeleteWallet = (wallet: any) => {
+  const handleDeleteWallet = async (wallet: any) => {
     if (wallets.length <= 1) {
       Alert.alert(
         'Cannot Delete',

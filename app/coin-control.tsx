@@ -434,7 +434,7 @@ export default function CoinControlScreen() {
         <View style={[
           styles.summaryContainer,
           { backgroundColor: theme.colors.surface },
-          Platform.OS === 'android' ? { marginTop: 8 } : null,
+          Platform.OS === 'android' ? { marginTop: 16 } : null,
         ]}>
         <View style={styles.summaryRow}>
           <View style={styles.summaryItem}>
