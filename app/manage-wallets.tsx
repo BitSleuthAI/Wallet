@@ -167,15 +167,7 @@ export default function ManageWalletsScreen() {
             title: 'Manage Wallets',
             headerStyle: { backgroundColor: 'transparent' },
             headerTintColor: theme.colors.text,
-            headerLeft: Platform.OS === 'android' ? () => (
-              <TouchableOpacity
-                onPress={() => router.back()}
-                style={styles.backButton}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Text style={[styles.backButtonText, { color: theme.colors.text }]}>← Back</Text>
-              </TouchableOpacity>
-            ) : undefined,
+
           }} 
         />
         
@@ -451,12 +443,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
 });

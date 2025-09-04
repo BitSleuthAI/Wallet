@@ -399,15 +399,7 @@ export default function CoinControlScreen() {
           title: 'Coin Control',
           headerStyle: { backgroundColor: 'transparent' },
           headerTintColor: theme.colors.text,
-          headerLeft: Platform.OS === 'android' ? () => (
-            <TouchableOpacity
-              onPress={() => router.back()}
-              style={styles.backButton}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Text style={[styles.backButtonText, { color: theme.colors.text }]}>← Back</Text>
-            </TouchableOpacity>
-          ) : undefined,
+
           headerRight: () => (
             <View style={{ flexDirection: 'row' }}>
               <TouchableOpacity
@@ -791,12 +783,5 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
-  backButton: {
-    padding: 8,
-    marginLeft: -8,
-  },
-  backButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
+
 });
