@@ -2,13 +2,12 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import crashlyticsService from '@/services/crashlytics-service';
+
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    Bug,
     Check,
     ChevronRight,
     Clock,
@@ -23,7 +22,6 @@ import {
     Settings,
     Shield,
     Sun,
-    TestTube,
     UserX,
     Wallet,
     X
@@ -54,80 +52,7 @@ export default function SettingsScreen() {
 
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
 
-  // Crashlytics test functions
-  const testCrashlyticsLog = () => {
-    const message = `Test log message from settings screen - ${new Date().toISOString()}`;
-    crashlyticsService.log(message);
-    
-    const isAvailable = crashlyticsService.isAvailable();
-    const envInfo = crashlyticsService.getEnvironmentInfo();
-    
-    let alertMessage = '';
-    if (envInfo.isExpoGo) {
-      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test Crashlytics, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
-    } else if (isAvailable) {
-      alertMessage = 'Log message sent to Firebase Crashlytics!\n\nCheck the Firebase Console to see the log.';
-    } else {
-      alertMessage = 'Log message sent to Mock Crashlytics (console only).\n\nCheck the console for confirmation.';
-    }
-    
-    Alert.alert('Test Log', alertMessage);
-  };
 
-  const testCrashlyticsError = () => {
-    const testError = new Error('Test error from settings screen');
-    crashlyticsService.recordError(testError, {
-      testContext: 'settings_screen',
-      timestamp: new Date().toISOString(),
-      userAction: 'manual_test',
-    });
-    
-    const isAvailable = crashlyticsService.isAvailable();
-    const envInfo = crashlyticsService.getEnvironmentInfo();
-    
-    let alertMessage = '';
-    if (envInfo.isExpoGo) {
-      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test Crashlytics, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
-    } else if (isAvailable) {
-      alertMessage = 'Error recorded to Firebase Crashlytics!\n\nCheck the Firebase Console to see the error report.';
-    } else {
-      alertMessage = 'Error recorded to Mock Crashlytics (console only).\n\nCheck the console for confirmation.';
-    }
-    
-    Alert.alert('Test Error', alertMessage);
-  };
-
-  const testCrashlyticsCrash = () => {
-    const isAvailable = crashlyticsService.isAvailable();
-    const envInfo = crashlyticsService.getEnvironmentInfo();
-    
-    let alertMessage = '';
-    if (envInfo.isExpoGo) {
-      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test crash reporting, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
-      Alert.alert('Test Crash', alertMessage);
-      return;
-    }
-    
-    alertMessage = `This will force the app to crash for testing purposes. ${isAvailable ? 'The crash will be reported to Firebase Crashlytics.' : 'Running in mock mode - will throw a test error.'}\n\nThe app will restart automatically.`;
-    
-    Alert.alert(
-      'Test Crash',
-      alertMessage,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Crash App', 
-          style: 'destructive',
-          onPress: () => {
-            // Add a small delay to let the alert dismiss
-            setTimeout(() => {
-              crashlyticsService.crash();
-            }, 500);
-          }
-        }
-      ]
-    );
-  };
 
   const handleLogout = () => {
     if (isLoggingOut) return; // Prevent multiple logout attempts
@@ -414,34 +339,7 @@ export default function SettingsScreen() {
             onPress={() => router.push('/about')}
           />
 
-          {/* Crashlytics Testing Section */}
-          <SectionHeader title={`Crashlytics Testing ${(() => {
-            const envInfo = crashlyticsService.getEnvironmentInfo();
-            if (envInfo.isExpoGo) return '(Expo Go - Unavailable)';
-            return crashlyticsService.isAvailable() ? '(Live)' : '(Mock)';
-          })()}`} />
 
-          <SettingItem
-            icon={TestTube}
-            title="Test Log"
-            subtitle="Send a test log to Crashlytics"
-            onPress={testCrashlyticsLog}
-          />
-
-          <SettingItem
-            icon={Bug}
-            title="Test Error"
-            subtitle="Send a test error to Crashlytics"
-            onPress={testCrashlyticsError}
-          />
-
-          <SettingItem
-            icon={Bug}
-            title="Test Crash"
-            subtitle="Force app crash for testing"
-            onPress={testCrashlyticsCrash}
-            iconColor="#FF6B6B"
-          />
 
           {/* Logout Button */}
           <TouchableOpacity
