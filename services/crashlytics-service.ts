@@ -2,18 +2,43 @@ import { Platform } from 'react-native';
 
 // Firebase Crashlytics with fallback for web/missing native module
 let crashlytics: any = null;
+let firebaseApp: any = null;
 let isInitialized = false;
+let isExpoGo = false;
+
+// Check if running in Expo Go
+try {
+  const Constants = require('expo-constants').default;
+  isExpoGo = Constants.appOwnership === 'expo';
+  if (isExpoGo) {
+    console.log('ℹ️ Running in Expo Go - Firebase Crashlytics not available');
+  }
+} catch (error) {
+  console.log('ℹ️ Could not detect Expo Go status');
+}
 
 try {
-  if (Platform.OS !== 'web') {
+  if (Platform.OS !== 'web' && !isExpoGo) {
+    // Initialize Firebase App first
+    firebaseApp = require('@react-native-firebase/app').default;
     crashlytics = require('@react-native-firebase/crashlytics').default;
-    isInitialized = true;
-    console.log('✅ Firebase Crashlytics module loaded successfully');
-  } else {
+    
+    // Check if Firebase is properly configured
+    if (firebaseApp.apps.length === 0) {
+      console.warn('⚠️ Firebase app not initialized - check your configuration files');
+      isInitialized = false;
+    } else {
+      isInitialized = true;
+      console.log('✅ Firebase Crashlytics module loaded successfully');
+      console.log('📱 Firebase App Name:', firebaseApp.app().name);
+      console.log('🔧 Firebase Project ID:', firebaseApp.app().options.projectId);
+    }
+  } else if (Platform.OS === 'web') {
     console.log('ℹ️ Running on web - Crashlytics not available');
   }
 } catch (error) {
   console.warn('⚠️ Firebase Crashlytics not available:', error);
+  console.warn('💡 This is expected in Expo Go. Use a development build to test Crashlytics.');
   isInitialized = false;
 }
 
@@ -126,6 +151,9 @@ class CrashlyticsService {
    */
   isAvailable(): boolean {
     try {
+      if (isExpoGo) {
+        return false;
+      }
       if (isInitialized && crashlytics) {
         return crashlytics.isCrashlyticsCollectionEnabled();
       }
@@ -134,6 +162,17 @@ class CrashlyticsService {
       console.warn('❌ Failed to check Crashlytics availability:', e);
       return false;
     }
+  }
+
+  /**
+   * Get the current environment info
+   */
+  getEnvironmentInfo(): { isExpoGo: boolean; isInitialized: boolean; platform: string } {
+    return {
+      isExpoGo,
+      isInitialized,
+      platform: Platform.OS,
+    };
   }
 
   /**
@@ -199,7 +238,7 @@ class CrashlyticsService {
 const crashlyticsService = new CrashlyticsService();
 
 // Initialize Crashlytics on service creation
-if (isInitialized && crashlytics) {
+if (isInitialized && crashlytics && !isExpoGo) {
   try {
     crashlytics.setCrashlyticsCollectionEnabled(true);
     crashlytics.setUserId('anonymous');
@@ -207,11 +246,14 @@ if (isInitialized && crashlytics) {
       platform: Platform.OS,
       appVersion: '1.1.6',
       buildType: __DEV__ ? 'debug' : 'release',
+      environment: isExpoGo ? 'expo-go' : 'development-build',
     });
     console.log('✅ Crashlytics service initialized successfully');
   } catch (error) {
     console.warn('⚠️ Failed to initialize Crashlytics service:', error);
   }
+} else if (isExpoGo) {
+  console.log('ℹ️ Crashlytics service disabled in Expo Go - use development build');
 } else {
   console.log('ℹ️ Crashlytics service running in mock mode');
 }

@@ -1,179 +1,168 @@
-# Firebase Crashlytics Integration
+# Firebase Crashlytics Setup Guide
 
-This document describes the Firebase Crashlytics integration for the BitSleuth Wallet React Native app.
+## Current Status
 
-## Overview
+✅ **Dependencies**: Firebase packages are installed  
+✅ **Configuration Files**: Google services files are present  
+✅ **App Configuration**: Firebase plugins are configured in app.json  
+✅ **Service Implementation**: Crashlytics service is implemented  
+❌ **Runtime Environment**: Currently running in Expo Go (Crashlytics unavailable)
 
-Firebase Crashlytics has been integrated to provide comprehensive crash reporting and error tracking for both iOS and Android versions of the app. This helps identify and fix issues that users encounter in production.
+## Why Crashlytics Isn't Working
 
-## What's Included
+**Firebase Crashlytics does NOT work in Expo Go.** This is expected behavior because:
 
-### 1. Dependencies
-- `@react-native-firebase/app` - Core Firebase SDK
-- `@react-native-firebase/crashlytics` - Crashlytics SDK
+1. **Native Code Requirement**: Crashlytics requires native compilation
+2. **Expo Go Sandbox**: Expo Go runs in a sandboxed environment that doesn't support native Firebase modules
+3. **Development Build Required**: You need a custom development build or production build
 
-### 2. Configuration Files
-- `ios/BitSleuthWallet/GoogleService-Info.plist` - Firebase configuration for iOS
-- `android/app/google-services.json` - Firebase configuration for Android
-- `app.json` - Expo plugin configuration for Firebase
-- `android/build.gradle` - Project-level Gradle configuration with Firebase plugins
-- `android/app/build.gradle` - App-level Gradle configuration with Firebase dependencies
+## Solutions
 
-### 3. Code Integration
-- `app/_layout.tsx` - Main app initialization with Crashlytics setup
-- `services/crashlytics-service.ts` - Utility service for Crashlytics operations
-- `app/(tabs)/settings.tsx` - Test interface for Crashlytics features
+### Option 1: Create a Development Build (Recommended)
 
-## Features
+To test Crashlytics, you need to create a development build:
 
-### Automatic Crash Reporting
-- All unhandled errors are automatically reported to Firebase
-- Error boundary catches React component errors
-- Native iOS crashes are captured
+#### For iOS:
+```bash
+# Install EAS CLI if you haven't already
+npm install -g @expo/eas-cli
 
-### Custom Error Tracking
-- Manual error reporting with custom context
-- User identification for better debugging
-- Custom attributes for filtering and analysis
+# Login to Expo
+eas login
 
-### Testing Interface
-The settings screen includes a "Crashlytics Testing" section with:
-- **Test Log** - Send custom log messages
-- **Test Error** - Send test error reports
-- **Test Crash** - Force app crash for testing
+# Build for iOS device/simulator
+eas build --platform ios --profile development
 
-## Usage
+# Or run locally (requires Xcode)
+npx expo run:ios
+```
 
-### Basic Error Reporting
-```typescript
-import crashlyticsService from '@/services/crashlytics-service';
+#### For Android:
+```bash
+# Build for Android device/emulator
+eas build --platform android --profile development
 
-// Report an error
-try {
-  // Some operation that might fail
-} catch (error) {
-  crashlyticsService.recordError(error, {
-    context: 'wallet_operation',
-    userId: 'user123'
-  });
+# Or run locally (requires Android Studio)
+npx expo run:android
+```
+
+### Option 2: Test in Production Build
+
+Crashlytics works in production builds:
+
+```bash
+# Build for production
+eas build --platform all --profile production
+```
+
+## Configuration Details
+
+### ✅ Dependencies (Already Installed)
+```json
+{
+  "@react-native-firebase/app": "^23.2.0",
+  "@react-native-firebase/crashlytics": "^23.3.0"
 }
 ```
 
-### Custom Logging
+### ✅ App Configuration (Already Configured)
+```json
+{
+  "plugins": [
+    [
+      "@react-native-firebase/app",
+      {
+        "ios": {
+          "useFrameworks": "static",
+          "googleServicesFile": "./ios/BitSleuthWallet/GoogleService-Info.plist"
+        },
+        "android": {
+          "googleServicesFile": "./android/app/google-services.json"
+        }
+      }
+    ],
+    "@react-native-firebase/crashlytics"
+  ]
+}
+```
+
+### ✅ Configuration Files (Already Present)
+- **Android**: `android/app/google-services.json`
+- **iOS**: `ios/BitSleuthWallet/GoogleService-Info.plist`
+- **Project ID**: `bitsleuth`
+
+## Testing Crashlytics
+
+### Current Behavior in Expo Go
+When you click the test buttons in Settings > Crashlytics Testing:
+- **Test Log**: Shows "Expo Go - Unavailable" message
+- **Test Error**: Shows "Expo Go - Unavailable" message  
+- **Test Crash**: Shows "Expo Go - Unavailable" message
+- **Console**: Shows mock Crashlytics logs
+
+### Expected Behavior in Development/Production Build
+Once you create a development build:
+- **Test Log**: Sends log to Firebase Console
+- **Test Error**: Records error in Firebase Console
+- **Test Crash**: Forces app crash and reports to Firebase
+- **Console**: Shows "Live" status instead of "Mock"
+
+## Verification Steps
+
+### 1. Check Current Environment
+The app automatically detects the environment:
 ```typescript
-// Log custom messages
-crashlyticsService.log('User performed wallet operation');
+// In crashlytics-service.ts
+const envInfo = crashlyticsService.getEnvironmentInfo();
+console.log('Environment:', envInfo);
+// { isExpoGo: true, isInitialized: false, platform: 'ios' }
 ```
 
-### Setting User Context
-```typescript
-// Set user ID for better crash tracking
-crashlyticsService.setUserId('user123');
-
-// Set custom attributes
-crashlyticsService.setAttributes({
-  walletType: 'bitcoin',
-  version: '1.1.6'
-});
-```
-
-### Wallet-Specific Tracking
-```typescript
-// Track wallet operations
-crashlyticsService.trackWalletOperation('send_transaction', 'wallet123', true);
-
-// Track transaction events
-crashlyticsService.trackTransaction('send', '0.001', true);
-
-// Track authentication events
-crashlyticsService.trackAuthEvent('login', 'biometric', true);
-```
-
-## Configuration
-
-### iOS Setup
-The iOS configuration is handled automatically through:
-1. `GoogleService-Info.plist` file in the iOS project
-2. Expo plugins in `app.json`
-
-### Android Setup
-The Android configuration includes:
-1. `google-services.json` file in the Android project
-2. Google Services plugin in `android/build.gradle`
-3. Firebase Crashlytics plugin in `android/app/build.gradle`
-4. Firebase BOM and Crashlytics dependencies in `android/app/build.gradle`
-5. Expo plugins in `app.json`
-
-### Firebase Console
-- **Project**: bitsleuth
-- **Console**: https://console.firebase.google.com/project/bitsleuth
-- **Crashlytics Dashboard**: https://console.firebase.google.com/project/bitsleuth/crashlytics
-
-## Testing
-
-### Local Testing
-1. Run the app: `npm run ios` (for iOS) or `npm run android` (for Android)
-2. Navigate to Settings > Crashlytics Testing
-3. Use the test buttons to verify functionality
-4. Check the Firebase Console for reports
-
-### Test Script
-Run the verification script:
-```bash
-node scripts/test-crashlytics.js
-```
-
-## Privacy Considerations
-
-- Crash reports include stack traces and device information
-- User data is anonymized by default
-- Custom attributes should not include sensitive information
-- Crashlytics collection can be disabled for privacy-sensitive users
+### 2. Firebase Console
+Once running in a development build:
+1. Go to [Firebase Console](https://console.firebase.google.com/project/bitsleuth/crashlytics)
+2. Navigate to Crashlytics section
+3. Test the buttons in Settings
+4. Check for logs, errors, and crash reports
 
 ## Troubleshooting
 
-### Common Issues
+### If Crashlytics Still Doesn't Work in Development Build
 
-1. **Crashlytics not working in debug mode**
-   - Crashlytics is disabled by default in debug builds
-   - Use `setCrashlyticsCollectionEnabled(true)` to enable
+1. **Check Firebase Project Configuration**:
+   - Ensure bundle ID matches: `ai.bitsleuth.wallet`
+   - Verify GoogleService files are correctly placed
 
-2. **Reports not appearing in console**
-   - Reports can take up to 5 minutes to appear
-   - Ensure the app is properly configured with Firebase
-   - Check that the app is not running in debugger mode
+2. **Check Console Logs**:
+   ```
+   ✅ Firebase Crashlytics module loaded successfully
+   📱 Firebase App Name: [DEFAULT]
+   🔧 Firebase Project ID: bitsleuth
+   ✅ Crashlytics service initialized successfully
+   ```
 
-3. **Build errors**
-   - Ensure all dependencies are installed: `npm install --legacy-peer-deps`
-   - Clean and rebuild: `expo run:ios --clear` or `expo run:android --clear`
-   - For Android: Check that Google Services plugin is properly applied
+3. **Verify Build Configuration**:
+   - Make sure you're not running in Expo Go
+   - Check that native modules are properly linked
 
-### Debug Logging
-Enable debug logging to troubleshoot issues:
-```typescript
-// In your app initialization
-crashlytics().setCrashlyticsCollectionEnabled(true);
-console.log('Crashlytics enabled:', crashlytics().isCrashlyticsCollectionEnabled());
-```
+4. **Test Network Connectivity**:
+   - Ensure device has internet connection
+   - Check if Firebase services are accessible
 
-## Best Practices
+## Next Steps
 
-1. **Error Context**: Always provide meaningful context when reporting errors
-2. **User Privacy**: Don't include sensitive user data in crash reports
-3. **Testing**: Use the test interface to verify functionality before release
-4. **Monitoring**: Regularly check the Firebase Console for new issues
-5. **Version Tracking**: Include version information in custom attributes
+1. **Create Development Build**: Use `npx expo run:ios` or `npx expo run:android`
+2. **Test Crashlytics**: Use the test buttons in Settings
+3. **Verify in Firebase Console**: Check for logs and crash reports
+4. **Deploy to Production**: Once verified, deploy with confidence
 
-## Support
+## Additional Resources
 
-For issues with the Crashlytics integration:
-1. Check the Firebase Console for error details
-2. Review the test script output
-3. Check the React Native Firebase documentation
-4. Verify the iOS configuration files
+- [React Native Firebase Documentation](https://rnfirebase.io/crashlytics/usage)
+- [Expo Development Builds](https://docs.expo.dev/development/build/)
+- [Firebase Console](https://console.firebase.google.com/project/bitsleuth/crashlytics)
+- [EAS Build Documentation](https://docs.expo.dev/build/introduction/)
 
-## References
+---
 
-- [Firebase Crashlytics Documentation](https://firebase.google.com/docs/crashlytics)
-- [React Native Firebase Crashlytics](https://rnfirebase.io/crashlytics/usage)
-- [Expo Firebase Integration](https://docs.expo.dev/guides/using-firebase/)
+**Summary**: Your Firebase Crashlytics is properly configured but requires a development build to function. The "not working" behavior in Expo Go is completely expected and normal.

@@ -60,10 +60,18 @@ export default function SettingsScreen() {
     crashlyticsService.log(message);
     
     const isAvailable = crashlyticsService.isAvailable();
-    Alert.alert(
-      'Test Log Sent', 
-      `Log message sent to ${isAvailable ? 'Firebase Crashlytics' : 'Mock Crashlytics (console)'}\n\nCheck the console for confirmation.`
-    );
+    const envInfo = crashlyticsService.getEnvironmentInfo();
+    
+    let alertMessage = '';
+    if (envInfo.isExpoGo) {
+      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test Crashlytics, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
+    } else if (isAvailable) {
+      alertMessage = 'Log message sent to Firebase Crashlytics!\n\nCheck the Firebase Console to see the log.';
+    } else {
+      alertMessage = 'Log message sent to Mock Crashlytics (console only).\n\nCheck the console for confirmation.';
+    }
+    
+    Alert.alert('Test Log', alertMessage);
   };
 
   const testCrashlyticsError = () => {
@@ -75,17 +83,36 @@ export default function SettingsScreen() {
     });
     
     const isAvailable = crashlyticsService.isAvailable();
-    Alert.alert(
-      'Test Error Sent', 
-      `Error recorded to ${isAvailable ? 'Firebase Crashlytics' : 'Mock Crashlytics (console)'}\n\nCheck the console for confirmation.`
-    );
+    const envInfo = crashlyticsService.getEnvironmentInfo();
+    
+    let alertMessage = '';
+    if (envInfo.isExpoGo) {
+      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test Crashlytics, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
+    } else if (isAvailable) {
+      alertMessage = 'Error recorded to Firebase Crashlytics!\n\nCheck the Firebase Console to see the error report.';
+    } else {
+      alertMessage = 'Error recorded to Mock Crashlytics (console only).\n\nCheck the console for confirmation.';
+    }
+    
+    Alert.alert('Test Error', alertMessage);
   };
 
   const testCrashlyticsCrash = () => {
     const isAvailable = crashlyticsService.isAvailable();
+    const envInfo = crashlyticsService.getEnvironmentInfo();
+    
+    let alertMessage = '';
+    if (envInfo.isExpoGo) {
+      alertMessage = 'Running in Expo Go - Crashlytics not available.\n\nTo test crash reporting, create a development build:\n• Run: npx expo run:ios or npx expo run:android\n• Or build with EAS Build';
+      Alert.alert('Test Crash', alertMessage);
+      return;
+    }
+    
+    alertMessage = `This will force the app to crash for testing purposes. ${isAvailable ? 'The crash will be reported to Firebase Crashlytics.' : 'Running in mock mode - will throw a test error.'}\n\nThe app will restart automatically.`;
+    
     Alert.alert(
       'Test Crash',
-      `This will force the app to crash for testing purposes. ${isAvailable ? 'The crash will be reported to Firebase Crashlytics.' : 'Running in mock mode - will throw a test error.'}\n\nThe app will restart automatically.`,
+      alertMessage,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -388,7 +415,11 @@ export default function SettingsScreen() {
           />
 
           {/* Crashlytics Testing Section */}
-          <SectionHeader title={`Crashlytics Testing ${crashlyticsService.isAvailable() ? '(Live)' : '(Mock)'}`} />
+          <SectionHeader title={`Crashlytics Testing ${(() => {
+            const envInfo = crashlyticsService.getEnvironmentInfo();
+            if (envInfo.isExpoGo) return '(Expo Go - Unavailable)';
+            return crashlyticsService.isAvailable() ? '(Live)' : '(Mock)';
+          })()}`} />
 
           <SettingItem
             icon={TestTube}
