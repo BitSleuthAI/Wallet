@@ -2,21 +2,19 @@ import { Platform } from 'react-native';
 
 // Firebase Crashlytics with fallback for web/missing native module
 let crashlytics: any = null;
+let isInitialized = false;
+
 try {
-  crashlytics = require('@react-native-firebase/crashlytics').default;
+  if (Platform.OS !== 'web') {
+    crashlytics = require('@react-native-firebase/crashlytics').default;
+    isInitialized = true;
+    console.log('✅ Firebase Crashlytics module loaded successfully');
+  } else {
+    console.log('ℹ️ Running on web - Crashlytics not available');
+  }
 } catch (error) {
-  console.warn('Firebase Crashlytics not available:', error);
-  // Create a mock crashlytics object for fallback
-  crashlytics = () => ({
-    recordError: (error: Error) => console.error('Mock Crashlytics - Error:', error),
-    setAttributes: (attrs: any) => console.log('Mock Crashlytics - Attributes:', attrs),
-    setAttribute: (key: string, value: string) => console.log('Mock Crashlytics - Attribute:', key, value),
-    setUserId: (id: string) => console.log('Mock Crashlytics - User ID:', id),
-    setCrashlyticsCollectionEnabled: (enabled: boolean) => console.log('Mock Crashlytics - Collection enabled:', enabled),
-    isCrashlyticsCollectionEnabled: () => false,
-    log: (message: string) => console.log('Mock Crashlytics - Log:', message),
-    crash: () => console.log('Mock Crashlytics - Crash triggered')
-  });
+  console.warn('⚠️ Firebase Crashlytics not available:', error);
+  isInitialized = false;
 }
 
 class CrashlyticsService {
@@ -25,14 +23,17 @@ class CrashlyticsService {
    */
   recordError(error: Error, context?: Record<string, string>) {
     try {
-      if (crashlytics) {
+      if (isInitialized && crashlytics) {
         if (context) {
-          crashlytics().setAttributes(context);
+          crashlytics.setAttributes(context);
         }
-        crashlytics().recordError(error);
+        crashlytics.recordError(error);
+        console.log('📊 Error recorded to Crashlytics:', error.message);
+      } else {
+        console.log('🔍 Mock Crashlytics - Error:', error.message, context);
       }
     } catch (e) {
-      console.warn('Failed to record error to Crashlytics:', e);
+      console.warn('❌ Failed to record error to Crashlytics:', e);
     }
   }
 
@@ -41,11 +42,14 @@ class CrashlyticsService {
    */
   log(message: string) {
     try {
-      if (crashlytics) {
-        crashlytics().log(message);
+      if (isInitialized && crashlytics) {
+        crashlytics.log(message);
+        console.log('📊 Log sent to Crashlytics:', message);
+      } else {
+        console.log('🔍 Mock Crashlytics - Log:', message);
       }
     } catch (e) {
-      console.warn('Failed to log to Crashlytics:', e);
+      console.warn('❌ Failed to log to Crashlytics:', e);
     }
   }
 
@@ -54,11 +58,14 @@ class CrashlyticsService {
    */
   setUserId(userId: string) {
     try {
-      if (crashlytics) {
-        crashlytics().setUserId(userId);
+      if (isInitialized && crashlytics) {
+        crashlytics.setUserId(userId);
+        console.log('📊 User ID set in Crashlytics:', userId);
+      } else {
+        console.log('🔍 Mock Crashlytics - User ID:', userId);
       }
     } catch (e) {
-      console.warn('Failed to set user ID in Crashlytics:', e);
+      console.warn('❌ Failed to set user ID in Crashlytics:', e);
     }
   }
 
@@ -67,11 +74,14 @@ class CrashlyticsService {
    */
   setAttributes(attributes: Record<string, string>) {
     try {
-      if (crashlytics) {
-        crashlytics().setAttributes(attributes);
+      if (isInitialized && crashlytics) {
+        crashlytics.setAttributes(attributes);
+        console.log('📊 Attributes set in Crashlytics:', attributes);
+      } else {
+        console.log('🔍 Mock Crashlytics - Attributes:', attributes);
       }
     } catch (e) {
-      console.warn('Failed to set attributes in Crashlytics:', e);
+      console.warn('❌ Failed to set attributes in Crashlytics:', e);
     }
   }
 
@@ -80,11 +90,14 @@ class CrashlyticsService {
    */
   setAttribute(key: string, value: string) {
     try {
-      if (crashlytics) {
-        crashlytics().setAttribute(key, value);
+      if (isInitialized && crashlytics) {
+        crashlytics.setAttribute(key, value);
+        console.log('📊 Attribute set in Crashlytics:', key, value);
+      } else {
+        console.log('🔍 Mock Crashlytics - Attribute:', key, value);
       }
     } catch (e) {
-      console.warn('Failed to set attribute in Crashlytics:', e);
+      console.warn('❌ Failed to set attribute in Crashlytics:', e);
     }
   }
 
@@ -93,11 +106,18 @@ class CrashlyticsService {
    */
   crash() {
     try {
-      if (crashlytics) {
-        crashlytics().crash();
+      if (isInitialized && crashlytics) {
+        console.log('💥 Forcing crash for testing...');
+        crashlytics.crash();
+      } else {
+        console.log('🔍 Mock Crashlytics - Crash triggered (app would crash here)');
+        // For testing purposes, throw an actual error in mock mode
+        throw new Error('Test crash from Crashlytics service');
       }
     } catch (e) {
-      console.warn('Failed to force crash in Crashlytics:', e);
+      console.warn('❌ Failed to force crash in Crashlytics:', e);
+      // Re-throw to actually crash in test mode
+      throw e;
     }
   }
 
@@ -106,8 +126,12 @@ class CrashlyticsService {
    */
   isAvailable(): boolean {
     try {
-      return crashlytics ? crashlytics().isCrashlyticsCollectionEnabled() : false;
+      if (isInitialized && crashlytics) {
+        return crashlytics.isCrashlyticsCollectionEnabled();
+      }
+      return false;
     } catch (e) {
+      console.warn('❌ Failed to check Crashlytics availability:', e);
       return false;
     }
   }
@@ -117,11 +141,14 @@ class CrashlyticsService {
    */
   setCrashlyticsCollectionEnabled(enabled: boolean) {
     try {
-      if (crashlytics) {
-        crashlytics().setCrashlyticsCollectionEnabled(enabled);
+      if (isInitialized && crashlytics) {
+        crashlytics.setCrashlyticsCollectionEnabled(enabled);
+        console.log('📊 Crashlytics collection enabled:', enabled);
+      } else {
+        console.log('🔍 Mock Crashlytics - Collection enabled:', enabled);
       }
     } catch (e) {
-      console.warn('Failed to set crash collection enabled in Crashlytics:', e);
+      console.warn('❌ Failed to set crash collection enabled in Crashlytics:', e);
     }
   }
 
@@ -129,7 +156,8 @@ class CrashlyticsService {
    * Track wallet operations
    */
   trackWalletOperation(operation: string, walletId?: string, success: boolean = true) {
-    this.log(`Wallet operation: ${operation} - ${success ? 'success' : 'failed'}`);
+    const logMessage = `Wallet operation: ${operation} - ${success ? 'success' : 'failed'}`;
+    this.log(logMessage);
     this.setAttributes({
       walletOperation: operation,
       walletId: walletId || 'unknown',
@@ -142,7 +170,8 @@ class CrashlyticsService {
    * Track transaction events
    */
   trackTransaction(transactionType: string, amount?: string, success: boolean = true) {
-    this.log(`Transaction: ${transactionType} - ${success ? 'success' : 'failed'}`);
+    const logMessage = `Transaction: ${transactionType} - ${success ? 'success' : 'failed'}`;
+    this.log(logMessage);
     this.setAttributes({
       transactionType,
       amount: amount || 'unknown',
@@ -155,7 +184,8 @@ class CrashlyticsService {
    * Track authentication events
    */
   trackAuthEvent(event: string, method: string, success: boolean = true) {
-    this.log(`Auth event: ${event} - ${method} - ${success ? 'success' : 'failed'}`);
+    const logMessage = `Auth event: ${event} - ${method} - ${success ? 'success' : 'failed'}`;
+    this.log(logMessage);
     this.setAttributes({
       authEvent: event,
       authMethod: method,
@@ -166,4 +196,24 @@ class CrashlyticsService {
 }
 
 // Export singleton instance
-export default new CrashlyticsService();
+const crashlyticsService = new CrashlyticsService();
+
+// Initialize Crashlytics on service creation
+if (isInitialized && crashlytics) {
+  try {
+    crashlytics.setCrashlyticsCollectionEnabled(true);
+    crashlytics.setUserId('anonymous');
+    crashlytics.setAttributes({
+      platform: Platform.OS,
+      appVersion: '1.1.6',
+      buildType: __DEV__ ? 'debug' : 'release',
+    });
+    console.log('✅ Crashlytics service initialized successfully');
+  } catch (error) {
+    console.warn('⚠️ Failed to initialize Crashlytics service:', error);
+  }
+} else {
+  console.log('ℹ️ Crashlytics service running in mock mode');
+}
+
+export default crashlyticsService;

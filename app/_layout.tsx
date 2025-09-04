@@ -15,22 +15,8 @@ import React, { Component, ReactNode, useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-// Firebase imports - with fallback for web/missing native module
-let crashlytics: any = null;
-try {
-  crashlytics = require('@react-native-firebase/crashlytics').default;
-} catch (error) {
-  console.warn('Firebase Crashlytics not available:', error);
-  // Create a mock crashlytics object for fallback
-  crashlytics = () => ({
-    recordError: (error: Error) => console.error('Mock Crashlytics - Error:', error),
-    setAttributes: (attrs: any) => console.log('Mock Crashlytics - Attributes:', attrs),
-    setAttribute: (key: string, value: string) => console.log('Mock Crashlytics - Attribute:', key, value),
-    setUserId: (id: string) => console.log('Mock Crashlytics - User ID:', id),
-    setCrashlyticsCollectionEnabled: (enabled: boolean) => console.log('Mock Crashlytics - Collection enabled:', enabled),
-    log: (message: string) => console.log('Mock Crashlytics - Log:', message)
-  });
-}
+// Import Crashlytics service
+import crashlyticsService from '@/services/crashlytics-service';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
@@ -49,26 +35,18 @@ class ErrorBoundary extends Component<
   static getDerivedStateFromError(error: Error) {
     console.error('ErrorBoundary caught error:', error);
     // Report to Crashlytics if available
-    try {
-      crashlytics().recordError(error);
-    } catch (e) {
-      console.warn('Failed to report error to Crashlytics:', e);
-    }
+    crashlyticsService.recordError(error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
     console.error('ErrorBoundary componentDidCatch:', error, errorInfo);
     // Report to Crashlytics with additional context if available
-    try {
-      crashlytics().recordError(error);
-      crashlytics().setAttributes({
-        errorBoundary: 'true',
-        componentStack: errorInfo.componentStack || 'unknown',
-      });
-    } catch (e) {
-      console.warn('Failed to report error to Crashlytics:', e);
-    }
+    crashlyticsService.recordError(error, {
+      errorBoundary: 'true',
+      componentStack: errorInfo.componentStack || 'unknown',
+      timestamp: new Date().toISOString(),
+    });
   }
 
   render() {
@@ -255,46 +233,16 @@ export default function RootLayout() {
           console.warn('⚠️ Crypto initialization failed, but continuing');
         }
 
-        // Initialize Firebase Crashlytics if available
-        try {
-          if (crashlytics) {
-            // Enable crash collection (disabled by default in debug builds)
-            await crashlytics().setCrashlyticsCollectionEnabled(true);
-            
-            // Set user identifier for better crash tracking
-            crashlytics().setUserId('anonymous');
-            
-            // Set custom attributes
-            crashlytics().setAttributes({
-              platform: Platform.OS,
-              version: '1.1.6',
-              buildNumber: '1',
-              appName: 'BitSleuth Wallet',
-            });
-            
-            // Android-specific initialization
-            if (Platform.OS === 'android') {
-              // Enable automatic data collection for Android
-              crashlytics().setAttribute('android_auto_collection', 'enabled');
-              console.log('✅ Android Crashlytics configuration applied');
-            }
-            
-            console.log('✅ Firebase Crashlytics initialized successfully');
-          } else {
-            console.log('⚠️ Firebase Crashlytics not available - using mock implementation');
-          }
-        } catch (crashlyticsError) {
-          console.warn('⚠️ Crashlytics initialization error:', crashlyticsError);
-        }
+        // Crashlytics is now initialized in the service
+        console.log('✅ App initialization complete');
         
       } catch (error) {
         console.warn('⚠️ App initialization error:', error);
         // Report initialization errors to Crashlytics if available
-        try {
-          crashlytics().recordError(error as Error);
-        } catch (e) {
-          console.warn('Failed to report initialization error to Crashlytics:', e);
-        }
+        crashlyticsService.recordError(error as Error, {
+          context: 'app_initialization',
+          timestamp: new Date().toISOString(),
+        });
       }
       
       // Hide Expo splash screen after initialization

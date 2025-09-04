@@ -56,8 +56,14 @@ export default function SettingsScreen() {
 
   // Crashlytics test functions
   const testCrashlyticsLog = () => {
-    crashlyticsService.log('Test log message from settings screen');
-    Alert.alert('Success', 'Test log sent to Crashlytics');
+    const message = `Test log message from settings screen - ${new Date().toISOString()}`;
+    crashlyticsService.log(message);
+    
+    const isAvailable = crashlyticsService.isAvailable();
+    Alert.alert(
+      'Test Log Sent', 
+      `Log message sent to ${isAvailable ? 'Firebase Crashlytics' : 'Mock Crashlytics (console)'}\n\nCheck the console for confirmation.`
+    );
   };
 
   const testCrashlyticsError = () => {
@@ -65,21 +71,31 @@ export default function SettingsScreen() {
     crashlyticsService.recordError(testError, {
       testContext: 'settings_screen',
       timestamp: new Date().toISOString(),
+      userAction: 'manual_test',
     });
-    Alert.alert('Success', 'Test error sent to Crashlytics');
+    
+    const isAvailable = crashlyticsService.isAvailable();
+    Alert.alert(
+      'Test Error Sent', 
+      `Error recorded to ${isAvailable ? 'Firebase Crashlytics' : 'Mock Crashlytics (console)'}\n\nCheck the console for confirmation.`
+    );
   };
 
   const testCrashlyticsCrash = () => {
+    const isAvailable = crashlyticsService.isAvailable();
     Alert.alert(
       'Test Crash',
-      'This will force the app to crash for testing purposes. The app will restart automatically.',
+      `This will force the app to crash for testing purposes. ${isAvailable ? 'The crash will be reported to Firebase Crashlytics.' : 'Running in mock mode - will throw a test error.'}\n\nThe app will restart automatically.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Crash App', 
           style: 'destructive',
           onPress: () => {
-            crashlyticsService.crash();
+            // Add a small delay to let the alert dismiss
+            setTimeout(() => {
+              crashlyticsService.crash();
+            }, 500);
           }
         }
       ]
@@ -372,7 +388,7 @@ export default function SettingsScreen() {
           />
 
           {/* Crashlytics Testing Section */}
-          <SectionHeader title="Crashlytics Testing" />
+          <SectionHeader title={`Crashlytics Testing ${crashlyticsService.isAvailable() ? '(Live)' : '(Mock)'}`} />
 
           <SettingItem
             icon={TestTube}
