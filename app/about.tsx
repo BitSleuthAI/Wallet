@@ -146,7 +146,18 @@ export default function AboutScreen() {
         </DropdownSection>
 
         <DropdownSection title="Contact & Support">
-          <BulletPoint text="Visit our website: www.bitsleuth.ai" />
+          <View style={styles.bulletContainer}>
+            <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
+            <Text style={[styles.bulletText, { color: theme.colors.text }]}>
+              Visit our website:{' '}
+              <Text
+                style={{ color: theme.colors.primary, textDecorationLine: 'underline' }}
+                onPress={() => Linking.openURL('https://www.bitsleuth.ai')}
+              >
+                www.bitsleuth.ai
+              </Text>
+            </Text>
+          </View>
           <View style={styles.bulletContainer}>
             <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
             <Text style={[styles.bulletText, { color: theme.colors.text }]}>
