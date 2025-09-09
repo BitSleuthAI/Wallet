@@ -4,10 +4,12 @@ import { useWallet } from '@/hooks/wallet-store';
 import { Stack } from 'expo-router';
 import React from 'react';
 import {
+    Linking,
     Platform,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -170,9 +172,11 @@ export default function TermsOfServiceScreen() {
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
               If you have questions about these Terms, please contact us at:
             </Text>
-            <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
-              📧 hello@bitsleuth.ai
-            </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
+              <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
+                📧 hello@bitsleuth.ai
+              </Text>
+            </TouchableOpacity>
           </Section>
 
           <View style={styles.footer}>

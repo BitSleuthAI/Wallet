@@ -4,10 +4,12 @@ import { useWallet } from '@/hooks/wallet-store';
 import { Stack } from 'expo-router';
 import React from 'react';
 import {
+    Linking,
     Platform,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -137,7 +139,13 @@ export default function PrivacyPolicyScreen() {
             <BulletPoint text="The right to request deletion of crash data associated with your device (through your device ID anonymization)." />
             <BulletPoint text="The right to contact us with any privacy-related concerns." />
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
-              To exercise your rights, please email us at hello@bitsleuth.ai.
+              To exercise your rights, please email us at{' '}
+              <Text 
+                style={{ color: theme.colors.primary, textDecorationLine: 'underline' }}
+                onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}
+              >
+                hello@bitsleuth.ai
+              </Text>.
             </Text>
           </Section>
 
@@ -163,9 +171,11 @@ export default function PrivacyPolicyScreen() {
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
               If you have any questions about this Privacy Policy, please contact us at:
             </Text>
-            <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
-              📧 hello@bitsleuth.ai
-            </Text>
+            <TouchableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
+              <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
+                📧 hello@bitsleuth.ai
+              </Text>
+            </TouchableOpacity>
           </Section>
 
           <View style={styles.copyright}>
