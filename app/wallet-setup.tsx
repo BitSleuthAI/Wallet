@@ -1,31 +1,31 @@
 // Import crypto polyfill first
 // import '@/services/crypto-polyfill';
 
+import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
+import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
-import { GradientBackground } from '@/components/GradientBackground';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  Clipboard,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Clipboard,
+    KeyboardAvoidingView,
+    Linking,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
@@ -309,14 +309,14 @@ export default function WalletSetupScreen() {
           By continuing you agree to our{' '}
           <Text 
             style={[styles.termsLink, { color: theme.colors.primary }]}
-            onPress={() => openLink('https://www.bitsleuth.ai/terms-of-service')}
+            onPress={() => router.push('/terms-of-service')}
           >
             Terms
           </Text>
           {' '}and{' '}
           <Text 
             style={[styles.termsLink, { color: theme.colors.primary }]}
-            onPress={() => openLink('https://www.bitsleuth.ai/privacy-policy')}
+            onPress={() => router.push('/privacy-policy')}
           >
             Privacy
           </Text>
@@ -524,7 +524,7 @@ export default function WalletSetupScreen() {
             I accept the{' '}
             <Text 
               style={[styles.termsLink, { color: theme.colors.primary }]}
-              onPress={() => openLink('https://www.bitsleuth.ai/terms-of-service')}
+              onPress={() => router.push('/terms-of-service')}
             >
               Terms
             </Text>
