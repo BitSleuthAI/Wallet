@@ -1,109 +1,127 @@
-# **App Name**: BitSleuth Wallet
+# Product Requirements Document (PRD)
 
-## Core Features:
+## 1. Overview
+**Product Name:** BitSleuth Wallet
 
-#### Security \& Authentication:
+**Description:** A client-side Bitcoin wallet for iOS, Android, and Web platforms, built with React Native and Expo. The app provides secure, non-custodial Bitcoin storage and management with all sensitive operations (seed generation, key derivation, encryption) happening locally on the device. No private keys are ever sent to external servers, ensuring complete user control over their funds.
 
-* PIN Authentication: 4-digit PIN setup and verification for wallet access
-* Biometric Authentication: Face ID, Touch ID, and fingerprint support for quick access
-* Auto-lock Security: Automatic wallet locking with configurable timeout
-* Local Private Key Storage: Private keys are generated and stored locally on device
-* BIP39 Mnemonic Support: 12/24-word seed phrase generation and import
-* BIP84 Native SegWit: Default wallet type using BIP84 derivation path (m/84'/0'/0')
+**Goals:** 
+- Provide a secure, user-friendly Bitcoin wallet that prioritizes privacy and self-custody
+- Enable seamless Bitcoin transactions with modern UX/UI design
+- Support multiple wallet types and advanced features for both beginners and power users
+- Maintain cross-platform compatibility while ensuring robust security
 
-#### Wallet Management:
+## 2. Problem Statement
+**What problem are we solving?** 
+Current Bitcoin wallet solutions often compromise between security and usability. Many wallets either require users to trust third-party services with their private keys (custodial solutions) or provide poor user experiences that make Bitcoin adoption difficult. There's a need for a wallet that combines enterprise-grade security with intuitive design, allowing users to maintain full control of their funds while enjoying a modern mobile experience.
 
-* Multi-Wallet Support: Create and manage multiple wallets with custom names and colors
-* Wallet Types: Support for HD, SegWit P2SH, SegWit Native, and Legacy wallet types
-* Address Generation: Automatic address generation with gap limit management
-* Balance Tracking: Real-time Bitcoin balance with USD/EUR/GBP conversion
-* Transaction History: Complete transaction history with detailed information
+**Why is this important?** 
+Bitcoin adoption is growing rapidly, but security breaches and poor UX continue to be major barriers. Users need a wallet that they can trust with their funds while being easy enough for mainstream adoption. The BitSleuth Wallet addresses this by providing a non-custodial solution with professional-grade security and modern design principles.
 
-#### Bitcoin Operations:
+## 3. Objectives and Success Metrics
+**Objectives (business + user goals):**
+- **Security First:** Ensure zero private key exposure to external servers
+- **User Adoption:** Create an intuitive experience that encourages Bitcoin usage
+- **Cross-Platform:** Provide consistent experience across iOS, Android, and Web
+- **Feature Completeness:** Support all essential Bitcoin wallet functionality
+- **Performance:** Maintain fast, responsive user experience
 
-* Send Bitcoin: Send transactions with custom fee settings
-* Receive Bitcoin: Generate receiving addresses and QR codes
-* QR Code Support: Scan QR codes for addresses and payment requests
-* Fee Management: Custom transaction fees with fee bumping capabilities
-* Coin Control: Advanced UTXO management for transaction optimization
+**KPIs / measurable success metrics:**
+- User retention rate (target: >70% after 30 days)
+- Transaction success rate (target: >99%)
+- App store ratings (target: >4.5/5)
+- Security audit compliance (100% pass rate)
+- Cross-platform feature parity (100% core features available on all platforms)
 
-#### User Experience:
+## 4. Target Audience
+**Who are the users?**
+- **Primary:** Bitcoin enthusiasts and early adopters who value self-custody
+- **Secondary:** New Bitcoin users seeking a secure, easy-to-use wallet
+- **Tertiary:** Advanced users requiring multiple wallet types and coin control features
 
-* Modern UI: Clean, intuitive interface with smooth animations
-* Dark/Light Themes: Automatic theme switching with custom color schemes
-* Haptic Feedback: Tactile feedback for enhanced user experience
-* Price Charts: 24-hour price tracking with visual charts
-* Multi-Currency Display: Support for USD, EUR, and GBP price display
-* Balance Hiding: Option to hide wallet balances for privacy
+**Personas / user stories:**
+- **"Security-Conscious Sarah"**: Wants full control over her Bitcoin with enterprise-grade security
+- **"Mobile-First Mike"**: Primarily uses mobile devices and needs seamless cross-platform experience
+- **"Power User Paul"**: Requires advanced features like coin control, multiple wallet types, and custom fee management
 
-#### Technical Features:
+## 5. Features & Requirements
+### Core Features
+- [x] **Secure Wallet Creation**: BIP39 mnemonic generation with BIP84 Native SegWit support
+- [x] **Multi-Wallet Management**: Create and manage multiple wallets with custom names and colors
+- [x] **Biometric & PIN Authentication**: Face ID, Touch ID, and PIN protection with auto-lock
+- [x] **Send/Receive Bitcoin**: Complete transaction functionality with QR code support
+- [x] **Transaction History**: Detailed transaction tracking with real-time balance updates
+- [x] **Address Management**: Automatic address generation with gap limit management
+- [x] **Fee Management**: Custom transaction fees with fee bumping capabilities
+- [x] **Multi-Currency Display**: USD, EUR, GBP price conversion with real-time rates
+- [x] **Dark/Light Themes**: Automatic theme switching with modern design system
+- [x] **Cross-Platform Support**: iOS, Android, and Web compatibility
 
-* Cross-Platform: React Native with Expo for iOS, Android, and Web
-* Firebase Integration: Crashlytics for error tracking and analytics
-* Offline Capability: Core wallet functions work without internet
-* Secure Storage: AsyncStorage for encrypted local data persistence
-* Network Resilience: Robust error handling and connection management
+### Nice-to-Have Features
+- [ ] **Hardware Wallet Integration**: Support for Ledger/Trezor devices
+- [ ] **Lightning Network**: Fast, low-cost microtransactions
+- [ ] **Multi-Signature Wallets**: Shared wallet functionality
+- [ ] **Advanced Privacy Features**: CoinJoin and privacy-focused transactions
+- [ ] **FIDO2/WebAuthn Support**: Hardware security key authentication
+- [ ] **Tor/VPN Integration**: Anonymous transaction routing
+- [ ] **BIP39 Passphrase**: Additional passphrase encryption layer
+- [ ] **Advanced Coin Control**: UTXO labeling and advanced management
 
-## Style Guidelines:
+## 6. Technical Considerations
+**Platforms:**
+- **Mobile:** React Native with Expo (iOS 13+, Android 8+)
+- **Web:** React Native Web with responsive design
+- **Backend:** Client-side only, no server dependencies
 
-#### Color Scheme:
+**Integrations:**
+- **Blockstream Explorer API**: Transaction data and UTXO management
+- **CoinGecko API**: Real-time Bitcoin price data
+- **Firebase Crashlytics**: Error tracking and analytics
+- **Expo Local Authentication**: Biometric and PIN authentication
 
-* Primary Colors: Dynamic gradient system with purple/violet tones (#B794F4, #9F7AEA)
-* Background: Deep dark theme (#0A0A0F) with surface colors (#1A1A2E)
-* Accent Colors: Pink glow (#F687B3) and vibrant purple (#B794F4)
-* Success/Error: Green (#48BB78) and red (#FC8181) for status indicators
+**Dependencies:**
+- **Cryptography:** @noble/secp256k1, @noble/hashes, bitcoinjs-lib
+- **Bitcoin Standards:** BIP32, BIP39, BIP84 compliance
+- **State Management:** Zustand for application state
+- **UI Framework:** NativeWind (Tailwind CSS for React Native)
+- **Storage:** AsyncStorage for local data persistence
 
-#### Typography:
+## 7. Risks & Assumptions
+**Risks:**
+- **Security Vulnerabilities**: Potential cryptographic implementation flaws
+- **Platform Changes**: iOS/Android API changes affecting functionality
+- **Network Dependencies**: API service outages impacting user experience
+- **Regulatory Changes**: Evolving cryptocurrency regulations
+- **User Error**: Loss of private keys or mnemonic phrases
 
-* Font Family: System fonts with Inter-style characteristics
-* Hierarchy: Clear typography scale from caption (12px) to display (32px)
-* Weight: Regular, semibold (600), and bold variations
+**Assumptions:**
+- Users will properly backup their mnemonic phrases
+- Blockstream Explorer API will remain available and reliable
+- Mobile platforms will continue supporting required cryptographic libraries
+- Users have basic understanding of Bitcoin wallet security practices
 
-#### Design System:
+## 8. Timeline & Milestones
+**Phase 1: Core Wallet (Completed)**
+- Basic wallet creation and import functionality
+- Send/receive Bitcoin transactions
+- PIN and biometric authentication
+- Transaction history and balance tracking
 
-* Border Radius: Consistent 8px, 12px, 16px, 20px scale
-* Spacing: 4px to 32px spacing system for consistent layouts
-* Shadows: Platform-specific shadow implementations (iOS/Android/Web)
-* Animations: Subtle transitions and loading states
-* Icons: Lucide React Native icon set with thin line style
+**Phase 2: Enhanced Features (In Progress)**
+- Multi-wallet support with custom themes
+- Advanced fee management and coin control
+- Cross-platform optimization
+- Performance improvements and bug fixes
 
-#### Layout Principles:
+**Phase 3: Advanced Features (Future)**
+- Hardware wallet integration
+- Lightning Network support
+- Advanced privacy features
+- Multi-signature wallet support
 
-* Mobile-First: Optimized for mobile devices with responsive design
-* Card-Based: Modular card layout for wallet information
-* Visual Hierarchy: Clear information architecture with proper contrast
-* Accessibility: Support for screen readers and accessibility features
-
-## Security Architecture:
-
-#### Implemented Security Features:
-
-* Local Key Generation: Private keys never leave the device
-* BIP39 Compliance: Standard mnemonic phrase generation
-* Secure Storage: Encrypted local storage using device keychain
-* Biometric Integration: Native biometric authentication
-* Auto-Lock: Configurable session timeout for security
-
-#### Cryptographic Implementation:
-
-* ECC Library: @noble/secp256k1 for elliptic curve operations
-* Hash Functions: @noble/hashes for SHA-256 and HMAC operations
-* Bitcoin Libraries: bitcoinjs-lib for transaction building
-* BIP32/BIP39: Standard Bitcoin key derivation and mnemonic handling
-
-## Future Enhancements:
-
-#### Advanced Security:
-
-* AES-256 Encryption: Client-side encryption for wallet data
-* BIP39 Passphrase: Additional passphrase encryption layer
-* FIDO2/WebAuthn: Hardware security key support
-* Certificate Pinning: HTTPS security for API communications
-* Tor/VPN Integration: Anonymous transaction routing
-
-#### Additional Features:
-
-* Hardware Wallet Support: Integration with Ledger/Trezor devices
-* Multi-Signature Wallets: Shared wallet functionality
-* Lightning Network: Fast, low-cost microtransactions
-* Advanced Privacy: CoinJoin and privacy-focused features
+## 9. Open Questions
+- **Hardware Wallet Priority**: Which hardware wallet manufacturers should be prioritized for integration?
+- **Lightning Network**: Should Lightning support be built-in or provided as a separate module?
+- **Regulatory Compliance**: What additional compliance features might be required for different jurisdictions?
+- **Backup Strategy**: Should additional backup methods beyond mnemonic phrases be implemented?
+- **Performance Optimization**: What are the acceptable performance thresholds for transaction processing?
