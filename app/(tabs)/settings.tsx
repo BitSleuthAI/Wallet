@@ -15,6 +15,7 @@ import {
     Euro,
     Eye,
     EyeOff,
+    FileText,
     FolderOpen,
     Info,
     Moon,
@@ -337,6 +338,13 @@ export default function SettingsScreen() {
             title="About BitSleuth Wallet"
             subtitle="Version 1.1.6"
             onPress={() => router.push('/about')}
+          />
+
+          <SettingItem
+            icon={FileText}
+            title="Terms of Service"
+            subtitle="Read our terms and conditions"
+            onPress={() => router.push('/terms-of-service')}
           />
 
 
