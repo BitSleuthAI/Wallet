@@ -63,7 +63,7 @@ export default function TermsOfServiceScreen() {
               Terms of Service
             </Text>
             <Text style={[styles.lastUpdated, { color: theme.colors.textSecondary }]}>
-              Last Updated: 24 July 2025
+              Last Updated: 9 September 2025
             </Text>
           </View>
 

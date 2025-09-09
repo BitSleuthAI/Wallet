@@ -63,7 +63,7 @@ export default function PrivacyPolicyScreen() {
               Privacy Policy
             </Text>
             <Text style={[styles.effectiveDate, { color: theme.colors.textSecondary }]}>
-              Effective Date: 24 July 2025
+              Effective Date: 9 September 2025
             </Text>
           </View>
 
