@@ -18,6 +18,7 @@ import {
     FileText,
     FolderOpen,
     Info,
+    Lock,
     Moon,
     PoundSterling,
     Settings,
@@ -345,6 +346,13 @@ export default function SettingsScreen() {
             title="Terms of Service"
             subtitle="Read our terms and conditions"
             onPress={() => router.push('/terms-of-service')}
+          />
+
+          <SettingItem
+            icon={Lock}
+            title="Privacy Policy"
+            subtitle="Learn how we protect your privacy"
+            onPress={() => router.push('/privacy-policy')}
           />
 
 
