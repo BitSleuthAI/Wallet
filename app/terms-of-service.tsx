@@ -41,7 +41,7 @@ export default function TermsOfServiceScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Terms of Service',
-          headerBackTitle: 'About',
+          headerBackTitle: 'Settings',
           headerStyle: {
             backgroundColor: 'transparent',
           },
