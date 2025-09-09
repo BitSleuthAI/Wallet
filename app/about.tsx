@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   ScrollView,
   Platform,
+  Linking,
 } from 'react-native';
 import { Stack } from 'expo-router';
 import { ChevronDown, ChevronRight } from 'lucide-react-native';
@@ -146,7 +147,18 @@ export default function AboutScreen() {
 
         <DropdownSection title="Contact & Support">
           <BulletPoint text="Visit our website: www.bitsleuth.ai" />
-          <BulletPoint text="Email support: support@bitsleuth.ai" />
+          <View style={styles.bulletContainer}>
+            <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
+            <Text style={[styles.bulletText, { color: theme.colors.text }]}>
+              Email support:{' '}
+              <Text
+                style={{ color: theme.colors.primary, textDecorationLine: 'underline' }}
+                onPress={() => Linking.openURL('mailto:support@bitsleuth.ai')}
+              >
+                support@bitsleuth.ai
+              </Text>
+            </Text>
+          </View>
           <BulletPoint text="Follow us on social media for updates" />
         </DropdownSection>
         </ScrollView>
