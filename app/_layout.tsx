@@ -121,7 +121,7 @@ function AppContent() {
   return (
     <Stack 
       screenOptions={{ 
-        headerBackTitle: Platform.OS === 'ios' ? 'Back' : '',
+        headerBackTitle: '',
         headerStyle: {
           backgroundColor: 'transparent',
         },

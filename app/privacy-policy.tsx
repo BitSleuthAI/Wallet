@@ -41,7 +41,7 @@ export default function PrivacyPolicyScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Privacy Policy',
-          headerBackTitle: 'Settings',
+          headerBackTitle: '',
           headerStyle: {
             backgroundColor: 'transparent',
           },
