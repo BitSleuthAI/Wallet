@@ -21,6 +21,7 @@ import {
     Lock,
     Moon,
     PoundSterling,
+    Scale,
     Settings,
     Shield,
     Sun,
@@ -353,6 +354,13 @@ export default function SettingsScreen() {
             title="Privacy Policy"
             subtitle="Learn how we protect your privacy"
             onPress={() => router.push('/privacy-policy')}
+          />
+
+          <SettingItem
+            icon={Scale}
+            title="Legal Disclaimer"
+            subtitle="Important legal information"
+            onPress={() => router.push('/legal-disclaimer')}
           />
 
 
