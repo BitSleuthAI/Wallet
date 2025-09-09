@@ -19,19 +19,25 @@ try {
 
 try {
   if (Platform.OS !== 'web' && !isExpoGo) {
-    // Initialize Firebase App first
-    firebaseApp = require('@react-native-firebase/app').default;
-    crashlytics = require('@react-native-firebase/crashlytics').default;
-    
-    // Check if Firebase is properly configured
-    if (firebaseApp.apps.length === 0) {
-      console.warn('⚠️ Firebase app not initialized - check your configuration files');
+    // Try to initialize Firebase App first
+    try {
+      firebaseApp = require('@react-native-firebase/app').default;
+      crashlytics = require('@react-native-firebase/crashlytics').default;
+      
+      // Check if Firebase is properly configured
+      if (firebaseApp.apps.length === 0) {
+        console.warn('⚠️ Firebase app not initialized - check your configuration files');
+        isInitialized = false;
+      } else {
+        isInitialized = true;
+        console.log('✅ Firebase Crashlytics module loaded successfully');
+        console.log('📱 Firebase App Name:', firebaseApp.app().name);
+        console.log('🔧 Firebase Project ID:', firebaseApp.app().options.projectId);
+      }
+    } catch (moduleError) {
+      console.log('ℹ️ Firebase modules not found - running in mock mode');
+      console.log('💡 Install @react-native-firebase packages for production builds');
       isInitialized = false;
-    } else {
-      isInitialized = true;
-      console.log('✅ Firebase Crashlytics module loaded successfully');
-      console.log('📱 Firebase App Name:', firebaseApp.app().name);
-      console.log('🔧 Firebase Project ID:', firebaseApp.app().options.projectId);
     }
   } else if (Platform.OS === 'web') {
     console.log('ℹ️ Running on web - Crashlytics not available');
