@@ -167,6 +167,12 @@ export default function PrivacyPolicyScreen() {
               📧 hello@bitsleuth.ai
             </Text>
           </Section>
+
+          <View style={styles.copyright}>
+            <Text style={[styles.copyrightText, { color: theme.colors.textSecondary }]}>
+              © 2025 Bitsleuth. All rights reserved.
+            </Text>
+          </View>
         </ScrollView>
       </AndroidSafeContainer>
     </GradientBackground>
@@ -257,6 +263,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginTop: 8,
+    textAlign: 'center',
+  },
+  copyright: {
+    paddingHorizontal: 20,
+    paddingVertical: 30,
+    alignItems: 'center',
+  },
+  copyrightText: {
+    fontSize: 14,
+    fontWeight: '500',
     textAlign: 'center',
   },
 });
