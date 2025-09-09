@@ -1,0 +1,114 @@
+version: 1
+description: >
+  Global coding and project guardrails. Provides a lightweight baseline to improve
+  security, consistency, and best practices across the repository.
+
+policies:
+  # -------------------------------------------------------------------
+  # 1) Block hardcoded secrets in source code
+  #    This rule prevents committing API keys, tokens, and passwords directly.
+  #    Expand later: add more regexes for other providers if needed.
+  # -------------------------------------------------------------------
+  - id: security.no_hardcoded_secrets
+    severity: error
+    message: >
+      Hardcoded secret detected. Use environment variables or a secure vault—never commit secrets to source.
+    applies_to:
+      globs:
+        - "**/*.{js,jsx,ts,tsx}"
+        - "**/*.py"
+        - "**/*.{go,rb}"
+        - "**/*.{yml,yaml,json}"
+        - "**/*.{sh,bash}"
+    match:
+      any:
+        - regex: (?i)\b(secret|password|passwd|pwd|token|apikey|api[_-]?key|access[_-]?key|client[_-]?secret)\b\s*[:=]\s*["'][^"']{6,}["']
+        - regex: \bAKIA[0-9A-Z]{16}\b                 # AWS Access Key ID
+        - regex: \bghp_[0-9A-Za-z]{20,}\b            # GitHub PAT
+        - regex: \bAIza[0-9A-Za-z\-_]{20,}\b         # Google API key
+        - regex: \bsk-[A-Za-z0-9]{16,}\b             # "sk-" style keys
+        - regex: -----BEGIN [A-Z ]*PRIVATE KEY-----   # PEM private keys (start)
+    exclude_if:
+      any:
+        - regex: (?i)(example|sample|placeholder|dummy|test|changeme|<.+>|REDACTED)
+    remediation:
+      guidance: |
+        Replace literals with environment variables or fetch from your vault at runtime.
+        Examples:
+          # Node.js
+          const apiKey = process.env.SERVICE_API_KEY
+          # Python
+          import os; API_KEY = os.environ["SERVICE_API_KEY"]
+          # Shell
+          curl -H "Authorization: Bearer $SERVICE_TOKEN" ...
+        Provide env vars via CI/CD, Docker/K8s, or a local .env (ignored) for dev.
+
+  # -------------------------------------------------------------------
+  # 2) Block committing .env-like files
+  #    These often contain secrets. Commit only .env.example (safe placeholders).
+  #    Expand later: add patterns for other secret-bearing files.
+  # -------------------------------------------------------------------
+  - id: security.block_env_files
+    severity: error
+    message: Do not commit .env files. Inject via runtime/CI and keep local copies ignored.
+    applies_to:
+      globs:
+        - "**/.env"
+        - "**/.env.*"
+        - "**/*.env"
+    match:
+      any:
+        - regex: .+  # any content triggers
+    remediation:
+      guidance: |
+        Add these to .gitignore, keep local only (e.g., .env.local), and source values from a vault/CI store.
+
+  # -------------------------------------------------------------------
+  # 3) Warn on suspicious config keys in YAML/JSON
+  #    Helps catch secrets slipping into configs.
+  #    Expand later: add stricter checks, or extend to .toml/.ini if needed.
+  # -------------------------------------------------------------------
+  - id: security.suspicious_config_keys
+    severity: warning
+    message: Potential secret-like value in config. Prefer env/vault and reference via templating.
+    applies_to:
+      globs:
+        - "**/*.{yml,yaml,json}"
+    match:
+      all:
+        - regex: (?i)\b(secret|token|apikey|api[_-]?key|password|client[_-]?secret|private[_-]?key)\b
+        - regex: :\s*["'][^"']{6,}["']
+    remediation:
+      guidance: |
+        Replace literal with an environment variable or vault reference (e.g., External Secrets,
+        SOPS, or your platform’s secret manager).
+
+settings:
+  ai_coding_assistant:
+    guardrails:
+      - "Never propose adding literal secrets to source files."
+      - "Default to environment variables or a secure vault for any credential."
+      - "Use obvious placeholders only (e.g., <YOUR_API_KEY>)."
+    placeholders:
+      api_key: "<YOUR_API_KEY>"
+      password: "<YOUR_PASSWORD>"
+      token: "<YOUR_TOKEN>"
+
+ignore:
+  # Reduce noise while starting out
+  - "tests/**"
+  - "examples/**"
+  - "docs/**"
+
+# -------------------------------------------------------------------
+# 🚀 Expansion Notes:
+# - To add more guardrails, copy/paste one of the above policy blocks
+#   and adjust. Example ideas:
+#     * Linting / formatting checks
+#     * Disallow large binary files in git
+#     * License header enforcement
+# - Keep severity balanced:
+#     * use `error` for hard-stops (security risks)
+#     * use `warning` for softer nudges
+#     * use `info` for team reminders
+# -------------------------------------------------------------------
