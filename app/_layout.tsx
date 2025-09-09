@@ -109,6 +109,12 @@ const errorStyles = StyleSheet.create({
   },
 });
 
+const rootStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
+
 function AppContent() {
   const { theme } = useWallet();
   
@@ -150,6 +156,9 @@ function AppContent() {
       <Stack.Screen name="fee-bump" options={{ headerShown: true }} />
       <Stack.Screen name="manage-wallets" options={{ headerShown: true }} />
       <Stack.Screen name="passkeys-security" options={{ headerShown: true }} />
+      <Stack.Screen name="terms-of-service" options={{ headerShown: true }} />
+      <Stack.Screen name="privacy-policy" options={{ headerShown: true }} />
+      <Stack.Screen name="legal-disclaimer" options={{ headerShown: true }} />
     </Stack>
   );
 }
@@ -254,7 +263,7 @@ export default function RootLayout() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
+      <GestureHandlerRootView style={rootStyles.container}>
         <RootLayoutNav />
       </GestureHandlerRootView>
     </QueryClientProvider>
