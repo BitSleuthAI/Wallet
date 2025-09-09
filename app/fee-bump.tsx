@@ -1,13 +1,16 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
 import { Transaction } from '@/types/wallet';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, Check } from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -69,14 +72,28 @@ export default function FeeBumpScreen() {
 
   if (!transaction) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen options={{ title: 'Bump Fee (RBF)' }} />
-        <View style={styles.centerContent}>
-          <Text style={[styles.errorText, { color: theme.colors.error }]}>
-            Transaction not found
-          </Text>
-        </View>
-      </View>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <Stack.Screen 
+          options={{ 
+            title: 'Bump Fee (RBF)',
+            headerBackTitle: '',
+            headerStyle: {
+              backgroundColor: 'transparent',
+            },
+            headerTintColor: theme.colors.text,
+            headerTitleStyle: {
+              color: theme.colors.text,
+            },
+          }} 
+        />
+        <AndroidSafeContainer style={styles.container}>
+          <View style={styles.centerContent}>
+            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+              Transaction not found
+            </Text>
+          </View>
+        </AndroidSafeContainer>
+      </GradientBackground>
     );
   }
 
@@ -154,21 +171,30 @@ export default function FeeBumpScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Bump fee (RBF)',
-          headerStyle: { backgroundColor: theme.colors.background },
+          title: 'Bump Fee (RBF)',
+          headerBackTitle: '',
+          headerStyle: {
+            backgroundColor: 'transparent',
+          },
           headerTintColor: theme.colors.text,
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-              <ArrowLeft color={theme.colors.text} size={24} />
-            </TouchableOpacity>
-          ),
+          headerTitleStyle: {
+            color: theme.colors.text,
+          },
         }} 
       />
       
-      <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+      <AndroidSafeContainer style={styles.container}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={[
+            styles.scrollContent,
+            Platform.OS === 'ios' && { paddingTop: 75 }
+          ]}
+          showsVerticalScrollIndicator={false}
+        >
         {/* Transaction Info */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionInfo}>
@@ -295,10 +321,10 @@ export default function FeeBumpScreen() {
             The total fee rate (satoshi per byte) you want to pay should be higher than {getMinimumFeeRate()} sat/byte
           </Text>
         </View>
-      </ScrollView>
+        </ScrollView>
 
-      {/* Bottom Actions */}
-      <View style={[styles.bottomActions, { backgroundColor: theme.colors.surface }]}>
+        {/* Bottom Actions */}
+        <View style={[styles.bottomActions, { backgroundColor: theme.colors.surface + 'F0', borderTopColor: theme.colors.border }]}>
         <TouchableOpacity
           style={[
             styles.actionButton,
@@ -342,8 +368,9 @@ export default function FeeBumpScreen() {
             details
           </Text>
         </TouchableOpacity>
-      </View>
-    </View>
+        </View>
+      </AndroidSafeContainer>
+    </GradientBackground>
   );
 }
 
@@ -353,6 +380,9 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
   },
   centerContent: {
     flex: 1,
@@ -364,7 +394,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   section: {
-    margin: platformStyles.spacing.lg,
+    marginHorizontal: platformStyles.spacing.lg,
+    marginVertical: platformStyles.spacing.md,
     padding: platformStyles.spacing.lg,
     borderRadius: platformStyles.borderRadius.large,
     ...platformStyles.shadow,
@@ -461,7 +492,8 @@ const styles = StyleSheet.create({
     padding: platformStyles.spacing.lg,
     paddingBottom: platformStyles.spacing.xl,
     borderTopWidth: 1,
-    borderTopColor: '#E5E5E5',
+    borderRadius: platformStyles.borderRadius.large,
+    marginTop: platformStyles.spacing.sm,
   },
   actionButton: {
     paddingVertical: platformStyles.spacing.md,
@@ -501,8 +533,5 @@ const styles = StyleSheet.create({
   },
   detailsButtonText: {
     ...platformStyles.typography.body,
-  },
-  headerButton: {
-    padding: platformStyles.spacing.sm,
   },
 });
