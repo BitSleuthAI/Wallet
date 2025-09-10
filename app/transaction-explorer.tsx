@@ -174,22 +174,19 @@ export default function TransactionExplorerScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: true,
-          headerTransparent: true,
-          headerTitle: '',
+          headerTransparent: false,
+          headerTitle: 'Transaction',
+          headerTitleStyle: {
+            fontWeight: 'bold',
+            color: theme.colors.text,
+          },
           headerLeft: () => (
             <TouchableOpacity 
               style={styles.headerBackButton}
               onPress={() => router.back()}
             >
-              <ArrowIcon color={arrowColor} size={24} />
+              <ArrowLeft color={theme.colors.text} size={24} />
             </TouchableOpacity>
-          ),
-          headerRight: () => (
-            <View style={styles.headerTitleContainer}>
-              <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-                Transaction
-              </Text>
-            </View>
           ),
           headerStyle: {
             backgroundColor: 'transparent',
@@ -198,28 +195,28 @@ export default function TransactionExplorerScreen() {
       />
       
       <ScrollView 
-        style={[styles.scrollView, { paddingTop: insets.top + 60 }]} 
+        style={styles.scrollView} 
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
         {/* Transaction Details Card */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionHeader}>
-            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+            <View style={styles.transactionArrow}>
+              <ArrowIcon color={arrowColor} size={20} />
+            </View>
+            <Text style={[styles.subtitle, { color: theme.colors.text, fontWeight: 'bold' }]}>
               Broadcasted on {formatDate(explorerData.timestamp)}
             </Text>
           </View>
-          <View style={styles.txidContainer}>
+          <TouchableOpacity 
+            style={styles.txidContainer}
+            onPress={() => copyToClipboard(explorerData.txid)}
+          >
             <Text style={[styles.txid, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {explorerData.txid}
             </Text>
-            <TouchableOpacity 
-              style={styles.copyButton}
-              onPress={() => copyToClipboard(explorerData.txid)}
-            >
-              <Copy color={theme.colors.textSecondary} size={20} />
-            </TouchableOpacity>
-          </View>
+          </TouchableOpacity>
         </View>
 
         {/* Summary Card */}
@@ -454,12 +451,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold' as const,
   },
   transactionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: platformStyles.spacing.md,
   },
+  transactionArrow: {
+    marginRight: platformStyles.spacing.sm,
+  },
   txidContainer: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
+    flex: 1,
   },
   copyButton: {
     padding: platformStyles.spacing.sm,
