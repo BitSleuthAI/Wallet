@@ -200,7 +200,7 @@ export default function TransactionExplorerScreen() {
     );
   }
 
-  const isReceive = transaction?.amount > 0;
+  const isReceive = transaction?.type === 'received';
   const ArrowIcon = isReceive ? ArrowDownLeft : ArrowUpRight;
   const arrowColor = isReceive ? '#22c55e' : '#ef4444';
 
@@ -235,7 +235,7 @@ export default function TransactionExplorerScreen() {
         {/* Transaction Details Card */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionHeader}>
-            <View style={[styles.transactionIconContainer, { backgroundColor: isReceive ? '#22c55e' : '#ef4444' }]}>
+            <View style={[styles.transactionIconContainer, { backgroundColor: arrowColor }]}>
               <ArrowIcon color="white" size={16} />
             </View>
             <Text style={[styles.subtitle, { color: theme.colors.text, fontWeight: 'bold' }]}>
