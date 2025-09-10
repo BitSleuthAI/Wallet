@@ -22,7 +22,7 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+
 
 export default function WalletSettingsScreen() {
   const { 
@@ -125,15 +125,14 @@ export default function WalletSettingsScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
           options={{ 
             title: 'Wallet Settings',
           }} 
         />
         
-        <AndroidSafeContainer style={styles.scrollContainer}>
-          <ScrollView style={styles.scrollView}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Wallet Info Section */}
         <SectionHeader title="Wallet Information" />
         
@@ -206,8 +205,7 @@ export default function WalletSettingsScreen() {
 
           <View style={styles.bottomSpacing} />
           </ScrollView>
-        </AndroidSafeContainer>
-      </SafeAreaView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }

@@ -3,6 +3,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 import { Stack } from 'expo-router';
 import {
@@ -450,14 +451,14 @@ export default function PasskeysSecurityScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <View style={styles.container}>
+      <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
           options={{ 
             title: 'Passkeys & Security Keys',
           }} 
         />
         
-        <ScrollView style={styles.scrollView}>
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Security Status Card */}
         <View style={[styles.statusCard, { backgroundColor: theme.colors.primary }]}>
           <View style={styles.statusHeader}>
@@ -661,7 +662,7 @@ export default function PasskeysSecurityScreen() {
 
         <View style={styles.bottomSpacing} />
         </ScrollView>
-      </View>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
