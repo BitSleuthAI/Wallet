@@ -1,64 +1,58 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
-import { GradientBackground } from '@/components/GradientBackground';
-import { useWallet } from '@/hooks/wallet-store';
 import { Link, Stack } from "expo-router";
-import { Home } from 'lucide-react-native';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { ArrowLeft, Bot } from 'lucide-react-native';
+import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
 
 export default function NotFoundScreen() {
-  const { theme } = useWallet();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
   
   return (
-    <GradientBackground theme={theme} variant="primary" direction="vertical">
+    <View style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5' }]}>
       <Stack.Screen 
         options={{ 
-          title: "Page Not Found",
-          headerBackTitle: '',
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: {
-            color: theme.colors.text,
-          },
+          headerShown: false
         }} 
       />
-      <AndroidSafeContainer style={styles.container}>
-        <View style={[
-          styles.content,
-          Platform.OS === 'ios' && { paddingTop: 75 }
-        ]}>
-          <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
+      <AndroidSafeContainer style={styles.safeArea}>
+        <View style={styles.content}>
+          <View style={[
+            styles.card, 
+            { 
+              backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
+              borderColor: isDark ? '#3a3a3a' : '#e0e0e0'
+            }
+          ]}>
             <View style={[
               styles.iconContainer,
-              { backgroundColor: theme.colors.primary + '20' }
+              { backgroundColor: '#8B5CF6' }
             ]}>
-              <Text style={[styles.errorCode, { color: theme.colors.primary }]}>404</Text>
+              <Bot color="#2a2a2a" size={48} strokeWidth={2} />
             </View>
             
-            <Text style={[styles.title, { color: theme.colors.text }]}>
-              Oops! Page not found
+            <Text style={[styles.title, { color: isDark ? '#ffffff' : '#1a1a1a' }]}>
+              404 - Page Not Found
             </Text>
             
-            <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
-              The page you&apos;re looking for doesn&apos;t exist or has been moved.
+            <Text style={[styles.description, { color: isDark ? '#a0a0a0' : '#666666' }]}>
+              Oh sleuth!!! It seems BitSleuth bot got lost in the digital ether. The page you&apos;re looking for might have been moved or never existed.
             </Text>
 
             <Link href="/" asChild>
               <TouchableOpacity 
                 style={[
                   styles.button,
-                  { backgroundColor: theme.colors.primary }
+                  { backgroundColor: '#8B5CF6' }
                 ]}
               >
-                <Home color="white" size={20} />
-                <Text style={styles.buttonText}>Go to Home</Text>
+                <ArrowLeft color="#2a2a2a" size={20} strokeWidth={2.5} />
+                <Text style={styles.buttonText}>Return to Dashboard</Text>
               </TouchableOpacity>
             </Link>
           </View>
         </View>
       </AndroidSafeContainer>
-    </GradientBackground>
+    </View>
   );
 }
 
@@ -66,62 +60,66 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  safeArea: {
+    flex: 1,
+  },
   content: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    padding: 20,
+    padding: 24,
   },
   card: {
     width: '100%',
-    maxWidth: 400,
-    padding: 32,
-    borderRadius: 20,
+    maxWidth: 380,
+    padding: 40,
+    borderRadius: 24,
     alignItems: 'center',
+    borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 8,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
   },
   iconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
+    width: 100,
+    height: 100,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
-  },
-  errorCode: {
-    fontSize: 48,
-    fontWeight: 'bold',
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: "700",
-    marginBottom: 12,
+    marginBottom: 16,
     textAlign: 'center',
+    letterSpacing: -0.5,
   },
   description: {
     fontSize: 16,
     lineHeight: 24,
     textAlign: 'center',
-    marginBottom: 32,
+    marginBottom: 40,
+    paddingHorizontal: 8,
   },
   button: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    gap: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 16,
+    gap: 12,
+    width: '100%',
+    justifyContent: 'center',
   },
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'white',
+    color: '#2a2a2a',
   },
 });
