@@ -14,7 +14,7 @@ import { Copy, RefreshCw, ExternalLink, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import * as WebBrowser from 'expo-web-browser';
+
 import * as walletService from '@/services/wallet-service';
 import * as bitcoinService from '@/services/bitcoin-service';
 import { GradientBackground } from '@/components/GradientBackground';
@@ -214,14 +214,8 @@ export default function WalletAddressesScreen() {
     }
   };
 
-  const openAddressExplorer = async (address: string) => {
-    try {
-      const url = `https://app.bitsleuth.ai/address/${address}`;
-      await WebBrowser.openBrowserAsync(url);
-    } catch (error) {
-      console.error('Failed to open address explorer:', error);
-      Alert.alert('Error', 'Failed to open address explorer');
-    }
+  const openAddressDetails = (address: string) => {
+    router.push(`/address-details?address=${encodeURIComponent(address)}`);
   };
 
   const refreshAddresses = async () => {
@@ -246,7 +240,7 @@ export default function WalletAddressesScreen() {
   const AddressItem = ({ addressInfo }: { addressInfo: AddressInfo }) => (
     <TouchableOpacity
       style={[styles.addressItem, { backgroundColor: theme.colors.surface }]}
-      onPress={() => openAddressExplorer(addressInfo.address)}
+      onPress={() => openAddressDetails(addressInfo.address)}
       activeOpacity={0.7}
     >
       <View style={styles.addressHeader}>
@@ -317,7 +311,7 @@ export default function WalletAddressesScreen() {
           <TouchableOpacity
             onPress={(e) => {
               e.stopPropagation();
-              openAddressExplorer(addressInfo.address);
+              openAddressDetails(addressInfo.address);
             }}
             style={styles.actionButton}
           >
