@@ -20,7 +20,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
-        "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID."
+        "NSFaceIDUsageDescription": "Allow $(PRODUCT_NAME) to use Face ID.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
