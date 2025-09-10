@@ -4,7 +4,6 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { Stack, router } from 'expo-router';
 import {
-    ArrowLeft,
     ChevronRight,
     Coins,
     FileKey,
@@ -31,10 +30,6 @@ export default function WalletSettingsScreen() {
     currentWallet, 
     logoutAndEraseWallet 
   } = useWallet();
-
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -133,25 +128,11 @@ export default function WalletSettingsScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
           options={{ 
-            headerShown: false,
+            title: 'Wallet Settings',
           }} 
         />
         
         <AndroidSafeContainer style={styles.scrollContainer}>
-          {/* Custom Header */}
-          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
-              style={styles.backButton}
-              onPress={handleBack}
-              testID="back-button"
-            >
-              <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-              Wallet Settings
-            </Text>
-            <View style={styles.headerSpacer} />
-          </View>
           <ScrollView style={styles.scrollView}>
         {/* Wallet Info Section */}
         <SectionHeader title="Wallet Information" />

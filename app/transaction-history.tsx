@@ -1,7 +1,7 @@
 import TransactionItem from '@/components/TransactionItem';
 import { useWallet } from '@/hooks/wallet-store';
-import { Stack, router } from 'expo-router';
-import { Clock, ArrowLeft } from 'lucide-react-native';
+import { Stack } from 'expo-router';
+import { Clock } from 'lucide-react-native';
 import React from 'react';
 import {
     ActivityIndicator,
@@ -9,7 +9,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,10 +23,6 @@ export default function TransactionHistoryScreen() {
     refreshData,
     currentWallet
   } = useWallet();
-
-  const handleBack = () => {
-    router.back();
-  };
 
   const handleRefresh = async () => {
     await refreshData();
@@ -69,24 +64,9 @@ export default function TransactionHistoryScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
           options={{ 
-            headerShown: false,
+            title: 'Transaction History',
           }} 
         />
-        
-        {/* Custom Header */}
-        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBack}
-            testID="back-button"
-          >
-            <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Transaction History
-          </Text>
-          <View style={styles.headerSpacer} />
-        </View>
       
       <ScrollView 
         style={styles.scrollView}

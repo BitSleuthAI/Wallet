@@ -165,9 +165,6 @@ export default function ManageWalletsScreen() {
         <Stack.Screen 
           options={{ 
             title: 'Manage Wallets',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
-
           }} 
         />
         
