@@ -3,7 +3,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+
 import { Stack } from 'expo-router';
 import {
     AlertTriangle,
@@ -432,12 +432,10 @@ export default function PasskeysSecurityScreen() {
   if (loading) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
-        <AndroidSafeContainer style={styles.container}>
+        <View style={styles.container}>
           <Stack.Screen 
             options={{ 
               title: 'Passkeys & Security Keys',
-              headerStyle: { backgroundColor: 'transparent' },
-              headerTintColor: theme.colors.text,
             }} 
           />
           <View style={styles.loadingContainer}>
@@ -445,19 +443,17 @@ export default function PasskeysSecurityScreen() {
               Loading security settings...
             </Text>
           </View>
-        </AndroidSafeContainer>
+        </View>
       </GradientBackground>
     );
   }
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <AndroidSafeContainer style={styles.container}>
+      <View style={styles.container}>
         <Stack.Screen 
           options={{ 
             title: 'Passkeys & Security Keys',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
           }} 
         />
         
@@ -665,7 +661,7 @@ export default function PasskeysSecurityScreen() {
 
         <View style={styles.bottomSpacing} />
         </ScrollView>
-      </AndroidSafeContainer>
+      </View>
     </GradientBackground>
   );
 }

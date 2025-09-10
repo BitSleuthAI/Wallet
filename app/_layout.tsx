@@ -115,9 +115,10 @@ const rootStyles = StyleSheet.create({
     flex: 1,
   },
   headerBackButton: {
-    paddingLeft: 16,
+    paddingLeft: Platform.OS === 'ios' ? 16 : 12,
     paddingRight: 8,
     paddingVertical: 8,
+    marginLeft: Platform.OS === 'android' ? 4 : 0,
   },
 });
 
@@ -129,13 +130,19 @@ function AppContent() {
       screenOptions={{ 
         headerBackTitle: '',
         headerStyle: {
-          backgroundColor: 'transparent',
+          backgroundColor: Platform.select({
+            ios: theme.colors.background + 'F0',
+            android: theme.colors.background + 'F0',
+            default: theme.colors.background + 'F0',
+          }),
         },
-        headerTransparent: true,
+        headerTransparent: false,
+        headerBlurEffect: Platform.OS === 'ios' ? 'regular' : undefined,
         headerTintColor: theme.colors.text,
         headerTitleStyle: {
           color: theme.colors.text,
-          fontWeight: '600',
+          fontWeight: '700',
+          fontSize: 18,
         },
         headerTitleAlign: 'center',
         headerShadowVisible: false,
@@ -148,8 +155,9 @@ function AppContent() {
           <TouchableOpacity
             style={rootStyles.headerBackButton}
             onPress={() => router.back()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
-            <ArrowLeft size={24} color={theme.colors.text} />
+            <ArrowLeft size={24} color={theme.colors.text} strokeWidth={2.5} />
           </TouchableOpacity>
         ),
       }}
