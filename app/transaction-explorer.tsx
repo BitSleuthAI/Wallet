@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
@@ -21,7 +22,6 @@ import {
     View,
     ActivityIndicator,
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TransactionExplorerData {
   txid: string;
@@ -56,7 +56,6 @@ export default function TransactionExplorerScreen() {
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
-  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (txid && transactions) {
@@ -135,32 +134,68 @@ export default function TransactionExplorerScreen() {
 
   if (loading) {
     return (
-      <GradientBackground theme={theme} style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            headerShown: false,
-          }} 
-        />
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={theme.colors.primary} />
-        </View>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
+          <Stack.Screen 
+            options={{ 
+              headerShown: false,
+            }} 
+          />
+          
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Transaction
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
 
   if (!transaction || !explorerData) {
     return (
-      <GradientBackground theme={theme} style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            headerShown: false,
-          }} 
-        />
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: theme.colors.error }]}>
-            Transaction not found
-          </Text>
-        </View>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
+          <Stack.Screen 
+            options={{ 
+              headerShown: false,
+            }} 
+          />
+          
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Transaction
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.colors.error }]}>
+              Transaction not found
+            </Text>
+          </View>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
@@ -170,35 +205,33 @@ export default function TransactionExplorerScreen() {
   const arrowColor = isReceive ? '#22c55e' : '#ef4444';
 
   return (
-    <GradientBackground theme={theme} style={styles.container}>
-      <Stack.Screen 
-        options={{ 
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: 'Transaction',
-          headerTitleStyle: {
-            fontWeight: 'bold',
-            color: theme.colors.text,
-          },
-          headerLeft: () => (
-            <TouchableOpacity 
-              style={styles.headerBackButton}
-              onPress={() => router.back()}
-            >
-              <ArrowLeft color={theme.colors.text} size={24} />
-            </TouchableOpacity>
-          ),
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
-        }} 
-      />
-      
-      <ScrollView 
-        style={[styles.scrollView, { paddingTop: insets.top + 56 }]} 
-        showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="never"
-      >
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
+        <Stack.Screen 
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Transaction
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
+        
+        <ScrollView 
+          style={styles.scrollView} 
+          showsVerticalScrollIndicator={false}
+        >
         {/* Transaction Details Card */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionHeader}>
@@ -403,7 +436,8 @@ export default function TransactionExplorerScreen() {
             </TouchableOpacity>
           ))}
         </View>
-      </ScrollView>
+        </ScrollView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
@@ -411,6 +445,28 @@ export default function TransactionExplorerScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: 'transparent',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollView: {
     flex: 1,
@@ -424,6 +480,7 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 20,
   },
   errorText: {
     ...platformStyles.typography.bodyLarge,
@@ -436,20 +493,7 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     ...platformStyles.shadow,
   },
-  headerBackButton: {
-    padding: platformStyles.spacing.sm,
-    marginLeft: platformStyles.spacing.sm,
-  },
-  headerTitleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    marginRight: 60,
-  },
-  headerTitle: {
-    ...platformStyles.typography.heading,
-    fontSize: 20,
-    fontWeight: 'bold' as const,
-  },
+
   transactionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
