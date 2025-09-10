@@ -41,13 +41,6 @@ export default function LegalDisclaimerScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Legal Disclaimer',
-          headerBackTitle: '',
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: {
-            color: theme.colors.text,
           },
         }} 
       />

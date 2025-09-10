@@ -9,11 +9,12 @@ import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { WalletProvider, useWallet } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { ArrowLeft } from 'lucide-react-native';
 
 // Import Crashlytics service
 import crashlyticsService from '@/services/crashlytics-service';
@@ -113,6 +114,11 @@ const rootStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  headerBackButton: {
+    paddingLeft: 16,
+    paddingRight: 8,
+    paddingVertical: 8,
+  },
 });
 
 function AppContent() {
@@ -137,6 +143,14 @@ function AppContent() {
         },
         gestureEnabled: true,
         animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade_from_bottom',
+        headerLeft: () => (
+          <TouchableOpacity
+            style={rootStyles.headerBackButton}
+            onPress={() => router.back()}
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+        ),
       }}
     >
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
