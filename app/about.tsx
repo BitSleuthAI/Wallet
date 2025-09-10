@@ -5,11 +5,10 @@ import {
   StyleSheet,
   TouchableOpacity,
   ScrollView,
-  Platform,
   Linking,
 } from 'react-native';
-import { Stack } from 'expo-router';
-import { ChevronDown, ChevronRight } from 'lucide-react-native';
+import { Stack, router } from 'expo-router';
+import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
@@ -55,6 +54,10 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
 export default function AboutScreen() {
   const { theme } = useWallet();
 
+  const handleBack = () => {
+    router.back();
+  };
+
   const BulletPoint = ({ text }: { text: string }) => (
     <View style={styles.bulletContainer}>
       <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
@@ -68,28 +71,31 @@ export default function AboutScreen() {
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'About BitSleuth Wallet',
-          headerBackTitle: '',
-          headerStyle: {
-            backgroundColor: 'transparent',
-          },
-          headerTintColor: theme.colors.text,
-          headerTitleStyle: {
-            color: theme.colors.text,
-          },
-          headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
       
       <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            About BitSleuth Wallet
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            Platform.OS === 'ios' && { paddingTop: 75 }
-          ]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-            <View style={styles.header}>
+            <View style={styles.contentHeader}>
           <Text style={[styles.appTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
           </Text>
@@ -183,13 +189,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
+  contentHeader: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     alignItems: 'center',

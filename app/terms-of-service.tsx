@@ -1,7 +1,8 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
     Linking,
@@ -36,24 +37,39 @@ export default function TermsOfServiceScreen() {
     </View>
   );
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Terms of Service',
-          headerTitleAlign: 'center',
+          headerShown: false,
         }} 
       />
       
       <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Terms of Service
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[
-            styles.scrollContent,
-            Platform.OS === 'ios' && { paddingTop: 75 }
-          ]}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
         >
-          <View style={styles.header}>
+          <View style={styles.contentHeader}>
             <Text style={[styles.title, { color: theme.colors.text }]}>
               Terms of Service
             </Text>
@@ -187,13 +203,34 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
+  },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
     flexGrow: 1,
   },
-  header: {
+  contentHeader: {
     paddingHorizontal: 20,
     paddingVertical: 20,
     alignItems: 'center',

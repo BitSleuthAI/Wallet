@@ -1,17 +1,18 @@
 import TransactionItem from '@/components/TransactionItem';
 import { useWallet } from '@/hooks/wallet-store';
-import { Stack } from 'expo-router';
-import { Clock } from 'lucide-react-native';
+import { Stack, router } from 'expo-router';
+import { Clock, ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
     ActivityIndicator,
     RefreshControl,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GradientBackground } from '@/components/GradientBackground';
 
 export default function TransactionHistoryScreen() {
@@ -23,6 +24,10 @@ export default function TransactionHistoryScreen() {
     refreshData,
     currentWallet
   } = useWallet();
+
+  const handleBack = () => {
+    router.back();
+  };
 
   const handleRefresh = async () => {
     await refreshData();
@@ -63,15 +68,25 @@ export default function TransactionHistoryScreen() {
     <GradientBackground theme={theme} variant="primary">
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
-        options={{ 
-          title: 'Transaction History',
-          headerStyle: { 
-            backgroundColor: 'transparent',
-          },
-          headerTintColor: theme.colors.text,
-          headerTransparent: true,
-        }} 
-      />
+          options={{ 
+            headerShown: false,
+          }} 
+        />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Transaction History
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
       
       <ScrollView 
         style={styles.scrollView}
@@ -85,12 +100,12 @@ export default function TransactionHistoryScreen() {
         }
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+        {/* Content Header */}
+        <View style={styles.contentHeader}>
+          <Text style={[styles.contentHeaderTitle, { color: theme.colors.text }]}>
             All Transactions
           </Text>
-          <Text style={[styles.headerSubtitle, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.contentHeaderSubtitle, { color: theme.colors.textSecondary }]}>
             {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
           </Text>
         </View>
@@ -138,21 +153,41 @@ export default function TransactionHistoryScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollView: {
     flex: 1,
   },
-  header: {
+  contentHeader: {
     paddingHorizontal: 20,
     paddingVertical: 20,
   },
-  headerTitle: {
+  contentHeaderTitle: {
     fontSize: 24,
     fontWeight: '700',
     marginBottom: 4,
   },
-  headerSubtitle: {
+  contentHeaderSubtitle: {
     fontSize: 16,
   },
   loadingContainer: {

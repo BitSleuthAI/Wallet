@@ -4,6 +4,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { Stack, router } from 'expo-router';
 import {
+    ArrowLeft,
     ChevronRight,
     Coins,
     FileKey,
@@ -16,13 +17,13 @@ import {
 import React from 'react';
 import {
     Alert,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function WalletSettingsScreen() {
   const { 
@@ -30,6 +31,10 @@ export default function WalletSettingsScreen() {
     currentWallet, 
     logoutAndEraseWallet 
   } = useWallet();
+
+  const handleBack = () => {
+    router.back();
+  };
 
   const handleDeleteWallet = () => {
     Alert.alert(
@@ -128,13 +133,25 @@ export default function WalletSettingsScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen 
           options={{ 
-            title: 'Wallet Settings',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
+            headerShown: false,
           }} 
         />
         
         <AndroidSafeContainer style={styles.scrollContainer}>
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBack}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Wallet Settings
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
           <ScrollView style={styles.scrollView}>
         {/* Wallet Info Section */}
         <SectionHeader title="Wallet Information" />
@@ -218,6 +235,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: 'transparent',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollContainer: {
     flex: 1,
