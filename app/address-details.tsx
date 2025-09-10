@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Platform,
+  Modal,
 } from 'react-native';
 import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Copy } from 'lucide-react-native';
@@ -50,6 +51,7 @@ export default function AddressDetailsScreen() {
   const { theme } = useWallet();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
+  const [showCopiedModal, setShowCopiedModal] = useState(false);
   
   // Fetch address balance
   const balanceQuery = useQuery({
@@ -135,6 +137,7 @@ export default function AddressDetailsScreen() {
   const copyAddress = async () => {
     if (address) {
       await Clipboard.setStringAsync(address);
+      setShowCopiedModal(true);
     }
   };
 
@@ -286,6 +289,31 @@ export default function AddressDetailsScreen() {
             )}
           </View>
         </ScrollView>
+
+        {/* Copied Modal */}
+        <Modal
+          visible={showCopiedModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowCopiedModal(false)}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay} 
+            activeOpacity={1}
+            onPress={() => setShowCopiedModal(false)}
+          >
+            <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Copied</Text>
+              <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>Copied to clipboard</Text>
+              <TouchableOpacity
+                style={[styles.modalButton, { borderTopColor: theme.colors.border }]}
+                onPress={() => setShowCopiedModal(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.colors.primary }]}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </Modal>
       </AndroidSafeContainer>
     </GradientBackground>
   );
@@ -465,5 +493,45 @@ const styles = StyleSheet.create({
     fontSize: 16,
     textAlign: 'center',
     marginTop: 100,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '80%',
+    maxWidth: 320,
+    borderRadius: 14,
+    overflow: 'hidden',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingTop: 24,
+    paddingHorizontal: 20,
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 16,
+    textAlign: 'center',
+    paddingHorizontal: 20,
+    marginBottom: 24,
+  },
+  modalButton: {
+    borderTopWidth: 1,
+    paddingVertical: 16,
+  },
+  modalButtonText: {
+    fontSize: 17,
+    fontWeight: '500',
+    textAlign: 'center',
   },
 });
