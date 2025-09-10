@@ -9,7 +9,6 @@ import {
   Alert,
   TextInput,
   Modal,
-  Platform,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -25,7 +24,6 @@ import { getWalletTypeDisplayName } from '@/types/wallet';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
@@ -169,14 +167,11 @@ export default function ManageWalletsScreen() {
         />
         
         <ScrollView style={styles.scrollView}>
-          <AndroidSafeContainer 
-            style={styles.walletsList}
-            customTopPadding={Platform.OS === 'android' ? 100 : undefined}
-          >
+          <View style={styles.walletsList}>
             {wallets.map((wallet) => (
               <WalletItem key={wallet.id} wallet={wallet} />
             ))}
-          </AndroidSafeContainer>
+          </View>
         </ScrollView>
 
       <View style={styles.bottomContainer}>

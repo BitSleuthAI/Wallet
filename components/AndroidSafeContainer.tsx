@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, View } from 'react-native';
+import { View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface AndroidSafeContainerProps {
@@ -21,17 +21,14 @@ export function AndroidSafeContainer({
 }: AndroidSafeContainerProps) {
   const insets = useSafeAreaInsets();
 
-  if (Platform.OS !== 'android') {
-    return <View style={style}>{children}</View>;
-  }
-
-  const androidStyles = {
-    paddingTop: enableTopPadding ? (customTopPadding ?? Math.max(insets.top + 20, 60)) : 0,
-    paddingBottom: enableBottomPadding ? (customBottomPadding ?? Math.max(insets.bottom + 20, 80)) : 0,
+  // Use safe area insets for both iOS and Android
+  const safeStyles = {
+    paddingTop: enableTopPadding ? (customTopPadding ?? insets.top) : 0,
+    paddingBottom: enableBottomPadding ? (customBottomPadding ?? insets.bottom) : 0,
   };
 
   return (
-    <View style={[style, androidStyles]}>
+    <View style={[style, safeStyles]}>
       {children}
     </View>
   );
