@@ -451,7 +451,7 @@ export default function PasskeysSecurityScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <AndroidSafeContainer style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
             title: 'Passkeys & Security Keys',

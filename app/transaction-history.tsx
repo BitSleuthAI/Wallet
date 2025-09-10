@@ -62,7 +62,7 @@ export default function TransactionHistoryScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <AndroidSafeContainer style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
             title: 'Transaction History',
