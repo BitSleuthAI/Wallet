@@ -6,6 +6,8 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
     ArrowLeft,
+    ArrowDown,
+    ArrowUp,
     Copy,
     CheckCircle,
 } from 'lucide-react-native';
@@ -19,6 +21,7 @@ import {
     View,
     ActivityIndicator,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface TransactionExplorerData {
   txid: string;
@@ -53,6 +56,7 @@ export default function TransactionExplorerScreen() {
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const insets = useSafeAreaInsets();
 
   useEffect(() => {
     if (txid && transactions) {
@@ -161,36 +165,54 @@ export default function TransactionExplorerScreen() {
     );
   }
 
+  const isReceive = transaction?.amount > 0;
+  const ArrowIcon = isReceive ? ArrowDown : ArrowUp;
+  const arrowColor = isReceive ? '#22c55e' : '#ef4444';
+
   return (
     <GradientBackground theme={theme} style={styles.container}>
       <Stack.Screen 
         options={{ 
-          headerShown: false,
+          headerShown: true,
+          headerTransparent: true,
+          headerTitle: '',
+          headerLeft: () => (
+            <TouchableOpacity 
+              style={styles.headerBackButton}
+              onPress={() => router.back()}
+            >
+              <ArrowIcon color={arrowColor} size={24} />
+            </TouchableOpacity>
+          ),
+          headerRight: () => (
+            <View style={styles.headerTitleContainer}>
+              <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+                Transaction
+              </Text>
+            </View>
+          ),
+          headerStyle: {
+            backgroundColor: 'transparent',
+          },
         }} 
       />
       
       <ScrollView 
-        style={styles.scrollView} 
+        style={[styles.scrollView, { paddingTop: insets.top + 60 }]} 
         showsVerticalScrollIndicator={false}
         contentInsetAdjustmentBehavior="automatic"
       >
-        {/* Header Card */}
+        {/* Transaction Details Card */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.headerRow}>
-            <TouchableOpacity 
-              style={[styles.backButton, { backgroundColor: theme.colors.primary + '20' }]}
-              onPress={() => router.back()}
-            >
-              <ArrowLeft color={theme.colors.primary} size={24} />
-            </TouchableOpacity>
-            <View style={styles.headerTextContainer}>
-              <Text style={[styles.title, { color: theme.colors.text }]}>
-                Bitcoin Transaction
-              </Text>
-              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
-                Broadcasted on {formatDate(explorerData.timestamp)}
-              </Text>
-            </View>
+          <View style={styles.transactionHeader}>
+            <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
+              Broadcasted on {formatDate(explorerData.timestamp)}
+            </Text>
+          </View>
+          <View style={styles.txidContainer}>
+            <Text style={[styles.txid, { color: theme.colors.textSecondary }]} numberOfLines={2}>
+              {explorerData.txid}
+            </Text>
             <TouchableOpacity 
               style={styles.copyButton}
               onPress={() => copyToClipboard(explorerData.txid)}
@@ -198,9 +220,6 @@ export default function TransactionExplorerScreen() {
               <Copy color={theme.colors.textSecondary} size={20} />
             </TouchableOpacity>
           </View>
-          <Text style={[styles.txid, { color: theme.colors.textSecondary }]} numberOfLines={2}>
-            {explorerData.txid}
-          </Text>
         </View>
 
         {/* Summary Card */}
@@ -398,7 +417,6 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
-    paddingTop: 60,
   },
   loadingContainer: {
     flex: 1,
@@ -421,30 +439,31 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     ...platformStyles.shadow,
   },
-  headerRow: {
-    flexDirection: 'row',
+  headerBackButton: {
+    padding: platformStyles.spacing.sm,
+    marginLeft: platformStyles.spacing.sm,
+  },
+  headerTitleContainer: {
+    flex: 1,
     alignItems: 'center',
+    marginRight: 60,
+  },
+  headerTitle: {
+    ...platformStyles.typography.heading,
+    fontSize: 20,
+    fontWeight: 'bold' as const,
+  },
+  transactionHeader: {
     marginBottom: platformStyles.spacing.md,
   },
-  backButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: platformStyles.spacing.md,
-  },
-  headerTextContainer: {
-    flex: 1,
+  txidContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
   },
   copyButton: {
     padding: platformStyles.spacing.sm,
-  },
-  title: {
-    ...platformStyles.typography.heading,
-    fontSize: 24,
-    fontWeight: 'bold' as const,
-    marginBottom: 4,
+    marginLeft: platformStyles.spacing.sm,
   },
   subtitle: {
     ...platformStyles.typography.body,
