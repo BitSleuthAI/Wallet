@@ -34,7 +34,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
 
   const handlePress = () => {
     router.push({
-      pathname: '/transaction-details',
+      pathname: '/transaction-explorer',
       params: { txid: transaction.txid },
     });
   };
