@@ -6,8 +6,8 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
     ArrowLeft,
-    ArrowDown,
-    ArrowUp,
+    ArrowDownLeft,
+    ArrowUpRight,
     Copy,
     CheckCircle,
 } from 'lucide-react-native';
@@ -166,7 +166,7 @@ export default function TransactionExplorerScreen() {
   }
 
   const isReceive = transaction?.amount > 0;
-  const ArrowIcon = isReceive ? ArrowDown : ArrowUp;
+  const ArrowIcon = isReceive ? ArrowDownLeft : ArrowUpRight;
   const arrowColor = isReceive ? '#22c55e' : '#ef4444';
 
   return (
@@ -174,7 +174,7 @@ export default function TransactionExplorerScreen() {
       <Stack.Screen 
         options={{ 
           headerShown: true,
-          headerTransparent: false,
+          headerTransparent: true,
           headerTitle: 'Transaction',
           headerTitleStyle: {
             fontWeight: 'bold',
@@ -195,15 +195,15 @@ export default function TransactionExplorerScreen() {
       />
       
       <ScrollView 
-        style={styles.scrollView} 
+        style={[styles.scrollView, { paddingTop: insets.top + 56 }]} 
         showsVerticalScrollIndicator={false}
-        contentInsetAdjustmentBehavior="automatic"
+        contentInsetAdjustmentBehavior="never"
       >
         {/* Transaction Details Card */}
         <View style={[styles.card, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.transactionHeader}>
-            <View style={styles.transactionArrow}>
-              <ArrowIcon color={arrowColor} size={20} />
+            <View style={[styles.transactionIconContainer, { backgroundColor: isReceive ? '#22c55e' : '#ef4444' }]}>
+              <ArrowIcon color="white" size={16} />
             </View>
             <Text style={[styles.subtitle, { color: theme.colors.text, fontWeight: 'bold' }]}>
               Broadcasted on {formatDate(explorerData.timestamp)}
@@ -455,7 +455,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: platformStyles.spacing.md,
   },
-  transactionArrow: {
+  transactionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: platformStyles.spacing.sm,
   },
   txidContainer: {
