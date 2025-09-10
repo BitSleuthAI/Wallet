@@ -20,7 +20,6 @@ import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Platform,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Text,
@@ -432,35 +431,36 @@ export default function PasskeysSecurityScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Passkeys & Security Keys',
-            headerStyle: { backgroundColor: theme.colors.background },
-            headerTintColor: theme.colors.text,
-          }} 
-        />
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-            Loading security settings...
-          </Text>
-        </View>
-      </SafeAreaView>
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <AndroidSafeContainer style={styles.container}>
+          <Stack.Screen 
+            options={{ 
+              title: 'Passkeys & Security Keys',
+              headerStyle: { backgroundColor: 'transparent' },
+              headerTintColor: theme.colors.text,
+            }} 
+          />
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+              Loading security settings...
+            </Text>
+          </View>
+        </AndroidSafeContainer>
+      </GradientBackground>
     );
   }
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
           options={{ 
             title: 'Passkeys & Security Keys',
             headerStyle: { backgroundColor: 'transparent' },
-          headerTintColor: theme.colors.text,
-        }} 
-      />
-      
-      <AndroidSafeContainer style={styles.scrollContainer}>
+            headerTintColor: theme.colors.text,
+          }} 
+        />
+        
         <ScrollView style={styles.scrollView}>
         {/* Security Status Card */}
         <View style={[styles.statusCard, { backgroundColor: theme.colors.primary }]}>
@@ -666,7 +666,6 @@ export default function PasskeysSecurityScreen() {
         <View style={styles.bottomSpacing} />
         </ScrollView>
       </AndroidSafeContainer>
-      </SafeAreaView>
     </GradientBackground>
   );
 }

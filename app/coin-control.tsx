@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Alert,
   RefreshControl,
@@ -392,36 +391,32 @@ export default function CoinControlScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary">
-      <SafeAreaView style={styles.container}>
-        
+      <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
-        options={{ 
-          title: 'Coin Control',
-          headerStyle: { backgroundColor: 'transparent' },
-          headerTintColor: theme.colors.text,
-
-          headerRight: () => (
-            <View style={{ flexDirection: 'row' }}>
-              <TouchableOpacity
-                onPress={() => setShowFilters(!showFilters)}
-                style={styles.headerButton}
-                testID="toggle-filters"
-              >
-                <Filter color={theme.colors.primary} size={20} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={applySelection}
-                style={styles.headerButton}
-                testID="apply-coin-selection"
-              >
-                <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
-              </TouchableOpacity>
-            </View>
-          ),
-        }} 
-      />
-      
-      <AndroidSafeContainer style={styles.contentContainer}>
+          options={{ 
+            title: 'Coin Control',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+            headerRight: () => (
+              <View style={{ flexDirection: 'row' }}>
+                <TouchableOpacity
+                  onPress={() => setShowFilters(!showFilters)}
+                  style={styles.headerButton}
+                  testID="toggle-filters"
+                >
+                  <Filter color={theme.colors.primary} size={20} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={applySelection}
+                  style={styles.headerButton}
+                  testID="apply-coin-selection"
+                >
+                  <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
+                </TouchableOpacity>
+              </View>
+            ),
+          }} 
+        />
         {/* Summary Stats */}
         <View style={[
           styles.summaryContainer,
@@ -549,7 +544,6 @@ export default function CoinControlScreen() {
         )}
       </ScrollView>
       </AndroidSafeContainer>
-      </SafeAreaView>
     </GradientBackground>
   );
 }

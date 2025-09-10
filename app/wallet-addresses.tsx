@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Alert,
   Platform,
@@ -363,29 +362,26 @@ export default function WalletAddressesScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
-        options={{ 
-          title: 'Wallet Addresses',
-          headerStyle: { backgroundColor: 'transparent' },
-          headerTintColor: theme.colors.text,
-
-          headerRight: () => (
-            <TouchableOpacity
-              onPress={refreshAddresses}
-              style={styles.refreshButton}
-              disabled={generatingAddresses}
-            >
-              <RefreshCw 
-                color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
-                size={20} 
-              />
-            </TouchableOpacity>
-          ),
-        }} 
-      />
-      
-      <AndroidSafeContainer style={styles.contentContainer} enableBottomPadding={false}>
+          options={{ 
+            title: 'Wallet Addresses',
+            headerStyle: { backgroundColor: 'transparent' },
+            headerTintColor: theme.colors.text,
+            headerRight: () => (
+              <TouchableOpacity
+                onPress={refreshAddresses}
+                style={styles.refreshButton}
+                disabled={generatingAddresses}
+              >
+                <RefreshCw 
+                  color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
+                  size={20} 
+                />
+              </TouchableOpacity>
+            ),
+          }} 
+        />
         {/* iOS spacer below header to avoid overlap */}
         {Platform.OS === 'ios' ? <View style={{ height: 16 }} /> : null}
         {/* Tab Navigation */}
@@ -452,7 +448,6 @@ export default function WalletAddressesScreen() {
         )}
         </ScrollView>
       </AndroidSafeContainer>
-      </SafeAreaView>
     </GradientBackground>
   );
 }

@@ -21,7 +21,6 @@ import {
     Alert,
     Platform,
     Pressable,
-    SafeAreaView,
     ScrollView,
     StyleSheet,
     Switch,
@@ -334,28 +333,28 @@ export default function FeeSettingsScreen() {
   if (loading) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
-        <SafeAreaView style={styles.container}>
+        <AndroidSafeContainer style={styles.container}>
           <Stack.Screen 
-          options={{ 
-            title: 'Fee Settings',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
-          }} 
-        />
+            options={{ 
+              title: 'Fee Settings',
+              headerStyle: { backgroundColor: 'transparent' },
+              headerTintColor: theme.colors.text,
+            }} 
+          />
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
               Loading fee estimates...
             </Text>
           </View>
-        </SafeAreaView>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
           options={{ 
             title: 'Fee Settings',
@@ -376,8 +375,7 @@ export default function FeeSettingsScreen() {
             ),
           }} 
         />
-      
-      <AndroidSafeContainer style={styles.scrollContainer}>
+        
         <ScrollView style={styles.scrollView}>
         {/* Fee Presets Section */}
         <SectionHeader 
@@ -615,7 +613,6 @@ export default function FeeSettingsScreen() {
         <View style={styles.bottomPadding} />
         </ScrollView>
       </AndroidSafeContainer>
-      </SafeAreaView>
     </GradientBackground>
   );
 }
