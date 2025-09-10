@@ -1,6 +1,8 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
+import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
     Linking,
@@ -35,14 +37,33 @@ export default function TermsOfServiceScreen() {
     </View>
   );
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Terms of Service',
+          headerShown: false,
         }} 
       />
-      <View style={styles.container}>
+      
+      <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Terms of Service
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
@@ -173,7 +194,7 @@ export default function TermsOfServiceScreen() {
             </Text>
           </View>
         </ScrollView>
-      </View>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
@@ -195,7 +216,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
     marginRight: 32,

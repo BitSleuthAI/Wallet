@@ -16,7 +16,9 @@ import {
   Plus,
   X,
   Check,
+  ArrowLeft,
 } from 'lucide-react-native';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { useWallet } from '@/hooks/wallet-store';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
@@ -156,14 +158,33 @@ export default function ManageWalletsScreen() {
     </View>
   );
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Manage Wallets',
+          headerShown: false,
         }} 
       />
-      <View style={styles.container}>
+      
+      <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Manage Wallets
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         
         <ScrollView style={styles.scrollView}>
           <View style={styles.walletsList}>
@@ -265,7 +286,7 @@ export default function ManageWalletsScreen() {
           </View>
         </View>
       </Modal>
-      </View>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
@@ -273,6 +294,27 @@ export default function ManageWalletsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollView: {
     flex: 1,

@@ -1,11 +1,12 @@
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import {
     AlertTriangle,
+    ArrowLeft,
     CheckCircle,
     Clock,
     DollarSign,
@@ -330,17 +331,35 @@ export default function FeeSettingsScreen() {
     );
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   if (loading) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
         <AndroidSafeContainer style={styles.container}>
           <Stack.Screen 
             options={{ 
-              title: 'Fee Settings',
-              headerStyle: { backgroundColor: 'transparent' },
-              headerTintColor: theme.colors.text,
+              headerShown: false,
             }} 
           />
+          
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBack}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Fee Settings
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
@@ -357,24 +376,34 @@ export default function FeeSettingsScreen() {
       <AndroidSafeContainer style={styles.container}>
         <Stack.Screen 
           options={{ 
-            title: 'Fee Settings',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={refreshFeeEstimates}
-                disabled={refreshing}
-                style={styles.refreshButton}
-              >
-                <RefreshCw 
-                  color={theme.colors.primary} 
-                  size={20} 
-                  style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
-                />
-              </TouchableOpacity>
-            ),
+            headerShown: false,
           }} 
         />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Fee Settings
+          </Text>
+          <TouchableOpacity
+            onPress={refreshFeeEstimates}
+            disabled={refreshing}
+            style={styles.refreshButton}
+          >
+            <RefreshCw 
+              color={theme.colors.primary} 
+              size={20} 
+              style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
+            />
+          </TouchableOpacity>
+        </View>
         
         <ScrollView style={styles.scrollView}>
         {/* Fee Presets Section */}
@@ -620,6 +649,27 @@ export default function FeeSettingsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollContainer: {
     flex: 1,

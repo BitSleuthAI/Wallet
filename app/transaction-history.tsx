@@ -1,7 +1,7 @@
 import TransactionItem from '@/components/TransactionItem';
 import { useWallet } from '@/hooks/wallet-store';
-import { Stack } from 'expo-router';
-import { Clock } from 'lucide-react-native';
+import { Stack, router } from 'expo-router';
+import { ArrowLeft, Clock } from 'lucide-react-native';
 import React from 'react';
 import {
     ActivityIndicator,
@@ -9,6 +9,7 @@ import {
     ScrollView,
     StyleSheet,
     Text,
+    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -60,14 +61,33 @@ export default function TransactionHistoryScreen() {
     </View>
   );
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
-            title: 'Transaction History',
+            headerShown: false,
           }} 
         />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Transaction History
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
       
       <ScrollView 
         style={styles.scrollView}
@@ -148,7 +168,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
     marginRight: 32,

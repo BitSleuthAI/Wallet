@@ -5,9 +5,10 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
-import { Stack } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import {
     AlertTriangle,
+    ArrowLeft,
     CheckCircle,
     Fingerprint,
     Key,
@@ -430,21 +431,41 @@ export default function PasskeysSecurityScreen() {
     );
   };
 
+  const handleBack = () => {
+    router.back();
+  };
+
   if (loading) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
-        <View style={styles.container}>
+        <AndroidSafeContainer style={styles.container}>
           <Stack.Screen 
             options={{ 
-              title: 'Passkeys & Security Keys',
+              headerShown: false,
             }} 
           />
+          
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={handleBack}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Passkeys & Security Keys
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
               Loading security settings...
             </Text>
           </View>
-        </View>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
@@ -454,9 +475,24 @@ export default function PasskeysSecurityScreen() {
       <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
-            title: 'Passkeys & Security Keys',
+            headerShown: false,
           }} 
         />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Passkeys & Security Keys
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Security Status Card */}
@@ -671,6 +707,27 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
+  },
   scrollContainer: {
     flex: 1,
   },
@@ -689,12 +746,6 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 24,
     borderRadius: 16,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: 'white',
-    marginBottom: 8,
   },
   headerSubtitle: {
     fontSize: 16,

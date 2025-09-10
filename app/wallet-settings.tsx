@@ -4,6 +4,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { Stack, router } from 'expo-router';
 import {
+    ArrowLeft,
     ChevronRight,
     Coins,
     FileKey,
@@ -123,14 +124,33 @@ export default function WalletSettingsScreen() {
     </Text>
   );
 
+  const handleBack = () => {
+    router.back();
+  };
+
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
-            title: 'Wallet Settings',
+            headerShown: false,
           }} 
         />
+        
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={handleBack}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Wallet Settings
+          </Text>
+          <View style={styles.headerSpacer} />
+        </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {/* Wallet Info Section */}
@@ -228,7 +248,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
     marginRight: 32,
