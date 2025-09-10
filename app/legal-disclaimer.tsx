@@ -40,7 +40,8 @@ export default function LegalDisclaimerScreen() {
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Legal Disclaimer'
+          title: 'Legal Disclaimer',
+          headerTitleAlign: 'center',
         }} 
       />
       

@@ -41,6 +41,7 @@ export default function PrivacyPolicyScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Privacy Policy',
+          headerTitleAlign: 'center',
         }} 
       />
       

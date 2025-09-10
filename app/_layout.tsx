@@ -137,6 +137,7 @@ function AppContent() {
           color: theme.colors.text,
           fontWeight: '600',
         },
+        headerTitleAlign: 'center',
         headerShadowVisible: false,
         contentStyle: {
           backgroundColor: 'transparent',

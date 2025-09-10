@@ -41,6 +41,7 @@ export default function TermsOfServiceScreen() {
       <Stack.Screen 
         options={{ 
           title: 'Terms of Service',
+          headerTitleAlign: 'center',
         }} 
       />
       

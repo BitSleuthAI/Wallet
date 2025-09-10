@@ -77,6 +77,7 @@ export default function AboutScreen() {
           headerTitleStyle: {
             color: theme.colors.text,
           },
+          headerTitleAlign: 'center',
         }} 
       />
       
