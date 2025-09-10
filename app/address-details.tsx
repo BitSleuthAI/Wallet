@@ -174,9 +174,7 @@ export default function AddressDetailsScreen() {
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <View style={styles.headerContent}>
-            <View style={styles.bitcoinIcon}>
-              <Text style={styles.bitcoinSymbol}>₿</Text>
-            </View>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Address</Text>
           </View>
           <View style={styles.headerSpacer} />
         </View>
@@ -242,11 +240,13 @@ export default function AddressDetailsScreen() {
               processedTransactions.map((tx, index) => (
                 <View key={tx.txid} style={[styles.transactionItem, index < processedTransactions.length - 1 && styles.transactionBorder]}>
                   <View style={styles.transactionDetails}>
-                    <View style={styles.transactionIcon}>
+                    <View style={[styles.transactionIcon, { 
+                      backgroundColor: tx.type === 'sent' ? 'rgba(239, 68, 68, 0.2)' : 'rgba(34, 197, 94, 0.2)' 
+                    }]}>
                       {tx.type === 'sent' ? (
-                        <ArrowUpRight size={16} color={theme.colors.primary} />
+                        <ArrowUpRight size={16} color="#EF4444" />
                       ) : (
-                        <ArrowDownLeft size={16} color={theme.colors.primary} />
+                        <ArrowDownLeft size={16} color="#22C55E" />
                       )}
                     </View>
                     <View style={styles.transactionInfo}>
@@ -313,17 +313,8 @@ const styles = StyleSheet.create({
   headerSpacer: {
     width: 40,
   },
-  bitcoinIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#8B5CF6',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  bitcoinSymbol: {
-    color: 'white',
-    fontSize: 20,
+  headerTitle: {
+    fontSize: 18,
     fontWeight: 'bold',
   },
   scrollView: {
@@ -418,7 +409,6 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 12,
