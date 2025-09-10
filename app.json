@@ -29,6 +29,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "ai.bitsleuth.wallet",
+      "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
