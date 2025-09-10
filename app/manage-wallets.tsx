@@ -23,7 +23,6 @@ import { getWalletTypeDisplayName } from '@/types/wallet';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
@@ -159,12 +158,12 @@ export default function ManageWalletsScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Manage Wallets',
-          }} 
-        />
+      <Stack.Screen 
+        options={{ 
+          title: 'Manage Wallets',
+        }} 
+      />
+      <View style={styles.container}>
         
         <ScrollView style={styles.scrollView}>
           <View style={styles.walletsList}>
@@ -266,7 +265,7 @@ export default function ManageWalletsScreen() {
           </View>
         </View>
       </Modal>
-      </AndroidSafeContainer>
+      </View>
     </GradientBackground>
   );
 }
@@ -280,6 +279,7 @@ const styles = StyleSheet.create({
   },
   walletsList: {
     padding: 20,
+    paddingTop: 40,
   },
   walletItem: {
     flexDirection: 'row',
