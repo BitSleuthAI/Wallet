@@ -22,6 +22,7 @@ import {
   Zap,
   ChevronDown,
   ChevronUp,
+  ArrowLeft,
 } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs } from '@/services/bitcoin-service';
@@ -390,33 +391,43 @@ export default function CoinControlScreen() {
   };
 
   return (
-    <GradientBackground theme={theme} variant="primary">
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <Stack.Screen 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
+      
       <AndroidSafeContainer style={styles.container}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Coin Control',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
-            headerRight: () => (
-              <View style={{ flexDirection: 'row' }}>
-                <TouchableOpacity
-                  onPress={() => setShowFilters(!showFilters)}
-                  style={styles.headerButton}
-                  testID="toggle-filters"
-                >
-                  <Filter color={theme.colors.primary} size={20} />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={applySelection}
-                  style={styles.headerButton}
-                  testID="apply-coin-selection"
-                >
-                  <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
-                </TouchableOpacity>
-              </View>
-            ),
-          }} 
-        />
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Coin Control
+          </Text>
+          <View style={{ flexDirection: 'row' }}>
+            <TouchableOpacity
+              onPress={() => setShowFilters(!showFilters)}
+              style={styles.headerButton}
+              testID="toggle-filters"
+            >
+              <Filter color={theme.colors.primary} size={20} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={applySelection}
+              style={styles.headerButton}
+              testID="apply-coin-selection"
+            >
+              <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {/* Summary Stats */}
         <View style={[
           styles.summaryContainer,
@@ -552,8 +563,23 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
+  },
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
     flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
   },
   headerButton: {
     padding: 8,

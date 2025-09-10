@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Copy, RefreshCw, ExternalLink } from 'lucide-react-native';
+import { Copy, RefreshCw, ExternalLink, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -361,29 +361,38 @@ export default function WalletAddressesScreen() {
   );
 
   return (
-    <GradientBackground theme={theme} variant="primary">
-      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
-        <Stack.Screen 
-          options={{ 
-            title: 'Wallet Addresses',
-            headerStyle: { backgroundColor: 'transparent' },
-            headerTintColor: theme.colors.text,
-            headerRight: () => (
-              <TouchableOpacity
-                onPress={refreshAddresses}
-                style={styles.refreshButton}
-                disabled={generatingAddresses}
-              >
-                <RefreshCw 
-                  color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
-                  size={20} 
-                />
-              </TouchableOpacity>
-            ),
-          }} 
-        />
-        {/* iOS spacer below header to avoid overlap */}
-        {Platform.OS === 'ios' ? <View style={{ height: 16 }} /> : null}
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <Stack.Screen 
+        options={{ 
+          headerShown: false,
+        }} 
+      />
+      
+      <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            View Addresses
+          </Text>
+          <TouchableOpacity
+            onPress={refreshAddresses}
+            style={styles.refreshButton}
+            disabled={generatingAddresses}
+          >
+            <RefreshCw 
+              color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
+              size={20} 
+            />
+          </TouchableOpacity>
+        </View>
+
         {/* Tab Navigation */}
         <View testID="addresses-tab-container" style={[styles.tabContainer, { backgroundColor: theme.colors.surface }]}>
           <TabButton
@@ -456,10 +465,24 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  contentContainer: {
-    flex: 1,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
   },
-
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
   refreshButton: {
     padding: 8,
     marginRight: -8,

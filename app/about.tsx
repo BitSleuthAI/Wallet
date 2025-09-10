@@ -202,7 +202,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
     marginRight: 32,
