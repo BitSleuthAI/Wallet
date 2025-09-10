@@ -10,7 +10,7 @@ import {
   Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { ArrowLeft, Copy, AlertTriangle } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Clipboard from 'expo-clipboard';
@@ -53,7 +53,7 @@ export default function GenerateXPUBScreen() {
   if (!isPinVerified) {
     return (
       <GradientBackground theme={theme} variant="primary">
-        <SafeAreaView style={styles.container}>
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
           <Stack.Screen
             options={{
               headerShown: false,
@@ -65,7 +65,7 @@ export default function GenerateXPUBScreen() {
             onSuccess={handlePinSuccess}
             onBack={handleGoBack}
           />
-        </SafeAreaView>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
@@ -73,7 +73,7 @@ export default function GenerateXPUBScreen() {
   if (!currentWallet) {
     return (
       <GradientBackground theme={theme} variant="primary">
-        <SafeAreaView style={styles.container}>
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
           <Stack.Screen
             options={{
               headerShown: false,
@@ -84,14 +84,14 @@ export default function GenerateXPUBScreen() {
               No wallet found. Please create or import a wallet first.
             </Text>
           </View>
-        </SafeAreaView>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
 
   return (
     <GradientBackground theme={theme} variant="primary">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen
           options={{
             headerShown: false,
@@ -181,7 +181,7 @@ export default function GenerateXPUBScreen() {
           </Text>
         </View>
       </ScrollView>
-      </SafeAreaView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }

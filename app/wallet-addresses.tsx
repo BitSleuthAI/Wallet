@@ -385,7 +385,7 @@ export default function WalletAddressesScreen() {
         }} 
       />
       
-      <AndroidSafeContainer style={styles.contentContainer} customTopPadding={Platform.OS === 'android' ? 100 : undefined}>
+      <AndroidSafeContainer style={styles.contentContainer} enableBottomPadding={false}>
         {/* iOS spacer below header to avoid overlap */}
         {Platform.OS === 'ios' ? <View style={{ height: 16 }} /> : null}
         {/* Tab Navigation */}

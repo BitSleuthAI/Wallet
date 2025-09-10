@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ViewRecoveryPhrase() {
@@ -76,7 +76,7 @@ export default function ViewRecoveryPhrase() {
   if (!isPinVerified) {
     return (
       <GradientBackground theme={theme} variant="primary">
-        <SafeAreaView style={styles.container}>
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
           <Stack.Screen
             options={{
               headerShown: false,
@@ -88,7 +88,7 @@ export default function ViewRecoveryPhrase() {
             onSuccess={handlePinSuccess}
             onBack={handleBack}
           />
-        </SafeAreaView>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
@@ -96,7 +96,7 @@ export default function ViewRecoveryPhrase() {
   if (!currentWallet) {
     return (
       <GradientBackground theme={theme} variant="primary">
-        <SafeAreaView style={styles.container}>
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
           <Stack.Screen
             options={{
               headerShown: false,
@@ -107,7 +107,7 @@ export default function ViewRecoveryPhrase() {
               No wallet found. Please create or import a wallet first.
             </Text>
           </View>
-        </SafeAreaView>
+        </AndroidSafeContainer>
       </GradientBackground>
     );
   }
@@ -116,7 +116,7 @@ export default function ViewRecoveryPhrase() {
 
   return (
     <GradientBackground theme={theme} variant="primary">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen
           options={{
             headerShown: false,
@@ -240,7 +240,7 @@ export default function ViewRecoveryPhrase() {
           </View>
         </View>
       </Modal>
-      </SafeAreaView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }

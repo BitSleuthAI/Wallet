@@ -4,7 +4,6 @@ import {
   Text,
   StyleSheet,
   TouchableOpacity,
-  SafeAreaView,
   ScrollView,
   Alert,
   TextInput,
@@ -24,6 +23,7 @@ import { getWalletTypeDisplayName } from '@/types/wallet';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { GradientBackground } from '@/components/GradientBackground';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 export default function ManageWalletsScreen() {
   const { theme, wallets, editWallet, deleteWallet } = useWallet();
@@ -159,7 +159,7 @@ export default function ManageWalletsScreen() {
 
   return (
     <GradientBackground theme={theme} variant="primary" direction="vertical">
-      <SafeAreaView style={styles.container}>
+      <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
         <Stack.Screen 
           options={{ 
             title: 'Manage Wallets',
@@ -266,7 +266,7 @@ export default function ManageWalletsScreen() {
           </View>
         </View>
       </Modal>
-      </SafeAreaView>
+      </AndroidSafeContainer>
     </GradientBackground>
   );
 }
