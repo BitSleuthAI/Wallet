@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
+
   ActivityIndicator,
   Platform,
 } from 'react-native';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Copy, ExternalLink } from 'lucide-react-native';
-import Clipboard from '@react-native-clipboard/clipboard';
-import { useWalletStore } from '@/hooks/wallet-store';
-import { hapticFeedback } from '@/services/haptic-service';
-import { useTheme } from '@react-navigation/native';
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react-native';
+import * as Clipboard from 'expo-clipboard';
+import { useWallet } from '@/hooks/wallet-store';
+import { HapticService } from '@/services/haptic-service';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 
 interface TransactionDetails {
   txid: string;
@@ -24,14 +24,14 @@ interface TransactionDetails {
   fee?: number;
   confirmations: number;
   timestamp: number;
-  inputs: Array<{
+  inputs: {
     address: string;
     amount: number;
-  }>;
-  outputs: Array<{
+  }[];
+  outputs: {
     address: string;
     amount: number;
-  }>;
+  }[];
   size: number;
   weight: number;
   blockHeight?: number;
@@ -41,17 +41,12 @@ interface TransactionDetails {
 export default function TransactionExplorer() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
   const router = useRouter();
-  const { colors } = useTheme();
-  const { currentWallet } = useWalletStore();
+  const { currentWallet, theme } = useWallet();
   const [transaction, setTransaction] = useState<TransactionDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [copiedField, setCopiedField] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadTransactionDetails();
-  }, [txid]);
-
-  const loadTransactionDetails = async () => {
+  const loadTransactionDetails = useCallback(async () => {
     try {
       setLoading(true);
       // Simulate loading transaction details
@@ -90,11 +85,15 @@ export default function TransactionExplorer() {
       setTransaction(mockTransaction);
     } catch (error) {
       console.error('Error loading transaction:', error);
-      Alert.alert('Error', 'Failed to load transaction details');
+      console.error('Failed to load transaction details');
     } finally {
       setLoading(false);
     }
-  };
+  }, [txid, currentWallet]);
+
+  useEffect(() => {
+    loadTransactionDetails();
+  }, [loadTransactionDetails]);
 
   const getWalletAddresses = async (): Promise<string[]> => {
     // This should return all addresses associated with the current wallet
@@ -103,8 +102,8 @@ export default function TransactionExplorer() {
   };
 
   const copyToClipboard = async (text: string, field: string) => {
-    await hapticFeedback('light');
-    Clipboard.setString(text);
+    await HapticService.light();
+    await Clipboard.setStringAsync(text);
     setCopiedField(field);
     setTimeout(() => setCopiedField(null), 2000);
   };
@@ -124,63 +123,69 @@ export default function TransactionExplorer() {
 
   if (loading) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerTitle: '',
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()}>
-                <ArrowLeft size={24} color="#fff" />
-              </TouchableOpacity>
-            ),
-          }}
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <Stack.Screen 
+          options={{ 
+            headerShown: false,
+          }} 
         />
-        <LinearGradient
-          colors={['#FF6B35', '#F7931A']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Transaction</Text>
+        
+        <AndroidSafeContainer style={styles.container}>
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Transaction
+            </Text>
+            <View style={styles.headerSpacer} />
           </View>
-        </LinearGradient>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.primary} />
-        </View>
-      </View>
+          
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+          </View>
+        </AndroidSafeContainer>
+      </GradientBackground>
     );
   }
 
   if (!transaction) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <Stack.Screen
-          options={{
-            headerShown: true,
-            headerTransparent: true,
-            headerTitle: '',
-            headerLeft: () => (
-              <TouchableOpacity onPress={() => router.back()}>
-                <ArrowLeft size={24} color="#fff" />
-              </TouchableOpacity>
-            ),
-          }}
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <Stack.Screen 
+          options={{ 
+            headerShown: false,
+          }} 
         />
-        <LinearGradient
-          colors={['#FF6B35', '#F7931A']}
-          style={styles.headerGradient}
-        >
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>Transaction</Text>
+        
+        <AndroidSafeContainer style={styles.container}>
+          {/* Custom Header */}
+          <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+              testID="back-button"
+            >
+              <ArrowLeft size={24} color={theme.colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+              Transaction
+            </Text>
+            <View style={styles.headerSpacer} />
           </View>
-        </LinearGradient>
-        <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>
-            Transaction not found
-          </Text>
-        </View>
-      </View>
+          
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.colors.text }]}>
+              Transaction not found
+            </Text>
+          </View>
+        </AndroidSafeContainer>
+      </GradientBackground>
     );
   }
 
@@ -188,28 +193,28 @@ export default function TransactionExplorer() {
   const iconColor = transaction.type === 'receive' ? '#10B981' : '#EF4444';
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack.Screen
-        options={{
-          headerShown: true,
-          headerTransparent: true,
-          headerTitle: '',
-          headerLeft: () => (
-            <TouchableOpacity onPress={() => router.back()}>
-              <ArrowLeft size={24} color="#fff" />
-            </TouchableOpacity>
-          ),
-        }}
+    <GradientBackground theme={theme} variant="primary" direction="vertical">
+      <Stack.Screen 
+        options={{ 
+          headerShown: false,
+        }} 
       />
       
-      <LinearGradient
-        colors={['#FF6B35', '#F7931A']}
-        style={styles.headerGradient}
-      >
-        <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Transaction</Text>
+      <AndroidSafeContainer style={styles.container}>
+        {/* Custom Header */}
+        <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            testID="back-button"
+          >
+            <ArrowLeft size={24} color={theme.colors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Transaction
+          </Text>
+          <View style={styles.headerSpacer} />
         </View>
-      </LinearGradient>
 
       <ScrollView 
         style={styles.scrollView}
@@ -222,7 +227,7 @@ export default function TransactionExplorer() {
             <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
               <TransactionIcon size={24} color={iconColor} />
             </View>
-            <Text style={[styles.broadcastText, { color: colors.text }]}>
+            <Text style={[styles.broadcastText, { color: theme.colors.text }]}>
               Broadcasted on {formatDate(transaction.timestamp)}
             </Text>
           </View>
@@ -230,12 +235,12 @@ export default function TransactionExplorer() {
 
         {/* Transaction ID */}
         <TouchableOpacity
-          style={[styles.section, { backgroundColor: colors.card }]}
+          style={[styles.section, { backgroundColor: theme.colors.surface }]}
           onPress={() => copyToClipboard(transaction.txid, 'txid')}
           activeOpacity={0.7}
         >
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Transaction ID</Text>
-          <Text style={[styles.txidText, { color: colors.text }]} numberOfLines={1}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Transaction ID</Text>
+          <Text style={[styles.txidText, { color: theme.colors.text }]} numberOfLines={1}>
             {transaction.txid}
           </Text>
           {copiedField === 'txid' && (
@@ -244,18 +249,18 @@ export default function TransactionExplorer() {
         </TouchableOpacity>
 
         {/* Amount & Fee */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.amountRow}>
             <View style={styles.amountItem}>
-              <Text style={[styles.label, { color: colors.text + '80' }]}>Amount</Text>
+              <Text style={[styles.label, { color: theme.colors.text + '80' }]}>Amount</Text>
               <Text style={[styles.amountText, { color: iconColor }]}>
                 {transaction.type === 'receive' ? '+' : '-'}{formatBTC(transaction.amount)}
               </Text>
             </View>
             {transaction.fee && (
               <View style={styles.amountItem}>
-                <Text style={[styles.label, { color: colors.text + '80' }]}>Fee</Text>
-                <Text style={[styles.feeText, { color: colors.text }]}>
+                <Text style={[styles.label, { color: theme.colors.text + '80' }]}>Fee</Text>
+                <Text style={[styles.feeText, { color: theme.colors.text }]}>
                   {formatBTC(transaction.fee)}
                 </Text>
               </View>
@@ -264,10 +269,10 @@ export default function TransactionExplorer() {
         </View>
 
         {/* Confirmations */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Confirmations</Text>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Confirmations</Text>
           <View style={styles.confirmationsRow}>
-            <Text style={[styles.confirmationsText, { color: colors.text }]}>
+            <Text style={[styles.confirmationsText, { color: theme.colors.text }]}>
               {transaction.confirmations}
             </Text>
             <View style={[
@@ -285,39 +290,39 @@ export default function TransactionExplorer() {
         </View>
 
         {/* Technical Details */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Technical Details</Text>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Technical Details</Text>
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
-              <Text style={[styles.detailLabel, { color: colors.text + '80' }]}>Size</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>{transaction.size} bytes</Text>
+              <Text style={[styles.detailLabel, { color: theme.colors.text + '80' }]}>Size</Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>{transaction.size} bytes</Text>
             </View>
             <View style={styles.detailItem}>
-              <Text style={[styles.detailLabel, { color: colors.text + '80' }]}>Weight</Text>
-              <Text style={[styles.detailValue, { color: colors.text }]}>{transaction.weight} WU</Text>
+              <Text style={[styles.detailLabel, { color: theme.colors.text + '80' }]}>Weight</Text>
+              <Text style={[styles.detailValue, { color: theme.colors.text }]}>{transaction.weight} WU</Text>
             </View>
             {transaction.blockHeight && (
               <View style={styles.detailItem}>
-                <Text style={[styles.detailLabel, { color: colors.text + '80' }]}>Block Height</Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>{transaction.blockHeight}</Text>
+                <Text style={[styles.detailLabel, { color: theme.colors.text + '80' }]}>Block Height</Text>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}>{transaction.blockHeight}</Text>
               </View>
             )}
           </View>
         </View>
 
         {/* Inputs & Outputs */}
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Inputs ({transaction.inputs.length})</Text>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Inputs ({transaction.inputs.length})</Text>
           {transaction.inputs.map((input, index) => (
             <TouchableOpacity
-              key={index}
+              key={`input-${input.address}-${index}`}
               style={styles.addressItem}
               onPress={() => copyToClipboard(input.address, `input-${index}`)}
             >
-              <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[styles.addressText, { color: theme.colors.text }]} numberOfLines={1}>
                 {input.address}
               </Text>
-              <Text style={[styles.addressAmount, { color: colors.text + '80' }]}>
+              <Text style={[styles.addressAmount, { color: theme.colors.text + '80' }]}>
                 {formatBTC(input.amount)}
               </Text>
               {copiedField === `input-${index}` && (
@@ -327,18 +332,18 @@ export default function TransactionExplorer() {
           ))}
         </View>
 
-        <View style={[styles.section, { backgroundColor: colors.card }]}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Outputs ({transaction.outputs.length})</Text>
+        <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Outputs ({transaction.outputs.length})</Text>
           {transaction.outputs.map((output, index) => (
             <TouchableOpacity
-              key={index}
+              key={`output-${output.address}-${index}`}
               style={styles.addressItem}
               onPress={() => copyToClipboard(output.address, `output-${index}`)}
             >
-              <Text style={[styles.addressText, { color: colors.text }]} numberOfLines={1}>
+              <Text style={[styles.addressText, { color: theme.colors.text }]} numberOfLines={1}>
                 {output.address}
               </Text>
-              <Text style={[styles.addressAmount, { color: colors.text + '80' }]}>
+              <Text style={[styles.addressAmount, { color: theme.colors.text + '80' }]}>
                 {formatBTC(output.amount)}
               </Text>
               {copiedField === `output-${index}` && (
@@ -351,12 +356,12 @@ export default function TransactionExplorer() {
         {/* Block Hash */}
         {transaction.blockHash && (
           <TouchableOpacity
-            style={[styles.section, { backgroundColor: colors.card }]}
-            onPress={() => copyToClipboard(transaction.blockHash, 'blockHash')}
+            style={[styles.section, { backgroundColor: theme.colors.surface }]}
+            onPress={() => copyToClipboard(transaction.blockHash!, 'blockHash')}
             activeOpacity={0.7}
           >
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Block Hash</Text>
-            <Text style={[styles.hashText, { color: colors.text }]} numberOfLines={2}>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Block Hash</Text>
+            <Text style={[styles.hashText, { color: theme.colors.text }]} numberOfLines={2}>
               {transaction.blockHash}
             </Text>
             {copiedField === 'blockHash' && (
@@ -365,7 +370,8 @@ export default function TransactionExplorer() {
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
+      </AndroidSafeContainer>
+    </GradientBackground>
   );
 }
 
@@ -373,18 +379,26 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  headerGradient: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 20,
-    paddingHorizontal: 20,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 0,
   },
-  headerContent: {
-    marginTop: 40,
+  backButton: {
+    padding: 8,
+    marginLeft: -8,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 18,
     fontWeight: 'bold',
-    color: '#FFFFFF',
+    flex: 1,
+    textAlign: 'center',
+    marginRight: 32,
+  },
+  headerSpacer: {
+    width: 32,
   },
   scrollView: {
     flex: 1,
