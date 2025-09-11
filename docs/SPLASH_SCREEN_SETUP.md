@@ -4,11 +4,11 @@ This guide explains how to set up the custom splash screen for your BitSleuth Wa
 
 ## ✨ Features
 
-- **Custom Branding**: Beautiful BitSleuth Wallet branding with Bitcoin theme
-- **Smooth Animations**: Elegant entrance animations with logo rotation and fade effects
+- **Custom Branding**: Beautiful BitSleuth Wallet branding with magnifying glass theme
+- **Smooth Animations**: Elegant entrance animations with spring effects and fade transitions
 - **Cross-Platform**: Consistent experience on both iOS and Android
 - **App Store Compliant**: Meets Apple App Store requirements for splash screens
-- **Professional Design**: Dark theme with Bitcoin orange accents and security icons
+- **Professional Design**: Orange gradient theme with magnifying glass logo and version display
 - **Expo Compatible**: Uses Expo's native splash screen system for optimal performance
 
 ## 🚀 Quick Start
@@ -18,7 +18,7 @@ This guide explains how to set up the custom splash screen for your BitSleuth Wa
 The required dependencies are already installed:
 - `expo-splash-screen` - Built into Expo
 - `expo-linear-gradient` - For beautiful background gradients
-- `lucide-react-native` - For icons
+- `react-native-svg` - For custom SVG logo rendering
 
 ### 2. Configuration
 
@@ -37,39 +37,36 @@ The required dependencies are already installed:
 
 #### iOS Setup
 
-1. **LaunchScreen.storyboard** (Already created)
-   - Located at: `ios/BitSleuthWallet/LaunchScreen.storyboard`
+1. **SplashScreen.storyboard** (Already created)
+   - Located at: `ios/BitSleuthWallet/SplashScreen.storyboard`
    - Contains the native iOS splash screen layout
-   - Uses system colors for automatic dark/light mode support
+   - Uses `SplashScreenLogo` image asset for the logo
 
 2. **Info.plist** (Update required)
-   - Ensure `UILaunchStoryboardName` is set to `LaunchScreen`
+   - Ensure `UILaunchStoryboardName` is set to `SplashScreen`
    - This should already be configured in your Expo project
 
 #### Android Setup
 
 1. **styles.xml** (Already created)
    - Located at: `android/app/src/main/res/values/styles.xml`
-   - Defines the `SplashTheme` for Android
+   - Defines the `Theme.App.SplashScreen` for Android 12+ splash screen API
 
-2. **splash_background.xml** (Already created)
-   - Located at: `android/app/src/main/res/drawable/splash_background.xml`
-   - Defines the splash screen background layout
-
-3. **colors.xml** (Already created)
+2. **colors.xml** (Already created)
    - Located at: `android/app/src/main/res/values/colors.xml`
    - Defines the color scheme for the splash screen
 
-4. **splash_logo.xml** (Already created)
-   - Located at: `android/app/src/main/res/drawable/splash_logo.xml`
-   - Vector drawable for the BitSleuth logo
+3. **Splash Screen Assets** (Already created)
+   - Located at: `android/app/src/main/res/drawable-*/splashscreen_logo.png`
+   - Multiple density versions of the splash screen logo
 
 ### 3. React Native Components
 
 #### Components
 - **SplashScreen.tsx** (Already created)
   - Main splash screen component with animations
-  - Bitcoin-themed design with security icons
+  - Magnifying glass logo with orange gradient background
+  - Version display and app branding
 
 #### Services
 - **splash-screen-manager.ts** (Already created)
@@ -110,56 +107,54 @@ function AppWithSplash() {
 4. **Main App**: Displays when everything is ready
 
 ### 2. Animation Sequence
-1. **Logo Entrance**: Bitcoin icon scales and fades in
-2. **Icon Rotation**: Bitcoin icon rotates 360 degrees
+1. **Logo Entrance**: Magnifying glass scales in with spring animation
+2. **Logo Fade**: Magnifying glass fades in smoothly
 3. **Text Fade**: App name and tagline fade in
-4. **Glow Effect**: Subtle background glow appears
-5. **Loading Dots**: Animated loading indicator
-6. **Transition**: Smooth transition to main app
+4. **Hold Display**: Shows version and wallet description
+5. **Transition**: Smooth transition to main app
 
 ### 3. Branding Elements
 - **App Name**: "BitSleuth" in large, bold text
-- **Tagline**: "Secure • Fast • Private"
-- **Bitcoin Icon**: Orange Bitcoin symbol with rotation
-- **Security Icons**: Shield and lightning bolt for features
+- **Tagline**: "secure • private • trusted"
+- **Magnifying Glass Logo**: White magnifying glass with spring animation
+- **Version Display**: Shows current app version (v1.1.6)
 - **Bottom Text**: "Bitcoin Wallet" for context
 
 ## 🔧 Customization
 
 ### Colors
-The splash screen uses a dark theme with these colors:
-- **Background**: `#0F172A` (Dark blue-gray)
+The splash screen uses an orange gradient theme with these colors:
+- **Background Gradient**: `#FF8A3D` → `#FF6B5C` → `#FF5E7B` (Orange gradient)
 - **Primary Text**: `#FFFFFF` (White)
-- **Secondary Text**: `#CBD5E1` (Light gray)
-- **Accent**: `#6366F1` (Indigo)
-- **Bitcoin**: `#F7931A` (Bitcoin orange)
+- **Secondary Text**: `rgba(255, 255, 255, 0.95)` (Semi-transparent white)
+- **Logo**: `#FFFFFF` (White magnifying glass)
+- **Version Text**: `rgba(255, 255, 255, 0.8)` (Semi-transparent white)
 
 ### Animation Timing
 You can adjust animation durations in `SplashScreen.tsx`:
 ```typescript
-// Logo entrance: 800ms
-// Icon rotation: 1000ms
+// Magnifying glass spring animation: tension: 20, friction: 7
+// Logo fade: 600ms
 // Text fade: 800ms
-// Glow effect: 600ms
-// Hold time: 500ms
+// Hold time: 1500ms
 ```
 
 ### Logo and Icons
-- **Bitcoin Icon**: Uses Lucide React Native icons
-- **Security Icons**: Shield and Zap icons for features
-- **Custom Logo**: You can replace with your own logo image
+- **Magnifying Glass**: Custom SVG logo using react-native-svg
+- **Version Display**: Shows current app version dynamically
+- **Custom Logo**: You can replace the SVG with your own logo
 
 ## 📱 Platform-Specific Features
 
 ### iOS
-- **LaunchScreen.storyboard**: Native iOS splash screen
+- **SplashScreen.storyboard**: Native iOS splash screen
 - **Auto Layout**: Responsive design for all screen sizes
-- **System Colors**: Automatic dark/light mode support
+- **Image Assets**: Uses SplashScreenLogo image asset
 
 ### Android
-- **Vector Drawables**: Scalable graphics for all densities
-- **Material Design**: Follows Android design guidelines
-- **Status Bar**: Custom status bar colors
+- **Splash Screen API**: Uses Android 12+ splash screen API
+- **Multiple Densities**: PNG assets for all screen densities
+- **Theme Integration**: Integrated with app theme system
 
 ## 🚨 Troubleshooting
 
@@ -172,16 +167,16 @@ You can adjust animation durations in `SplashScreen.tsx`:
 
 2. **Animation Not Working**
    - Check that `expo-linear-gradient` is installed
-   - Verify all required icons are available
+   - Verify `react-native-svg` is properly installed
    - Check for any console errors
 
 3. **Platform-Specific Issues**
-   - **iOS**: Verify LaunchScreen.storyboard is properly configured
-   - **Android**: Check that styles.xml references the correct theme
+   - **iOS**: Verify SplashScreen.storyboard is properly configured
+   - **Android**: Check that styles.xml references the correct splash screen theme
 
 ### Debug Mode
 Enable debug logging by checking the console for:
-- `🚀 Initializing crypto in RootLayout...`
+- `🚀 Initializing app in RootLayout...`
 - `✅ Crypto initialized successfully`
 - `🎉 Splash screen hidden, app is ready!`
 
@@ -208,4 +203,4 @@ This splash screen implementation meets Apple App Store requirements:
 
 ---
 
-**Note**: This splash screen implementation is designed to work seamlessly with your existing BitSleuth Wallet app using Expo's native splash screen system. All functionality has been preserved while adding a professional, branded launch experience that's fully compatible with Expo.
+**Note**: This splash screen implementation is designed to work seamlessly with your existing BitSleuth Wallet app using Expo's native splash screen system. The magnifying glass theme reflects the "BitSleuth" branding while providing a professional, branded launch experience that's fully compatible with Expo and meets all platform requirements.
