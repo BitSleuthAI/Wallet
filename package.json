@@ -72,7 +72,9 @@
   "expo": {
     "doctor": {
       "reactNativeDirectoryCheck": {
-        "exclude": ["react-native-confetti-cannon"],
+        "exclude": [
+          "react-native-confetti-cannon"
+        ],
         "listUnknownPackages": false
       }
     }
