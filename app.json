@@ -25,19 +25,21 @@
     },
     "owner": "bitsleuth",
     "plugins": [
-      "expo-build-properties",
-      {
-        "ios": {
-          "useFrameworks": "static",
-          "extraPods": [
-            { "name": "GoogleUtilities", "modular_headers": true },
-            { "name": "GoogleDataTransport", "modular_headers": true },
-            { "name": "FirebaseCoreInternal", "modular_headers": true },
-            { "name": "FirebaseCoreExtension", "modular_headers": true },
-            { "name": "FirebaseInstallations", "modular_headers": true }
-          ]
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "useFrameworks": "static",
+            "extraPods": [
+              { "name": "GoogleUtilities", "modular_headers": true },
+              { "name": "GoogleDataTransport", "modular_headers": true },
+              { "name": "FirebaseCoreInternal", "modular_headers": true },
+              { "name": "FirebaseCoreExtension", "modular_headers": true },
+              { "name": "FirebaseInstallations", "modular_headers": true }
+            ]
+          }
         }
-      }
+      ]
     ]
   }
 }
