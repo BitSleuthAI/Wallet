@@ -32,13 +32,9 @@
       "package": "ai.bitsleuth.wallet",
       "googleServicesFile": "./android/app/google-services.json",
       "permissions": [
-        "CAMERA",
-        "RECORD_AUDIO",
-        "android.permission.VIBRATE",
-        "USE_BIOMETRIC",
-        "USE_FINGERPRINT",
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
+        "android.permission.VIBRATE",
         "android.permission.USE_BIOMETRIC",
         "android.permission.USE_FINGERPRINT"
       ]
