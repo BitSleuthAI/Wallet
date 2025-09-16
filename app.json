@@ -18,6 +18,21 @@
         "projectId": "d9e4224e-8289-45e2-92d4-39c45c34ff2e"
       }
     },
-    "owner": "bitsleuth"
+    "owner": "bitsleuth",
+    "plugins": [
+      "expo-build-properties",
+      {
+        "ios": {
+          "useFrameworks": "static",
+          "extraPods": [
+            { "name": "GoogleUtilities", "modular_headers": true },
+            { "name": "GoogleDataTransport", "modular_headers": true },
+            { "name": "FirebaseCoreInternal", "modular_headers": true },
+            { "name": "FirebaseCoreExtension", "modular_headers": true },
+            { "name": "FirebaseInstallations", "modular_headers": true }
+          ]
+        }
+      }
+    ]
   }
 }
