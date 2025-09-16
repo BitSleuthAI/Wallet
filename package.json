@@ -26,6 +26,7 @@
     "bitcoinjs-lib": "^6.1.7",
     "expo": "^53.0.22",
     "expo-blur": "~14.1.5",
+    "expo-build-properties": "~0.14.8",
     "expo-camera": "~16.1.11",
     "expo-clipboard": "~7.1.5",
     "expo-constants": "~17.1.7",
