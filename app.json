@@ -68,9 +68,6 @@
         {
           "ios": {
             "useFrameworks": "static"
-          },
-          "android": {
-            "googleServicesFile": "./android/app/google-services.json"
           }
         }
       ],
@@ -80,9 +77,6 @@
       "typedRoutes": true
     },
     "extra": {
-      "router": {
-        "origin": "https://rork.com/"
-      },
       "eas": {
         "projectId": "d9e4224e-8289-45e2-92d4-39c45c34ff2e"
       }
