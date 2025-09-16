@@ -4,6 +4,11 @@
     "slug": "bitsleuth-wallet",
     "version": "1.1.6",
     "newArchEnabled": true,
+    "icon": "./assets/images/icon.png",
+    "adaptiveIcon": {
+      "foregroundImage": "./assets/images/adaptive-icon.png",
+      "backgroundColor": "#ffffff"
+    },
     "web": {
       "favicon": "./assets/images/favicon.png"
     },
