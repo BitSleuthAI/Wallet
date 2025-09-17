@@ -19,7 +19,7 @@
 
 /* Begin PBXFileReference section */
 		03E9A976B9FC611D19A9F7D9 /* Pods-BitSleuthWallet.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BitSleuthWallet.debug.xcconfig"; path = "Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet.debug.xcconfig"; sourceTree = "<group>"; };
-		13B07F961A680F5B00A75B9A /* BitSleuthWallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BitSleuthWallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		13B07F961A680F5B00A75B9A /* BitSleuth Wallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "BitSleuth Wallet.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BitSleuthWallet/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BitSleuthWallet/Info.plist; sourceTree = "<group>"; };
 		1AEEA5A72E7AA81700395BAD /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
@@ -120,7 +120,7 @@
 		83CBBA001A601CBA00E9B192 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				13B07F961A680F5B00A75B9A /* BitSleuthWallet.app */,
+				13B07F961A680F5B00A75B9A /* BitSleuth Wallet.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -137,9 +137,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		13B07F861A680F5B00A75B9A /* BitSleuthWallet */ = {
+		13B07F861A680F5B00A75B9A /* BitSleuth Wallet */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BitSleuthWallet" */;
+			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BitSleuth Wallet" */;
 			buildPhases = (
 				829304B4A4B296E957696F76 /* [CP] Check Pods Manifest.lock */,
 				7DFC525DE536B31822CD95B7 /* [Expo] Configure project */,
@@ -156,9 +156,9 @@
 			);
 			dependencies = (
 			);
-			name = BitSleuthWallet;
+			name = "BitSleuth Wallet";
 			productName = BitSleuthWallet;
-			productReference = 13B07F961A680F5B00A75B9A /* BitSleuthWallet.app */;
+			productReference = 13B07F961A680F5B00A75B9A /* BitSleuth Wallet.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -187,7 +187,7 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				13B07F861A680F5B00A75B9A /* BitSleuthWallet */,
+				13B07F861A680F5B00A75B9A /* BitSleuth Wallet */,
 			);
 		};
 /* End PBXProject section */
@@ -405,12 +405,14 @@
 					"FB_SONARKIT_ENABLED=1",
 				);
 				INFOPLIST_FILE = BitSleuthWallet/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "BitSleuth Wallet";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -418,7 +420,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_DEBUG";
 				PRODUCT_BUNDLE_IDENTIFIER = ai.bitsleuth.wallet;
-				PRODUCT_NAME = BitSleuthWallet;
+				PRODUCT_NAME = "BitSleuth Wallet";
 				SWIFT_OBJC_BRIDGING_HEADER = "BitSleuthWallet/BitSleuthWallet-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
@@ -434,12 +436,14 @@
 				CLANG_ENABLE_MODULES = YES;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = BitSleuthWallet/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = "BitSleuth Wallet";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.finance";
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1.6;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
 					"-ObjC",
@@ -447,7 +451,7 @@
 				);
 				OTHER_SWIFT_FLAGS = "$(inherited) -D EXPO_CONFIGURATION_RELEASE";
 				PRODUCT_BUNDLE_IDENTIFIER = ai.bitsleuth.wallet;
-				PRODUCT_NAME = BitSleuthWallet;
+				PRODUCT_NAME = "BitSleuth Wallet";
 				SWIFT_OBJC_BRIDGING_HEADER = "BitSleuthWallet/BitSleuthWallet-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -597,7 +601,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BitSleuthWallet" */ = {
+		13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BitSleuth Wallet" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				13B07F941A680F5B00A75B9A /* Debug */,
