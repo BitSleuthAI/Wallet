@@ -16,8 +16,8 @@ import * as stream from 'stream-browserify';
 global.stream = stream;
 
 // Events polyfill
-import { EventEmitter } from 'events';
-global.EventEmitter = EventEmitter;
+import * as events from 'events';
+global.EventEmitter = events.EventEmitter;
 
 // Util polyfill
 import util from 'util';
@@ -56,7 +56,7 @@ global.require = (id) => {
       module = stream;
       break;
     case 'events':
-      module = { EventEmitter };
+      module = events;
       break;
     case 'util':
       module = require('util');
