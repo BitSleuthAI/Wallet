@@ -1,3 +1,6 @@
+// CRITICAL: Polyfills must be imported first, before any other imports
+import '../polyfills';
+
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
 
@@ -11,10 +14,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
+import { ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { ArrowLeft } from 'lucide-react-native';
 
 // Import Crashlytics service
 import crashlyticsService from '@/services/crashlytics-service';
