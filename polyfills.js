@@ -56,7 +56,7 @@ global.require = (id) => {
       module = stream;
       break;
     case 'events':
-      module = require('events');
+      module = { EventEmitter };
       break;
     case 'util':
       module = require('util');

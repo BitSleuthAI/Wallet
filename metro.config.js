@@ -29,18 +29,15 @@ config.resolver.alias = {
 // Ensure polyfills are resolved correctly
 config.resolver.sourceExts = [...config.resolver.sourceExts, 'cjs', 'mjs'];
 
-// Add custom resolver to handle Node.js modules
-config.resolver.resolveRequest = (context, moduleName, platform) => {
-  // Handle Node.js built-in modules
-  if (config.resolver.alias[moduleName]) {
-    return {
-      type: 'sourceFile',
-      filePath: require.resolve(config.resolver.alias[moduleName]),
-    };
-  }
-  
-  // Fall back to default resolution
-  return context.resolveRequest(context, moduleName, platform);
-};
+// Add blockList to exclude problematic files
+config.resolver.blockList = [
+  /node_modules\/.*\/node_modules\/react-native\/.*/,
+];
+
+// Add watchFolders to ensure Metro watches the correct directories
+config.watchFolders = [
+  __dirname,
+  `${__dirname}/node_modules`,
+];
 
 module.exports = config;
