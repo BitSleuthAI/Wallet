@@ -36,11 +36,8 @@ global.URLSearchParams = URLSearchParams;
 import * as querystring from 'querystring-es3';
 global.querystring = querystring;
 
-// Crypto polyfill
-import crypto from 'react-native-get-random-values';
-if (typeof global.crypto === 'undefined') {
-  global.crypto = crypto;
-}
+// Note: react-native-get-random-values is imported at the top for side effects
+// It automatically polyfills crypto.getRandomValues, so no manual assignment needed
 
 // Create a module cache for Node.js modules
 const moduleCache = new Map();
@@ -74,7 +71,9 @@ global.require = (id) => {
       module = require('querystring-es3');
       break;
     case 'crypto':
-      module = require('react-native-get-random-values');
+      // react-native-get-random-values is imported for side effects only
+      // Return the global crypto object that was polyfilled
+      module = global.crypto;
       break;
     case 'buffer':
       module = { Buffer };

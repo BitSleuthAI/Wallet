@@ -16,11 +16,8 @@ if (typeof global.EventEmitter === 'undefined') {
   global.EventEmitter = EventEmitter;
 }
 
-// Additional crypto polyfills if needed
-if (typeof global.crypto === 'undefined') {
-  const crypto = require('react-native-get-random-values');
-  global.crypto = crypto;
-}
+// Note: react-native-get-random-values is imported at the top for side effects
+// It automatically polyfills crypto.getRandomValues, so no manual assignment needed
 
 // Ensure process is available
 if (typeof global.process === 'undefined') {
