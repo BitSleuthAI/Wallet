@@ -17,6 +17,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "ai.bitsleuth.wallet",
       "buildNumber": "1",
+      "googleServicesFile": "./ios/BitSleuthWallet/GoogleService-Info.plist",
       "infoPlist": {
         "NSCameraUsageDescription": "Allow $(PRODUCT_NAME) to access your camera",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to access your microphone",
