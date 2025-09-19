@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",
+    "@expo/configure-splash-screen": "^0.6.0",
     "@expo/vector-icons": "^14.1.0",
     "@nkzw/create-context-hook": "^1.1.0",
     "@noble/hashes": "^1.8.0",
