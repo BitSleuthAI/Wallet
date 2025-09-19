@@ -1,4 +1,5 @@
 const { getDefaultConfig } = require('expo/metro-config');
+const nodeLibs = require('node-libs-react-native');
 
 const config = getDefaultConfig(__dirname);
 
@@ -8,21 +9,19 @@ config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 // Add resolver configuration to handle @noble/hashes crypto.js warning
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
+// Add extraNodeModules to handle Node.js polyfills using node-libs-react-native
+config.resolver.extraNodeModules = {
+  ...nodeLibs,
+  // Override specific modules with our preferred polyfills
+  'stream': require.resolve('stream-browserify'),
+  'crypto': require.resolve('react-native-get-random-values'),
+  'buffer': require.resolve('@craftzdog/react-native-buffer'),
+  'process': require.resolve('process/browser'),
+};
+
 // Add alias to redirect crypto.js to crypto and Node.js polyfills
 config.resolver.alias = {
   '@noble/hashes/crypto.js': '@noble/hashes/crypto',
-  'stream': 'stream-browserify',
-  'crypto': 'react-native-get-random-values',
-  'buffer': '@craftzdog/react-native-buffer',
-  'process': 'process/browser',
-  'events': 'events',
-  'util': 'util',
-  'assert': 'assert',
-  'url': 'url',
-  'querystring': 'querystring-es3',
-  'string_decoder': 'string_decoder',
-  'inherits': 'inherits',
-  'safe-buffer': '@craftzdog/react-native-buffer',
   'web-streams-polyfill/ponyfill/es6': 'web-streams-polyfill/dist/ponyfill.js',
 };
 
@@ -39,5 +38,36 @@ config.watchFolders = [
   __dirname,
   `${__dirname}/node_modules`,
 ];
+
+// Add custom resolver to handle Node.js modules
+config.resolver.resolveRequest = (context, moduleName, platform) => {
+  // Handle Node.js built-in modules that need polyfills
+  if (config.resolver.extraNodeModules[moduleName]) {
+    try {
+      return {
+        type: 'sourceFile',
+        filePath: config.resolver.extraNodeModules[moduleName],
+      };
+    } catch (error) {
+      console.warn(`Failed to resolve ${moduleName}:`, error.message);
+    }
+  }
+  
+  // Handle aliases
+  if (config.resolver.alias[moduleName]) {
+    try {
+      const resolvedPath = require.resolve(config.resolver.alias[moduleName]);
+      return {
+        type: 'sourceFile',
+        filePath: resolvedPath,
+      };
+    } catch (error) {
+      console.warn(`Failed to resolve alias ${moduleName}:`, error.message);
+    }
+  }
+  
+  // Fall back to default resolution
+  return context.resolveRequest(context, moduleName, platform);
+};
 
 module.exports = config;

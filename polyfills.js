@@ -3,100 +3,10 @@
 import 'react-native-get-random-values';
 import 'react-native-url-polyfill/auto';
 
-// Buffer polyfill
-import { Buffer } from '@craftzdog/react-native-buffer';
-global.Buffer = Buffer;
-
-// Process polyfill
-import process from 'process/browser';
-global.process = process;
-
-// Stream polyfill - make it available globally and as a module
-import * as stream from 'stream-browserify';
-global.stream = stream;
-
-// Events polyfill
-import * as events from 'events';
-global.EventEmitter = events.EventEmitter;
-
-// Util polyfill
-import util from 'util';
-global.util = util;
-
-// Assert polyfill
-import assert from 'assert';
-global.assert = assert;
-
-// URL polyfill
-import { URL, URLSearchParams } from 'url';
-global.URL = URL;
-global.URLSearchParams = URLSearchParams;
-
-// Querystring polyfill
-import * as querystring from 'querystring-es3';
-global.querystring = querystring;
-
 // Note: react-native-get-random-values is imported at the top for side effects
 // It automatically polyfills crypto.getRandomValues, so no manual assignment needed
 
-// Create a module cache for Node.js modules
-const moduleCache = new Map();
-
-// Make Node.js modules available as CommonJS modules
-const originalRequire = global.require || require;
-global.require = (id) => {
-  // Check cache first
-  if (moduleCache.has(id)) {
-    return moduleCache.get(id);
-  }
-
-  let module;
-  switch (id) {
-    case 'stream':
-      module = stream;
-      break;
-    case 'events':
-      module = events;
-      break;
-    case 'util':
-      module = require('util');
-      break;
-    case 'assert':
-      module = require('assert');
-      break;
-    case 'url':
-      module = require('url');
-      break;
-    case 'querystring':
-      module = require('querystring-es3');
-      break;
-    case 'crypto':
-      // react-native-get-random-values is imported for side effects only
-      // Return the global crypto object that was polyfilled
-      module = global.crypto;
-      break;
-    case 'buffer':
-      module = { Buffer };
-      break;
-    case 'process':
-      module = process;
-      break;
-    case 'string_decoder':
-      module = require('string_decoder');
-      break;
-    case 'inherits':
-      module = require('inherits');
-      break;
-    case 'safe-buffer':
-      module = { Buffer };
-      break;
-    default:
-      return originalRequire(id);
-  }
-
-  // Cache the module
-  moduleCache.set(id, module);
-  return module;
-};
+// Note: react-native-polyfill-globals/auto should handle most Node.js modules
+// The custom require function is simplified since the polyfills are handled automatically
 
 console.log('✅ All Node.js polyfills loaded successfully');
