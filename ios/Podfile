@@ -15,6 +15,7 @@ prepare_react_native_project!
 
 target 'BitSleuthWallet' do
   use_expo_modules!
+  use_modular_headers!
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
@@ -49,15 +50,6 @@ target 'BitSleuthWallet' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
-
-    # Configure extra pods for Firebase
-    installer.pods_project.targets.each do |target|
-      if ['GoogleUtilities', 'GoogleDataTransport', 'FirebaseCoreInternal', 'FirebaseCoreExtension', 'FirebaseInstallations'].include?(target.name)
-        target.build_configurations.each do |config|
-          config.build_settings['DEFINES_MODULE'] = 'YES'
-        end
-      end
-    end
 
     # This is necessary for Xcode 14, because it signs resource bundles by default
     # when building for devices.

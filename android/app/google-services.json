@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "123456789",
-    "project_id": "bitsleuth-wallet",
-    "storage_bucket": "bitsleuth-wallet.appspot.com"
+    "project_number": "510465233305",
+    "project_id": "bitsleuth",
+    "storage_bucket": "bitsleuth.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789:android:abcdef123456",
+        "mobilesdk_app_id": "1:510465233305:android:17c91346ecafeaaf85c308",
         "android_client_info": {
           "package_name": "ai.bitsleuth.wallet"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "dummy-key"
+          "current_key": "AIzaSyBCpQwAvY3MyN-OCYvMlJqbInohHSJpgfg"
         }
       ],
       "services": {
