@@ -76,8 +76,14 @@ Bitcoin adoption is growing rapidly, but security breaches and poor UX continue 
 **Integrations:**
 - **Blockstream Explorer API**: Transaction data and UTXO management
 - **CoinGecko API**: Real-time Bitcoin price data
-- **Firebase Crashlytics**: Error tracking and analytics
+- **Firebase Crashlytics**: Error tracking and crash reporting (ONLY)
 - **Expo Local Authentication**: Biometric and PIN authentication
+
+**Privacy Policy - Google Services:**
+- **CRITICAL**: Google Analytics is PROHIBITED and must NEVER be added
+- **ONLY**: Google Crashlytics is permitted for essential error tracking
+- **Rationale**: Bitcoin wallet privacy is paramount - no user behavior tracking
+- **Enforcement**: All AI agents must verify this policy before adding any Google services
 
 **Dependencies:**
 - **Cryptography:** @noble/secp256k1, @noble/hashes, bitcoinjs-lib

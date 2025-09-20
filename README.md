@@ -26,6 +26,17 @@ A client-side Bitcoin wallet for iOS and Android, built with React Native and Ex
 - **State Management**: Zustand
 - **APIs**: Blockstream Explorer (transactions, UTXOs, fees), CoinGecko (market data)
 - **Security**: Expo Local Authentication (biometrics/PIN)
+- **Error Tracking**: Firebase Crashlytics (ONLY - no Google Analytics)
+
+---
+
+## Privacy Policy
+
+**Google Services Policy:**
+- ✅ **Firebase Crashlytics**: Essential error tracking and crash reporting
+- ❌ **Google Analytics**: PROHIBITED - no user behavior tracking
+- **Rationale**: Bitcoin wallet privacy is paramount - we never track user behavior
+- **Enforcement**: All contributors and AI agents must verify this policy before adding any Google services
 
 ---
 
