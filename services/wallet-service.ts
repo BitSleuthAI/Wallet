@@ -369,9 +369,9 @@ export const importWallet = async (name: string, mnemonic: string, color: string
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
           const result = new Uint8Array(64);
           for (let i = 0; i < 64; i++) {
-            let hash = BigInt(0x6a09e667f3bcc908);
+            let hash = BigInt('0x6a09e667f3bcc908');
             for (let j = 0; j < data.length; j++) {
-              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt(0x9e3779b97f4a7c15)) & BigInt(0xffffffffffffffff);
+              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt('0x9e3779b97f4a7c15')) & BigInt('0xffffffffffffffff');
             }
             result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
           }
@@ -601,9 +601,9 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
           const result = new Uint8Array(64);
           for (let i = 0; i < 64; i++) {
-            let hash = BigInt(0x6a09e667f3bcc908);
+            let hash = BigInt('0x6a09e667f3bcc908');
             for (let j = 0; j < data.length; j++) {
-              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt(0x9e3779b97f4a7c15)) & BigInt(0xffffffffffffffff);
+              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt('0x9e3779b97f4a7c15')) & BigInt('0xffffffffffffffff');
             }
             result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
           }
@@ -856,9 +856,9 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
         const simpleSha512 = (data: Uint8Array): Uint8Array => {
           const result = new Uint8Array(64);
           for (let i = 0; i < 64; i++) {
-            let hash = BigInt(0x6a09e667f3bcc908);
+            let hash = BigInt('0x6a09e667f3bcc908');
             for (let j = 0; j < data.length; j++) {
-              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt(0x9e3779b97f4a7c15)) & BigInt(0xffffffffffffffff);
+              hash = ((hash << BigInt(5)) - hash + BigInt(data[j]) + BigInt(i) * BigInt('0x9e3779b97f4a7c15')) & BigInt('0xffffffffffffffff');
             }
             result[i] = Number(hash >> BigInt((i % 8) * 8)) & 0xff;
           }

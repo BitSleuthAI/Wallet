@@ -168,7 +168,7 @@ export const createNobleECC = () => {
 
     console.log('✅ Creating noble-based ECC interface');
 
-    return {
+    const eccInterface = {
       isPoint: (p: Uint8Array): boolean => {
         try {
           if (!p || p.length === 0) return false;
@@ -262,6 +262,7 @@ export const createNobleECC = () => {
     };
     
     console.log('✅ Noble ECC interface created successfully');
+    return eccInterface;
   } catch (error) {
     console.error('❌ Failed to create noble ECC interface:', error);
     throw new Error('ECC library not available');
