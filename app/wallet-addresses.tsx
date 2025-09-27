@@ -1,24 +1,61 @@
-import React, { useState, useMemo } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  Platform,
-  ActivityIndicator,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import { Copy, RefreshCw, ExternalLink, ArrowLeft } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
+import { Stack, useRouter } from 'expo-router';
+import { ArrowLeft, Copy, ExternalLink, RefreshCw } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import {
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
-import * as walletService from '@/services/wallet-service';
-import * as bitcoinService from '@/services/bitcoin-service';
-import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
+import * as bitcoinService from '@/services/bitcoin-service';
+
+// Platform-specific wallet service imports
+let walletService: any;
+try {
+  let importedService: any;
+  if (Platform.OS === 'web') {
+    console.log('🌐 Loading web wallet service in wallet addresses...');
+    importedService = require('@/services/wallet-service.web');
+  } else {
+    console.log('📱 Loading mobile wallet service in wallet addresses...');
+    importedService = require('@/services/wallet-service');
+  }
+  
+  console.log('📦 Wallet addresses imported service keys:', Object.keys(importedService));
+  
+  // Ensure functions are properly bound and accessible
+  walletService = {
+    generateAddressFromXpub: importedService.generateAddressFromXpub,
+    generateNewAddress: importedService.generateNewAddress
+  };
+  
+  // Verify required functions are available
+  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress'];
+  const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
+  
+  if (missingFunctions.length > 0) {
+    throw new Error(`Missing wallet service functions in addresses: ${missingFunctions.join(', ')}`);
+  }
+  
+  console.log('✅ Wallet service loaded successfully in wallet addresses');
+} catch (error) {
+  console.error('❌ Failed to load wallet service in wallet addresses:', error);
+  // Provide a minimal fallback
+  walletService = {
+    generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
+    generateNewAddress: async () => { throw new Error('Wallet service not available'); }
+  };
+}
 
 interface AddressInfo {
   address: string;

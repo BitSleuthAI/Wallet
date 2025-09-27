@@ -32,11 +32,33 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 // Platform-specific wallet service imports
 let walletService: any;
 try {
+  let importedService: any;
   if (Platform.OS === 'web') {
-    walletService = require('@/services/wallet-service.web');
+    console.log('🌐 Loading web wallet service...');
+    importedService = require('@/services/wallet-service.web');
   } else {
-    walletService = require('@/services/wallet-service');
+    console.log('📱 Loading mobile wallet service...');
+    importedService = require('@/services/wallet-service');
   }
+  
+  console.log('📦 Imported service keys:', Object.keys(importedService));
+  
+  // Ensure functions are properly bound and accessible
+  walletService = {
+    generateMnemonic: importedService.generateMnemonic,
+    validateMnemonic: importedService.validateMnemonic,
+    createWallet: importedService.createWallet,
+    importWallet: importedService.importWallet
+  };
+  
+  // Verify all required functions are available
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
+  
+  if (missingFunctions.length > 0) {
+    throw new Error(`Missing wallet service functions: ${missingFunctions.join(', ')}`);
+  }
+  
   console.log('✅ Wallet service loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load wallet service:', error);
@@ -99,6 +121,12 @@ export default function WalletSetupScreen() {
     
     try {
       console.log('Attempting to generate mnemonic with wallet service');
+      console.log('Wallet service type:', typeof walletService.generateMnemonic);
+      
+      if (typeof walletService.generateMnemonic !== 'function') {
+        throw new Error('generateMnemonic is not a function');
+      }
+      
       const strength = wordCount === 24 ? 256 : 128;
       
       // Handle both sync and async versions of generateMnemonic
@@ -214,6 +242,12 @@ export default function WalletSetupScreen() {
     setIsLoading(true);
     try {
       // First validate the mnemonic manually for debugging
+      console.log('Wallet service validateMnemonic type:', typeof walletService.validateMnemonic);
+      
+      if (typeof walletService.validateMnemonic !== 'function') {
+        throw new Error('validateMnemonic is not a function');
+      }
+      
       const isValid = walletService.validateMnemonic(mnemonic.trim());
       console.log('Manual validation result:', isValid);
       

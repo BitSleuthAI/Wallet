@@ -711,8 +711,25 @@ export const createTransaction = async (
       });
     }
     
-    // Sign inputs
-    const { getPrivateKey } = require('./wallet-service');
+    // Sign inputs - use platform-aware wallet service import
+    let getPrivateKey: any;
+    try {
+      const { Platform } = require('react-native');
+      let importedService: any;
+      if (Platform.OS === 'web') {
+        importedService = require('./wallet-service.web');
+      } else {
+        importedService = require('./wallet-service');
+      }
+      getPrivateKey = importedService.getPrivateKey;
+      
+      if (typeof getPrivateKey !== 'function') {
+        throw new Error('getPrivateKey is not a function');
+      }
+    } catch (error) {
+      console.error('❌ Failed to load getPrivateKey:', error);
+      throw new Error('Private key function not available');
+    }
     
     for (let i = 0; i < selection.selectedUTXOs.length; i++) {
       const utxo = selection.selectedUTXOs[i];

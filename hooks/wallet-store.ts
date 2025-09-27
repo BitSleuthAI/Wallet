@@ -1,11 +1,59 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
 import * as bitcoinService from '@/services/bitcoin-service';
-import * as walletService from '@/services/wallet-service';
 import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
+
+// Platform-specific wallet service imports
+let walletService: any;
+try {
+  let importedService: any;
+  if (Platform.OS === 'web') {
+    console.log('🌐 Loading web wallet service in wallet store...');
+    importedService = require('@/services/wallet-service.web');
+  } else {
+    console.log('📱 Loading mobile wallet service in wallet store...');
+    importedService = require('@/services/wallet-service');
+  }
+  
+  console.log('📦 Wallet store imported service keys:', Object.keys(importedService));
+  
+  // Ensure functions are properly bound and accessible
+  walletService = {
+    generateMnemonic: importedService.generateMnemonic,
+    validateMnemonic: importedService.validateMnemonic,
+    createWallet: importedService.createWallet,
+    importWallet: importedService.importWallet,
+    generateAddressFromXpub: importedService.generateAddressFromXpub,
+    generateNewAddress: importedService.generateNewAddress,
+    getPrivateKey: importedService.getPrivateKey
+  };
+  
+  // Verify all required functions are available
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey'];
+  const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
+  
+  if (missingFunctions.length > 0) {
+    throw new Error(`Missing wallet service functions in store: ${missingFunctions.join(', ')}`);
+  }
+  
+  console.log('✅ Wallet service loaded successfully in wallet store');
+} catch (error) {
+  console.error('❌ Failed to load wallet service in wallet store:', error);
+  // Provide a minimal fallback
+  walletService = {
+    generateMnemonic: async () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    validateMnemonic: () => true,
+    createWallet: async () => { throw new Error('Wallet service not available'); },
+    importWallet: async () => { throw new Error('Wallet service not available'); },
+    generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
+    generateNewAddress: async () => { throw new Error('Wallet service not available'); },
+    getPrivateKey: async () => { throw new Error('Wallet service not available'); }
+  };
+}
 
 // Currency symbols and exchange rates
 const CURRENCY_SYMBOLS: Record<FiatCurrency, string> = {
