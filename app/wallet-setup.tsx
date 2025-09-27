@@ -33,16 +33,28 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 let walletService: any;
 try {
   if (Platform.OS === 'web') {
-    walletService = require('@/services/wallet-service.web');
+    const webService = require('@/services/wallet-service.web');
+    walletService = {
+      generateMnemonic: webService.generateMnemonic,
+      validateMnemonic: webService.validateMnemonic,
+      createWallet: webService.createWallet,
+      importWallet: webService.importWallet
+    };
   } else {
-    walletService = require('@/services/wallet-service');
+    const mobileService = require('@/services/wallet-service');
+    walletService = {
+      generateMnemonic: mobileService.generateMnemonic,
+      validateMnemonic: mobileService.validateMnemonic,
+      createWallet: mobileService.createWallet,
+      importWallet: mobileService.importWallet
+    };
   }
   console.log('✅ Wallet service loaded successfully');
 } catch (error) {
   console.error('❌ Failed to load wallet service:', error);
   // Provide a minimal fallback
   walletService = {
-    generateMnemonic: async () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    generateMnemonic: () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
     validateMnemonic: () => true,
     createWallet: async () => { throw new Error('Wallet service not available'); },
     importWallet: async () => { throw new Error('Wallet service not available'); }
@@ -100,7 +112,16 @@ export default function WalletSetupScreen() {
     try {
       console.log('Attempting to generate mnemonic with wallet service');
       const strength = wordCount === 24 ? 256 : 128;
-      const newMnemonic = await walletService.generateMnemonic(strength);
+      
+      // Handle both sync and async versions of generateMnemonic
+      let newMnemonic: string;
+      const result = walletService.generateMnemonic(strength);
+      if (result instanceof Promise) {
+        newMnemonic = await result;
+      } else {
+        newMnemonic = result;
+      }
+      
       console.log('Successfully generated mnemonic with wallet service');
       // Only update if we got a valid mnemonic
       if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
