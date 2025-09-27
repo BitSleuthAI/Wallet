@@ -53,39 +53,6 @@ export const initializeCrypto = async (): Promise<boolean> => {
       return true;
     }
     
-    // Simple fallback ECC implementation for basic operations
-    const createFallbackECC = () => {
-      console.log('🔧 Creating fallback ECC implementation...');
-      
-      // Basic ECC interface that provides minimal functionality
-      return {
-        isPoint: (p: Uint8Array): boolean => {
-          return p && p.length > 0;
-        },
-        isPrivate: (d: Uint8Array): boolean => {
-          return d && d.length === 32;
-        },
-        pointFromScalar: (d: Uint8Array, compressed = true): Uint8Array | null => {
-          if (!d || d.length !== 32) return null;
-          // Return a dummy public key (this is just for initialization)
-          return new Uint8Array(compressed ? 33 : 65);
-        },
-        pointAddScalar: (p: Uint8Array, tweak: Uint8Array, compressed = true): Uint8Array | null => {
-          return new Uint8Array(compressed ? 33 : 65);
-        },
-        privateAdd: (d: Uint8Array, tweak: Uint8Array): Uint8Array | null => {
-          return new Uint8Array(32);
-        },
-        sign: (hash: Uint8Array, privateKey: Uint8Array): Uint8Array => {
-          // Return a dummy signature for initialization
-          return new Uint8Array(64);
-        },
-        verify: (hash: Uint8Array, publicKey: Uint8Array, signature: Uint8Array): boolean => {
-          return true; // Dummy verification for initialization
-        },
-      };
-    };
-    
     let nobleECC;
     
     try {
@@ -94,9 +61,43 @@ export const initializeCrypto = async (): Promise<boolean> => {
       nobleECC = createNobleECC();
       console.log('✅ Noble ECC implementation created successfully');
     } catch (eccError) {
-      console.warn('⚠️ Failed to create noble ECC, using fallback:', eccError);
-      nobleECC = createFallbackECC();
+      console.error('❌ Failed to create noble ECC implementation:', eccError);
+      throw new Error('Cryptographic library initialization failed. The wallet cannot operate securely without proper ECC support.');
     }
+    
+    // Validate ECC implementation before using it
+    console.log('🔧 Validating ECC implementation...');
+    
+    // Test basic ECC functionality
+    const testPrivateKey = new Uint8Array(32);
+    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+    
+    // Test private key validation
+    if (!nobleECC.isPrivate(testPrivateKey)) {
+      throw new Error('ECC private key validation failed');
+    }
+    
+    // Test point generation
+    const publicKey = nobleECC.pointFromScalar(testPrivateKey, true);
+    if (!publicKey || publicKey.length !== 33) {
+      throw new Error('ECC point generation failed');
+    }
+    
+    // Test signing and verification
+    const testHash = new Uint8Array(32);
+    testHash.fill(0xaa); // Fill with test data
+    
+    const signature = nobleECC.sign(testHash, testPrivateKey);
+    if (!signature || signature.length === 0) {
+      throw new Error('ECC signing failed');
+    }
+    
+    const isValid = nobleECC.verify(testHash, publicKey, signature);
+    if (!isValid) {
+      throw new Error('ECC signature verification failed');
+    }
+    
+    console.log('✅ ECC implementation validation passed');
     
     // Set the global ECC instance
     (global as any).ecc = nobleECC;

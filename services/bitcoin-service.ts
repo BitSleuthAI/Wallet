@@ -12,14 +12,12 @@ const ensureECC = async () => {
     const success = await initializeCrypto();
     
     if (!success) {
-      console.warn('⚠️ Crypto initialization failed in bitcoin service');
-      return;
+      throw new Error('Cryptographic library initialization failed');
     }
     
     const ecc = (global as any).ecc;
     if (!ecc) {
-      console.warn('⚠️ ECC library not available, some features may not work');
-      return;
+      throw new Error('ECC library not available after initialization');
     }
     
     const bitcoin = require('bitcoinjs-lib');
@@ -30,7 +28,8 @@ const ensureECC = async () => {
     
     eccInitialized = true;
   } catch (error) {
-    // console.warn('⚠️ Failed to initialize ECC for bitcoin service:', error);
+    console.error('❌ Failed to initialize ECC for bitcoin service:', error);
+    throw new Error('Bitcoin service requires cryptographic library to function securely');
   }
 };
 
