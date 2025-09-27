@@ -4,23 +4,28 @@ import { Platform } from 'react-native';
 // Don't initialize ECC at module load time - do it lazily when needed
 let eccInitialized = false;
 
-const ensureECC = () => {
+const ensureECC = async () => {
   if (eccInitialized) return;
   
   try {
     const { initializeCrypto } = require('./crypto-polyfill');
-    initializeCrypto();
+    const success = await initializeCrypto();
+    
+    if (!success) {
+      console.warn('⚠️ Crypto initialization failed in bitcoin service');
+      return;
+    }
     
     const ecc = (global as any).ecc;
     if (!ecc) {
-      // console.warn('⚠️ ECC library not available, some features may not work');
+      console.warn('⚠️ ECC library not available, some features may not work');
       return;
     }
     
     const bitcoin = require('bitcoinjs-lib');
     if (typeof bitcoin.initEccLib === 'function') {
       bitcoin.initEccLib(ecc);
-      // console.log('✅ ECC library initialized for bitcoin service');
+      console.log('✅ ECC library initialized for bitcoin service');
     }
     
     eccInitialized = true;
@@ -328,7 +333,7 @@ export const isValidBitcoinAddress = (address: string): boolean => {
 
 export const getAddressBalance = async (address: string): Promise<number> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   // Validate address format first
   if (!isValidBitcoinAddress(address)) {
@@ -396,7 +401,7 @@ export const getAddressBalance = async (address: string): Promise<number> => {
 
 export const getWalletBalance = async (addresses: string[]): Promise<number> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   try {
     const balancePromises = addresses.map(address => getAddressBalance(address));
@@ -412,7 +417,7 @@ export const getWalletBalance = async (addresses: string[]): Promise<number> => 
 
 export const getAddressTransactions = async (address: string): Promise<any[]> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   // Validate address format first
   if (!isValidBitcoinAddress(address)) {
@@ -487,7 +492,7 @@ export const getAddressTransactions = async (address: string): Promise<any[]> =>
 
 export const getTransactionHistory = async (addresses: string[]): Promise<Transaction[]> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   try {
     const transactionPromises = addresses.map(address => getAddressTransactions(address));
@@ -545,7 +550,7 @@ export const getTransactionHistory = async (addresses: string[]): Promise<Transa
 
 export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   try {
     const data = await fetchJSON(`${API_BASE}/address/${address}/utxo`, { timeoutMs: 15000 });
@@ -568,7 +573,7 @@ export const createTransaction = async (
   // console.log('Parameters:', { toAddress, amount, feeRate, enableRBF });
   
   // Ensure ECC is initialized
-  ensureECC();
+  await ensureECC();
   
   // Validate inputs
   if (!isValidBitcoinAddress(toAddress)) {
@@ -837,7 +842,7 @@ const generateMockTxHex = (txid: string, toAddress: string, amount: number, fee:
 
 export const broadcastTransaction = async (txHex: string): Promise<string> => {
   // Ensure ECC is initialized for any crypto operations
-  ensureECC();
+  await ensureECC();
   
   // console.log('📡 Broadcasting REAL Bitcoin transaction to MAINNET...');
   // console.log('Transaction hex length:', txHex.length);
