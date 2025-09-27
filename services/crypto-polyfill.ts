@@ -1,51 +1,15 @@
-// Import polyfills at the very top of your app
-import 'react-native-get-random-values';
-import 'react-native-url-polyfill/auto';
+// Note: Polyfills are already imported in polyfills.js and app/_layout.tsx
+// This file only handles crypto and ECC initialization
 
-// Buffer polyfill
+// Ensure Buffer is available for bitcoinjs-lib
 import { Buffer } from '@craftzdog/react-native-buffer';
 (global as any).Buffer = Buffer;
-
-// Stream polyfill for React Native
-// @ts-ignore - stream-browserify doesn't have types
-import { Readable, Transform, Writable } from 'stream-browserify';
-(global as any).stream = { Readable, Writable, Transform };
-
-// Events polyfill for React Native
-import { EventEmitter } from 'events';
-if (typeof (global as any).EventEmitter === 'undefined') {
-  (global as any).EventEmitter = EventEmitter;
-}
-
-// Note: react-native-get-random-values is imported at the top for side effects
-// It automatically polyfills crypto.getRandomValues, so no manual assignment needed
-
-// Ensure process is available
-if (typeof (global as any).process === 'undefined') {
-  (global as any).process = require('process');
-}
-
-// Additional Node.js polyfills
-if (typeof (global as any).util === 'undefined') {
-  (global as any).util = require('util');
-}
-
-if (typeof (global as any).assert === 'undefined') {
-  (global as any).assert = require('assert');
-}
-
-if (typeof (global as any).url === 'undefined') {
-  (global as any).url = require('url');
-}
-
-if (typeof (global as any).querystring === 'undefined') {
-  (global as any).querystring = require('querystring-es3');
-}
 
 // Initialize crypto and ECC library
 export const initializeCrypto = async (): Promise<boolean> => {
   try {
     console.log('🔧 Initializing crypto polyfills and ECC library...');
+    console.log('🔧 Global crypto initialized flag:', (global as any).__cryptoInitialized);
     
     // Check if already initialized
     if ((global as any).__cryptoInitialized) {
@@ -100,20 +64,40 @@ export const initializeCrypto = async (): Promise<boolean> => {
     console.log('✅ ECC implementation validation passed');
     
     // Set the global ECC instance
+    console.log('🔧 Setting global ECC instance...');
     (global as any).ecc = nobleECC;
+    console.log('🔧 Global ECC set:', typeof (global as any).ecc, (global as any).ecc ? Object.keys((global as any).ecc) : 'null');
     
     // Initialize bitcoinjs-lib with our ECC implementation
     try {
-      const bitcoin = require('bitcoinjs-lib');
-      if (typeof bitcoin.initEccLib === 'function') {
-        bitcoin.initEccLib(nobleECC);
-        console.log('✅ BitcoinJS initialized with ECC');
+      console.log('🔧 Loading bitcoinjs-lib for crypto polyfill...');
+      let bitcoin;
+      try {
+        bitcoin = require('bitcoinjs-lib');
+      } catch (requireError) {
+        console.log('⚠️ bitcoinjs-lib require() failed in crypto polyfill, skipping...');
+        // Don't return early - continue to set the crypto initialized flag
+      }
+      
+      if (bitcoin) {
+        console.log('🔧 BitcoinJS loaded in crypto polyfill:', typeof bitcoin, Object.keys(bitcoin));
+        
+        if (typeof bitcoin.initEccLib === 'function') {
+          console.log('🔧 Initializing bitcoinjs-lib with ECC in crypto polyfill...');
+          bitcoin.initEccLib(nobleECC);
+          console.log('✅ BitcoinJS initialized with ECC');
+        } else {
+          console.log('⚠️ bitcoinjs-lib.initEccLib not available in crypto polyfill, continuing without it');
+        }
+      } else {
+        console.log('⚠️ bitcoinjs-lib not loaded in crypto polyfill, continuing without it');
       }
     } catch (bitcoinError) {
-      console.warn('⚠️ BitcoinJS initialization failed:', bitcoinError);
+      console.warn('⚠️ BitcoinJS initialization failed, continuing without it:', bitcoinError);
     }
     
     // Mark as initialized
+    console.log('🔧 Marking crypto as initialized...');
     (global as any).__cryptoInitialized = true;
     
     console.log('✅ Crypto initialization completed successfully');

@@ -81,9 +81,47 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const hasSetInitialWallet = useRef(false);
   const currentWalletIdRef = useRef<string | null>(null);
   const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
+  const [cryptoReady, setCryptoReady] = useState(false);
+  const cryptoReadyRef = useRef(false);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
+
+  // Monitor crypto initialization
+  useEffect(() => {
+    const checkCryptoReady = () => {
+      const isReady = !!(global as any).__cryptoInitialized;
+      if (isReady && !cryptoReadyRef.current) {
+        console.log('🔧 Crypto is ready, enabling queries...');
+        cryptoReadyRef.current = true;
+        setCryptoReady(true);
+        // Invalidate queries to trigger refetch
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
+      }
+    };
+
+    // Check immediately
+    checkCryptoReady();
+
+    // Only set up interval if crypto is not ready yet
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (!cryptoReadyRef.current) {
+      interval = setInterval(checkCryptoReady, 1000);
+    }
+
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [queryClient]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    cryptoReadyRef.current = cryptoReady;
+  }, [cryptoReady]);
 
   // Migration and initialization
   useEffect(() => {
@@ -235,6 +273,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return prices;
       }
     },
+    enabled: cryptoReady,
     refetchInterval: 120000, // Refetch every 2 minutes (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 5000, // Fixed 5 second delay
@@ -257,7 +296,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return 0; // Return 0 instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
     refetchInterval: 60000, // Refetch every 60 seconds (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 10000, // Fixed 10 second delay
@@ -280,7 +319,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
     refetchInterval: 90000, // Refetch every 90 seconds (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 15000, // Fixed 15 second delay

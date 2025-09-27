@@ -5,30 +5,68 @@ import { Platform } from 'react-native';
 let eccInitialized = false;
 
 const ensureECC = async () => {
-  if (eccInitialized) return;
+  console.log('🔧 ensureECC called, eccInitialized:', eccInitialized);
+  
+  if (eccInitialized) {
+    console.log('✅ ECC already initialized, returning');
+    return;
+  }
   
   try {
+    console.log('🔧 Loading crypto-polyfill...');
     const { initializeCrypto } = require('./crypto-polyfill');
+    
+    console.log('🔧 Calling initializeCrypto...');
     const success = await initializeCrypto();
+    
+    console.log('🔧 initializeCrypto result:', success);
     
     if (!success) {
       throw new Error('Cryptographic library initialization failed');
     }
     
+    console.log('🔧 Checking global ECC...');
     const ecc = (global as any).ecc;
+    console.log('🔧 Global ECC:', typeof ecc, ecc ? Object.keys(ecc) : 'null');
+    
     if (!ecc) {
       throw new Error('ECC library not available after initialization');
     }
     
-    const bitcoin = require('bitcoinjs-lib');
-    if (typeof bitcoin.initEccLib === 'function') {
-      bitcoin.initEccLib(ecc);
-      console.log('✅ ECC library initialized for bitcoin service');
+    console.log('🔧 Loading bitcoinjs-lib...');
+    try {
+      // Try different import methods for React Native
+      let bitcoin;
+      try {
+        bitcoin = require('bitcoinjs-lib');
+      } catch (requireError) {
+        console.log('⚠️ require() failed, trying dynamic import...');
+        // For React Native, we might need to skip bitcoinjs-lib initialization
+        // since it may not be fully compatible
+        console.log('⚠️ Skipping bitcoinjs-lib initialization in React Native');
+        eccInitialized = true;
+        console.log('✅ ensureECC completed successfully (without bitcoinjs-lib)');
+        return;
+      }
+      
+      console.log('🔧 BitcoinJS loaded:', typeof bitcoin, bitcoin ? Object.keys(bitcoin) : 'null');
+      
+      if (bitcoin && typeof bitcoin.initEccLib === 'function') {
+        console.log('🔧 Initializing bitcoinjs-lib with ECC...');
+        bitcoin.initEccLib(ecc);
+        console.log('✅ ECC library initialized for bitcoin service');
+      } else {
+        console.log('⚠️ bitcoinjs-lib.initEccLib not available, continuing without it');
+      }
+    } catch (bitcoinError) {
+      console.warn('⚠️ BitcoinJS initialization failed, continuing without it:', bitcoinError);
     }
     
     eccInitialized = true;
+    console.log('✅ ensureECC completed successfully');
   } catch (error) {
     console.error('❌ Failed to initialize ECC for bitcoin service:', error);
+    console.error('❌ Error stack:', error.stack);
     throw new Error('Bitcoin service requires cryptographic library to function securely');
   }
 };

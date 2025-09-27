@@ -31,9 +31,6 @@ export const createNobleECC = () => {
       return out;
     };
     
-    const etcObj = (noble as any).etc ?? {};
-    const utilsObj = (noble as any).utils ?? {};
-    
     // Try to use @noble/hashes first, fallback to simple implementations
     let hmacImpl, shaImpl;
     try {
@@ -108,13 +105,20 @@ export const createNobleECC = () => {
       };
     }
     
-    etcObj.hmacSha256Sync = hmacImpl;
-    etcObj.sha256Sync = shaImpl;
-    utilsObj.hmacSha256Sync = utilsObj.hmacSha256Sync ?? hmacImpl;
-    utilsObj.sha256Sync = utilsObj.sha256Sync ?? shaImpl;
-    utilsObj.concatBytes = utilsObj.concatBytes ?? concatBytes;
-    (noble as any).etc = { ...(noble as any).etc, ...etcObj };
-    (noble as any).utils = { ...(noble as any).utils, ...utilsObj };
+    // Ensure etc and utils objects exist before assigning properties
+    if (!(noble as any).etc) {
+      (noble as any).etc = {};
+    }
+    if (!(noble as any).utils) {
+      (noble as any).utils = {};
+    }
+    
+    // Add hash functions to the existing etc and utils objects
+    (noble as any).etc.hmacSha256Sync = hmacImpl;
+    (noble as any).etc.sha256Sync = shaImpl;
+    (noble as any).utils.hmacSha256Sync = hmacImpl;
+    (noble as any).utils.sha256Sync = shaImpl;
+    (noble as any).utils.concatBytes = concatBytes;
     
     console.log('✅ Hash functions set up in ECC override');
     
@@ -128,22 +132,24 @@ export const createNobleECC = () => {
       const testKey = new Uint8Array([1, 2, 3, 4]);
       const testData = new Uint8Array([5, 6, 7, 8]);
       
-      // Test HMAC function
-      if (!noble.utils.hmacSha256Sync || typeof noble.utils.hmacSha256Sync !== 'function') {
+      // Test HMAC function (check both etc and utils)
+      const hmacFunc = noble.etc.hmacSha256Sync || noble.utils.hmacSha256Sync;
+      if (!hmacFunc || typeof hmacFunc !== 'function') {
         throw new Error('hmacSha256Sync function not available');
       }
       
-      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      const hmacResult = hmacFunc(testKey, testData);
       if (!hmacResult || hmacResult.length !== 32) {
         throw new Error('HMAC function test failed - invalid output');
       }
       
-      // Test SHA256 function
-      if (!noble.utils.sha256Sync || typeof noble.utils.sha256Sync !== 'function') {
+      // Test SHA256 function (check both etc and utils)
+      const sha256Func = noble.etc.sha256Sync || noble.utils.sha256Sync;
+      if (!sha256Func || typeof sha256Func !== 'function') {
         throw new Error('sha256Sync function not available');
       }
       
-      const sha256Result = noble.utils.sha256Sync(testData);
+      const sha256Result = sha256Func(testData);
       if (!sha256Result || sha256Result.length !== 32) {
         throw new Error('SHA256 function test failed - invalid output');
       }
@@ -230,8 +236,10 @@ export const createNobleECC = () => {
             throw new Error('Invalid private key: must be 32 bytes');
           }
 
-          // Ensure hash functions are available before signing
-          if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
+          // Ensure hash functions are available before signing (check both etc and utils)
+          const hmacFunc = noble.etc.hmacSha256Sync || noble.utils.hmacSha256Sync;
+          const sha256Func = noble.etc.sha256Sync || noble.utils.sha256Sync;
+          if (!hmacFunc || !sha256Func) {
             throw new Error('hashes.hmacSha256Sync not set');
           }
 
