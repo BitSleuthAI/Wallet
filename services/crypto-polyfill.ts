@@ -76,17 +76,21 @@ export const initializeCrypto = async (): Promise<boolean> => {
         bitcoin = require('bitcoinjs-lib');
       } catch (requireError) {
         console.log('⚠️ bitcoinjs-lib require() failed in crypto polyfill, skipping...');
-        return true; // Continue without bitcoinjs-lib
+        // Don't return early - continue to set the crypto initialized flag
       }
       
-      console.log('🔧 BitcoinJS loaded in crypto polyfill:', typeof bitcoin, bitcoin ? Object.keys(bitcoin) : 'null');
-      
-      if (bitcoin && typeof bitcoin.initEccLib === 'function') {
-        console.log('🔧 Initializing bitcoinjs-lib with ECC in crypto polyfill...');
-        bitcoin.initEccLib(nobleECC);
-        console.log('✅ BitcoinJS initialized with ECC');
+      if (bitcoin) {
+        console.log('🔧 BitcoinJS loaded in crypto polyfill:', typeof bitcoin, Object.keys(bitcoin));
+        
+        if (typeof bitcoin.initEccLib === 'function') {
+          console.log('🔧 Initializing bitcoinjs-lib with ECC in crypto polyfill...');
+          bitcoin.initEccLib(nobleECC);
+          console.log('✅ BitcoinJS initialized with ECC');
+        } else {
+          console.log('⚠️ bitcoinjs-lib.initEccLib not available in crypto polyfill, continuing without it');
+        }
       } else {
-        console.log('⚠️ bitcoinjs-lib.initEccLib not available in crypto polyfill, continuing without it');
+        console.log('⚠️ bitcoinjs-lib not loaded in crypto polyfill, continuing without it');
       }
     } catch (bitcoinError) {
       console.warn('⚠️ BitcoinJS initialization failed, continuing without it:', bitcoinError);

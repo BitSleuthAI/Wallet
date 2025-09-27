@@ -82,6 +82,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const currentWalletIdRef = useRef<string | null>(null);
   const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
   const [cryptoReady, setCryptoReady] = useState(false);
+  const cryptoReadyRef = useRef(false);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -90,8 +91,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     const checkCryptoReady = () => {
       const isReady = !!(global as any).__cryptoInitialized;
-      if (isReady && !cryptoReady) {
+      if (isReady && !cryptoReadyRef.current) {
         console.log('🔧 Crypto is ready, enabling queries...');
+        cryptoReadyRef.current = true;
         setCryptoReady(true);
         // Invalidate queries to trigger refetch
         queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
@@ -103,11 +105,23 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     // Check immediately
     checkCryptoReady();
 
-    // Set up interval to check periodically
-    const interval = setInterval(checkCryptoReady, 1000);
+    // Only set up interval if crypto is not ready yet
+    let interval: ReturnType<typeof setInterval> | null = null;
+    if (!cryptoReadyRef.current) {
+      interval = setInterval(checkCryptoReady, 1000);
+    }
 
-    return () => clearInterval(interval);
-  }, [cryptoReady, queryClient]);
+    return () => {
+      if (interval) {
+        clearInterval(interval);
+      }
+    };
+  }, [queryClient]);
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    cryptoReadyRef.current = cryptoReady;
+  }, [cryptoReady]);
 
   // Migration and initialization
   useEffect(() => {
