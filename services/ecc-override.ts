@@ -31,9 +31,6 @@ export const createNobleECC = () => {
       return out;
     };
     
-    const etcObj = (noble as any).etc ?? {};
-    const utilsObj = (noble as any).utils ?? {};
-    
     // Try to use @noble/hashes first, fallback to simple implementations
     let hmacImpl, shaImpl;
     try {
@@ -108,13 +105,12 @@ export const createNobleECC = () => {
       };
     }
     
-    etcObj.hmacSha256Sync = hmacImpl;
-    etcObj.sha256Sync = shaImpl;
-    utilsObj.hmacSha256Sync = utilsObj.hmacSha256Sync ?? hmacImpl;
-    utilsObj.sha256Sync = utilsObj.sha256Sync ?? shaImpl;
-    utilsObj.concatBytes = utilsObj.concatBytes ?? concatBytes;
-    (noble as any).etc = { ...(noble as any).etc, ...etcObj };
-    (noble as any).utils = { ...(noble as any).utils, ...utilsObj };
+    // Add hash functions directly to the existing etc and utils objects
+    (noble as any).etc.hmacSha256Sync = hmacImpl;
+    (noble as any).etc.sha256Sync = shaImpl;
+    (noble as any).utils.hmacSha256Sync = hmacImpl;
+    (noble as any).utils.sha256Sync = shaImpl;
+    (noble as any).utils.concatBytes = concatBytes;
     
     console.log('✅ Hash functions set up in ECC override');
     
@@ -129,21 +125,21 @@ export const createNobleECC = () => {
       const testData = new Uint8Array([5, 6, 7, 8]);
       
       // Test HMAC function
-      if (!noble.utils.hmacSha256Sync || typeof noble.utils.hmacSha256Sync !== 'function') {
+      if (!noble.etc.hmacSha256Sync || typeof noble.etc.hmacSha256Sync !== 'function') {
         throw new Error('hmacSha256Sync function not available');
       }
       
-      const hmacResult = noble.utils.hmacSha256Sync(testKey, testData);
+      const hmacResult = noble.etc.hmacSha256Sync(testKey, testData);
       if (!hmacResult || hmacResult.length !== 32) {
         throw new Error('HMAC function test failed - invalid output');
       }
       
       // Test SHA256 function
-      if (!noble.utils.sha256Sync || typeof noble.utils.sha256Sync !== 'function') {
+      if (!noble.etc.sha256Sync || typeof noble.etc.sha256Sync !== 'function') {
         throw new Error('sha256Sync function not available');
       }
       
-      const sha256Result = noble.utils.sha256Sync(testData);
+      const sha256Result = noble.etc.sha256Sync(testData);
       if (!sha256Result || sha256Result.length !== 32) {
         throw new Error('SHA256 function test failed - invalid output');
       }
@@ -231,7 +227,7 @@ export const createNobleECC = () => {
           }
 
           // Ensure hash functions are available before signing
-          if (!noble.utils.hmacSha256Sync || !noble.utils.sha256Sync) {
+          if (!noble.etc.hmacSha256Sync || !noble.etc.sha256Sync) {
             throw new Error('hashes.hmacSha256Sync not set');
           }
 

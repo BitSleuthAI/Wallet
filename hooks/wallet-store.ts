@@ -81,9 +81,33 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const hasSetInitialWallet = useRef(false);
   const currentWalletIdRef = useRef<string | null>(null);
   const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
+  const [cryptoReady, setCryptoReady] = useState(false);
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
+
+  // Monitor crypto initialization
+  useEffect(() => {
+    const checkCryptoReady = () => {
+      const isReady = !!(global as any).__cryptoInitialized;
+      if (isReady && !cryptoReady) {
+        console.log('🔧 Crypto is ready, enabling queries...');
+        setCryptoReady(true);
+        // Invalidate queries to trigger refetch
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions'] });
+        queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
+      }
+    };
+
+    // Check immediately
+    checkCryptoReady();
+
+    // Set up interval to check periodically
+    const interval = setInterval(checkCryptoReady, 1000);
+
+    return () => clearInterval(interval);
+  }, [cryptoReady, queryClient]);
 
   // Migration and initialization
   useEffect(() => {
@@ -235,6 +259,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return prices;
       }
     },
+    enabled: cryptoReady,
     refetchInterval: 120000, // Refetch every 2 minutes (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 5000, // Fixed 5 second delay
@@ -257,7 +282,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return 0; // Return 0 instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
     refetchInterval: 60000, // Refetch every 60 seconds (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 10000, // Fixed 10 second delay
@@ -280,7 +305,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length,
+    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
     refetchInterval: 90000, // Refetch every 90 seconds (less aggressive)
     retry: 1, // Reduced retries
     retryDelay: 15000, // Fixed 15 second delay
