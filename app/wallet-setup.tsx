@@ -13,19 +13,19 @@ import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    Clipboard,
-    KeyboardAvoidingView,
-    Linking,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Clipboard,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
@@ -33,21 +33,9 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 let walletService: any;
 try {
   if (Platform.OS === 'web') {
-    const webService = require('@/services/wallet-service.web');
-    walletService = {
-      generateMnemonic: webService.generateMnemonic,
-      validateMnemonic: webService.validateMnemonic,
-      createWallet: webService.createWallet,
-      importWallet: webService.importWallet
-    };
+    walletService = require('@/services/wallet-service.web');
   } else {
-    const mobileService = require('@/services/wallet-service');
-    walletService = {
-      generateMnemonic: mobileService.generateMnemonic,
-      validateMnemonic: mobileService.validateMnemonic,
-      createWallet: mobileService.createWallet,
-      importWallet: mobileService.importWallet
-    };
+    walletService = require('@/services/wallet-service');
   }
   console.log('✅ Wallet service loaded successfully');
 } catch (error) {
