@@ -5,13 +5,19 @@ console.log('🔧 Setting up ECC override to prevent tiny-secp256k1 WASM loading
 // Create a noble-based ECC implementation that matches tiny-secp256k1 interface
 export const createNobleECC = () => {
   try {
+    console.log('🔧 Loading @noble/secp256k1...');
     const mod = require('@noble/secp256k1');
+    console.log('✅ @noble/secp256k1 module loaded');
+    console.log('🔧 Module shape:', Object.keys(mod || {}));
+    
     const noble = (mod && (mod.secp256k1 || mod.default)) ? (mod.secp256k1 ?? mod.default) : mod;
 
     if (!noble || typeof noble.getPublicKey !== 'function') {
-      console.error('secp256k1 module shape:', Object.keys(mod || {}));
+      console.error('❌ secp256k1 module shape:', Object.keys(mod || {}));
+      console.error('❌ noble object:', noble);
       throw new Error('@noble/secp256k1 not available');
     }
+    console.log('✅ Noble secp256k1 interface available');
 
     // CRITICAL: Set up hash functions BEFORE any operations
     console.log('🔧 Setting up hash functions for noble/secp256k1...');
@@ -162,7 +168,7 @@ export const createNobleECC = () => {
 
     console.log('✅ Creating noble-based ECC interface');
 
-    return {
+    const eccInterface = {
       isPoint: (p: Uint8Array): boolean => {
         try {
           if (!p || p.length === 0) return false;
@@ -208,7 +214,7 @@ export const createNobleECC = () => {
           const tweakBig = BigInt('0x' + Array.from(tweak).map(b => b.toString(16).padStart(2, '0')).join(''));
           const n = BigInt('0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141');
           const result = (dBig + tweakBig) % n;
-          if (result === 0n) return null;
+          if (result === BigInt(0)) return null;
           const hex = result.toString(16).padStart(64, '0');
           return new Uint8Array(hex.match(/.{2}/g)!.map(byte => parseInt(byte, 16)));
         } catch {
@@ -254,6 +260,9 @@ export const createNobleECC = () => {
         }
       },
     };
+    
+    console.log('✅ Noble ECC interface created successfully');
+    return eccInterface;
   } catch (error) {
     console.error('❌ Failed to create noble ECC interface:', error);
     throw new Error('ECC library not available');
