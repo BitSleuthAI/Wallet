@@ -361,7 +361,8 @@ const generateProperAddress = async (xpub: string, index: number): Promise<strin
       
       // Generate proper address from xpub
       const node = bip32.fromBase58(xpub);
-      const child = node.derive(index);
+      // Fix: Include change level (chain 0 for external addresses) in BIP84 derivation path
+      const child = node.derive(0).derive(index);
       
       if (!child.publicKey) {
         throw new Error('Failed to derive public key');

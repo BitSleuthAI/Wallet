@@ -312,7 +312,8 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
     const bip32 = bip32Module.BIP32Factory(ecc);
     
     const node = bip32.fromBase58(xpub);
-    const child = node.derive(index);
+    // Fix: Include change level (chain 0 for external addresses) in BIP84 derivation path
+    const child = node.derive(0).derive(index);
     
     if (!child.publicKey) {
       throw new Error('Failed to derive public key from xpub');
