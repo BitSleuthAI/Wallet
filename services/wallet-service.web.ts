@@ -309,8 +309,8 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     // Create a deterministic xpub-like string for web
     const webXpub = `web_xpub_${simpleHash(mnemonic)}_${simpleHash(name)}`;
     
-    // Generate first address deterministically from mnemonic
-    const firstAddress = await generateDemoAddress(mnemonic, 0);
+    // Generate first address deterministically from xpub
+    const firstAddress = await generateDemoAddress(webXpub, 0);
     
     const wallet: Wallet = {
       id: Date.now().toString(),
