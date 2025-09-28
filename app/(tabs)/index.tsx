@@ -1,17 +1,17 @@
+import FeedbackPopup from '@/components/FeedbackPopup';
+import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
-import FeedbackPopup from '@/components/FeedbackPopup';
-import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -402,11 +402,13 @@ export default function WalletScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Recent Transactions
             </Text>
-            <TouchableOpacity onPress={() => router.push('/transaction-history')}>
-              <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
-                View All
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.transactionsHeaderActions}>
+              <TouchableOpacity onPress={() => router.push('/transaction-history')}>
+                <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
+                  View All
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {hasTransactionsError ? (
@@ -701,6 +703,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 20,
+  },
+  transactionsHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
   },
   sectionTitle: {
     fontSize: 20,

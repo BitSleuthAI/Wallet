@@ -1,22 +1,22 @@
-import React, { useMemo, useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  ActivityIndicator,
-  Platform,
-  Modal,
-} from 'react-native';
-import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Copy } from 'lucide-react-native';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
+import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
-import * as bitcoinService from '@/services/bitcoin-service';
-import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
+import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Copy } from 'lucide-react-native';
+import React, { useMemo, useState } from 'react';
+import {
+    ActivityIndicator,
+    Modal,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 interface Transaction {
   txid: string;
@@ -53,17 +53,46 @@ export default function AddressDetailsScreen() {
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
   
-  // Fetch address balance
+  // Fetch address balance using Esplora service
   const balanceQuery = useQuery({
-    queryKey: ['address-balance', address],
-    queryFn: () => bitcoinService.getAddressBalance(address!),
+    queryKey: ['address-balance-improved', address],
+    queryFn: async () => {
+      if (!address) return 0;
+      
+      console.log('💰 Fetching address balance using Esplora service...');
+      const result = await getAddressStats(address);
+      
+      if (result.error || !result.data) {
+        console.warn('❌ Address balance fetch failed:', result.error);
+        return 0;
+      }
+      
+      const balance = result.data.chain_stats ? 
+        (result.data.chain_stats.funded_txo_sum - result.data.chain_stats.spent_txo_sum) / 1e8 : 0;
+      
+      console.log('✅ Address balance fetched:', balance, 'BTC');
+      return balance;
+    },
     enabled: !!address,
   });
 
-  // Fetch address transactions
+  // Fetch address transactions using Esplora service
   const transactionsQuery = useQuery({
-    queryKey: ['address-transactions', address],
-    queryFn: () => bitcoinService.getAddressTransactions(address!),
+    queryKey: ['address-transactions-improved', address],
+    queryFn: async () => {
+      if (!address) return [];
+      
+      console.log('📜 Fetching address transactions using Esplora service...');
+      const result = await getAddressTransactions(address);
+      
+      if (result.error || !result.data) {
+        console.warn('❌ Address transactions fetch failed:', result.error);
+        return [];
+      }
+      
+      console.log('✅ Address transactions fetched:', result.data.length, 'transactions');
+      return result.data;
+    },
     enabled: !!address,
   });
 

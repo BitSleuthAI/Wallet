@@ -23,14 +23,18 @@ const GAP_LIMIT = 20; // Standard gap limit for address discovery
  */
 async function getP2wpkhAddress(pubKey: Buffer): Promise<string> {
   try {
-    // Use bitcoinjs-lib for reliable P2WPKH address generation
-    const bitcoin = require('bitcoinjs-lib');
+    // Use proper P2WPKH address generation
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
     
-    // Create P2WPKH address from public key
-    const { address } = bitcoin.payments.p2wpkh({
-      pubkey: pubKey,
-      network: bitcoin.networks.bitcoin
-    });
+    // Hash the public key: SHA256 -> RIPEMD160
+    const sha256Hash = sha256(pubKey);
+    const hash160 = ripemd160(sha256Hash);
+    
+    // Convert to bech32 words and encode
+    const words = bech32.bech32.toWords(hash160);
+    const address = bech32.bech32.encode('bc', [0, ...words]);
     
     return address;
   } catch (error) {
@@ -411,37 +415,13 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32.fromSeed(seed);
     
-    // Derive zpub for P2WPKH (BIP84) - zpub is the correct format for P2WPKH
-    const derivedNode = root.derivePath("m/84'/0'/0'").neutered();
+    // Derive xpub for P2WPKH (BIP84)
+    const xpub = root.derivePath("m/84'/0'/0'").neutered().toBase58();
     
-    // Try to create zpub with proper version bytes
-    let zpub;
-    try {
-      // Method 1: Try to use the version parameter if supported
-      zpub = derivedNode.toBase58('zpub');
-    } catch (error) {
-      console.log('⚠️ toBase58 with version parameter failed, trying alternative method');
-      try {
-        // Method 2: Try to set the version on the node
-        const nodeWithVersion = { ...derivedNode, version: 0x04b24746 };
-        zpub = nodeWithVersion.toBase58();
-      } catch (error2) {
-        console.log('⚠️ Alternative method failed, using xpub with BIP84 path');
-        // Method 3: Use xpub but with correct BIP84 derivation path
-        // The derivation path is what matters most for compatibility
-        zpub = derivedNode.toBase58();
-      }
-    }
-    
-    console.log('🔍 Generated zpub:', zpub);
-    console.log('🔍 Zpub length:', zpub.length);
-    console.log('🔍 Zpub starts with:', zpub.substring(0, 10));
-    
-    // Generate initial addresses using zpub
+    // Generate initial addresses
     const addresses: string[] = [];
     for (let i = 0; i < 5; i++) {
-      const address = await generateAddressFromXpub(zpub, i);
-      console.log(`🔍 Generated address ${i}:`, address);
+      const address = await generateAddressFromXpub(xpub, i);
       addresses.push(address);
     }
     
@@ -450,7 +430,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       name,
       color,
       mnemonic,
-      xpub: zpub, // Store zpub instead of xpub
+      xpub,
       addresses,
       currentAddressIndex: 4,
       createdAt: new Date().toISOString(),

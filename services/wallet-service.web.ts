@@ -337,19 +337,62 @@ export const importWallet = async (name: string, mnemonic: string, color: string
   }
 };
 
-// Demo addresses for web/Expo Go environment
-const DEMO_ADDRESSES = [
-  'bc1qw508d6qejxtdg4y5r3zarvary0c5xw7kv8f3t4',
-  'bc1qrp33g0q5c5txsp9arysrx4k6zdkfs4nce4xj0gdcccefvpysxf3qccfmv3',
-  'bc1qxvnt9awej0amdmhayl6rkjs3a0f6nk4e8z7rt4',
-  'bc1q9vza2e8x573nczrlzms0wvx3gsqjx7vavgkx0l',
-  'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq',
-  'bc1q8c6fshw2dlwun7ekn9qwf37cu2rn755upcp6el',
-  'bc1qk0jareu4jytc0cfrhr786ewygwdh6ne0fhxujq',
-  'bc1qzd7dvzpzltwqp0ah8fcpqn8t0ynzrzsg0u3c2e',
-  'bc1qm34lsc65zpw79lxes69zkqmk6ee3ewf0j77s3h',
-  'bc1ql68h2m2a2d0f2j3k4l5m6n7o8p9q0r1s2t3u4v'
-];
+// Generate a proper Bitcoin address from xpub and index
+const generateProperAddress = async (xpub: string, index: number): Promise<string> => {
+  try {
+    console.log(`🌐 Generating address for xpub: ${xpub.substring(0, 20)}..., index: ${index}`);
+    
+    // For web environment, use proper Bitcoin address generation with bech32
+    try {
+      console.log('🔧 Importing bip32...');
+      const bip32Module = await import('bip32');
+      console.log('✅ bip32 module imported successfully');
+      
+      // For web, we need to initialize bip32 with ECC
+      console.log('🔧 Initializing bip32 with ECC...');
+      const ecc = await import('@noble/secp256k1');
+      const bip32 = bip32Module.BIP32Factory(ecc);
+      console.log('✅ bip32 initialized with ECC');
+      
+      const bech32 = await import('bech32');
+      const { sha256 } = await import('@noble/hashes/sha256');
+      const { ripemd160 } = await import('@noble/hashes/ripemd160');
+      
+      // Generate proper address from xpub
+      const node = bip32.fromBase58(xpub);
+      const child = node.derive(index);
+      
+      if (!child.publicKey) {
+        throw new Error('Failed to derive public key');
+      }
+
+      console.log('🌐 Public key derived, length:', child.publicKey.length);
+      
+      // Generate P2WPKH address (bc1q...)
+      // 1. Hash the public key with SHA256
+      const sha256Hash = sha256(child.publicKey);
+      // 2. Hash the result with RIPEMD160
+      const hash160 = ripemd160(sha256Hash);
+      
+      console.log('🌐 Hash160 generated, length:', hash160.length);
+      
+      // 3. Encode as bech32
+      const words = bech32.bech32.toWords(hash160);
+      const address = bech32.bech32.encode('bc', [0, ...words]);
+
+      console.log(`✅ Generated proper web Bitcoin address: ${address}`);
+      return address;
+    } catch (cryptoError) {
+      console.error('❌ Web crypto libraries failed:', cryptoError);
+      throw new Error(`Web address generation failed: ${cryptoError.message}`);
+    }
+  } catch (error) {
+    console.error('❌ Web address generation failed:', error);
+    
+    // Don't use a fallback address - throw the error so we can fix it
+    throw new Error(`Web address generation completely failed: ${error.message}`);
+  }
+};
 
 // Simple hash function for deterministic address selection
 const simpleHash = (input: string): number => {
@@ -362,10 +405,9 @@ const simpleHash = (input: string): number => {
   return Math.abs(hash);
 };
 
-// Generate deterministic demo address based on input
-const generateDemoAddress = (seed: string, index: number = 0): string => {
-  const hash = simpleHash(seed + index.toString());
-  return DEMO_ADDRESSES[hash % DEMO_ADDRESSES.length];
+// Generate deterministic address based on input
+const generateDemoAddress = async (xpub: string, index: number = 0): Promise<string> => {
+  return await generateProperAddress(xpub, index);
 };
 
 export const generateAddressFromXpub = async (xpub: string, index: number): Promise<string> => {
@@ -379,7 +421,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
   } catch (error) {
     console.error('❌ Web: Error generating address:', error);
     // Fallback to first demo address
-    return DEMO_ADDRESSES[0];
+    return await generateProperAddress(xpub, 0);
   }
 };
 
