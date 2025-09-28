@@ -35,7 +35,8 @@ async function getP2wpkhAddress(pubKey: Buffer): Promise<string> {
     return address;
   } catch (error) {
     console.error('❌ Failed to generate P2WPKH address:', error);
-    throw new Error(`Address generation failed: ${error.message}`);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Address generation failed: ${message}`);
   }
 }
 
@@ -175,8 +176,8 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       return { data: null, error: 'Could not fetch BTC price data' };
     }
 
-    const btcPrice = btcPriceResult.data;
-    const latestBlockHeight = blockHeightResult.data;
+    const btcPrice = Number(btcPriceResult.data);
+    const latestBlockHeight = Number(blockHeightResult.data);
 
     // Fetch data for all used addresses with controlled concurrency
     const concurrency = 1; // Very low concurrency to avoid rate limiting
@@ -403,34 +404,59 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     
     await ensureECC();
     
+    // Check ECC availability
+    const ecc = (global as any).ecc;
+    if (!ecc) {
+      throw new Error('ECC library not available');
+    }
+    
+    console.log('🔧 ECC library available:', typeof ecc, Object.keys(ecc));
+    
     // Generate xpub from mnemonic
     const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
     const bip32 = bip32Module.BIP32Factory(ecc);
     
+    console.log('🔧 BIP32 factory created');
+    
     const seed = await bip39.mnemonicToSeed(mnemonic);
+    console.log('🔧 Seed generated, length:', seed.length);
+    
     const root = bip32.fromSeed(seed);
+    console.log('🔧 Root node created');
     
-    // Derive zpub for P2WPKH (BIP84) - zpub is the correct format for P2WPKH
-    const derivedNode = root.derivePath("m/84'/0'/0'").neutered();
+    // Derive xpub for P2WPKH (BIP84) first, then convert to zpub
+    console.log('🔧 Deriving path m/84\'/0\'/0\'...');
+    const derivedNode = root.derivePath("m/84'/0'/0'");
+    console.log('🔧 Derived node created');
     
-    // Try to create zpub with proper version bytes
+    const neuteredNode = derivedNode.neutered();
+    console.log('🔧 Neutered node created');
+    
+    // Generate xpub first
+    const xpub = neuteredNode.toBase58();
+    console.log('✅ Generated xpub:', xpub.substring(0, 20) + '...');
+    
+    // Convert xpub to zpub with proper version bytes and checksum
     let zpub;
     try {
-      // Method 1: Try to use the version parameter if supported
-      zpub = derivedNode.toBase58('zpub');
+      // Use bs58 to decode the xpub (this includes checksum validation)
+      const bs58 = require('bs58');
+      
+      // Decode the xpub to get the raw bytes
+      const decoded = bs58.decode(xpub);
+      
+      // Replace the first 4 bytes with zpub version bytes (0x04b24746)
+      const zpubVersionBytes = Buffer.from([0x04, 0xb2, 0x47, 0x46]);
+      const zpubData = Buffer.concat([zpubVersionBytes, decoded.slice(4)]);
+      
+      // Encode back to base58 (bs58 will automatically add checksum)
+      zpub = bs58.encode(zpubData);
+      console.log('✅ Converted xpub to zpub with proper checksum');
     } catch (error) {
-      console.log('⚠️ toBase58 with version parameter failed, trying alternative method');
-      try {
-        // Method 2: Try to set the version on the node
-        const nodeWithVersion = { ...derivedNode, version: 0x04b24746 };
-        zpub = nodeWithVersion.toBase58();
-      } catch (error2) {
-        console.log('⚠️ Alternative method failed, using xpub with BIP84 path');
-        // Method 3: Use xpub but with correct BIP84 derivation path
-        // The derivation path is what matters most for compatibility
-        zpub = derivedNode.toBase58();
-      }
+      console.error('❌ Failed to convert xpub to zpub:', error);
+      // Fallback to xpub if conversion fails
+      zpub = xpub;
+      console.log('⚠️ Using xpub as fallback');
     }
     
     console.log('🔍 Generated zpub:', zpub);
@@ -449,11 +475,16 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       id: Date.now().toString(),
       name,
       color,
+      addressType: 'p2wpkh',
       mnemonic,
       xpub: zpub, // Store zpub instead of xpub
       addresses,
       currentAddressIndex: 4,
-      createdAt: new Date().toISOString(),
+      balance: 0,
+      balanceUSD: 0,
+      derivationPath: "m/84'/0'/0'",
+      gap: 20,
+      createdAt: Date.now(),
       type: 'hd',
     };
     

@@ -159,7 +159,10 @@ export default function WalletAddressesScreen() {
       }> = {};
       
       // Fetch balance and transaction details for each address using Esplora service
-      const promises = addressesQuery.data.map(async (addressInfo) => {
+      // Process addresses sequentially to avoid rate limiting
+      for (let i = 0; i < addressesQuery.data.length; i++) {
+        const addressInfo = addressesQuery.data[i];
+        
         try {
           console.log(`💰 Fetching data for address: ${addressInfo.address.substring(0, 10)}...`);
           
@@ -216,13 +219,10 @@ export default function WalletAddressesScreen() {
             sentCount: 0
           };
         }
-      });
-      
-      // Process addresses sequentially with longer delays to avoid rate limiting
-      for (let i = 0; i < promises.length; i++) {
-        await promises[i];
-        if (i < promises.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between each address to avoid rate limiting
+        
+        // Add delay between requests to avoid rate limiting (except for the last request)
+        if (i < addressesQuery.data.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between each address
         }
       }
       

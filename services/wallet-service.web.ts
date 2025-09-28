@@ -310,7 +310,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     const webXpub = `web_xpub_${simpleHash(mnemonic)}_${simpleHash(name)}`;
     
     // Generate first address deterministically from mnemonic
-    const firstAddress = generateDemoAddress(mnemonic, 0);
+    const firstAddress = await generateDemoAddress(mnemonic, 0);
     
     const wallet: Wallet = {
       id: Date.now().toString(),
@@ -348,11 +348,12 @@ const generateProperAddress = async (xpub: string, index: number): Promise<strin
       const bip32Module = await import('bip32');
       console.log('✅ bip32 module imported successfully');
       
-      // For web, we need to initialize bip32 with ECC
-      console.log('🔧 Initializing bip32 with ECC...');
-      const ecc = await import('@noble/secp256k1');
+      // For web, we need to initialize bip32 with proper ECC interface
+      console.log('🔧 Initializing bip32 with proper ECC interface...');
+      const { createNobleECC } = await import('@/services/ecc-override');
+      const ecc = createNobleECC();
       const bip32 = bip32Module.BIP32Factory(ecc);
-      console.log('✅ bip32 initialized with ECC');
+      console.log('✅ bip32 initialized with proper ECC interface');
       
       const bech32 = await import('bech32');
       const { sha256 } = await import('@noble/hashes/sha256');
@@ -384,13 +385,15 @@ const generateProperAddress = async (xpub: string, index: number): Promise<strin
       return address;
     } catch (cryptoError) {
       console.error('❌ Web crypto libraries failed:', cryptoError);
-      throw new Error(`Web address generation failed: ${cryptoError.message}`);
+      const errorMessage = cryptoError instanceof Error ? cryptoError.message : 'Unknown crypto error';
+      throw new Error(`Web address generation failed: ${errorMessage}`);
     }
   } catch (error) {
     console.error('❌ Web address generation failed:', error);
     
     // Don't use a fallback address - throw the error so we can fix it
-    throw new Error(`Web address generation completely failed: ${error.message}`);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Web address generation completely failed: ${errorMessage}`);
   }
 };
 
@@ -415,7 +418,7 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
   
   try {
     // Generate deterministic address for web
-    const address = generateDemoAddress(xpub, index);
+    const address = await generateDemoAddress(xpub, index);
     console.log('✅ Web: Generated demo address:', address);
     return address;
   } catch (error) {
