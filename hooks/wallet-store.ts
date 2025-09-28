@@ -35,7 +35,7 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {

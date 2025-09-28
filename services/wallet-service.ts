@@ -101,7 +101,7 @@ export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
         const addressTxs = await Promise.all(
           batch.map(async (addr, i) => {
             try {
-              const result = await esploraGet(`/address/${addr}/txs/chain`, 300000);
+              const result = await esploraGet(`/address/${addr}/txs`, 300000);
               console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
               return result;
             } catch (error) {
@@ -111,32 +111,29 @@ export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
           })
         );
         
-        let foundInBatch = false;
+        // Process addresses in order and track gap correctly
         for (let i = 0; i < addressTxs.length; i++) {
           if (addressTxs[i] && Array.isArray(addressTxs[i]) && addressTxs[i].length > 0) {
             allUsedAddresses.push(batch[i]);
-            gap = 0;
-            foundInBatch = true;
+            gap = 0; // Reset gap when we find a used address
             console.log(`✅ Found used address at index ${index + i}: ${batch[i]}`);
           } else {
-            gap++;
+            gap++; // Increment gap for unused address
+            console.log(`🔍 Address ${index + i} unused, gap: ${gap}`);
           }
         }
         
-        if (!foundInBatch) {
-          console.log(`🔍 No transactions found in batch, gap: ${gap}`);
-          // If a whole batch of 20 is unused, we can likely stop for this chain
-          if (gap >= GAP_LIMIT) {
-            console.log(`🔍 Gap limit reached for ${chain === 0 ? 'external' : 'internal'} chain`);
-            break;
-          }
+        // Check if we've reached the gap limit
+        if (gap >= GAP_LIMIT) {
+          console.log(`🔍 Gap limit reached for ${chain === 0 ? 'external' : 'internal'} chain at index ${index + gap - 1}`);
+          break;
         }
 
         index += GAP_LIMIT;
       }
     }
     
-    const uniqueAddresses = [...new Set(allUsedAddresses)];
+    const uniqueAddresses = Array.from(new Set(allUsedAddresses));
     console.log(`✅ Address discovery complete: ${uniqueAddresses.length} used addresses found`);
     console.log(`📋 Used addresses:`, uniqueAddresses.map(addr => addr.substring(0, 10) + '...'));
     
@@ -186,7 +183,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     const utxos: any[] = [];
     const addressInfos: any[] = [];
 
-    async function worker() {
+    const worker = async () => {
       while (idx < usedAddresses.length) {
         const address = usedAddresses[idx++];
         try {
@@ -223,7 +220,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           console.warn(`⚠️ Failed to process address ${address}:`, error);
         }
       }
-    }
+    };
 
     // Run workers with controlled concurrency
     await Promise.all(Array.from({ length: Math.min(concurrency, usedAddresses.length) }, () => worker()));
