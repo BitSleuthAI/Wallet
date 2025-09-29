@@ -4,13 +4,13 @@ import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface QRScannerProps {
@@ -189,23 +189,27 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   if (manualEntry) {
     const handleManualSubmit = () => {
       if (manualAddress.trim()) {
-        const address = manualAddress.trim();
+        const input = manualAddress.trim();
         
-        // Basic Bitcoin address validation
+        // Check if it's a Bitcoin address
         const isValidAddress = (
-          address.startsWith('bc1') || 
-          address.startsWith('1') || 
-          address.startsWith('3') ||
-          address.startsWith('tb1') // testnet
-        ) && address.length >= 26 && address.length <= 62;
+          input.startsWith('bc1') || 
+          input.startsWith('1') || 
+          input.startsWith('3') ||
+          input.startsWith('tb1') // testnet
+        ) && input.length >= 26 && input.length <= 62;
         
-        if (isValidAddress) {
-          onScan(address);
+        // Check if it's a recovery phrase (12 or 24 words)
+        const words = input.split(/\s+/);
+        const isRecoveryPhrase = words.length === 12 || words.length === 24;
+        
+        if (isValidAddress || isRecoveryPhrase) {
+          onScan(input);
           onClose();
         } else {
           Alert.alert(
-            'Invalid Address',
-            'Please enter a valid Bitcoin address.',
+            'Invalid Input',
+            'Please enter a valid Bitcoin address or recovery phrase (12 or 24 words).',
             [{ text: 'OK' }]
           );
         }
@@ -215,15 +219,20 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
         <View style={[styles.content, { backgroundColor: theme.colors.surface }]}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => setManualEntry(false)}>
-            <X color={theme.colors.text} size={24} />
-          </TouchableOpacity>
+          <View style={styles.manualEntryHeader}>
+            <Text style={[styles.title, { color: theme.colors.text }]}>
+              Manual Entry
+            </Text>
+            <TouchableOpacity 
+              style={[styles.manualCloseButton, { backgroundColor: theme.colors.background }]} 
+              onPress={() => setManualEntry(false)}
+            >
+              <X color={theme.colors.text} size={20} />
+            </TouchableOpacity>
+          </View>
           
-          <Text style={[styles.title, { color: theme.colors.text }]}>
-            Enter Bitcoin Address
-          </Text>
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
-            Manually enter the Bitcoin address you want to send to.
+            Enter a Bitcoin address or recovery phrase (12 or 24 words).
           </Text>
           
           <TextInput
@@ -476,5 +485,18 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: '600',
+  },
+  manualEntryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 8,
+  },
+  manualCloseButton: {
+    borderRadius: 16,
+    padding: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 0, 0, 0.1)',
   },
 });
