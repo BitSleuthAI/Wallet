@@ -810,20 +810,41 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
     
     console.log('🔧 Starting debug transaction fetching...');
-    const { debugTransactionFetching: debugFunc, testWithKnownAddress, testRawFetch } = await import('@/services/bitcoin-service');
+    const { esploraGet, getAddressTransactions, testProviderConnectivity } = await import('@/services/esplora-service');
     
-    // First test raw fetch to see if the basic issue is polyfills
-    console.log('🧪 Testing raw fetch first...');
-    await testRawFetch();
+    // First test provider connectivity
+    console.log('🧪 Testing provider connectivity...');
+    const connectivityResult = await testProviderConnectivity();
+    console.log('🔧 Provider connectivity:', connectivityResult.data ? '✅ Connected' : '❌ Failed', connectivityResult.error || '');
     
-    // Then test with a known address that has transactions
-    console.log('🧪 Testing with known address...');
-    await testWithKnownAddress();
+    // Test with a known address that has transactions (Bitcoin Genesis block address)
+    console.log('🧪 Testing with known address (Genesis block)...');
+    try {
+      const genesisAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+      const genesisResult = await getAddressTransactions(genesisAddress);
+      console.log('🔧 Genesis address test:', genesisResult.data ? `✅ Found ${genesisResult.data.length} transactions` : '❌ Failed', genesisResult.error || '');
+    } catch (error) {
+      console.log('🔧 Genesis address test failed:', error);
+    }
+    
+    // Test raw esploraGet with a simple endpoint
+    console.log('🧪 Testing raw esploraGet...');
+    try {
+      const blockHeight = await esploraGet('/blocks/tip/height');
+      console.log('🔧 Raw esploraGet test:', `✅ Block height: ${blockHeight}`);
+    } catch (error) {
+      console.log('🔧 Raw esploraGet test failed:', error);
+    }
     
     console.log('🔧 Now testing your wallet addresses...');
     for (const address of currentWallet.addresses) {
       console.log(`🔧 Testing address: ${address}`);
-      await debugFunc(address);
+      try {
+        const result = await getAddressTransactions(address);
+        console.log(`🔧 Address ${address}:`, result.data ? `✅ Found ${result.data.length} transactions` : '❌ Failed', result.error || '');
+      } catch (error) {
+        console.log(`🔧 Address ${address} test failed:`, error);
+      }
     }
   }, [currentWallet]);
 
