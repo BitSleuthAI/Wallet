@@ -17,7 +17,7 @@ import {
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
-import * as bitcoinService from '@/services/bitcoin-service';
+import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
 
 // Platform-specific wallet service imports
 let walletService: any;
@@ -84,10 +84,13 @@ export default function WalletAddressesScreen() {
       console.log('🔍 Generating addresses for display...');
       const addresses: AddressInfo[] = [];
       
-      // Generate receiving addresses (m/84'/0'/0'/0/i)
-      for (let i = 0; i < 20; i++) {
+      // Generate receiving addresses (m/84'/0'/0'/0/i) - reduced to 10 for better performance
+      console.log('🔧 Generating receiving addresses for wallet addresses screen...');
+      for (let i = 0; i < 10; i++) {
         try {
+          console.log(`🔧 Generating receiving address ${i}...`);
           const address = await walletService.generateAddressFromXpub(currentWallet.xpub, i);
+          console.log(`✅ Generated receiving address ${i}: ${address}`);
           addresses.push({
             address,
             index: i,
@@ -100,13 +103,13 @@ export default function WalletAddressesScreen() {
             derivationPath: `m/84'/0'/0'/0/${i}`
           });
         } catch (error) {
-          console.warn(`Failed to generate receiving address ${i}:`, error);
+          console.warn(`❌ Failed to generate receiving address ${i}:`, error);
         }
       }
       
-      // Generate change addresses (m/84'/0'/0'/1/i)
+      // Generate change addresses (m/84'/0'/0'/1/i) - reduced to 10 for better performance
       // For proper HD wallet implementation, change addresses use path 1
-      for (let i = 0; i < 20; i++) {
+      for (let i = 0; i < 10; i++) {
         try {
           // Generate change addresses using proper derivation path
           // In a real implementation, this would use the change derivation path
@@ -141,9 +144,13 @@ export default function WalletAddressesScreen() {
   const addressBalancesQuery = useQuery({
     queryKey: ['address-balances', addressesQuery.data?.map(a => a.address).join(','), addressesQuery.data?.length],
     queryFn: async () => {
-      if (!addressesQuery.data?.length) return {};
+      if (!addressesQuery.data?.length) {
+        console.log('⚠️ No addresses data available for balance query');
+        return {};
+      }
       
       console.log('💰 Fetching balances and transaction details for addresses...');
+      console.log(`📊 Addresses to process: ${addressesQuery.data.length}`);
       const balanceData: Record<string, { 
         balance: number; 
         txCount: number; 
@@ -151,13 +158,25 @@ export default function WalletAddressesScreen() {
         sentCount: number; 
       }> = {};
       
-      // Fetch balance and transaction details for each address
-      const promises = addressesQuery.data.map(async (addressInfo) => {
+      // Fetch balance and transaction details for each address using Esplora service
+      // Process addresses sequentially to avoid rate limiting
+      for (let i = 0; i < addressesQuery.data.length; i++) {
+        const addressInfo = addressesQuery.data[i];
+        
         try {
-          const [balance, transactions] = await Promise.all([
-            bitcoinService.getAddressBalance(addressInfo.address),
-            bitcoinService.getAddressTransactions(addressInfo.address)
+          console.log(`💰 Fetching data for address: ${addressInfo.address.substring(0, 10)}...`);
+          
+          const [statsResult, transactionsResult] = await Promise.all([
+            getAddressStats(addressInfo.address),
+            getAddressTransactions(addressInfo.address)
           ]);
+          
+          // Extract balance from stats
+          const balance = statsResult.data?.chain_stats ? 
+            (statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum) / 1e8 : 0;
+          
+          // Extract transactions
+          const transactions = transactionsResult.data || [];
           
           // Analyze transactions to count received vs sent
           let receivedCount = 0;
@@ -178,14 +197,21 @@ export default function WalletAddressesScreen() {
             if (sentInTx) sentCount++;
           });
           
+          console.log(`✅ Address ${addressInfo.address.substring(0, 10)}...: ${transactions.length} txs, ${balance.toFixed(8)} BTC`);
+          
           balanceData[addressInfo.address] = {
             balance,
             txCount: transactions.length,
             receivedCount,
             sentCount
           };
-        } catch (error) {
-          console.warn(`Failed to fetch data for address ${addressInfo.address}:`, error);
+        } catch (error: any) {
+          // Suppress rate limiting errors as they're handled by provider switching
+          if (error?.message?.includes('Rate limited')) {
+            console.log(`⚠️ Rate limited for address ${addressInfo.address.substring(0, 10)}... - will retry with different provider`);
+          } else {
+            console.warn(`❌ Failed to fetch data for address ${addressInfo.address}:`, error);
+          }
           balanceData[addressInfo.address] = {
             balance: 0,
             txCount: 0,
@@ -193,10 +219,15 @@ export default function WalletAddressesScreen() {
             sentCount: 0
           };
         }
-      });
+        
+        // Add delay between requests to avoid rate limiting (except for the last request)
+        if (i < addressesQuery.data.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between each address
+        }
+      }
       
-      await Promise.all(promises);
       console.log(`✅ Fetched balance data for ${Object.keys(balanceData).length} addresses`);
+      console.log('🔍 Balance data sample:', Object.entries(balanceData).slice(0, 3));
       return balanceData;
     },
     enabled: !!addressesQuery.data?.length,
@@ -204,6 +235,35 @@ export default function WalletAddressesScreen() {
     refetchInterval: 300000, // 5 minutes
     refetchOnWindowFocus: false,
   });
+
+    // Debug logging for query states
+    console.log('🔍 Address query state:', {
+      isLoading: addressesQuery.isLoading,
+      isError: addressesQuery.isError,
+      dataLength: addressesQuery.data?.length || 0,
+      hasData: !!addressesQuery.data?.length
+    });
+    
+    console.log('🔍 Balance query state:', {
+      isLoading: addressBalancesQuery.isLoading,
+      isError: addressBalancesQuery.isError,
+      enabled: !!addressesQuery.data?.length,
+      dataKeys: Object.keys(addressBalancesQuery.data || {}).length,
+      hasData: !!addressBalancesQuery.data
+    });
+    
+    // Debug the processed addresses
+    if (addressesQuery.data && addressBalancesQuery.data) {
+      const sampleAddress = addressesQuery.data[0];
+      const sampleBalance = addressBalancesQuery.data[sampleAddress?.address];
+      console.log('🔍 Sample address data:', {
+        address: sampleAddress?.address?.substring(0, 10) + '...',
+        balance: sampleBalance?.balance,
+        txCount: sampleBalance?.txCount,
+        receivedCount: sampleBalance?.receivedCount,
+        sentCount: sampleBalance?.sentCount
+      });
+    }
 
   // Combine address data with balance information
   const addressData = useMemo((): AddressInfo[] => {
@@ -319,21 +379,27 @@ export default function WalletAddressesScreen() {
       <View style={styles.transactionStats}>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total Txs</Text>
-          <Text style={[styles.statValue, { color: theme.colors.text }]}>{addressInfo.txCount}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            {addressBalancesQuery.isLoading ? '...' : addressInfo.txCount}
+          </Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Received</Text>
-          <Text style={[styles.statValue, { color: theme.colors.success }]}>{addressInfo.receivedCount}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.success }]}>
+            {addressBalancesQuery.isLoading ? '...' : addressInfo.receivedCount}
+          </Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Sent</Text>
-          <Text style={[styles.statValue, { color: theme.colors.error }]}>{addressInfo.sentCount}</Text>
+          <Text style={[styles.statValue, { color: theme.colors.error }]}>
+            {addressBalancesQuery.isLoading ? '...' : addressInfo.sentCount}
+          </Text>
         </View>
       </View>
       
       <View style={styles.addressFooter}>
         <Text style={[styles.balanceText, { color: theme.colors.textSecondary }]}>
-          Balance: {formatBalance(addressInfo.balance)} BTC
+          Balance: {addressBalancesQuery.isLoading ? 'Loading...' : `${formatBalance(addressInfo.balance)} BTC`}
         </Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity

@@ -1,5 +1,6 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
-import * as bitcoinService from '@/services/bitcoin-service';
+import { getBTCPrice } from '@/services/esplora-service';
+import { getWalletData } from '@/services/wallet-service';
 import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -29,11 +30,12 @@ try {
     importWallet: importedService.importWallet,
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
-    getPrivateKey: importedService.getPrivateKey
+    getPrivateKey: importedService.getPrivateKey,
+    testAddressGeneration: importedService.testAddressGeneration
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -248,29 +250,81 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
 
-  // Bitcoin price query with multi-currency support
+  // Bitcoin price query using Esplora service
   const priceQuery = useQuery({
-    queryKey: ['bitcoin-price', selectedCurrency],
+    queryKey: ['bitcoin-price-improved', selectedCurrency],
     queryFn: async () => {
-      const prices = await bitcoinService.getBitcoinPrice();
-      // Convert USD price to selected currency if needed
-      if (selectedCurrency === 'USD') {
-        return prices;
+      console.log('💲 Fetching BTC price using Esplora service...');
+      const priceResult = await getBTCPrice();
+      
+      if (priceResult.error || !priceResult.data) {
+        console.warn('❌ BTC price fetch failed:', priceResult.error);
+        return {
+          usd: 0,
+          usd_24h_change: 0,
+          USD: { last: 0 }
+        };
       }
       
-      // Fetch exchange rates for EUR and GBP
+      const { price: usdPrice, change24h } = priceResult.data;
+      console.log('✅ BTC price fetched:', usdPrice, 'USD, 24h change:', change24h);
+      
+      // Return in the format expected by the UI
+      const priceData = {
+        usd: usdPrice,
+        usd_24h_change: change24h,
+        USD: { last: usdPrice }
+      };
+      
+      // Convert USD price to selected currency if needed
+      if (selectedCurrency === 'USD') {
+        return priceData;
+      }
+      
+      // Fetch exchange rates for EUR and GBP using XMLHttpRequest
       try {
-        const response = await fetch(`https://api.exchangerate-api.com/v4/latest/USD`);
-        const data = await response.json();
+        const data = await new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.timeout = 10000;
+          
+          xhr.onreadystatechange = () => {
+            if (xhr.readyState === 4) {
+              if (xhr.status === 200) {
+                try {
+                  const data = JSON.parse(xhr.responseText);
+                  resolve(data);
+                } catch (parseError) {
+                  reject(new Error('Failed to parse exchange rate data'));
+                }
+              } else {
+                reject(new Error(`Exchange rate fetch failed: ${xhr.status}`));
+              }
+            }
+          };
+          
+          xhr.onerror = () => reject(new Error('Network error'));
+          xhr.ontimeout = () => reject(new Error('Request timeout'));
+          
+          xhr.open('GET', `https://api.exchangerate-api.com/v4/latest/USD`, true);
+          xhr.setRequestHeader('Accept', 'application/json');
+          xhr.send();
+        });
+        
         const rate = data.rates[selectedCurrency] || 1;
         
         return {
-          usd: prices.usd * rate,
-          usd_24h_change: prices.usd_24h_change, // Keep the same percentage change
+          usd: usdPrice * rate,
+          usd_24h_change: change24h, // Keep the same percentage change
+          USD: { last: usdPrice * rate },
+          [selectedCurrency]: { last: usdPrice * rate }
         };
       } catch (error) {
-        // console.warn('Failed to fetch exchange rates, using USD prices:', error);
-        return prices;
+        console.warn('❌ Failed to fetch exchange rates, using USD prices:', error);
+        return {
+          usd: usdPrice,
+          usd_24h_change: change24h,
+          USD: { last: usdPrice }
+        };
       }
     },
     enabled: cryptoReady,
@@ -283,44 +337,76 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnMount: true, // Only refetch on mount
   });
 
-  // Wallet balance query
+  // Wallet balance query using improved service
   const balanceQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: ['wallet-balance', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
+    queryKey: ['wallet-balance-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
-      if (!currentWallet || !currentWallet.addresses.length) return 0;
+      if (!currentWallet || !currentWallet.xpub) return 0;
       try {
-        return await bitcoinService.getWalletBalance(currentWallet.addresses);
+        console.log('💰 Fetching wallet balance using improved service...');
+        const result = await getWalletData(currentWallet.xpub);
+        
+        if (result.error) {
+          console.warn('❌ Wallet balance fetch failed:', result.error);
+          return 0;
+        }
+        
+        if (!result.data) {
+          console.log('ℹ️ No wallet data returned for balance');
+          return 0;
+        }
+        
+        console.log('✅ Wallet balance fetched:', result.data.balanceBTC, 'BTC');
+        return result.data.balanceBTC || 0;
       } catch (error) {
-        // console.warn('Balance fetch failed, returning 0:', error);
+        console.warn('❌ Improved balance fetch failed:', error);
         return 0; // Return 0 instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
-    refetchInterval: 60000, // Refetch every 60 seconds (less aggressive)
-    retry: 1, // Reduced retries
-    retryDelay: 10000, // Fixed 10 second delay
-    staleTime: 120000, // Consider data fresh for 2 minutes
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    refetchInterval: 120000, // Refetch every 2 minutes
+    retry: 2, // Allow retries for network issues
+    retryDelay: 10000, // 10 second delay between retries
+    staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: true, // Only refetch on mount
   });
 
   // Transaction history query
   const transactionsQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
-    queryKey: ['transactions', currentWallet?.id, JSON.stringify(currentWallet?.addresses)],
+    queryKey: ['transactions-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
-      if (!currentWallet || !currentWallet.addresses.length) return [];
+      if (!currentWallet || !currentWallet.xpub) {
+        console.log('🚫 No current wallet or xpub available for transaction fetching');
+        return [];
+      }
+      
+      console.log('🔍 Wallet store: Fetching transactions using address discovery for wallet:', currentWallet.name);
+      
       try {
-        return await bitcoinService.getTransactionHistory(currentWallet.addresses);
+        const result = await getWalletData(currentWallet.xpub);
+        
+        if (result.error) {
+          console.warn('❌ Wallet data fetch failed:', result.error);
+          return [];
+        }
+        
+        if (!result.data) {
+          console.log('ℹ️ No wallet data returned');
+          return [];
+        }
+        
+        console.log('📊 Wallet store: Received improved transactions:', result.data.transactions?.length || 0);
+        return result.data.transactions || [];
       } catch (error) {
-        // console.warn('Transaction history fetch failed, returning empty array:', error);
+        console.warn('❌ Improved transaction history fetch failed:', error);
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.addresses?.length && cryptoReady,
-    refetchInterval: 90000, // Refetch every 90 seconds (less aggressive)
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    refetchInterval: 120000, // Refetch every 2 minutes
     retry: 1, // Reduced retries
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 180000, // Consider data fresh for 3 minutes
@@ -716,6 +802,51 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // console.warn('⚠️ Error during data refresh:', error);
     }
   }, [queryClient]);
+
+  const debugTransactionFetching = useCallback(async () => {
+    if (!currentWallet || !currentWallet.addresses.length) {
+      console.log('🚫 No current wallet or addresses available for debugging');
+      return;
+    }
+    
+    console.log('🔧 Starting debug transaction fetching...');
+    const { esploraGet, getAddressTransactions, testProviderConnectivity } = await import('@/services/esplora-service');
+    
+    // First test provider connectivity
+    console.log('🧪 Testing provider connectivity...');
+    const connectivityResult = await testProviderConnectivity();
+    console.log('🔧 Provider connectivity:', connectivityResult.data ? '✅ Connected' : '❌ Failed', connectivityResult.error || '');
+    
+    // Test with a known address that has transactions (Bitcoin Genesis block address)
+    console.log('🧪 Testing with known address (Genesis block)...');
+    try {
+      const genesisAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
+      const genesisResult = await getAddressTransactions(genesisAddress);
+      console.log('🔧 Genesis address test:', genesisResult.data ? `✅ Found ${genesisResult.data.length} transactions` : '❌ Failed', genesisResult.error || '');
+    } catch (error) {
+      console.log('🔧 Genesis address test failed:', error);
+    }
+    
+    // Test raw esploraGet with a simple endpoint
+    console.log('🧪 Testing raw esploraGet...');
+    try {
+      const blockHeight = await esploraGet('/blocks/tip/height');
+      console.log('🔧 Raw esploraGet test:', `✅ Block height: ${blockHeight}`);
+    } catch (error) {
+      console.log('🔧 Raw esploraGet test failed:', error);
+    }
+    
+    console.log('🔧 Now testing your wallet addresses...');
+    for (const address of currentWallet.addresses) {
+      console.log(`🔧 Testing address: ${address}`);
+      try {
+        const result = await getAddressTransactions(address);
+        console.log(`🔧 Address ${address}:`, result.data ? `✅ Found ${result.data.length} transactions` : '❌ Failed', result.error || '');
+      } catch (error) {
+        console.log(`🔧 Address ${address} test failed:`, error);
+      }
+    }
+  }, [currentWallet]);
 
   const switchWallet = useCallback((walletId: string) => {
     if (wallets.find(w => w.id === walletId)) {
