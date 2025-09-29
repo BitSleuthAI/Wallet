@@ -1,27 +1,27 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
-import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { Stack, router } from 'expo-router';
 import {
-    ArrowLeft,
-    ChevronRight,
-    Coins,
-    FileKey,
-    Key,
-    List,
-    Trash2,
-    Wallet,
-    Zap,
+  ArrowLeft,
+  ChevronRight,
+  Coins,
+  FileKey,
+  Key,
+  List,
+  Trash2,
+  Wallet,
+  Zap,
 } from 'lucide-react-native';
 import React from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 
@@ -29,13 +29,32 @@ export default function WalletSettingsScreen() {
   const { 
     theme, 
     currentWallet, 
-    logoutAndEraseWallet 
+    deleteWallet,
+    wallets
   } = useWallet();
 
   const handleDeleteWallet = () => {
+    // Check if there's no current wallet
+    if (!currentWallet) {
+      Alert.alert(
+        'No Wallet Selected',
+        'Please select a wallet to delete.'
+      );
+      return;
+    }
+
+    // Check if this is the last wallet
+    if (wallets.length <= 1) {
+      Alert.alert(
+        'Cannot Delete',
+        'You must have at least one wallet. Create another wallet before deleting this one.'
+      );
+      return;
+    }
+
     Alert.alert(
       'Delete Wallet',
-      'This will permanently delete your wallet from this device. Make sure you have your recovery phrase backed up.\n\nThis action cannot be undone!',
+      `Are you sure you want to delete "${currentWallet.name}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -43,27 +62,14 @@ export default function WalletSettingsScreen() {
           style: 'destructive', 
           onPress: async () => {
             try {
-              console.log('🗑️ User confirmed wallet deletion');
+              console.log('🗑️ User confirmed wallet deletion for:', currentWallet.name);
               
-              Alert.alert(
-                'Deleting Wallet',
-                'Please wait while we securely delete your wallet data...',
-                [],
-                { cancelable: false }
-              );
-              
-              await logoutAndEraseWallet();
+              await deleteWallet(currentWallet.id);
               
               console.log('✅ Wallet deletion completed successfully');
               
-              setTimeout(() => {
-                try {
-                  router.replace('/wallet-setup');
-                } catch (navError) {
-                  console.warn('Navigation error, trying alternative route:', navError);
-                  router.push('/wallet-setup');
-                }
-              }, 500);
+              // Navigate back to manage wallets or home screen
+              router.back();
               
             } catch (error) {
               console.error('❌ Error during wallet deletion:', error);
