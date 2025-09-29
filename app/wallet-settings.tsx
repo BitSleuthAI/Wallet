@@ -4,24 +4,24 @@ import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-    ArrowLeft,
-    ChevronRight,
-    Coins,
-    FileKey,
-    Key,
-    List,
-    Trash2,
-    Wallet,
-    Zap,
+  ArrowLeft,
+  ChevronRight,
+  Coins,
+  FileKey,
+  Key,
+  List,
+  Trash2,
+  Wallet,
+  Zap,
 } from 'lucide-react-native';
 import React from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 
@@ -34,6 +34,15 @@ export default function WalletSettingsScreen() {
   } = useWallet();
 
   const handleDeleteWallet = () => {
+    // Check if there's no current wallet
+    if (!currentWallet) {
+      Alert.alert(
+        'No Wallet Selected',
+        'Please select a wallet to delete.'
+      );
+      return;
+    }
+
     // Check if this is the last wallet
     if (wallets.length <= 1) {
       Alert.alert(
@@ -45,7 +54,7 @@ export default function WalletSettingsScreen() {
 
     Alert.alert(
       'Delete Wallet',
-      `Are you sure you want to delete "${currentWallet?.name}"? This action cannot be undone.`,
+      `Are you sure you want to delete "${currentWallet.name}"? This action cannot be undone.`,
       [
         { text: 'Cancel', style: 'cancel' },
         { 
@@ -53,9 +62,9 @@ export default function WalletSettingsScreen() {
           style: 'destructive', 
           onPress: async () => {
             try {
-              console.log('🗑️ User confirmed wallet deletion for:', currentWallet?.name);
+              console.log('🗑️ User confirmed wallet deletion for:', currentWallet.name);
               
-              await deleteWallet(currentWallet!.id);
+              await deleteWallet(currentWallet.id);
               
               console.log('✅ Wallet deletion completed successfully');
               
