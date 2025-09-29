@@ -7,7 +7,7 @@ export const WALLET_TYPE_DISPLAY_NAMES: Record<WalletType, string> = {
   'segwit-native': 'Native SegWit (P2WPKH)',
   'segwit-p2sh': 'Nested SegWit & Script (P2SH)',
   'legacy': 'Legacy (P2PKH)',
-  'hd': 'Taproot (P2TR)'
+  'hd': 'HD Wallet (P2WPKH)'
 };
 
 // Function to get display name for wallet type
