@@ -155,6 +155,26 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           
           // console.log('✅ Migration completed successfully');
         }
+        
+        // Migrate wallet type from 'hd' to 'segwit-native' for existing wallets
+        const existingWallets = await AsyncStorage.getItem('wallets');
+        if (existingWallets) {
+          const wallets = JSON.parse(existingWallets);
+          let needsUpdate = false;
+          
+          const updatedWallets = wallets.map((wallet: any) => {
+            if (wallet.type === 'hd' && wallet.addressType === 'p2wpkh') {
+              needsUpdate = true;
+              return { ...wallet, type: 'segwit-native' };
+            }
+            return wallet;
+          });
+          
+          if (needsUpdate) {
+            await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
+            console.log('✅ Migrated wallet types from hd to segwit-native');
+          }
+        }
       } catch (error) {
         // console.warn('⚠️ Error during wallet initialization:', error);
       }

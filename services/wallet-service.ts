@@ -448,7 +448,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     
     // Generate initial addresses using zpub
     const addresses: string[] = [];
-    for (let i = 0; i < 5; i++) {
+    for (let i = 0; i < 1; i++) {
       const address = await generateAddressFromXpub(zpub, i);
       console.log(`🔍 Generated address ${i}:`, address);
       addresses.push(address);
@@ -462,13 +462,13 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       mnemonic,
       xpub: zpub, // Store zpub instead of xpub
       addresses,
-      currentAddressIndex: 4,
+      currentAddressIndex: 0,
       balance: 0,
       balanceUSD: 0,
       derivationPath: "m/84'/0'/0'",
       gap: 20,
       createdAt: Date.now(),
-      type: 'hd',
+      type: 'segwit-native',
     };
     
     console.log('✅ Wallet imported successfully');
