@@ -156,6 +156,10 @@ dependencies {
     implementation 'com.google.firebase:firebase-crashlytics'
     // Note: Google Analytics removed for privacy - only Crashlytics is used
 
+    // Google Play Services for barcode scanning
+    implementation 'com.google.android.gms:play-services-mlkit-barcode-scanning:18.3.0'
+    implementation 'com.google.android.gms:play-services-base:18.2.0'
+
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";
     def isWebpAnimatedEnabled = (findProperty('expo.webp.animated') ?: "") == "true";

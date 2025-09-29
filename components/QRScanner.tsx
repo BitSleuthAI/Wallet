@@ -1,14 +1,16 @@
 import { useWallet } from '@/hooks/wallet-store';
+import googlePlayServicesService from '@/services/google-play-services';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface QRScannerProps {
@@ -20,12 +22,37 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const { theme } = useWallet();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const [playServicesAvailable, setPlayServicesAvailable] = useState<boolean | null>(null);
+  const [manualEntry, setManualEntry] = useState(false);
+  const [manualAddress, setManualAddress] = useState('');
 
   useEffect(() => {
     if (!permission?.granted) {
       requestPermission();
     }
   }, [permission, requestPermission]);
+
+  useEffect(() => {
+    const checkPlayServices = async () => {
+      try {
+        const isAvailable = await googlePlayServicesService.checkAvailability();
+        setPlayServicesAvailable(isAvailable);
+        
+        if (!isAvailable && Platform.OS === 'android') {
+          const detailedStatus = await googlePlayServicesService.getDetailedStatus();
+          if (detailedStatus?.isUserResolvable) {
+            // Show dialog to update Play Services
+            await googlePlayServicesService.showErrorDialog();
+          }
+        }
+      } catch (error) {
+        console.error('Error checking Google Play Services:', error);
+        setPlayServicesAvailable(false);
+      }
+    };
+
+    checkPlayServices();
+  }, []);
 
   if (Platform.OS === 'web') {
     return (
@@ -92,6 +119,45 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     );
   }
 
+  // Show loading while checking Play Services
+  if (playServicesAvailable === null) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>Loading...</Text>
+        </View>
+      </View>
+    );
+  }
+
+  // Show Play Services error on Android
+  if (Platform.OS === 'android' && playServicesAvailable === false) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.colors.surface }]}>
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            QR Scanner Unavailable
+          </Text>
+          <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
+            Google Play Services is required for QR code scanning but is not available on this device. You can manually enter the Bitcoin address instead.
+          </Text>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.colors.primary }]}
+            onPress={() => setManualEntry(true)}
+          >
+            <Text style={styles.buttonText}>Manual Entry</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
+            onPress={onClose}
+          >
+            <Text style={[styles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   if (!permission.granted) {
     return (
       <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -113,6 +179,80 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             onPress={onClose}
           >
             <Text style={[styles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
+  // Manual entry mode
+  if (manualEntry) {
+    const handleManualSubmit = () => {
+      if (manualAddress.trim()) {
+        const address = manualAddress.trim();
+        
+        // Basic Bitcoin address validation
+        const isValidAddress = (
+          address.startsWith('bc1') || 
+          address.startsWith('1') || 
+          address.startsWith('3') ||
+          address.startsWith('tb1') // testnet
+        ) && address.length >= 26 && address.length <= 62;
+        
+        if (isValidAddress) {
+          onScan(address);
+          onClose();
+        } else {
+          Alert.alert(
+            'Invalid Address',
+            'Please enter a valid Bitcoin address.',
+            [{ text: 'OK' }]
+          );
+        }
+      }
+    };
+
+    return (
+      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+        <View style={[styles.content, { backgroundColor: theme.colors.surface }]}>
+          <TouchableOpacity style={styles.closeButton} onPress={() => setManualEntry(false)}>
+            <X color={theme.colors.text} size={24} />
+          </TouchableOpacity>
+          
+          <Text style={[styles.title, { color: theme.colors.text }]}>
+            Enter Bitcoin Address
+          </Text>
+          <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
+            Manually enter the Bitcoin address you want to send to.
+          </Text>
+          
+          <TextInput
+            style={[styles.textInput, { 
+              backgroundColor: theme.colors.background,
+              color: theme.colors.text,
+              borderColor: theme.colors.border 
+            }]}
+            value={manualAddress}
+            onChangeText={setManualAddress}
+            placeholder="Enter Bitcoin address..."
+            placeholderTextColor={theme.colors.textSecondary}
+            multiline
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+          
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.colors.primary }]}
+            onPress={handleManualSubmit}
+          >
+            <Text style={styles.buttonText}>Use Address</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
+            onPress={() => setManualEntry(false)}
+          >
+            <Text style={[styles.buttonText, { color: theme.colors.text }]}>Back to Scanner</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -214,6 +354,15 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
               Position the Bitcoin address QR code within the frame to scan
             </Text>
           </View>
+          
+          <View style={styles.bottomButtons}>
+            <TouchableOpacity
+              style={[styles.manualButton, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}
+              onPress={() => setManualEntry(true)}
+            >
+              <Text style={styles.manualButtonText}>Manual Entry</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       </CameraView>
     </View>
@@ -301,5 +450,31 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: 8,
+  },
+  textInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginVertical: 8,
+    fontSize: 16,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  bottomButtons: {
+    position: 'absolute',
+    bottom: 50,
+    left: 20,
+    right: 20,
+    alignItems: 'center',
+  },
+  manualButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  manualButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
