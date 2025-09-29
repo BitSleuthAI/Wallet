@@ -157,9 +157,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         }
         
         // Migrate wallet type from 'hd' to 'segwit-native' for existing wallets
-        const existingWallets = await AsyncStorage.getItem('wallets');
-        if (existingWallets) {
-          const wallets = JSON.parse(existingWallets);
+        const walletsData = await AsyncStorage.getItem('wallets');
+        if (walletsData) {
+          const wallets = JSON.parse(walletsData);
           let needsUpdate = false;
           
           const updatedWallets = wallets.map((wallet: any) => {
