@@ -1,7 +1,7 @@
-import React from 'react';
-import { View, StyleSheet, ViewStyle, Platform } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { Theme } from '@/types/wallet';
+import { LinearGradient } from 'expo-linear-gradient';
+import React from 'react';
+import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface GradientBackgroundProps {
   theme: Theme;
@@ -46,10 +46,10 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
           return [theme.colors.background, theme.colors.surface];
       }
     } else {
-      // Light mode with vibrant orange gradient
+      // Light mode with vibrant coral gradient (unchanged - perfect as is)
       switch (variant) {
         case 'primary':
-          // Beautiful orange gradient for light mode
+          // Beautiful coral gradient for light mode
           return [
             '#FFE5DB',  // Light peach
             '#FFD4C4',  // Soft coral

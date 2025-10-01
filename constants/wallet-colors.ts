@@ -8,54 +8,54 @@ export type WalletColorOption = {
 // Beautiful gradient color palette for wallets
 export const WALLET_COLOR_PALETTE: WalletColorOption[] = [
   {
-    id: 'purple',
-    base: '#8B5CF6',
-    gradient: ['#A78BFA', '#8B5CF6', '#7C3AED'], // Light purple to deep violet
-  },
-  {
-    id: 'pink',
-    base: '#EC4899',
-    gradient: ['#F9A8D4', '#EC4899', '#DB2777'], // Light pink to deep pink
-  },
-  {
-    id: 'blue',
-    base: '#3B82F6',
-    gradient: ['#60A5FA', '#3B82F6', '#2563EB'], // Light blue to deep blue
-  },
-  {
-    id: 'emerald',
-    base: '#10B981',
-    gradient: ['#34D399', '#10B981', '#059669'], // Light emerald to deep green
-  },
-  {
-    id: 'amber',
-    base: '#F59E0B',
-    gradient: ['#FCD34D', '#F59E0B', '#D97706'], // Light amber to deep orange
-  },
-  {
-    id: 'red',
-    base: '#EF4444',
-    gradient: ['#FCA5A5', '#EF4444', '#DC2626'], // Light red to deep red
-  },
-  {
-    id: 'indigo',
-    base: '#6366F1',
-    gradient: ['#818CF8', '#6366F1', '#4F46E5'], // Light indigo to deep indigo
+    id: 'cyan',
+    base: '#26F5FE',
+    gradient: ['#4DFFFF', '#26F5FE', '#00BCD4'], // Bright cyan to teal
   },
   {
     id: 'teal',
-    base: '#14B8A6',
-    gradient: ['#5EEAD4', '#14B8A6', '#0D9488'], // Light teal to deep teal
+    base: '#00BCD4',
+    gradient: ['#26F5FE', '#00BCD4', '#0097A7'], // Cyan to dark teal
   },
   {
-    id: 'orange',
-    base: '#F97316',
-    gradient: ['#FB923C', '#F97316', '#EA580C'], // Light orange to deep orange
+    id: 'turquoise',
+    base: '#40E0D0',
+    gradient: ['#80D8FF', '#40E0D0', '#26A69A'], // Light turquoise to dark
   },
   {
-    id: 'cyan',
-    base: '#06B6D4',
-    gradient: ['#67E8F9', '#06B6D4', '#0891B2'], // Light cyan to deep cyan
+    id: 'emerald',
+    base: '#00E676',
+    gradient: ['#4DFF88', '#00E676', '#00C853'], // Bright emerald gradient
+  },
+  {
+    id: 'amber',
+    base: '#FFB74D',
+    gradient: ['#FFD54F', '#FFB74D', '#FF8F00'], // Warm amber gradient
+  },
+  {
+    id: 'coral',
+    base: '#FF8A65',
+    gradient: ['#FFAB91', '#FF8A65', '#FF7043'], // Coral gradient (matches light theme)
+  },
+  {
+    id: 'pink',
+    base: '#FF4081',
+    gradient: ['#FF80AB', '#FF4081', '#E91E63'], // Bright pink gradient
+  },
+  {
+    id: 'blue',
+    base: '#2196F3',
+    gradient: ['#64B5F6', '#2196F3', '#1976D2'], // Classic blue gradient
+  },
+  {
+    id: 'purple',
+    base: '#9C27B0',
+    gradient: ['#BA68C8', '#9C27B0', '#7B1FA2'], // Purple gradient
+  },
+  {
+    id: 'indigo',
+    base: '#3F51B5',
+    gradient: ['#7986CB', '#3F51B5', '#303F9F'], // Indigo gradient
   },
 ];
 
@@ -92,5 +92,5 @@ export function getWalletGradient(baseColor: string): [string, string, string] {
 // Get just the base colors for simple color pickers
 export const WALLET_COLORS = WALLET_COLOR_PALETTE.map(c => c.base);
 
-// Default wallet color
-export const DEFAULT_WALLET_COLOR = WALLET_COLOR_PALETTE[0].base;
+// Default wallet color - now cyan to match new dark theme
+export const DEFAULT_WALLET_COLOR = WALLET_COLOR_PALETTE[0].base; // '#26F5FE'
