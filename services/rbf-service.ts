@@ -819,26 +819,35 @@ async function createCancellationTransaction(
     }
     
     // Generate a new address in the wallet for the cancellation
-    // Use the next available address index - find the highest used index from our inputs
+    // Use the next available address index - find the highest used index from all wallet addresses
     // This ensures we don't reuse addresses and properly track the BIP32 derivation path
-    const usedAddressIndices = ourInputs.map((input: any) => {
-      const address = input.prevout.scriptpubkey_address;
-      return walletAddresses.indexOf(address);
-    }).filter((index: number) => index >= 0);
-    
-    const nextAddressIndex = usedAddressIndices.length > 0 
-      ? Math.max(...usedAddressIndices) + 1 
-      : walletAddresses.length; // Fallback to current wallet address count
+    const allAddressIndices = walletAddresses.map((_, index) => index);
+    const nextAddressIndex = allAddressIndices.length > 0 
+      ? Math.max(...allAddressIndices) + 1 
+      : 0; // Start from 0 if no addresses exist
     const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
     
     // Calculate fee for cancellation transaction
-    // Fix: Calculate the original fee properly from inputs/outputs since originalTx.fee is often missing
+    // Fix: Calculate the original fee properly from all transaction inputs/outputs
     let totalOriginalInputValue = 0;
     let totalOriginalOutputValue = 0;
     
-    // Calculate total input value from our UTXOs
-    for (const utxo of utxos) {
-      totalOriginalInputValue += utxo.value;
+    // Calculate total input value from ALL original transaction inputs
+    for (const input of originalTx.vin) {
+      if (input.prevout && input.prevout.value !== undefined) {
+        totalOriginalInputValue += input.prevout.value;
+      } else {
+        // If prevout.value is not available, we need to fetch it from the UTXO
+        // This is a fallback for APIs that don't include input values
+        console.warn(`⚠️ Input value not found in prevout for ${input.txid}:${input.vout}, using UTXO value`);
+        const utxo = utxos.find(u => u.txid === input.txid && u.vout === input.vout);
+        if (utxo) {
+          totalOriginalInputValue += utxo.value;
+        } else {
+          console.error(`❌ Cannot find UTXO for input ${input.txid}:${input.vout}`);
+          throw new Error(`Cannot determine input value for ${input.txid}:${input.vout}`);
+        }
+      }
     }
     
     // Calculate total output value from original transaction
