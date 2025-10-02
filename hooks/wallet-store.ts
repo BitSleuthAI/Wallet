@@ -31,11 +31,16 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     getPrivateKey: importedService.getPrivateKey,
-    testAddressGeneration: importedService.testAddressGeneration
+    testAddressGeneration: importedService.testAddressGeneration,
+    testSmartAddressGeneration: importedService.testSmartAddressGeneration,
+    findNextUnusedAddressIndex: importedService.findNextUnusedAddressIndex,
+    findNextUnusedAddressIndexWithCycling: importedService.findNextUnusedAddressIndexWithCycling,
+    generateAddressBatchForView: importedService.generateAddressBatchForView,
+    isAddressInWallet: importedService.isAddressInWallet
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration', 'testSmartAddressGeneration', 'findNextUnusedAddressIndex', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'isAddressInWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -53,7 +58,13 @@ try {
     importWallet: async () => { throw new Error('Wallet service not available'); },
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    getPrivateKey: async () => { throw new Error('Wallet service not available'); }
+    getPrivateKey: async () => { throw new Error('Wallet service not available'); },
+    testAddressGeneration: async () => { throw new Error('Wallet service not available'); },
+    testSmartAddressGeneration: async () => { throw new Error('Wallet service not available'); },
+    findNextUnusedAddressIndex: async () => { throw new Error('Wallet service not available'); },
+    findNextUnusedAddressIndexWithCycling: async () => { throw new Error('Wallet service not available'); },
+    generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); },
+    isAddressInWallet: async () => { throw new Error('Wallet service not available'); }
   };
 }
 

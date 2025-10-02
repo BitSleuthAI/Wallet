@@ -451,20 +451,41 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
   }
 };
 
+/**
+ * Find the next unused address index for web (simplified version)
+ * Since web doesn't have real blockchain access, we'll use a deterministic approach
+ */
+const findNextUnusedAddressIndexWeb = async (xpub: string, startIndex: number = 0): Promise<number> => {
+  console.log(`🌐 Web: Finding next unused address index starting from ${startIndex}`);
+  
+  try {
+    // For web, we'll use a simple deterministic approach
+    // In a real implementation, this would check the blockchain
+    // For now, we'll just return the next sequential index
+    const nextIndex = startIndex;
+    console.log(`✅ Web: Next unused address index: ${nextIndex}`);
+    return nextIndex;
+  } catch (error) {
+    console.error(`❌ Web: Failed to find next unused address:`, error);
+    return startIndex;
+  }
+};
+
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   console.log('🌐 Web: generateNewAddress called for wallet:', wallet.name);
   
   try {
-    const newIndex = wallet.currentAddressIndex + 1;
-    const newAddress = await generateAddressFromXpub(wallet.xpub, newIndex);
+    // Find the next unused address index using smart logic
+    const nextUnusedIndex = await findNextUnusedAddressIndexWeb(wallet.xpub, wallet.currentAddressIndex + 1);
+    const newAddress = await generateAddressFromXpub(wallet.xpub, nextUnusedIndex);
     
     const updatedWallet: Wallet = {
       ...wallet,
       addresses: [...wallet.addresses, newAddress],
-      currentAddressIndex: newIndex,
+      currentAddressIndex: nextUnusedIndex,
     };
     
-    console.log('✅ Web: New address generated:', newAddress);
+    console.log(`✅ Web: New unused address generated at index ${nextUnusedIndex}:`, newAddress);
     return updatedWallet;
   } catch (error) {
     console.error('❌ Web: Error generating new address:', error);
@@ -503,6 +524,148 @@ export const testAddressGeneration = async (): Promise<boolean> => {
     }
   } catch (error) {
     console.error('❌ Web: Address generation test failed:', error);
+    return false;
+  }
+};
+
+// Test function for smart address generation (exported for wallet store)
+export const testSmartAddressGeneration = async (): Promise<boolean> => {
+  console.log('🧪 Web: Testing smart address generation...');
+  
+  try {
+    // Test basic address generation
+    const testXpub = 'web_xpub_test_123456789';
+    const testAddress = await generateAddressFromXpub(testXpub, 0);
+    
+    if (!testAddress || !testAddress.startsWith('bc1q')) {
+      console.log('❌ Web: Smart address generation test failed - invalid address format');
+      return false;
+    }
+    
+    // Test batch generation
+    const batchResult = await generateAddressBatchForView(testXpub, 0, 5);
+    
+    if (!Array.isArray(batchResult) || batchResult.length !== 5) {
+      console.log('❌ Web: Smart address generation test failed - invalid batch result');
+      return false;
+    }
+    
+    // Verify all addresses in batch are valid
+    const allValid = batchResult.every(addr => 
+      addr.address && addr.address.startsWith('bc1q') && 
+      typeof addr.index === 'number' && 
+      typeof addr.isUsed === 'boolean' &&
+      typeof addr.balance === 'number' &&
+      typeof addr.txCount === 'number'
+    );
+    
+    if (!allValid) {
+      console.log('❌ Web: Smart address generation test failed - invalid batch data');
+      return false;
+    }
+    
+    console.log('✅ Web: Smart address generation test passed');
+    return true;
+  } catch (error) {
+    console.error('❌ Web: Smart address generation test failed:', error);
+    return false;
+  }
+};
+
+// Find next unused address index (simplified for web)
+export const findNextUnusedAddressIndex = async (xpub: string, startIndex: number = 0): Promise<number> => {
+  console.log(`🌐 Web: Finding next unused address index starting from ${startIndex}`);
+  
+  try {
+    // For web, we'll use a simple deterministic approach
+    // In a real implementation, this would check the blockchain
+    // For now, we'll just return the next sequential index
+    const nextIndex = startIndex;
+    console.log(`✅ Web: Next unused address index: ${nextIndex}`);
+    return nextIndex;
+  } catch (error) {
+    console.error(`❌ Web: Failed to find next unused address:`, error);
+    return startIndex;
+  }
+};
+
+// Find next unused address index with cycling (simplified for web)
+export const findNextUnusedAddressIndexWithCycling = async (xpub: string, wallet: Wallet): Promise<number> => {
+  console.log(`🌐 Web: Finding next unused address with cycling for wallet: ${wallet.name}`);
+  
+  try {
+    // For web, we'll use a simple deterministic approach
+    // In a real implementation, this would check the blockchain and cycle through unused addresses
+    // For now, we'll just return the next sequential index
+    const nextIndex = wallet.currentAddressIndex + 1;
+    console.log(`✅ Web: Next unused address index (cycling): ${nextIndex}`);
+    return nextIndex;
+  } catch (error) {
+    console.error(`❌ Web: Failed to find next unused address with cycling:`, error);
+    return wallet.currentAddressIndex + 1;
+  }
+};
+
+// Generate addresses in batches for view addresses screen
+export const generateAddressBatchForView = async (xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}>> => {
+  console.log(`🌐 Web: Generating address batch for view: start=${startIndex}, size=${batchSize}`);
+  
+  try {
+    const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}> = [];
+    
+    // Generate addresses in the batch
+    for (let i = 0; i < batchSize; i++) {
+      const index = startIndex + i;
+      try {
+        const address = await generateAddressFromXpub(xpub, index);
+        
+        // For web demo, simulate some addresses as "used" based on index
+        // This creates a realistic demo experience
+        const isUsed = index < 3 || (index > 10 && index < 15); // Some addresses are "used"
+        const balance = isUsed ? Math.random() * 0.01 : 0; // Small random balance for "used" addresses
+        const txCount = isUsed ? Math.floor(Math.random() * 5) + 1 : 0; // Random transaction count for "used" addresses
+        
+        addressData.push({
+          address,
+          index,
+          isUsed,
+          balance,
+          txCount
+        });
+        
+        console.log(`✅ Web: Address ${index}: ${isUsed ? 'used' : 'unused'}, ${txCount} txs, ${balance.toFixed(8)} BTC`);
+        
+      } catch (error) {
+        console.warn(`⚠️ Web: Failed to generate address ${index}:`, error);
+        // Add a fallback address
+        addressData.push({
+          address: generateSafeFallbackAddress(xpub, index),
+          index,
+          isUsed: false,
+          balance: 0,
+          txCount: 0
+        });
+      }
+    }
+    
+    console.log(`✅ Web: Generated ${addressData.length} addresses for view`);
+    return addressData;
+  } catch (error) {
+    console.error(`❌ Web: Failed to generate address batch for view:`, error);
+    throw error;
+  }
+};
+
+// Check if an address is in the wallet
+export const isAddressInWallet = async (wallet: Wallet, address: string): Promise<boolean> => {
+  console.log(`🌐 Web: Checking if address is in wallet: ${address.substring(0, 10)}...`);
+  
+  try {
+    const isInWallet = wallet.addresses.includes(address);
+    console.log(`✅ Web: Address ${isInWallet ? 'found' : 'not found'} in wallet`);
+    return isInWallet;
+  } catch (error) {
+    console.error(`❌ Web: Failed to check if address is in wallet:`, error);
     return false;
   }
 };

@@ -1,8 +1,8 @@
-import React, { useState, useRef } from 'react';
-import { View, Text, StyleSheet, Dimensions, PanResponder, Animated } from 'react-native';
-import Svg, { Path, Defs, LinearGradient, Stop, Circle } from 'react-native-svg';
-import { WifiOff } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { WifiOff } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
+import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
 const chartWidth = width - 40;
@@ -238,13 +238,13 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
   const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
   const balanceChange = lastBalance - firstBalance;
   const isPositive = balanceChange >= 0;
-  // Use orange for light theme, purple for dark theme
-  const positiveColor = theme.isDark ? '#8B5CF6' : '#FB923C';
-  const chartColor = isPositive ? positiveColor : '#EF4444';
-  const gradientStartColor = isPositive ? positiveColor : '#EF4444';
+  // Use theme primary color for positive trend, error color for negative
+  const positiveColor = theme.colors.primary;
+  const chartColor = isPositive ? positiveColor : theme.colors.error;
+  const gradientStartColor = isPositive ? positiveColor : theme.colors.error;
   const gradientEndColor = isPositive ? 
-    (theme.isDark ? 'rgba(139, 92, 246, 0.1)' : 'rgba(251, 146, 60, 0.1)') : 
-    'rgba(239, 68, 68, 0.1)';
+    `${positiveColor}1A` : // 1A = 10% opacity in hex
+    `${theme.colors.error}1A`;
   
   const { linePath, gradientPath } = createPath(balanceHistory);
   const timeLabels = getTimeRangeLabels(balanceHistory);

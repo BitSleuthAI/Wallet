@@ -150,39 +150,39 @@ export const lightTheme: Theme = {
 export const darkTheme: Theme = {
   isDark: true,
   colors: {
-    // Deep dark background with purple undertones
+    // Deep dark background with cool undertones - complementary to warm coral
     background: '#0A0A0F',
     surface: '#1A1A2E',
-    primary: '#B794F4', // Vibrant purple
-    secondary: '#F687B3', // Pink glow
-    accent: '#9F7AEA', // Deep purple accent
-    success: '#48BB78',
-    warning: '#ED8936',
-    error: '#FC8181',
+    primary: '#26F5FE', // Bright cyan - perfect complement to coral orange
+    secondary: '#00BCD4', // Teal - creates beautiful gradient with cyan
+    accent: '#40E0D0', // Turquoise accent - bridges cyan and teal
+    success: '#00E676', // Bright emerald - complements the cool theme
+    warning: '#FFB74D', // Keep warm amber for contrast
+    error: '#FF5252', // Bright red - maintains energy
     text: '#F7FAFC',
     textSecondary: '#A0AEC0',
     border: '#2D3748',
-    // Gradient colors - inspired by the purple glow image
-    gradientStart: '#B794F4', // Vibrant purple
-    gradientEnd: '#9F7AEA', // Deep purple
-    gradientAccent: '#F687B3', // Pink accent
-    // Glow effects for dark theme (prominent)
-    glowPrimary: 'rgba(183, 148, 244, 0.4)',
-    glowSecondary: 'rgba(246, 135, 179, 0.4)',
-    glowAccent: 'rgba(159, 122, 234, 0.4)',
-    // Additional colors with glow variants
-    purple: '#B794F4',
-    blue: '#63B3ED',
-    green: '#48BB78',
-    orange: '#ED8936',
-    pink: '#F687B3',
-    yellow: '#F6E05E',
-    // Surface variants with subtle glow
+    // Gradient colors - cool cyan theme (opposite energy to warm coral)
+    gradientStart: '#26F5FE', // Bright cyan
+    gradientEnd: '#00BCD4', // Teal
+    gradientAccent: '#40E0D0', // Turquoise accent
+    // Glow effects for dark theme (cool cyan glow)
+    glowPrimary: 'rgba(38, 245, 254, 0.4)', // Cyan glow
+    glowSecondary: 'rgba(0, 188, 212, 0.4)', // Teal glow
+    glowAccent: 'rgba(64, 224, 208, 0.4)', // Turquoise glow
+    // Additional colors with cool variants
+    purple: '#26F5FE', // Replace purple with cyan
+    blue: '#26F5FE', // Cyan blue
+    green: '#00E676', // Bright emerald
+    orange: '#FFB74D', // Keep warm amber for contrast
+    pink: '#FF4081', // Bright pink for energy
+    yellow: '#FFEB3B', // Bright yellow for warmth
+    // Surface variants with cool undertones
     surfaceLight: '#252538',
     surfaceDark: '#16162A',
-    // Card backgrounds with glow effect
+    // Card backgrounds with cyan glow effect
     cardBackground: '#1F1F33',
-    cardBorder: '#3A3A5C',
+    cardBorder: '#26F5FE', // Cyan border for accent
   },
 };
 

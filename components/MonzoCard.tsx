@@ -100,7 +100,7 @@ export default function MonzoCard({
     if (variant === 'gradient') {
       return (
         <LinearGradient
-          colors={['#FF6B6B', '#4ECDC4']}
+          colors={['#26F5FE', '#00BCD4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}

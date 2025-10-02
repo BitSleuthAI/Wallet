@@ -175,7 +175,7 @@ export default function MonzoButton({
         activeOpacity={0.9}
       >
         <LinearGradient
-          colors={['#FF6B6B', '#4ECDC4']}
+          colors={['#26F5FE', '#00BCD4']}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
           style={StyleSheet.absoluteFill}
