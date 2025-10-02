@@ -244,14 +244,15 @@ export async function getCurrentBlockHeight(): Promise<{ data: number | null; er
 }
 
 /**
- * Get BTC price from blockchain.info
+ * Get BTC price from CoinGecko API (provides accurate 24h change data)
  */
 export async function getBTCPrice(): Promise<{ data: { price: number; change24h: number } | null; error: string | null }> {
   try {
-    console.log(`💲 Getting BTC price...`);
-    const response = await fetchJson('https://blockchain.info/ticker', {}, 60000); // Cache for 1 minute
-    const price = response?.USD?.last;
-    const change24h = response?.USD?.['15m'] || 0; // blockchain.info doesn't have 24h change, using 15m as approximation
+    console.log(`💲 Getting BTC price from CoinGecko...`);
+    const response = await fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {}, 60000); // Cache for 1 minute
+    const bitcoinData = response?.bitcoin;
+    const price = bitcoinData?.usd;
+    const change24h = bitcoinData?.usd_24h_change;
     
     if (typeof price === 'number' && price > 0) {
       return { 
