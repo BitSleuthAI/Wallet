@@ -58,7 +58,13 @@ try {
     importWallet: async () => { throw new Error('Wallet service not available'); },
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    getPrivateKey: async () => { throw new Error('Wallet service not available'); }
+    getPrivateKey: async () => { throw new Error('Wallet service not available'); },
+    testAddressGeneration: async () => { throw new Error('Wallet service not available'); },
+    testSmartAddressGeneration: async () => { throw new Error('Wallet service not available'); },
+    findNextUnusedAddressIndex: async () => { throw new Error('Wallet service not available'); },
+    findNextUnusedAddressIndexWithCycling: async () => { throw new Error('Wallet service not available'); },
+    generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); },
+    isAddressInWallet: async () => { throw new Error('Wallet service not available'); }
   };
 }
 
