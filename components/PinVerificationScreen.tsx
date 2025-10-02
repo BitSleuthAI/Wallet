@@ -4,12 +4,12 @@ import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Delete } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View,
 } from 'react-native';
 
 interface PinVerificationScreenProps {
@@ -40,39 +40,6 @@ export default function PinVerificationScreen({
       }
     }
   }, []);
-
-  const handleNumberPress = useCallback((number: string) => {
-    setPin(currentPin => {
-      if (currentPin.length < 4) {
-        const newPin = currentPin + number;
-        setError('');
-        
-        // Trigger haptic feedback asynchronously to avoid blocking UI
-        triggerHaptic();
-        
-        if (newPin.length === 4) {
-          verifyPin(newPin);
-        }
-        
-        return newPin;
-      }
-      return currentPin;
-    });
-  }, [triggerHaptic, verifyPin]);
-
-  const handleDelete = useCallback(() => {
-    setPin(currentPin => {
-      if (currentPin.length > 0) {
-        setError('');
-        
-        // Trigger haptic feedback asynchronously to avoid blocking UI
-        triggerHaptic();
-        
-        return currentPin.slice(0, -1);
-      }
-      return currentPin;
-    });
-  }, [triggerHaptic]);
 
   const verifyPin = useCallback(async (enteredPin: string) => {
     setIsLoading(true);
@@ -111,6 +78,39 @@ export default function PinVerificationScreen({
       setIsLoading(false);
     }
   }, [onSuccess]);
+
+  const handleNumberPress = useCallback((number: string) => {
+    setPin(currentPin => {
+      if (currentPin.length < 4) {
+        const newPin = currentPin + number;
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        if (newPin.length === 4) {
+          verifyPin(newPin);
+        }
+        
+        return newPin;
+      }
+      return currentPin;
+    });
+  }, [triggerHaptic, verifyPin]);
+
+  const handleDelete = useCallback(() => {
+    setPin(currentPin => {
+      if (currentPin.length > 0) {
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        return currentPin.slice(0, -1);
+      }
+      return currentPin;
+    });
+  }, [triggerHaptic]);
 
   const renderPinDots = useMemo(() => {
     return (
