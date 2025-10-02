@@ -599,47 +599,6 @@ async function broadcastTransaction(txHex: string): Promise<string> {
     return new Promise((resolve, reject) => {
       xhr.timeout = 30000; // 30 second timeout
       
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            try {
-              const txid = xhr.responseText.trim();
-              console.log('✅ Transaction broadcasted successfully:', txid);
-              resolve(txid);
-            } catch (parseError) {
-              console.error('❌ Failed to parse broadcast response:', parseError);
-              reject(new Error('Failed to parse broadcast response'));
-            }
-          } else {
-            console.error('❌ Broadcast failed with status:', xhr.status);
-            const responseText = xhr.responseText || '';
-            
-            // Handle specific error messages
-            if (responseText.includes('insufficient priority')) {
-              reject(new Error('Transaction fee too low. Please increase the fee rate.'));
-            } else if (responseText.includes('already in block chain')) {
-              reject(new Error('Transaction already exists in blockchain'));
-            } else if (responseText.includes('bad-txns-inputs-missingorspent')) {
-              reject(new Error('Transaction inputs are missing or already spent'));
-            } else if (responseText.includes('bad-txns-in-belowout')) {
-              reject(new Error('Transaction inputs are less than outputs'));
-            } else {
-              reject(new Error(`Broadcast failed: ${xhr.status} - ${responseText.substring(0, 200)}`));
-            }
-          }
-        }
-      };
-      
-      xhr.onerror = () => {
-        console.error('❌ Broadcast network error');
-        reject(new Error('Network error during broadcast'));
-      };
-      
-      xhr.ontimeout = () => {
-        console.error('❌ Broadcast timeout');
-        reject(new Error('Broadcast request timeout'));
-      };
-      
       // Try Blockstream first, then Mempool.space
       const urls = [
         'https://blockstream.info/api/tx',
@@ -697,6 +656,16 @@ async function broadcastTransaction(txHex: string): Promise<string> {
             }
           }
         }
+      };
+      
+      xhr.onerror = () => {
+        console.error('❌ Broadcast network error');
+        reject(new Error('Network error during broadcast'));
+      };
+      
+      xhr.ontimeout = () => {
+        console.error('❌ Broadcast timeout');
+        reject(new Error('Broadcast request timeout'));
       };
       
       tryNextUrl();
