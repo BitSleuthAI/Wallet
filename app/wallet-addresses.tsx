@@ -103,12 +103,6 @@ export default function WalletAddressesScreen() {
           derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
         }));
         
-        // Cache the addresses for this tab
-        setCachedAddresses(prev => ({
-          ...prev,
-          [selectedTab]: addresses
-        }));
-        
         console.log(`✅ Generated ${addresses.length} ${selectedTab} addresses using gap limit logic`);
         return addresses;
       } catch (error) {
@@ -120,6 +114,16 @@ export default function WalletAddressesScreen() {
     staleTime: 300000, // 5 minutes
     refetchOnWindowFocus: false,
   });
+
+  // Update cache when query data changes
+  React.useEffect(() => {
+    if (addressesQuery.data && !addressesQuery.isLoading && !addressesQuery.error) {
+      setCachedAddresses(prev => ({
+        ...prev,
+        [selectedTab]: addressesQuery.data
+      }));
+    }
+  }, [addressesQuery.data, addressesQuery.isLoading, addressesQuery.error, selectedTab]);
 
   const loadMoreAddresses = async () => {
     if (isLoadingMore) return;
