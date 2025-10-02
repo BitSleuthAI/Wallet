@@ -31,11 +31,16 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     getPrivateKey: importedService.getPrivateKey,
-    testAddressGeneration: importedService.testAddressGeneration
+    testAddressGeneration: importedService.testAddressGeneration,
+    testSmartAddressGeneration: importedService.testSmartAddressGeneration,
+    findNextUnusedAddressIndex: importedService.findNextUnusedAddressIndex,
+    findNextUnusedAddressIndexWithCycling: importedService.findNextUnusedAddressIndexWithCycling,
+    generateAddressBatchForView: importedService.generateAddressBatchForView,
+    isAddressInWallet: importedService.isAddressInWallet
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration', 'testSmartAddressGeneration', 'findNextUnusedAddressIndex', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'isAddressInWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {

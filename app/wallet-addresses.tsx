@@ -17,7 +17,6 @@ import {
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
-import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
 
 // Platform-specific wallet service imports
 let walletService: any;
@@ -36,11 +35,12 @@ try {
   // Ensure functions are properly bound and accessible
   walletService = {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
-    generateNewAddress: importedService.generateNewAddress
+    generateNewAddress: importedService.generateNewAddress,
+    generateAddressBatchForView: importedService.generateAddressBatchForView
   };
   
   // Verify required functions are available
-  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress'];
+  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress', 'generateAddressBatchForView'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -53,7 +53,8 @@ try {
   // Provide a minimal fallback
   walletService = {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
-    generateNewAddress: async () => { throw new Error('Wallet service not available'); }
+    generateNewAddress: async () => { throw new Error('Wallet service not available'); },
+    generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); }
   };
 }
 
@@ -74,219 +75,78 @@ export default function WalletAddressesScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
+  const [loadedBatches, setLoadedBatches] = useState<number>(1); // Start with 1 batch (20 addresses)
+  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
-  // Generate additional addresses for display (up to 20 receiving + 20 change)
+  const BATCH_SIZE = 20; // Load 20 addresses at a time
+
+  // Generate addresses in batches for display
   const addressesQuery = useQuery({
-    queryKey: ['wallet-addresses', currentWallet?.id, currentWallet?.xpub],
+    queryKey: ['wallet-addresses-batched', currentWallet?.id, currentWallet?.xpub, loadedBatches],
     queryFn: async () => {
       if (!currentWallet?.xpub) return [];
       
-      console.log('🔍 Generating addresses for display...');
-      const addresses: AddressInfo[] = [];
+      console.log(`🔍 Generating ${loadedBatches} batches of addresses for display...`);
+      const allAddresses: AddressInfo[] = [];
       
-      // Generate receiving addresses (m/84'/0'/0'/0/i) - reduced to 10 for better performance
-      console.log('🔧 Generating receiving addresses for wallet addresses screen...');
-      for (let i = 0; i < 10; i++) {
+      // Generate receiving addresses in batches
+      for (let batchIndex = 0; batchIndex < loadedBatches; batchIndex++) {
+        const startIndex = batchIndex * BATCH_SIZE;
+        console.log(`🔧 Generating receiving addresses batch ${batchIndex + 1}: indices ${startIndex}-${startIndex + BATCH_SIZE - 1}`);
+        
         try {
-          console.log(`🔧 Generating receiving address ${i}...`);
-          const address = await walletService.generateAddressFromXpub(currentWallet.xpub, i);
-          console.log(`✅ Generated receiving address ${i}: ${address}`);
-          addresses.push({
-            address,
-            index: i,
-            balance: 0,
-            txCount: 0,
-            receivedCount: 0,
-            sentCount: 0,
-            isUsed: false,
-            type: 'receiving',
-            derivationPath: `m/84'/0'/0'/0/${i}`
+          // Use the new batch generation function
+          const batchData = await walletService.generateAddressBatchForView(currentWallet.xpub, startIndex, BATCH_SIZE);
+          
+          batchData.forEach((addrData) => {
+            allAddresses.push({
+              address: addrData.address,
+              index: addrData.index,
+              balance: addrData.balance,
+              txCount: addrData.txCount,
+              receivedCount: 0, // Will be calculated separately if needed
+              sentCount: 0, // Will be calculated separately if needed
+              isUsed: addrData.isUsed,
+              type: 'receiving',
+              derivationPath: `m/84'/0'/0'/0/${addrData.index}`
+            });
           });
+          
+          console.log(`✅ Generated batch ${batchIndex + 1}: ${batchData.length} addresses`);
         } catch (error) {
-          console.warn(`❌ Failed to generate receiving address ${i}:`, error);
+          console.warn(`❌ Failed to generate batch ${batchIndex + 1}:`, error);
         }
       }
       
-      // Generate change addresses (m/84'/0'/0'/1/i) - reduced to 10 for better performance
-      // For proper HD wallet implementation, change addresses use path 1
-      for (let i = 0; i < 10; i++) {
-        try {
-          // Generate change addresses using proper derivation path
-          // In a real implementation, this would use the change derivation path
-          // For demo purposes, we'll use a different range to simulate change addresses
-          const changeIndex = 1000 + i; // Use offset to simulate change path
-          const address = await walletService.generateAddressFromXpub(currentWallet.xpub, changeIndex);
-          addresses.push({
-            address,
-            index: i,
-            balance: 0,
-            txCount: 0,
-            receivedCount: 0,
-            sentCount: 0,
-            isUsed: false,
-            type: 'change',
-            derivationPath: `m/84'/0'/0'/1/${i}`
-          });
-        } catch (error) {
-          console.warn(`Failed to generate change address ${i}:`, error);
-        }
-      }
-      
-      console.log(`✅ Generated ${addresses.length} addresses for display`);
-      return addresses;
+      console.log(`✅ Generated ${allAddresses.length} total addresses for display`);
+      return allAddresses;
     },
     enabled: !!currentWallet?.xpub,
     staleTime: 300000, // 5 minutes
     refetchOnWindowFocus: false,
   });
 
-  // Fetch balance and transaction data for each address
-  const addressBalancesQuery = useQuery({
-    queryKey: ['address-balances', addressesQuery.data?.map(a => a.address).join(','), addressesQuery.data?.length],
-    queryFn: async () => {
-      if (!addressesQuery.data?.length) {
-        console.log('⚠️ No addresses data available for balance query');
-        return {};
-      }
-      
-      console.log('💰 Fetching balances and transaction details for addresses...');
-      console.log(`📊 Addresses to process: ${addressesQuery.data.length}`);
-      const balanceData: Record<string, { 
-        balance: number; 
-        txCount: number; 
-        receivedCount: number; 
-        sentCount: number; 
-      }> = {};
-      
-      // Fetch balance and transaction details for each address using Esplora service
-      // Process addresses sequentially to avoid rate limiting
-      for (let i = 0; i < addressesQuery.data.length; i++) {
-        const addressInfo = addressesQuery.data[i];
-        
-        try {
-          console.log(`💰 Fetching data for address: ${addressInfo.address.substring(0, 10)}...`);
-          
-          const [statsResult, transactionsResult] = await Promise.all([
-            getAddressStats(addressInfo.address),
-            getAddressTransactions(addressInfo.address)
-          ]);
-          
-          // Extract balance from stats
-          const balance = statsResult.data?.chain_stats ? 
-            (statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum) / 1e8 : 0;
-          
-          // Extract transactions
-          const transactions = transactionsResult.data || [];
-          
-          // Analyze transactions to count received vs sent
-          let receivedCount = 0;
-          let sentCount = 0;
-          
-          transactions.forEach((tx: any) => {
-            // Check if this address received funds in this transaction
-            const receivedInTx = tx.vout?.some((output: any) => 
-              output.scriptpubkey_address === addressInfo.address
-            );
-            
-            // Check if this address sent funds in this transaction
-            const sentInTx = tx.vin?.some((input: any) => 
-              input.prevout?.scriptpubkey_address === addressInfo.address
-            );
-            
-            if (receivedInTx) receivedCount++;
-            if (sentInTx) sentCount++;
-          });
-          
-          console.log(`✅ Address ${addressInfo.address.substring(0, 10)}...: ${transactions.length} txs, ${balance.toFixed(8)} BTC`);
-          
-          balanceData[addressInfo.address] = {
-            balance,
-            txCount: transactions.length,
-            receivedCount,
-            sentCount
-          };
-        } catch (error: any) {
-          // Suppress rate limiting errors as they're handled by provider switching
-          if (error?.message?.includes('Rate limited')) {
-            console.log(`⚠️ Rate limited for address ${addressInfo.address.substring(0, 10)}... - will retry with different provider`);
-          } else {
-            console.warn(`❌ Failed to fetch data for address ${addressInfo.address}:`, error);
-          }
-          balanceData[addressInfo.address] = {
-            balance: 0,
-            txCount: 0,
-            receivedCount: 0,
-            sentCount: 0
-          };
-        }
-        
-        // Add delay between requests to avoid rate limiting (except for the last request)
-        if (i < addressesQuery.data.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, 2000)); // 2 second delay between each address
-        }
-      }
-      
-      console.log(`✅ Fetched balance data for ${Object.keys(balanceData).length} addresses`);
-      console.log('🔍 Balance data sample:', Object.entries(balanceData).slice(0, 3));
-      return balanceData;
-    },
-    enabled: !!addressesQuery.data?.length,
-    staleTime: 120000, // 2 minutes
-    refetchInterval: 300000, // 5 minutes
-    refetchOnWindowFocus: false,
-  });
-
-    // Debug logging for query states
-    console.log('🔍 Address query state:', {
-      isLoading: addressesQuery.isLoading,
-      isError: addressesQuery.isError,
-      dataLength: addressesQuery.data?.length || 0,
-      hasData: !!addressesQuery.data?.length
-    });
+  const loadMoreAddresses = async () => {
+    if (isLoadingMore) return;
     
-    console.log('🔍 Balance query state:', {
-      isLoading: addressBalancesQuery.isLoading,
-      isError: addressBalancesQuery.isError,
-      enabled: !!addressesQuery.data?.length,
-      dataKeys: Object.keys(addressBalancesQuery.data || {}).length,
-      hasData: !!addressBalancesQuery.data
-    });
-    
-    // Debug the processed addresses
-    if (addressesQuery.data && addressBalancesQuery.data) {
-      const sampleAddress = addressesQuery.data[0];
-      const sampleBalance = addressBalancesQuery.data[sampleAddress?.address];
-      console.log('🔍 Sample address data:', {
-        address: sampleAddress?.address?.substring(0, 10) + '...',
-        balance: sampleBalance?.balance,
-        txCount: sampleBalance?.txCount,
-        receivedCount: sampleBalance?.receivedCount,
-        sentCount: sampleBalance?.sentCount
-      });
+    setIsLoadingMore(true);
+    try {
+      setLoadedBatches(prev => prev + 1);
+      // The query will automatically refetch with the new batch count
+    } catch (error) {
+      console.error('Failed to load more addresses:', error);
+      Alert.alert('Error', 'Failed to load more addresses');
+    } finally {
+      setIsLoadingMore(false);
     }
+  };
 
   // Combine address data with balance information
   const addressData = useMemo((): AddressInfo[] => {
-    if (!addressesQuery.data || !addressBalancesQuery.data) return [];
+    if (!addressesQuery.data) return [];
     
     return addressesQuery.data
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
-      .map(addressInfo => {
-        const balanceInfo = addressBalancesQuery.data[addressInfo.address] || { 
-          balance: 0, 
-          txCount: 0, 
-          receivedCount: 0, 
-          sentCount: 0 
-        };
-        return {
-          ...addressInfo,
-          balance: balanceInfo.balance,
-          txCount: balanceInfo.txCount,
-          receivedCount: balanceInfo.receivedCount,
-          sentCount: balanceInfo.sentCount,
-          isUsed: balanceInfo.txCount > 0 || balanceInfo.balance > 0
-        };
-      })
       .filter(addr => addr.type === selectedTab)
       .filter((addr, index, array) => {
         // Remove duplicates based on address
@@ -299,7 +159,7 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [addressesQuery.data, addressBalancesQuery.data, selectedTab]);
+  }, [addressesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -318,10 +178,7 @@ export default function WalletAddressesScreen() {
   const refreshAddresses = async () => {
     setGeneratingAddresses(true);
     try {
-      await Promise.all([
-        addressesQuery.refetch(),
-        addressBalancesQuery.refetch()
-      ]);
+      await addressesQuery.refetch();
     } catch (error) {
       console.error('Failed to refresh addresses:', error);
       Alert.alert('Error', 'Failed to refresh addresses');
@@ -380,26 +237,26 @@ export default function WalletAddressesScreen() {
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total Txs</Text>
           <Text style={[styles.statValue, { color: theme.colors.text }]}>
-            {addressBalancesQuery.isLoading ? '...' : addressInfo.txCount}
+            {addressInfo.txCount}
           </Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Received</Text>
           <Text style={[styles.statValue, { color: theme.colors.success }]}>
-            {addressBalancesQuery.isLoading ? '...' : addressInfo.receivedCount}
+            {addressInfo.receivedCount}
           </Text>
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Sent</Text>
           <Text style={[styles.statValue, { color: theme.colors.error }]}>
-            {addressBalancesQuery.isLoading ? '...' : addressInfo.sentCount}
+            {addressInfo.sentCount}
           </Text>
         </View>
       </View>
       
       <View style={styles.addressFooter}>
         <Text style={[styles.balanceText, { color: theme.colors.textSecondary }]}>
-          Balance: {addressBalancesQuery.isLoading ? 'Loading...' : `${formatBalance(addressInfo.balance)} BTC`}
+          Balance: {formatBalance(addressInfo.balance)} BTC
         </Text>
         <View style={styles.actionButtons}>
           <TouchableOpacity
@@ -517,7 +374,7 @@ export default function WalletAddressesScreen() {
             <View style={styles.infoContainer}>
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
                 {selectedTab === 'receiving' 
-                  ? 'Receiving addresses (m/84\'/0\'/0\'/0/x) - Share these to receive Bitcoin. Used addresses are shown first.'
+                  ? `Receiving addresses (m/84\'/0\'/0\'/0/x) - Showing ${addressData.length} addresses. Used addresses are shown first.`
                   : 'Change addresses (m/84\'/0\'/0\'/1/x) - Automatically used for transaction change outputs.'}
               </Text>
               <View style={styles.summaryStats}>
@@ -542,6 +399,36 @@ export default function WalletAddressesScreen() {
             {addressData.map((addressInfo, index) => (
               <AddressItem key={`${addressInfo.type}-${addressInfo.index}-${index}-${addressInfo.address.slice(-8)}`} addressInfo={addressInfo} />
             ))}
+            
+            {/* Load More Button */}
+            <TouchableOpacity
+              style={[
+                styles.loadMoreButton,
+                { 
+                  backgroundColor: theme.colors.primary + '20',
+                  borderColor: theme.colors.primary,
+                  opacity: isLoadingMore ? 0.6 : 1
+                }
+              ]}
+              onPress={loadMoreAddresses}
+              disabled={isLoadingMore}
+            >
+              {isLoadingMore ? (
+                <>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={[styles.loadMoreText, { color: theme.colors.primary }]}>
+                    Loading more addresses...
+                  </Text>
+                </>
+              ) : (
+                <>
+                  <RefreshCw color={theme.colors.primary} size={20} />
+                  <Text style={[styles.loadMoreText, { color: theme.colors.primary }]}>
+                    Load More Addresses (+{BATCH_SIZE})
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -733,6 +620,22 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     padding: 4,
+  },
+  loadMoreButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginHorizontal: 20,
+    marginVertical: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 8,
+  },
+  loadMoreText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 
 });
