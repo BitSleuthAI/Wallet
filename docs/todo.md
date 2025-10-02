@@ -1,15 +1,3 @@
-### **1. Transaction Sending**
-- **Status**: ✅ **Implemented**
-- **Location**: `services/bitcoin-service.ts:283-387`
-- **Issue**: ~~`sendTransaction` function throws `Error('Transaction sending not yet implemented')`~~ **FIXED**
-- **Impact**: ~~Users cannot actually send Bitcoin transactions~~ **Users can now send Bitcoin transactions with proper change handling**
-
-### **2. Replace-by-Fee (RBF)**
-- **Status**: ❌ **UI only, no backend implementation**
-- **Location**: `app/fee-bump.tsx:118-153`
-- **Issue**: `handleCreateRBF` function only simulates the process with a 2-second delay and shows success alert
-- **Impact**: RBF fee bumping doesn't actually create or broadcast replacement transactions
-
 ### **3. Transaction Cancellation**
 - **Status**: ❌ **Explicitly marked as "Coming Soon"**
 - **Location**: `app/fee-bump.tsx:155-171`
