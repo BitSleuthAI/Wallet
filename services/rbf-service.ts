@@ -26,6 +26,59 @@ export interface RBFValidationResult {
 }
 
 /**
+ * Parse sequence number from API response
+ * Handles both decimal and hexadecimal formats
+ * 
+ * Fix: Previously used parseInt(sequence, 16) which incorrectly assumed
+ * all sequence numbers were hexadecimal. APIs often return decimal integers,
+ * causing incorrect RBF validation. This function now detects the format
+ * and parses accordingly.
+ */
+function parseSequenceNumber(sequence: any): number {
+  if (typeof sequence === 'number') {
+    return sequence;
+  }
+  
+  if (typeof sequence === 'string') {
+    // Check if it's a hexadecimal string (prefixed with '0x' or '0X')
+    if (sequence.startsWith('0x') || sequence.startsWith('0X')) {
+      const parsed = parseInt(sequence, 16);
+      if (isNaN(parsed)) {
+        console.warn(`⚠️ Failed to parse hexadecimal sequence: ${sequence}`);
+        return 0xFFFFFFFF; // Default to non-RBF sequence
+      }
+      return parsed;
+    }
+    // Otherwise parse as decimal
+    const parsed = parseInt(sequence, 10);
+    if (isNaN(parsed)) {
+      console.warn(`⚠️ Failed to parse decimal sequence: ${sequence}`);
+      return 0xFFFFFFFF; // Default to non-RBF sequence
+    }
+    return parsed;
+  }
+  
+  // If sequence is not a number or string, try to convert to string first
+  const sequenceStr = String(sequence);
+  if (sequenceStr.startsWith('0x') || sequenceStr.startsWith('0X')) {
+    const parsed = parseInt(sequenceStr, 16);
+    if (isNaN(parsed)) {
+      console.warn(`⚠️ Failed to parse hexadecimal sequence: ${sequenceStr}`);
+      return 0xFFFFFFFF; // Default to non-RBF sequence
+    }
+    return parsed;
+  }
+  
+  const parsed = parseInt(sequenceStr, 10);
+  if (isNaN(parsed)) {
+    console.warn(`⚠️ Failed to parse sequence: ${sequenceStr}`);
+    return 0xFFFFFFFF; // Default to non-RBF sequence
+  }
+  
+  return parsed;
+}
+
+/**
  * Fetch UTXO data for a specific transaction input
  * Handles both confirmed and unconfirmed transactions
  */
@@ -111,7 +164,8 @@ export async function validateRBFTransaction(txid: string, walletAddresses: stri
     
     // Check if transaction has RBF enabled (sequence number < 0xFFFFFFFE)
     const hasRBF = txData.vin?.some((input: any) => {
-      const sequence = parseInt(input.sequence, 16);
+      const sequence = parseSequenceNumber(input.sequence);
+      console.log(`🔍 Input sequence: ${input.sequence} (parsed as: ${sequence})`);
       return sequence < 0xFFFFFFFE;
     });
     
