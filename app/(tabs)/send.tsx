@@ -1,27 +1,27 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
-import { GradientBackground } from '@/components/GradientBackground';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import { getAddressUTXOs, getBitcoinPrice, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
+import { getAddressUTXOs, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -357,14 +357,26 @@ export default function SendScreen() {
       
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
-      const result = await sendTransaction(
-        currentWallet,
+      
+      // Get the current address and its index for signing
+      const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
+      const addressIndex = currentWallet.currentAddressIndex;
+      
+      const txid = await sendTransaction(
+        currentAddress,
         recipientAddress.trim(),
         amountInBTC,
         feeRate,
-        enableRBF,
-        selected
+        currentWallet.mnemonic,
+        addressIndex
       );
+      
+      // Create result object to match expected format
+      const result = {
+        txid,
+        fee: estimatedFee || 0.0001, // Use estimated fee
+        amount: amountInBTC
+      };
       
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       
