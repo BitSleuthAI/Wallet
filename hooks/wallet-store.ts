@@ -341,7 +341,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           xhr.send();
         });
         
-        const rate = data.rates[selectedCurrency] || 1;
+        const rate = (data as any).rates[selectedCurrency] || 1;
         
         return {
           usd: usdPrice * rate,
@@ -977,123 +977,101 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient]);
 
-  return useMemo(() => ({
-    // Wallet data
+  // Split the large useMemo into smaller, more focused ones to reduce re-renders
+  const walletData = useMemo(() => ({
     wallets,
     currentWallet,
     currentWalletId,
     isLoading: walletsQuery.isLoading || currentWalletQuery.isLoading,
-    
-    // Balance and price data
+  }), [wallets, currentWallet, currentWalletId, walletsQuery.isLoading, currentWalletQuery.isLoading]);
+
+  const balanceData = useMemo(() => ({
     balance: balanceQuery.data || 0,
     balanceUSD: (balanceQuery.data || 0) * (priceQuery.data?.usd || 0),
     bitcoinPrice: priceQuery.data,
-    
-    // Error states (only show if there's actually an error and no data)
-    priceError: priceQuery.error && !priceQuery.data ? priceQuery.error : null,
-    balanceError: balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null) ? balanceQuery.error : null,
-    transactionsError: transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0) ? transactionsQuery.error : null,
-    
-    // Transactions
-    transactions: transactionsQuery.data || [],
-    
-    // Theme
-    theme,
-    
-    // Currency
-    selectedCurrency,
-    setCurrency,
-    formatCurrency,
-    getCurrencySymbol,
-    getCurrencyName,
-    
-    // Hide balance setting
-    hideBalance,
-    setHideBalanceSetting,
-    
-    // Auto-lock setting
-    autoLockTimeout,
-    setAutoLockTimeoutSetting,
-    
-    // Coin control
-    coinControl: {
-      getSelectedUtxoIds,
-      setSelected: setCoinControlSelected,
-      clearSelected: clearCoinControlSelected,
-      toggleFreeze: toggleFreezeUtxo,
-      isFrozen: isUtxoFrozen,
-      filterSelectedUtxos,
-    },
-    
-    // Actions
-    createWallet,
-    importWallet,
-    generateNewAddress,
-    switchWallet,
-    editWallet,
-    deleteWallet,
-    toggleTheme,
-    refreshData,
-    logoutAndEraseWallet,
-    
-    // Loading states
-    isCreatingWallet: saveWalletsMutation.isPending,
     isLoadingBalance: balanceQuery.isLoading,
-    isLoadingTransactions: transactionsQuery.isLoading,
     isLoadingPrice: priceQuery.isLoading,
-    
-    // Error states for loading (only show if there's actually an error and no data)
     hasBalanceError: !!balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null),
-    hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
     hasPriceError: !!priceQuery.error && !priceQuery.data,
-    
-    // Feedback tracking
-    shouldShowFeedbackPrompt,
-    markFeedbackPromptShown,
-    markFeedbackPromptDismissed,
-  }), [
-    wallets,
-    currentWallet,
-    currentWalletId,
-    walletsQuery.isLoading,
-    currentWalletQuery.isLoading,
-    balanceQuery.data,
-    balanceQuery.isLoading,
-    priceQuery.data,
-    priceQuery.isLoading,
-    priceQuery.error,
-    transactionsQuery.data,
-    transactionsQuery.isLoading,
-    transactionsQuery.error,
-    balanceQuery.error,
+  }), [balanceQuery.data, balanceQuery.isLoading, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
+
+  const transactionData = useMemo(() => ({
+    transactions: transactionsQuery.data || [],
+    isLoadingTransactions: transactionsQuery.isLoading,
+    hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
+  }), [transactionsQuery.data, transactionsQuery.isLoading, transactionsQuery.error]);
+
+  const settingsData = useMemo(() => ({
     theme,
+    selectedCurrency,
+    hideBalance,
+    autoLockTimeout,
+  }), [theme, selectedCurrency, hideBalance, autoLockTimeout]);
+
+  const actionsData = useMemo(() => ({
     createWallet,
     importWallet,
     generateNewAddress,
-    toggleTheme,
-    refreshData,
-    logoutAndEraseWallet,
-    saveWalletsMutation.isPending,
     switchWallet,
     editWallet,
     deleteWallet,
-    selectedCurrency,
+    toggleTheme,
+    refreshData,
+    logoutAndEraseWallet,
     setCurrency,
     formatCurrency,
     getCurrencySymbol,
     getCurrencyName,
-    hideBalance,
     setHideBalanceSetting,
-    autoLockTimeout,
     setAutoLockTimeoutSetting,
+  }), [
+    createWallet,
+    importWallet,
+    generateNewAddress,
+    switchWallet,
+    editWallet,
+    deleteWallet,
+    toggleTheme,
+    refreshData,
+    logoutAndEraseWallet,
+    setCurrency,
+    formatCurrency,
+    getCurrencySymbol,
+    getCurrencyName,
+    setHideBalanceSetting,
+    setAutoLockTimeoutSetting,
+  ]);
+
+  const coinControlData = useMemo(() => ({
+    getSelectedUtxoIds,
+    setSelected: setCoinControlSelected,
+    clearSelected: clearCoinControlSelected,
+    toggleFreeze: toggleFreezeUtxo,
+    isFrozen: isUtxoFrozen,
+    filterSelectedUtxos,
+  }), [
+    getSelectedUtxoIds,
     setCoinControlSelected,
     clearCoinControlSelected,
     toggleFreezeUtxo,
     isUtxoFrozen,
     filterSelectedUtxos,
-    getSelectedUtxoIds,
+  ]);
+
+  const feedbackData = useMemo(() => ({
     shouldShowFeedbackPrompt,
     markFeedbackPromptShown,
     markFeedbackPromptDismissed,
-  ]);
+  }), [shouldShowFeedbackPrompt, markFeedbackPromptShown, markFeedbackPromptDismissed]);
+
+  return {
+    ...walletData,
+    ...balanceData,
+    ...transactionData,
+    ...settingsData,
+    ...actionsData,
+    coinControl: coinControlData,
+    ...feedbackData,
+    isCreatingWallet: saveWalletsMutation.isPending,
+  };
 });

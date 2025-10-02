@@ -1,6 +1,6 @@
 import { Theme } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
 
 interface GradientBackgroundProps {
@@ -20,7 +20,7 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
   direction = 'vertical',
   intensity = 'medium',
 }) => {
-  const getGradientColors = (): readonly [string, string, ...string[]] => {
+  const getGradientColors = useMemo((): readonly [string, string, ...string[]] => {
     if (theme.isDark) {
       switch (variant) {
         case 'primary':
@@ -81,9 +81,9 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
           return ['#FFE5DB', '#FFD4C4'];
       }
     }
-  };
+  }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowAccent, variant]);
 
-  const getGradientLocations = (): readonly [number, number, ...number[]] | undefined => {
+  const getGradientLocations = useMemo((): readonly [number, number, ...number[]] | undefined => {
     switch (intensity) {
       case 'light':
         return [0, 0.5, 1] as const;
@@ -93,9 +93,9 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
       default:
         return undefined;
     }
-  };
+  }, [intensity]);
 
-  const getGradientAngle = () => {
+  const getGradientAngle = useMemo(() => {
     switch (direction) {
       case 'horizontal':
         return { start: { x: 0, y: 0.5 }, end: { x: 1, y: 0.5 } };
@@ -105,11 +105,10 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
       default:
         return { start: { x: 0.5, y: 0 }, end: { x: 0.5, y: 1 } };
     }
-  };
+  }, [direction]);
 
   if (Platform.OS === 'web') {
     // Fallback for web with CSS gradients
-    const colors = getGradientColors();
     const gradientDirection = direction === 'horizontal' ? 'to right' : 
                              direction === 'diagonal' ? 'to bottom right' : 
                              'to bottom';
@@ -119,7 +118,7 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
         style={[
           styles.container,
           {
-            background: `linear-gradient(${gradientDirection}, ${colors.join(', ')})`,
+            background: `linear-gradient(${gradientDirection}, ${getGradientColors.join(', ')})`,
           } as any,
           style,
         ]}
@@ -131,9 +130,9 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
 
   return (
     <LinearGradient
-      colors={getGradientColors()}
-      locations={getGradientLocations()}
-      {...getGradientAngle()}
+      colors={getGradientColors}
+      locations={getGradientLocations}
+      {...getGradientAngle}
       style={[styles.container, style]}
     >
       {children}

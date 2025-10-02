@@ -4,7 +4,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 interface WalletCardProps {
@@ -25,8 +25,8 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   
   if (!displayWallet) return null;
 
-  // Generate enhanced gradient colors based on wallet color
-  const gradientColors = getWalletGradient(displayWallet.color);
+  // Memoize gradient colors to prevent recalculation on every render
+  const gradientColors = useMemo(() => getWalletGradient(displayWallet.color), [displayWallet.color]);
 
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
@@ -50,7 +50,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           <TouchableOpacity 
             ref={menuButtonRef}
             style={styles.menuButton}
-            onPress={() => {
+            onPress={useCallback(() => {
               menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
                 const menuWidth = 150;
                 const padding = 20;
@@ -64,7 +64,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
                 });
                 setShowMenu(true);
               });
-            }} 
+            }, [])} 
             testID="wallet-menu-button"
           >
             <MoreHorizontal color="white" size={24} />
@@ -120,12 +120,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           }]}>
             <TouchableOpacity 
               style={styles.menuItem}
-              onPress={() => {
+              onPress={useCallback(() => {
                 setShowMenu(false);
                 if (onEdit && displayWallet) {
                   onEdit(displayWallet);
                 }
-              }}
+              }, [onEdit, displayWallet])}
               testID="edit-wallet-button"
             >
               <Edit3 color="#333333" size={20} />
@@ -134,7 +134,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             
             <TouchableOpacity 
               style={styles.menuItem}
-              onPress={() => {
+              onPress={useCallback(() => {
                 setShowMenu(false);
                 if (displayWallet) {
                   Alert.alert(
@@ -150,7 +150,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
                     ]
                   );
                 }
-              }}
+              }, [displayWallet, deleteWallet])}
               testID="delete-wallet-button"
             >
               <Trash2 color="#FF3B30" size={20} />
