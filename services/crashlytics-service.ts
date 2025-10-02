@@ -18,7 +18,7 @@ try {
 }
 
 try {
-  if (Platform.OS !== 'web' && !isExpoGo) {
+  if (!isExpoGo) {
     // Try to initialize Firebase App first
     try {
       firebaseApp = require('@react-native-firebase/app').default;
@@ -39,7 +39,7 @@ try {
       console.log('💡 Install @react-native-firebase packages for production builds');
       isInitialized = false;
     }
-  } else if (Platform.OS === 'web') {
+  } else {
     console.log('ℹ️ Running on web - Crashlytics not available');
   }
 } catch (error) {

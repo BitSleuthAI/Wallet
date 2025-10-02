@@ -1,3 +1,4 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -15,7 +16,6 @@ import {
     Vibration,
     View,
 } from 'react-native';
-import { GradientBackground } from '@/components/GradientBackground';
 
 export default function PinSetupScreen() {
   const { theme, wallets } = useWallet();
@@ -27,7 +27,7 @@ export default function PinSetupScreen() {
   const maxPinLength = 4;
 
   const handleNumberPress = async (number: string) => {
-    if (Platform.OS !== 'web') {
+    if (true) {
       try {
         await Haptics.selectionAsync();
       } catch {
@@ -47,7 +47,7 @@ export default function PinSetupScreen() {
   };
 
   const handleDelete = async () => {
-    if (Platform.OS !== 'web') {
+    if (true) {
       try {
         await Haptics.selectionAsync();
       } catch {
@@ -102,7 +102,7 @@ export default function PinSetupScreen() {
         savePinAndProceed();
       } else {
         // PINs don't match, show error and reset
-        if (Platform.OS !== 'web') {
+        if (true) {
           try {
             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
           } catch {

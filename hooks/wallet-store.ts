@@ -6,19 +6,12 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
 
-// Platform-specific wallet service imports
+// Wallet service imports
 let walletService: any;
 try {
-  let importedService: any;
-  if (Platform.OS === 'web') {
-    console.log('🌐 Loading web wallet service in wallet store...');
-    importedService = require('@/services/wallet-service.web');
-  } else {
-    console.log('📱 Loading mobile wallet service in wallet store...');
-    importedService = require('@/services/wallet-service');
-  }
+  console.log('📱 Loading mobile wallet service in wallet store...');
+  const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet store imported service keys:', Object.keys(importedService));
   

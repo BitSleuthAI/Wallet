@@ -3,7 +3,6 @@
  * Uses BIP32 derivation and gap limit for proper address discovery
  */
 
-import { Platform } from 'react-native';
 import type { Transaction, Wallet } from '../types/wallet';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
@@ -296,11 +295,6 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
  * Generate a new address from xpub
  */
 export async function generateAddressFromXpub(xpub: string, index: number): Promise<string> {
-  if (Platform.OS === 'web') {
-    const webService = require('./wallet-service.web');
-    return webService.generateAddressFromXpub(xpub, index);
-  }
-  
   try {
     await ensureECC();
     
@@ -603,11 +597,6 @@ export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet
  * Generate a new address for the wallet using simple cycling pattern
  */
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
-  if (Platform.OS === 'web') {
-    const webService = require('./wallet-service.web');
-    return webService.generateNewAddress(wallet);
-  }
-  
   try {
     console.log('🔧 Generating new address for wallet:', wallet.name);
     

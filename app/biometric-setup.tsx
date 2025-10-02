@@ -1,19 +1,19 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  SafeAreaView,
-  Alert,
-  Platform,
-} from 'react-native';
-import { Stack, router } from 'expo-router';
-import { ArrowLeft, Fingerprint, Shield, Check } from 'lucide-react-native';
-import * as LocalAuthentication from 'expo-local-authentication';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
 import { GradientBackground } from '@/components/GradientBackground';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Stack, router } from 'expo-router';
+import { ArrowLeft, Check, Fingerprint, Shield } from 'lucide-react-native';
+import React, { useEffect, useState } from 'react';
+import {
+    Alert,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function BiometricSetupScreen() {
   const { theme } = useWallet();
@@ -50,7 +50,7 @@ export default function BiometricSetupScreen() {
       
       // On mobile, we should support biometric if hardware is available
       // Even if not enrolled, we can still show the option
-      const shouldSupport = Platform.OS !== 'web' && compatible;
+      const shouldSupport = compatible;
       console.log('Should support biometric:', shouldSupport);
       
       setIsSupported(shouldSupport);
