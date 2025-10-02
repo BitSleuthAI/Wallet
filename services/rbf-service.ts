@@ -26,6 +26,49 @@ export interface RBFValidationResult {
 }
 
 /**
+ * Fetch UTXO data for a specific transaction input
+ * Handles both confirmed and unconfirmed transactions
+ */
+async function fetchUTXOForInput(
+  inputTxid: string, 
+  inputVout: number, 
+  address: string,
+  addressUtxoMap: Map<string, any[]>
+): Promise<any | null> {
+  // First, try to find it in the cached UTXOs
+  let utxo = addressUtxoMap.get(address)?.find((u: any) => 
+    u.txid === inputTxid && u.vout === inputVout
+  );
+  
+  // If not found in cached UTXOs, it might be spent in mempool
+  // Try to fetch the specific transaction output directly
+  if (!utxo) {
+    try {
+      console.log(`🔍 UTXO not found in address UTXOs, fetching transaction output directly: ${inputTxid}:${inputVout}`);
+      const txData = await esploraGet(`/tx/${inputTxid}`, 300000);
+      
+      if (txData && txData.vout && txData.vout[inputVout]) {
+        const output = txData.vout[inputVout];
+        utxo = {
+          txid: inputTxid,
+          vout: inputVout,
+          value: output.value,
+          scriptpubkey: output.scriptpubkey,
+          status: txData.status || { confirmed: false }
+        };
+        console.log(`✅ Found UTXO from transaction data: ${utxo.value} sats`);
+      } else {
+        console.error(`❌ Transaction ${inputTxid} does not have output ${inputVout}`);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Failed to fetch transaction output for ${inputTxid}:${inputVout}:`, error);
+    }
+  }
+  
+  return utxo;
+}
+
+/**
  * Fetch transaction details from Blockstream API
  */
 export async function fetchTransactionDetails(txid: string): Promise<any> {
@@ -96,30 +139,54 @@ export async function validateRBFTransaction(txid: string, walletAddresses: stri
     }
     
     // Get UTXOs for our addresses to ensure we have the funds
+    // For unconfirmed transactions, we need to fetch UTXOs differently since
+    // the /address/{address}/utxo endpoint won't return inputs already spent in mempool
     const utxos: UTXO[] = [];
+    
+    // First, try to get UTXOs from the standard endpoint
+    const addressUtxoMap = new Map<string, any[]>();
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
-      try {
-        const addressUtxos = await esploraGet(`/address/${address}/utxo`, 300000);
-        if (Array.isArray(addressUtxos)) {
-          addressUtxos.forEach((utxo: any) => {
-            utxos.push({
-              txid: utxo.txid,
-              vout: utxo.vout,
-              value: utxo.value,
-              scriptPubKey: utxo.scriptpubkey,
-              address: address, // Always include address for unconfirmed transactions
-              status: {
-                confirmed: utxo.status?.confirmed || false,
-                block_height: utxo.status?.block_height,
-                block_hash: utxo.status?.block_hash,
-                block_time: utxo.status?.block_time,
-              },
-            });
-          });
+      if (!addressUtxoMap.has(address)) {
+        try {
+          const addressUtxos = await esploraGet(`/address/${address}/utxo`, 300000);
+          if (Array.isArray(addressUtxos)) {
+            addressUtxoMap.set(address, addressUtxos);
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to fetch UTXOs for address ${address}:`, error);
+          addressUtxoMap.set(address, []);
         }
-      } catch (error) {
-        console.warn(`⚠️ Failed to fetch UTXOs for address ${address}:`, error);
+      }
+    }
+    
+    // Now, for each input, try to find the corresponding UTXO
+    for (const input of ourInputs) {
+      const address = input.prevout.scriptpubkey_address;
+      const inputTxid = input.txid;
+      const inputVout = input.vout;
+      
+      // Use the helper function to fetch UTXO data
+      const utxo = await fetchUTXOForInput(inputTxid, inputVout, address, addressUtxoMap);
+      
+      // If we found a UTXO, add it to our list
+      if (utxo) {
+        utxos.push({
+          txid: utxo.txid,
+          vout: utxo.vout,
+          value: utxo.value,
+          scriptPubKey: utxo.scriptpubkey,
+          address: address, // Always include address for proper matching
+          status: {
+            confirmed: utxo.status?.confirmed || false,
+            block_height: utxo.status?.block_height,
+            block_hash: utxo.status?.block_hash,
+            block_time: utxo.status?.block_time,
+          },
+        });
+      } else {
+        console.error(`❌ Could not find UTXO for input ${inputTxid}:${inputVout} at address ${address}`);
+        throw new Error(`UTXO not found for input ${inputTxid}:${inputVout}. This input may have been spent or the transaction may be invalid.`);
       }
     }
     
@@ -206,15 +273,27 @@ export async function createReplacementTransaction(
       const address = input.prevout.scriptpubkey_address;
       const addressIndex = walletAddresses.indexOf(address);
       
-      // Find the corresponding UTXO
-      const utxo = utxos.find(u => 
-        u.txid === input.txid && 
-        u.vout === input.vout && 
-        u.address === address
-      );
+      // Find the corresponding UTXO - improved matching logic
+      const utxo = utxos.find(u => {
+        // Primary match: txid and vout must match exactly
+        const txidMatch = u.txid === input.txid;
+        const voutMatch = u.vout === input.vout;
+        
+        // Address match: either the UTXO has the address field set, or we know it from the input
+        const addressMatch = u.address === address || !u.address;
+        
+        return txidMatch && voutMatch && addressMatch;
+      });
       
       if (!utxo) {
+        console.error(`❌ UTXO not found for input ${input.txid}:${input.vout}`);
+        console.error(`Available UTXOs:`, utxos.map(u => ({ txid: u.txid, vout: u.vout, address: u.address })));
         throw new Error(`UTXO not found for input ${input.txid}:${input.vout}`);
+      }
+      
+      // Ensure the UTXO has the correct address for signing
+      if (!utxo.address) {
+        utxo.address = address;
       }
       
       totalInputValue += utxo.value;
