@@ -3,20 +3,21 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
+import { performRBF, validateRBFTransaction } from '@/services/rbf-service';
 import { Transaction } from '@/types/wallet';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -27,20 +28,55 @@ type FeeOption = {
 
 export default function FeeBumpScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions } = useWallet();
+  const { theme, transactions, currentWallet } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
   const [customFeeRate, setCustomFeeRate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationError, setValidationError] = useState<string | null>(null);
+  const [canReplace, setCanReplace] = useState<boolean>(false);
 
   useEffect(() => {
     if (txid && transactions) {
-      const tx = transactions.find(t => t.txid === txid);
+      const tx = transactions.find((t: Transaction) => t.txid === txid);
       setTransaction(tx || null);
     }
   }, [txid, transactions]);
+
+  // Validate RBF capability when transaction is loaded
+  useEffect(() => {
+    const validateRBF = async () => {
+      if (!transaction || !currentWallet) {
+        return;
+      }
+
+      setIsValidating(true);
+      setValidationError(null);
+      setCanReplace(false);
+
+      try {
+        const validation = await validateRBFTransaction(transaction.txid, currentWallet.addresses);
+        
+        if (!validation.isValid || !validation.canReplace) {
+          setValidationError(validation.reason || 'Transaction cannot be replaced');
+          setCanReplace(false);
+        } else {
+          setCanReplace(true);
+        }
+      } catch (error) {
+        console.error('RBF validation failed:', error);
+        setValidationError(error instanceof Error ? error.message : 'Validation failed');
+        setCanReplace(false);
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    validateRBF();
+  }, [transaction, currentWallet]);
 
   useEffect(() => {
     const loadFeeEstimates = async () => {
@@ -124,29 +160,57 @@ export default function FeeBumpScreen() {
       return;
     }
 
+    if (!canReplace) {
+      Alert.alert(
+        'Cannot Replace Transaction',
+        validationError || 'This transaction cannot be replaced'
+      );
+      return;
+    }
+
+    if (!currentWallet) {
+      Alert.alert('Error', 'No wallet selected');
+      return;
+    }
+
     setIsCreating(true);
     try {
-      // In a real implementation, you would:
-      // 1. Create a new transaction with the same outputs but higher fee
-      // 2. Sign and broadcast the replacement transaction
-      // 3. Update the transaction status
+      const newFeeRate = getCurrentFeeRate();
       
-      // Simulate the process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      console.log('Starting RBF process...');
+      console.log('Original TXID:', transaction?.txid);
+      console.log('New fee rate:', newFeeRate, 'sat/vB');
       
-      Alert.alert(
-        'RBF Transaction Created',
-        'The replacement transaction has been created and broadcast to the network.',
-        [
-          {
-            text: 'OK',
-            onPress: () => router.back(),
-          },
-        ]
+      const result = await performRBF(
+        transaction!.txid,
+        newFeeRate,
+        currentWallet.mnemonic,
+        currentWallet.addresses
       );
+      
+      if (result.success) {
+        Alert.alert(
+          'RBF Transaction Created',
+          `The replacement transaction has been created and broadcast to the network.\n\nReplacement TXID: ${result.replacementTxid}`,
+          [
+            {
+              text: 'OK',
+              onPress: () => router.back(),
+            },
+          ]
+        );
+      } else {
+        Alert.alert(
+          'RBF Failed',
+          result.error || 'Failed to create replacement transaction. Please try again.'
+        );
+      }
     } catch (error) {
       console.error('RBF failed:', error);
-      Alert.alert('Error', 'Failed to create replacement transaction. Please try again.');
+      Alert.alert(
+        'Error', 
+        `Failed to create replacement transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     } finally {
       setIsCreating(false);
     }
@@ -225,6 +289,32 @@ export default function FeeBumpScreen() {
           <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
             We will replace this transaction with the one with a higher fee, so it should be mined faster. This is called RBF - Replace By Fee.
           </Text>
+          
+          {/* RBF Validation Status */}
+          {isValidating && (
+            <View style={styles.validationStatus}>
+              <ActivityIndicator color={theme.colors.primary} size="small" />
+              <Text style={[styles.validationText, { color: theme.colors.textSecondary }]}>
+                Validating RBF capability...
+              </Text>
+            </View>
+          )}
+          
+          {!isValidating && validationError && (
+            <View style={styles.validationStatus}>
+              <Text style={[styles.validationError, { color: theme.colors.error }]}>
+                ⚠️ {validationError}
+              </Text>
+            </View>
+          )}
+          
+          {!isValidating && canReplace && !validationError && (
+            <View style={styles.validationStatus}>
+              <Text style={[styles.validationSuccess, { color: theme.colors.success }]}>
+                ✅ Transaction can be replaced with higher fee
+              </Text>
+            </View>
+          )}
         </View>
 
         {/* Fee Suggestions */}
@@ -328,30 +418,18 @@ export default function FeeBumpScreen() {
         <TouchableOpacity
           style={[
             styles.actionButton,
-            styles.createButton,
+            styles.bumpButton,
             { backgroundColor: theme.colors.primary },
-            !isValidFeeRate() && { opacity: 0.5 }
+            (!isValidFeeRate() || !canReplace || isValidating || isCreating) && { opacity: 0.5 }
           ]}
           onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || isCreating}
+          disabled={!isValidFeeRate() || !canReplace || isValidating || isCreating}
         >
           {isCreating ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
-            <Text style={styles.createButtonText}>Create</Text>
+            <Text style={styles.bumpButtonText}>Bump Fee</Text>
           )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            styles.bumpButton,
-            { backgroundColor: theme.colors.primary }
-          ]}
-          onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || isCreating}
-        >
-          <Text style={styles.bumpButtonText}>Bump Fee</Text>
         </TouchableOpacity>
         
         <TouchableOpacity
@@ -432,6 +510,24 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'left',
   },
+  validationStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: platformStyles.spacing.md,
+    paddingVertical: platformStyles.spacing.sm,
+  },
+  validationText: {
+    ...platformStyles.typography.body,
+    marginLeft: platformStyles.spacing.sm,
+  },
+  validationError: {
+    ...platformStyles.typography.body,
+    fontWeight: '500',
+  },
+  validationSuccess: {
+    ...platformStyles.typography.body,
+    fontWeight: '500',
+  },
   sectionTitle: {
     ...platformStyles.typography.title,
     marginBottom: platformStyles.spacing.lg,
@@ -501,14 +597,6 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'center',
     marginBottom: platformStyles.spacing.md,
-  },
-  createButton: {
-    // Styles for create button
-  },
-  createButtonText: {
-    color: 'white',
-    ...platformStyles.typography.bodyLarge,
-    fontWeight: '600',
   },
   bumpButton: {
     // Styles for bump fee button
