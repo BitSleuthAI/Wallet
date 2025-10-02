@@ -819,43 +819,23 @@ async function createCancellationTransaction(
     }
     
     // Generate a new address in the wallet for the cancellation
-    // Use the next available address index - find the highest used index from all wallet addresses
-    // This ensures we don't reuse addresses and properly track the BIP32 derivation path
-    const allAddressIndices = walletAddresses.map((_, index) => index);
-    const nextAddressIndex = allAddressIndices.length > 0 
-      ? Math.max(...allAddressIndices) + 1 
-      : 0; // Start from 0 if no addresses exist
+    // Calculate the next address index to avoid reuse
+    // Find the highest index from existing wallet addresses and add 1
+    const maxExistingIndex = walletAddresses.length > 0 ? walletAddresses.length - 1 : -1;
+    const nextAddressIndex = maxExistingIndex + 1;
     const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
     
     // Calculate fee for cancellation transaction
-    // Fix: Calculate the original fee properly from all transaction inputs/outputs
-    let totalOriginalInputValue = 0;
-    let totalOriginalOutputValue = 0;
-    
-    // Calculate total input value from ALL original transaction inputs
-    for (const input of originalTx.vin) {
-      if (input.prevout && input.prevout.value !== undefined) {
-        totalOriginalInputValue += input.prevout.value;
-      } else {
-        // If prevout.value is not available, we need to fetch it from the UTXO
-        // This is a fallback for APIs that don't include input values
-        console.warn(`⚠️ Input value not found in prevout for ${input.txid}:${input.vout}, using UTXO value`);
-        const utxo = utxos.find(u => u.txid === input.txid && u.vout === input.vout);
-        if (utxo) {
-          totalOriginalInputValue += utxo.value;
-        } else {
-          console.error(`❌ Cannot find UTXO for input ${input.txid}:${input.vout}`);
-          throw new Error(`Cannot determine input value for ${input.txid}:${input.vout}`);
-        }
-      }
-    }
+    // Fix: Calculate the original fee using only our inputs (consistent with totalInputValue)
+    // This ensures we're comparing apples to apples when calculating the cancellation fee
     
     // Calculate total output value from original transaction
+    let totalOriginalOutputValue = 0;
     for (const output of originalTx.vout) {
       totalOriginalOutputValue += output.value;
     }
     
-    const originalFee = totalOriginalInputValue - totalOriginalOutputValue;
+    const originalFee = totalInputValue - totalOriginalOutputValue;
     const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
     const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
     
