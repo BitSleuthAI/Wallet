@@ -40,9 +40,6 @@
         "android.permission.USE_FINGERPRINT"
       ]
     },
-//    "web": {
-//      "favicon": "./assets/images/favicon.png"
-//    },
     "plugins": [
       "expo-router",
       [
