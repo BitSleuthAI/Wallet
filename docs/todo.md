@@ -1,4 +1,4 @@
-# Wallet App Feature Analysis - Placeholder vs Functional Features
+# Wallet App Feature Analysis - Placeholder
 
 Based on comprehensive analysis of the codebase, here's a detailed breakdown of which features are implemented as placeholders versus functional implementations:
 
@@ -67,35 +67,6 @@ Based on comprehensive analysis of the codebase, here's a detailed breakdown of 
 - **Issue**: Setting exists but no enforcement during transaction signing
 - **Impact**: Biometric requirement for transactions not functional
 
-## **Functional Features:**
-
-### **1. Coin Control**
-- **Status**: ✅ **Fully functional**
-- **Location**: `app/coin-control.tsx`
-- **Features**: UTXO selection, freezing, filtering, sorting all work
-
-### **2. Fee Estimation**
-- **Status**: ✅ **Fully functional**
-- **Location**: `services/fee-service.ts`
-- **Features**: Real-time fee estimates from multiple sources (Mempool.space, Blockstream)
-
-### **3. Biometric Authentication (App Unlock)**
-- **Status**: ✅ **Fully functional**
-- **Location**: `app/biometric-setup.tsx`
-- **Features**: Face ID/Touch ID for app unlock works correctly
-
-### **4. Wallet Management**
-- **Status**: ✅ **Fully functional**
-- **Features**: Create, import, delete wallets, address generation all work
-
-### **5. Transaction History**
-- **Status**: ✅ **Fully functional**
-- **Features**: Real transaction data from blockchain APIs
-
-### **6. Balance Tracking**
-- **Status**: ✅ **Fully functional**
-- **Features**: Real-time balance updates
-
 ## **Summary:**
 
 The app has a **solid foundation** with working wallet management, balance tracking, transaction history, and coin control. However, **all transaction-related features are non-functional**:
@@ -107,7 +78,3 @@ The app has a **solid foundation** with working wallet management, balance track
 - ❌ **MFA/Transaction security** (not enforced)
 
 This appears to be a **wallet viewer** rather than a fully functional Bitcoin wallet. Users can view their balance and transaction history but cannot perform any actual Bitcoin operations.
-
-- Non-functional features: Transaction sending, RBF, transaction cancellation, CPFP, custom fees, auto-adjust fees, fee limits, passkeys/security keys, MFA, and biometric transaction security
-
-- Functional features: Coin control, fee estimation, biometric app unlock, wallet management, transaction history, and balance tracking
