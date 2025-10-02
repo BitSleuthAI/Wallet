@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import { useWallet } from '@/hooks/wallet-store';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Haptics from 'expo-haptics';
+import { ArrowLeft, Delete } from 'lucide-react-native';
+import React, { useCallback, useMemo, useState } from 'react';
 import {
-  View,
-  Text,
+  Platform,
   StyleSheet,
+  Text,
   TouchableOpacity,
   Vibration,
-  Platform,
+  View,
 } from 'react-native';
-import { ArrowLeft, Delete } from 'lucide-react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useWallet } from '@/hooks/wallet-store';
-import * as Haptics from 'expo-haptics';
 
 interface PinVerificationScreenProps {
   title: string;
@@ -30,50 +30,44 @@ export default function PinVerificationScreen({
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const handleNumberPress = (number: string) => {
-    if (pin.length < 4) {
-      const newPin = pin + number;
-      setPin(newPin);
-      setError('');
-      
-      if (Platform.OS !== 'web') {
-        Haptics.selectionAsync();
-      }
-      
-      if (newPin.length === 4) {
-        verifyPin(newPin);
+  // Memoized haptic feedback to prevent recreation on every render
+  const triggerHaptic = useCallback(async () => {
+    if (Platform.OS !== 'web') {
+      try {
+        await Haptics.selectionAsync();
+      } catch {
+        // Haptics not available, continue silently
       }
     }
-  };
+  }, []);
 
-  const handleDelete = () => {
-    if (pin.length > 0) {
-      setPin(pin.slice(0, -1));
-      setError('');
-      
-      if (Platform.OS !== 'web') {
-        Haptics.selectionAsync();
-      }
-    }
-  };
-
-  const verifyPin = async (enteredPin: string) => {
+  const verifyPin = useCallback(async (enteredPin: string) => {
     setIsLoading(true);
     try {
       const storedPin = await AsyncStorage.getItem('pin');
       
       if (storedPin === enteredPin) {
+        // Trigger success haptic feedback asynchronously
         if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+          } catch {
+            // Haptics not available, continue silently
+          }
         }
         onSuccess();
       } else {
         setError('Incorrect PIN. Please try again.');
         setPin('');
         
+        // Trigger error haptic feedback asynchronously
         if (Platform.OS !== 'web') {
-          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-          Vibration.vibrate(500);
+          try {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+            Vibration.vibrate(500);
+          } catch {
+            // Haptics not available, continue silently
+          }
         }
       }
     } catch (error) {
@@ -83,9 +77,42 @@ export default function PinVerificationScreen({
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [onSuccess]);
 
-  const renderPinDots = () => {
+  const handleNumberPress = useCallback((number: string) => {
+    setPin(currentPin => {
+      if (currentPin.length < 4) {
+        const newPin = currentPin + number;
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        if (newPin.length === 4) {
+          verifyPin(newPin);
+        }
+        
+        return newPin;
+      }
+      return currentPin;
+    });
+  }, [triggerHaptic, verifyPin]);
+
+  const handleDelete = useCallback(() => {
+    setPin(currentPin => {
+      if (currentPin.length > 0) {
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        return currentPin.slice(0, -1);
+      }
+      return currentPin;
+    });
+  }, [triggerHaptic]);
+
+  const renderPinDots = useMemo(() => {
     return (
       <View style={styles.pinDotsContainer}>
         {[...Array(4)].map((_, index) => (
@@ -102,9 +129,9 @@ export default function PinVerificationScreen({
         ))}
       </View>
     );
-  };
+  }, [pin.length, theme.colors.primary, theme.colors.border]);
 
-  const renderNumberPad = () => {
+  const renderNumberPad = useMemo(() => {
     const numberRows = [
       ['1', '2', '3'],
       ['4', '5', '6'],
@@ -157,7 +184,7 @@ export default function PinVerificationScreen({
         ))}
       </View>
     );
-  };
+  }, [theme.colors.primary, handleDelete, handleNumberPress, isLoading]);
 
   return (
     <View style={styles.container}>
@@ -187,7 +214,7 @@ export default function PinVerificationScreen({
           </Text>
         </View>
 
-        {renderPinDots()}
+        {renderPinDots}
 
         {error ? (
           <Text style={[styles.errorText, { color: '#EF4444' }]}>
@@ -195,7 +222,7 @@ export default function PinVerificationScreen({
           </Text>
         ) : null}
 
-        {renderNumberPad()}
+        {renderNumberPad}
       </View>
     </View>
   );

@@ -1,20 +1,20 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Delete, Fingerprint, Lock, Shield } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View,
+  Alert,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View,
 } from 'react-native';
-import { GradientBackground } from '@/components/GradientBackground';
 
 export default function PinUnlockScreen() {
   const { theme, logoutAndEraseWallet } = useWallet();
@@ -44,7 +44,8 @@ export default function PinUnlockScreen() {
     tryBiometric();
   }, [biometricEnabled, authenticateWithBiometric]);
 
-  const handleNumberPress = async (number: string) => {
+  // Memoized haptic feedback to prevent recreation on every render
+  const triggerHaptic = useCallback(async () => {
     if (Platform.OS !== 'web') {
       try {
         await Haptics.selectionAsync();
@@ -52,25 +53,25 @@ export default function PinUnlockScreen() {
         // Haptics not available, continue silently
       }
     }
+  }, []);
 
+  const handleNumberPress = useCallback(async (number: string) => {
     if (pin.length < maxPinLength) {
+      // Trigger haptic feedback asynchronously to avoid blocking UI
+      triggerHaptic();
       setPin(prev => prev + number);
     }
-  };
+  }, [pin.length, maxPinLength, triggerHaptic]);
 
-  const handleDelete = async () => {
-    if (Platform.OS !== 'web') {
-      try {
-        await Haptics.selectionAsync();
-      } catch {
-        // Haptics not available, continue silently
-      }
+  const handleDelete = useCallback(async () => {
+    if (pin.length > 0) {
+      // Trigger haptic feedback asynchronously to avoid blocking UI
+      triggerHaptic();
+      setPin(prev => prev.slice(0, -1));
     }
+  }, [pin.length, triggerHaptic]);
 
-    setPin(prev => prev.slice(0, -1));
-  };
-
-  const handleForgotPin = () => {
+  const handleForgotPin = useCallback(() => {
     Alert.alert(
       'Restore Wallet',
       'Are you sure you want to erase the current wallet and restore a new one? This action cannot be undone.',
@@ -95,34 +96,34 @@ export default function PinUnlockScreen() {
         },
       ]
     );
-  };
+  }, [logoutAndEraseWallet]);
 
-  const handleBiometricAuth = async () => {
+  const handleBiometricAuth = useCallback(async () => {
     const success = await authenticateWithBiometric();
     if (!success) {
       // Biometric failed, user can continue with PIN
       console.log('Biometric authentication failed, user can use PIN');
     }
-  };
+  }, [authenticateWithBiometric]);
 
-  const getBiometricIcon = () => {
+  const getBiometricIcon = useCallback(() => {
     if (biometricType === 'Face ID') {
       return <Shield color={theme.colors.primary} size={24} />;
     }
     return <Fingerprint color={theme.colors.primary} size={24} />;
-  };
+  }, [biometricType, theme.colors.primary]);
 
-  const getBiometricText = () => {
+  const getBiometricText = useCallback(() => {
     if (Platform.OS === 'android') {
       return 'Biometric';
     }
     return biometricType || 'Biometric';
-  };
+  }, [biometricType]);
 
   useEffect(() => {
     if (pin.length === maxPinLength) {
-      // Auto-verify PIN when 4 digits are entered
-      setTimeout(async () => {
+      // Auto-verify PIN when 4 digits are entered - reduced delay for better responsiveness
+      const timeoutId = setTimeout(async () => {
         const isValid = await unlock(pin);
         
         if (!isValid) {
@@ -130,9 +131,10 @@ export default function PinUnlockScreen() {
           const newAttempts = attempts + 1;
           setAttempts(newAttempts);
           
+          // Trigger haptic feedback asynchronously
           if (Platform.OS !== 'web') {
             try {
-              await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
             } catch {
               // Haptics not available, use vibration fallback
               Vibration.vibrate(500);
@@ -156,11 +158,13 @@ export default function PinUnlockScreen() {
           setPin('');
         }
         // If valid, the unlock function will handle unlocking the app
-      }, 300);
+      }, 150); // Reduced from 300ms to 150ms for better responsiveness
+      
+      return () => clearTimeout(timeoutId);
     }
   }, [pin, unlock, attempts]);
 
-  const renderPinDots = () => {
+  const renderPinDots = useMemo(() => {
     return (
       <View style={styles.pinDotsContainer}>
         {Array.from({ length: maxPinLength }).map((_, index) => (
@@ -179,9 +183,9 @@ export default function PinUnlockScreen() {
         ))}
       </View>
     );
-  };
+  }, [pin.length, theme.colors.primary]);
 
-  const renderNumberPad = () => {
+  const renderNumberPad = useMemo(() => {
     const numberRows = [
       ['1', '2', '3'],
       ['4', '5', '6'],
@@ -233,7 +237,7 @@ export default function PinUnlockScreen() {
         ))}
       </View>
     );
-  };
+  }, [theme.colors.primary, handleDelete, handleNumberPress]);
 
   const renderContent = () => (
     <View style={styles.content}>
@@ -273,8 +277,8 @@ export default function PinUnlockScreen() {
           )}
         </View>
 
-      {renderPinDots()}
-      {renderNumberPad()}
+      {renderPinDots}
+      {renderNumberPad}
       
       <View style={styles.footer}>
         <TouchableOpacity onPress={handleForgotPin} activeOpacity={0.7}>

@@ -11,7 +11,7 @@ import { Wallet } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -71,19 +71,19 @@ export default function WalletScreen() {
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
   const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
 
-  const onRefresh = async () => {
+  const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await refreshData();
     setRefreshing(false);
-  };
+  }, [refreshData]);
 
-  const handleEditWallet = (wallet: Wallet) => {
+  const handleEditWallet = useCallback((wallet: Wallet) => {
     setEditingWallet(wallet);
     setEditName(wallet.name);
     setEditColor(wallet.color);
-  };
+  }, []);
 
-  const handleSaveEdit = async () => {
+  const handleSaveEdit = useCallback(async () => {
     if (!editingWallet || !editName.trim()) {
       Alert.alert('Error', 'Please enter a wallet name');
       return;
@@ -97,20 +97,20 @@ export default function WalletScreen() {
     } catch (error) {
       Alert.alert('Error', 'Failed to update wallet');
     }
-  };
+  }, [editingWallet, editName, editColor, editWallet]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingWallet(null);
     setEditName('');
     setEditColor('');
-  };
+  }, []);
 
 
 
-  const formatPriceChange = (change: number) => {
+  const formatPriceChange = useCallback((change: number) => {
     const sign = change >= 0 ? '+' : '';
     return `${sign}${change.toFixed(2)}%`;
-  };
+  }, []);
 
   // Handle feedback prompt display
   useEffect(() => {
@@ -125,10 +125,10 @@ export default function WalletScreen() {
     }
   }, [shouldShowFeedbackPrompt, showFeedbackPopup, markFeedbackPromptShown]);
 
-  const handleFeedbackDismiss = () => {
+  const handleFeedbackDismiss = useCallback(() => {
     setShowFeedbackPopup(false);
     markFeedbackPromptDismissed();
-  };
+  }, [markFeedbackPromptDismissed]);
 
   // Show loading state while wallet is being loaded
   if (isLoading) {
@@ -248,9 +248,9 @@ export default function WalletScreen() {
             decelerationRate="fast"
             snapToInterval={336} // 320 (card width) + 16 (margin)
             snapToAlignment="start"
-            data={[...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }]}
+            data={useMemo(() => [...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }], [wallets])}
             keyExtractor={(item, index) => `${item.type}-${index}`}
-            renderItem={({ item }) => {
+            renderItem={useCallback(({ item }) => {
               if (item.type === 'add') {
                 return (
                   <TouchableOpacity 
@@ -287,8 +287,12 @@ export default function WalletScreen() {
                   />
                 </View>
               );
-            }}
+            }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet])}
             contentContainerStyle={styles.carouselContent}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={3}
+            windowSize={5}
+            initialNumToRender={3}
           />
         </View>
 
