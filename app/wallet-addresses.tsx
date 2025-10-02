@@ -91,7 +91,7 @@ export default function WalletAddressesScreen() {
         // Use the new gap limit function
         const addressData = await walletService.generateAddressesForView(currentWallet.xpub, selectedTab);
         
-        const addresses: AddressInfo[] = addressData.map((addrData) => ({
+        const addresses: AddressInfo[] = addressData.map((addrData: {address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}) => ({
           address: addrData.address,
           index: addrData.index,
           balance: addrData.balance,
@@ -139,8 +139,24 @@ export default function WalletAddressesScreen() {
 
   // Get address data for current tab (from cache or query)
   const addressData = useMemo((): AddressInfo[] => {
-    // Use cached addresses if available, otherwise use query data
-    const sourceData = cachedAddresses[selectedTab] || addressesQuery.data || [];
+    // Determine the best data source for the current tab
+    let sourceData: AddressInfo[] = [];
+    
+    // If query is loading or has an error, don't use stale cached data
+    if (addressesQuery.isLoading || addressesQuery.error) {
+      // Only use cached data if query is loading (not if it has an error)
+      if (addressesQuery.isLoading && cachedAddresses[selectedTab]) {
+        sourceData = cachedAddresses[selectedTab];
+      } else {
+        sourceData = [];
+      }
+    } else if (addressesQuery.data) {
+      // Query succeeded - use fresh query data
+      sourceData = addressesQuery.data;
+    } else if (cachedAddresses[selectedTab]) {
+      // Fallback to cached data if no fresh query data
+      sourceData = cachedAddresses[selectedTab];
+    }
     
     return sourceData
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
@@ -156,7 +172,7 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [cachedAddresses, addressesQuery.data, selectedTab]);
+  }, [cachedAddresses, addressesQuery.data, addressesQuery.isLoading, addressesQuery.error, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
