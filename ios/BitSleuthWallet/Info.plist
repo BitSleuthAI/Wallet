@@ -97,5 +97,7 @@
     <string>Automatic</string>
     <key>UIViewControllerBasedStatusBarAppearance</key>
     <false/>
+    <key>FirebaseCrashlyticsCollectionEnabled</key>
+    <true/>
   </dict>
 </plist>
