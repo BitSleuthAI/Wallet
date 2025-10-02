@@ -130,26 +130,39 @@ firebaseDeps.forEach(dep => {
 // Check app.json configuration
 console.log('\n⚙️ Checking app.json Firebase Configuration...');
 const appJsonPath = path.join(__dirname, '..', 'app.json');
-const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
 
-const hasFirebaseAppPlugin = appJson.expo.plugins.some(plugin => 
-  Array.isArray(plugin) && plugin[0] === '@react-native-firebase/app'
-);
+if (fs.existsSync(appJsonPath)) {
+  try {
+    const appJson = JSON.parse(fs.readFileSync(appJsonPath, 'utf8'));
+    
+    if (appJson.expo && appJson.expo.plugins && Array.isArray(appJson.expo.plugins)) {
+      const hasFirebaseAppPlugin = appJson.expo.plugins.some(plugin => 
+        Array.isArray(plugin) && plugin[0] === '@react-native-firebase/app'
+      );
 
-const hasCrashlyticsPlugin = appJson.expo.plugins.some(plugin => 
-  plugin === '@react-native-firebase/crashlytics'
-);
+      const hasCrashlyticsPlugin = appJson.expo.plugins.some(plugin => 
+        plugin === '@react-native-firebase/crashlytics'
+      );
 
-if (hasFirebaseAppPlugin) {
-  console.log('✅ @react-native-firebase/app plugin configured');
+      if (hasFirebaseAppPlugin) {
+        console.log('✅ @react-native-firebase/app plugin configured');
+      } else {
+        console.log('❌ @react-native-firebase/app plugin not found');
+      }
+
+      if (hasCrashlyticsPlugin) {
+        console.log('✅ @react-native-firebase/crashlytics plugin configured');
+      } else {
+        console.log('❌ @react-native-firebase/crashlytics plugin not found');
+      }
+    } else {
+      console.log('❌ Invalid app.json structure - missing expo.plugins array');
+    }
+  } catch (error) {
+    console.log('❌ Error parsing app.json:', error.message);
+  }
 } else {
-  console.log('❌ @react-native-firebase/app plugin not found');
-}
-
-if (hasCrashlyticsPlugin) {
-  console.log('✅ @react-native-firebase/crashlytics plugin configured');
-} else {
-  console.log('❌ @react-native-firebase/crashlytics plugin not found');
+  console.log('❌ app.json not found');
 }
 
 // Summary and recommendations
