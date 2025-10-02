@@ -11,17 +11,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -362,21 +362,16 @@ export default function SendScreen() {
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;
       
-      const txid = await sendTransaction(
+      const result = await sendTransaction(
         currentAddress,
         recipientAddress.trim(),
         amountInBTC,
         feeRate,
         currentWallet.mnemonic,
-        addressIndex
+        addressIndex,
+        enableRBF,
+        selected.length > 0 ? selected : undefined
       );
-      
-      // Create result object to match expected format
-      const result = {
-        txid,
-        fee: estimatedFee || 0.0001, // Use estimated fee
-        amount: amountInBTC
-      };
       
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       

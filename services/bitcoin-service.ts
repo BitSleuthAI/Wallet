@@ -287,8 +287,10 @@ export const sendTransaction = async (
   amount: number,
   feeRate: number = 10,
   mnemonic?: string,
-  addressIndex?: number
-): Promise<string> => {
+  addressIndex?: number,
+  enableRBF?: boolean,
+  selectedUTXOs?: UTXO[]
+): Promise<{ txid: string; fee: number; amount: number }> => {
   try {
     console.log('📤 Sending transaction...');
     console.log('From:', fromAddress.substring(0, 10) + '...');
@@ -316,28 +318,56 @@ export const sendTransaction = async (
     // Convert amount to satoshis
     const amountSatoshis = Math.floor(amount * 1e8);
     
-    // Get UTXOs for the from address
-    console.log('🔍 Fetching UTXOs for transaction...');
-    const utxos = await getAddressUTXOs(fromAddress);
+    let utxosToUse: UTXO[];
+    let actualFee: number;
     
-    if (utxos.length === 0) {
-      throw new Error('No UTXOs available for this address');
+    if (selectedUTXOs && selectedUTXOs.length > 0) {
+      // Use coin control selected UTXOs
+      console.log('🔍 Using coin control selected UTXOs:', selectedUTXOs.length);
+      utxosToUse = selectedUTXOs.filter(utxo => utxo.status.confirmed);
+      
+      if (utxosToUse.length === 0) {
+        throw new Error('No confirmed UTXOs in selected set');
+      }
+      
+      // Calculate actual fee for selected UTXOs
+      const totalInputValue = utxosToUse.reduce((sum, utxo) => sum + utxo.value, 0);
+      const estimatedSize = estimateTransactionSize(utxosToUse.length, 2); // recipient + change
+      actualFee = Math.ceil(estimatedSize * feeRate);
+      const totalNeeded = amountSatoshis + actualFee;
+      
+      if (totalInputValue < totalNeeded) {
+        throw new Error('Insufficient funds in selected UTXOs');
+      }
+      
+      console.log('✅ Using coin control UTXOs:', utxosToUse.length);
+    } else {
+      // Get UTXOs for the from address and select automatically
+      console.log('🔍 Fetching UTXOs for transaction...');
+      const utxos = await getAddressUTXOs(fromAddress);
+      
+      if (utxos.length === 0) {
+        throw new Error('No UTXOs available for this address');
+      }
+      
+      // Select UTXOs using greedy algorithm
+      const selectedUTXOsResult = selectUTXOs(utxos, amountSatoshis, feeRate);
+      utxosToUse = selectedUTXOsResult.selectedUTXOs;
+      actualFee = selectedUTXOsResult.fee;
+      console.log('✅ Selected UTXOs:', utxosToUse.length);
     }
-    
-    // Select UTXOs using greedy algorithm
-    const selectedUTXOs = selectUTXOs(utxos, amountSatoshis, feeRate);
-    console.log('✅ Selected UTXOs:', selectedUTXOs.selectedUTXOs.length);
     
     // Create transaction
     console.log('🔧 Creating transaction...');
     const transaction = await createTransaction(
-      selectedUTXOs.selectedUTXOs,
+      utxosToUse,
       toAddress,
       amountSatoshis,
-      selectedUTXOs.change,
+      actualFee,
       feeRate,
       mnemonic,
-      addressIndex
+      addressIndex,
+      enableRBF
     );
     
     // Broadcast transaction
@@ -345,7 +375,11 @@ export const sendTransaction = async (
     const txid = await broadcastTransaction(transaction);
     
     console.log('✅ Transaction sent successfully:', txid);
-    return txid;
+    return {
+      txid,
+      fee: actualFee / 1e8, // Convert back to BTC
+      amount: amountSatoshis / 1e8 // Convert back to BTC
+    };
   } catch (error) {
     console.error('❌ sendTransaction failed:', error);
     throw error;
@@ -414,10 +448,11 @@ async function createTransaction(
   utxos: UTXO[],
   toAddress: string,
   amountSatoshis: number,
-  changeAmount: number,
+  feeAmount: number,
   feeRate: number,
   mnemonic?: string,
-  addressIndex?: number
+  addressIndex?: number,
+  enableRBF?: boolean
 ): Promise<string> {
   try {
     console.log('🔧 Creating transaction with', utxos.length, 'inputs');
@@ -436,19 +471,30 @@ async function createTransaction(
     // Create transaction builder
     const txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
-    // Add inputs
+    // Calculate total input value and change
+    const totalInputValue = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    const changeAmount = totalInputValue - amountSatoshis - feeAmount;
+    
+    // Add inputs with RBF support
     for (const utxo of utxos) {
-      txb.addInput(utxo.txid, utxo.vout);
+      if (enableRBF) {
+        // Enable RBF by setting sequence number to 0xFFFFFFFD (allows replacement)
+        txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+      } else {
+        // Standard sequence number (no RBF)
+        txb.addInput(utxo.txid, utxo.vout);
+      }
     }
     
     // Add output to recipient
     txb.addOutput(toAddress, amountSatoshis);
     
-    // Add change output if needed
-    if (changeAmount > 546) { // Dust threshold
-      // For now, we'll need the change address - this should be passed as parameter
-      // For simplicity, we'll skip change for now
+    // Add change output if needed (dust threshold is 546 satoshis)
+    if (changeAmount > 546) {
+      // For now, we'll skip change output since we need a change address
+      // This should be improved to generate a proper change address
       console.log('⚠️ Change output skipped (change amount:', changeAmount, 'satoshis)');
+      console.log('⚠️ Note: Change address generation needed for proper implementation');
     }
     
     // Sign inputs
