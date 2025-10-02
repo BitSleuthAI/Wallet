@@ -103,8 +103,9 @@ export default function SendScreen() {
       try {
         if (!currentWallet) return;
         const all: any[] = [];
-        for (const addr of currentWallet.addresses) {
-          const list = await getAddressUTXOs(addr);
+        for (let i = 0; i < currentWallet.addresses.length; i++) {
+          const addr = currentWallet.addresses[i];
+          const list = await getAddressUTXOs(addr, i);
           list.forEach((u: any) => all.push({ ...u, address: addr }));
         }
         setAvailableUtxos(all);

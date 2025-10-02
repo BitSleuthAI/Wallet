@@ -351,7 +351,7 @@ export const sendTransaction = async (
     } else {
       // Get UTXOs for the from address and select automatically
       console.log('🔍 Fetching UTXOs for transaction...');
-      const utxos = await getAddressUTXOs(fromAddress);
+      const utxos = await getAddressUTXOs(fromAddress, addressIndex);
       
       if (utxos.length === 0) {
         throw new Error('No UTXOs available for this address');
@@ -566,7 +566,12 @@ async function createTransaction(
       // Use the addressIndex from the UTXO if available, otherwise fall back to the provided addressIndex
       const utxoAddressIndex = utxo.addressIndex !== undefined ? utxo.addressIndex : addressIndex;
       
-      console.log(`🔐 Signing input ${i} with address index ${utxoAddressIndex}`);
+      console.log(`🔐 Signing input ${i} with address index ${utxoAddressIndex} (UTXO: ${utxo.txid.substring(0, 8)}...)`);
+      
+      // Validate address index is non-negative
+      if (utxoAddressIndex < 0) {
+        throw new Error(`Invalid address index ${utxoAddressIndex} for UTXO ${utxo.txid}:${utxo.vout}`);
+      }
       
       // Derive private key for this specific address index
       const child = root.derivePath(`m/84'/0'/0'/0/${utxoAddressIndex}`);
@@ -577,7 +582,7 @@ async function createTransaction(
       
       // Sign the input with correct parameters for P2WPKH
       // Parameters: (inputIndex, keyPair, redeemScript, hashType, witnessValue)
-      txb.sign(i, child, null, null, utxo.value, bitcoin.Transaction.SIGHASH_ALL);
+      txb.sign(i, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
     }
     
     // Build transaction
