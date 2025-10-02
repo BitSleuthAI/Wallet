@@ -290,7 +290,8 @@ export const sendTransaction = async (
   mnemonic: string,
   addressIndex: number,
   enableRBF?: boolean,
-  selectedUTXOs?: UTXO[]
+  selectedUTXOs?: UTXO[],
+  allWalletAddresses?: string[]
 ): Promise<{ txid: string; fee: number; amount: number }> => {
   try {
     console.log('📤 Sending transaction...');
@@ -349,16 +350,49 @@ export const sendTransaction = async (
       
       console.log('✅ Using coin control UTXOs:', utxosToUse.length);
     } else {
-      // Get UTXOs for the from address and select automatically
+      // Get UTXOs from all wallet addresses and select automatically
       console.log('🔍 Fetching UTXOs for transaction...');
-      const utxos = await getAddressUTXOs(fromAddress, addressIndex);
       
-      if (utxos.length === 0) {
-        throw new Error('No UTXOs available for this address');
+      let allUtxos: UTXO[] = [];
+      
+      if (allWalletAddresses && allWalletAddresses.length > 0) {
+        // Fetch UTXOs from all wallet addresses
+        console.log('🔍 Fetching UTXOs from all wallet addresses:', allWalletAddresses.length);
+        
+        for (let i = 0; i < allWalletAddresses.length; i++) {
+          const address = allWalletAddresses[i];
+          try {
+            const addressUtxos = await getAddressUTXOs(address, i);
+            // Add the address index to each UTXO for proper signing
+            const utxosWithIndex = addressUtxos.map(utxo => ({
+              ...utxo,
+              addressIndex: i
+            }));
+            allUtxos.push(...utxosWithIndex);
+            console.log(`✅ Fetched ${addressUtxos.length} UTXOs from address ${i}`);
+          } catch (error) {
+            console.warn(`⚠️ Failed to fetch UTXOs from address ${i}:`, error);
+            // Continue with other addresses even if one fails
+          }
+        }
+      } else {
+        // Fallback to just the from address if no wallet addresses provided
+        console.log('⚠️ No wallet addresses provided, falling back to from address only');
+        const utxos = await getAddressUTXOs(fromAddress, addressIndex);
+        allUtxos = utxos.map(utxo => ({
+          ...utxo,
+          addressIndex: addressIndex
+        }));
       }
       
+      if (allUtxos.length === 0) {
+        throw new Error('No UTXOs available in wallet');
+      }
+      
+      console.log(`✅ Total UTXOs available: ${allUtxos.length}`);
+      
       // Select UTXOs using greedy algorithm
-      const selectedUTXOsResult = selectUTXOs(utxos, amountSatoshis, feeRate);
+      const selectedUTXOsResult = selectUTXOs(allUtxos, amountSatoshis, feeRate);
       utxosToUse = selectedUTXOsResult.selectedUTXOs;
       actualFee = selectedUTXOsResult.fee;
       console.log('✅ Selected UTXOs:', utxosToUse.length);

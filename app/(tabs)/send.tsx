@@ -384,7 +384,8 @@ export default function SendScreen() {
         currentWallet.mnemonic,
         addressIndex,
         enableRBF,
-        selected.length > 0 ? selected : undefined
+        selected.length > 0 ? selected : undefined,
+        currentWallet.addresses
       );
       
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
