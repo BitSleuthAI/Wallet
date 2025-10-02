@@ -103,7 +103,7 @@ export const isValidBitcoinAddress = (address: string): boolean => {
 /**
  * Get UTXOs for an address (still needed by coin-control and send screens)
  */
-export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
+export const getAddressUTXOs = async (address: string, addressIndex?: number): Promise<UTXO[]> => {
   try {
     console.log('🔍 Fetching UTXOs for address:', address.substring(0, 10) + '...');
     
@@ -126,6 +126,7 @@ export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
                 value: utxo.value,
                 scriptPubKey: utxo.scriptpubkey,
                 address: utxo.status?.confirmed ? address : undefined,
+                addressIndex: addressIndex, // Include the address index
                 status: {
                   confirmed: utxo.status?.confirmed || false,
                   block_height: utxo.status?.block_height,
@@ -189,6 +190,7 @@ export const getAddressUTXOs = async (address: string): Promise<UTXO[]> => {
                 value: utxo.value,
                 scriptPubKey: utxo.scriptpubkey,
                 address: utxo.status?.confirmed ? address : undefined,
+                addressIndex: addressIndex, // Include the address index
                 status: {
                   confirmed: utxo.status?.confirmed || false,
                   block_height: utxo.status?.block_height,
@@ -545,32 +547,37 @@ async function createTransaction(
     }
     
     // Sign inputs
-    console.log('🔐 Signing transaction with private key...');
+    console.log('🔐 Signing transaction with private keys...');
     
     // Import bip32 and bip39
     const bip32Module = await import('bip32');
     const bip39 = require('bip39');
     const bip32 = bip32Module.BIP32Factory(ecc);
     
-    // Derive private key
+    // Derive root key
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32.fromSeed(seed);
-    const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
     
-    if (!child.privateKey) {
-      throw new Error('Failed to derive private key');
-    }
-    
-    // Sign each input
+    // Sign each input with its corresponding private key
     for (let i = 0; i < utxos.length; i++) {
       const utxo = utxos[i];
       
-      // Get the public key for this UTXO
-      const publicKey = child.publicKey;
-      const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: publicKey });
+      // Determine the address index for this UTXO
+      // Use the addressIndex from the UTXO if available, otherwise fall back to the provided addressIndex
+      const utxoAddressIndex = utxo.addressIndex !== undefined ? utxo.addressIndex : addressIndex;
       
-      // Sign the input with witnessValue for P2WPKH
-      txb.sign(i, child, null, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      console.log(`🔐 Signing input ${i} with address index ${utxoAddressIndex}`);
+      
+      // Derive private key for this specific address index
+      const child = root.derivePath(`m/84'/0'/0'/0/${utxoAddressIndex}`);
+      
+      if (!child.privateKey) {
+        throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
+      }
+      
+      // Sign the input with correct parameters for P2WPKH
+      // Parameters: (inputIndex, keyPair, redeemScript, hashType, witnessValue)
+      txb.sign(i, child, null, null, utxo.value, bitcoin.Transaction.SIGHASH_ALL);
     }
     
     // Build transaction
