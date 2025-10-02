@@ -819,19 +819,42 @@ async function createCancellationTransaction(
     }
     
     // Generate a new address in the wallet for the cancellation
-    // Use the next available address index
-    const nextAddressIndex = Math.max(...walletAddresses.map((_, i) => i)) + 1;
+    // Use the next available address index - find the highest used index from our inputs
+    // This ensures we don't reuse addresses and properly track the BIP32 derivation path
+    const usedAddressIndices = ourInputs.map((input: any) => {
+      const address = input.prevout.scriptpubkey_address;
+      return walletAddresses.indexOf(address);
+    }).filter((index: number) => index >= 0);
+    
+    const nextAddressIndex = usedAddressIndices.length > 0 
+      ? Math.max(...usedAddressIndices) + 1 
+      : walletAddresses.length; // Fallback to current wallet address count
     const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
     
     // Calculate fee for cancellation transaction
-    // Use a reasonable fee rate for cancellation (higher than original to ensure it gets mined)
-    const originalFee = originalTx.fee || 0;
-    const originalSize = estimateTransactionSize(ourInputs.length, 1); // Single output
-    const originalFeeRate = originalFee / originalSize;
+    // Fix: Calculate the original fee properly from inputs/outputs since originalTx.fee is often missing
+    let totalOriginalInputValue = 0;
+    let totalOriginalOutputValue = 0;
+    
+    // Calculate total input value from our UTXOs
+    for (const utxo of utxos) {
+      totalOriginalInputValue += utxo.value;
+    }
+    
+    // Calculate total output value from original transaction
+    for (const output of originalTx.vout) {
+      totalOriginalOutputValue += output.value;
+    }
+    
+    const originalFee = totalOriginalInputValue - totalOriginalOutputValue;
+    const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
+    const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
     
     // Use a fee rate that's at least 2 sat/vB higher than original
     const cancellationFeeRate = Math.max(originalFeeRate + 2, 10); // Minimum 10 sat/vB
-    const cancellationFee = Math.ceil(cancellationFeeRate * originalSize);
+    // Fix: Use cancellation transaction size (single output) instead of original transaction size
+    const cancellationSize = estimateTransactionSize(ourInputs.length, 1); // Single output for cancellation
+    const cancellationFee = Math.ceil(cancellationFeeRate * cancellationSize);
     
     // Calculate amount to send back (total input minus fee)
     const cancellationAmount = totalInputValue - cancellationFee;
@@ -844,10 +867,12 @@ async function createCancellationTransaction(
     txb.addOutput(cancellationAddress, cancellationAmount);
     
     console.log(`💰 Cancellation details:`);
+    console.log(`   Original fee: ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Original size: ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
     console.log(`   Total input: ${totalInputValue} sats`);
     console.log(`   Cancellation fee: ${cancellationFee} sats (${cancellationFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Amount to wallet: ${cancellationAmount} sats`);
-    console.log(`   Cancellation address: ${cancellationAddress}`);
+    console.log(`   Cancellation address: ${cancellationAddress} (index: ${nextAddressIndex})`);
     
     // Sign the transaction
     console.log(`🔐 Signing cancellation transaction...`);
