@@ -61,7 +61,7 @@ export default function PinUnlockScreen() {
       triggerHaptic();
       setPin(prev => prev + number);
     }
-  }, [maxPinLength, triggerHaptic]);
+  }, [pin.length, maxPinLength, triggerHaptic]);
 
   const handleDelete = useCallback(async () => {
     if (pin.length > 0) {
@@ -69,7 +69,7 @@ export default function PinUnlockScreen() {
       triggerHaptic();
       setPin(prev => prev.slice(0, -1));
     }
-  }, [triggerHaptic]);
+  }, [pin.length, triggerHaptic]);
 
   const handleForgotPin = useCallback(() => {
     Alert.alert(
