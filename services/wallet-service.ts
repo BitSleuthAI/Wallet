@@ -640,8 +640,8 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 /**
  * Generate addresses for view addresses screen following gap limit logic
  * Returns addresses with their usage status following BIP44 gap limit rules
- * For receiving addresses: all used + up to GAP_LIMIT unused
- * For change addresses: all used + up to 1 unused
+ * Discovers all used addresses and stops only when encountering GAP_LIMIT consecutive unused addresses
+ * This ensures no used addresses are missed, regardless of chain type (receiving/change)
  */
 export async function generateAddressesForView(xpub: string, chainType: 'receiving' | 'change' = 'receiving'): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}>> {
   console.log(`🔍 Generating addresses for view: ${chainType} chain`);
@@ -656,17 +656,16 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
     
     const node = bip32.fromBase58(xpub);
     const chain = chainType === 'receiving' ? 0 : 1; // External (0) or Internal (1) chain
-    const maxUnusedLimit = chainType === 'receiving' ? GAP_LIMIT : 1; // 20 for receiving, 1 for change
     
     let allAddresses: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}> = [];
     let gap = 0;
     let index = 0;
-    let unusedCount = 0;
     
-    console.log(`🔍 Starting ${chainType} address discovery with gap limit ${GAP_LIMIT}, max unused: ${maxUnusedLimit}`);
+    console.log(`🔍 Starting ${chainType} address discovery with gap limit ${GAP_LIMIT}`);
     
-    // Discover addresses following gap limit logic
-    while (gap < GAP_LIMIT && unusedCount < maxUnusedLimit) {
+    // Discover addresses following BIP44 gap limit logic
+    // Stop only when we encounter GAP_LIMIT consecutive unused addresses
+    while (gap < GAP_LIMIT) {
       const batchSize = Math.min(GAP_LIMIT, 20); // Check in batches for efficiency
       const batch = await deriveAddressBatch(node, chain, index, index + batchSize);
       
@@ -709,12 +708,11 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
             console.log(`✅ Found used ${chainType} address at index ${addressIndex}: ${hasTransactions ? `${txCount} txs` : `${balance.toFixed(8)} BTC`}`);
           } else {
             gap++; // Increment gap for unused address
-            unusedCount++;
-            console.log(`🔍 ${chainType} address ${addressIndex} unused, gap: ${gap}, unused count: ${unusedCount}`);
+            console.log(`🔍 ${chainType} address ${addressIndex} unused, gap: ${gap}`);
             
-            // Stop if we've reached the unused limit for this chain type
-            if (unusedCount >= maxUnusedLimit) {
-              console.log(`🔍 Reached unused limit (${maxUnusedLimit}) for ${chainType} addresses`);
+            // Stop if we've reached the gap limit (consecutive unused addresses)
+            if (gap >= GAP_LIMIT) {
+              console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain`);
               break;
             }
           }
@@ -731,9 +729,10 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
             type: chainType
           });
           gap++;
-          unusedCount++;
           
-          if (unusedCount >= maxUnusedLimit) {
+          // Stop if we've reached the gap limit
+          if (gap >= GAP_LIMIT) {
+            console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain after error`);
             break;
           }
         }
@@ -742,9 +741,9 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
         await new Promise(resolve => setTimeout(resolve, 50));
       }
       
-      // Check if we've reached the gap limit or unused limit
-      if (gap >= GAP_LIMIT || unusedCount >= maxUnusedLimit) {
-        console.log(`🔍 Gap limit (${gap}) or unused limit (${unusedCount}) reached for ${chainType} chain`);
+      // Check if we've reached the gap limit
+      if (gap >= GAP_LIMIT) {
+        console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain`);
         break;
       }
       
