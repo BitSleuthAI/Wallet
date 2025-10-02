@@ -5,14 +5,14 @@ import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Copy, ExternalLink, RefreshCw } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
@@ -374,7 +374,7 @@ export default function WalletAddressesScreen() {
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
                 {selectedTab === 'receiving' 
                   ? `Receiving addresses (m/84\'/0\'/0\'/0/x) - Following BIP44 gap limit: all used + up to 20 unused. Showing ${addressData.length} addresses.`
-                  : `Change addresses (m/84\'/0\'/0\'/1/x) - Following BIP44 gap limit: all used + up to 1 unused. Showing ${addressData.length} addresses.`}
+                  : `Change addresses (m/84\'/0\'/0\'/1/x) - Following BIP44 gap limit: all used + up to 20 unused. Showing ${addressData.length} addresses.`}
               </Text>
               <View style={styles.summaryStats}>
                 <View style={styles.summaryItem}>
@@ -402,10 +402,7 @@ export default function WalletAddressesScreen() {
             {/* Gap Limit Info */}
             <View style={styles.gapLimitInfo}>
               <Text style={[styles.gapLimitText, { color: theme.colors.textSecondary }]}>
-                {selectedTab === 'receiving' 
-                  ? 'Gap Limit: Shows all used addresses + up to 20 unused addresses'
-                  : 'Gap Limit: Shows all used addresses + up to 1 unused address'
-                }
+                Gap Limit: Shows all used addresses + up to 20 unused addresses
               </Text>
             </View>
           </>
