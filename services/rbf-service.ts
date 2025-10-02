@@ -826,16 +826,21 @@ async function createCancellationTransaction(
     const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
     
     // Calculate fee for cancellation transaction
-    // Fix: Calculate the original fee using only our inputs (consistent with totalInputValue)
+    // Fix: Calculate the original fee using only our inputs and outputs (consistent with totalInputValue)
     // This ensures we're comparing apples to apples when calculating the cancellation fee
     
-    // Calculate total output value from original transaction
-    let totalOriginalOutputValue = 0;
+    // Calculate total output value that our wallet contributed to in the original transaction
+    let ourOriginalOutputValue = 0;
     for (const output of originalTx.vout) {
-      totalOriginalOutputValue += output.value;
+      // Only count outputs that go to our wallet addresses
+      if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
+        ourOriginalOutputValue += output.value;
+      }
     }
     
-    const originalFee = totalInputValue - totalOriginalOutputValue;
+    // Calculate the fee that our wallet paid in the original transaction
+    // This is the difference between our inputs and our outputs
+    const originalFee = totalInputValue - ourOriginalOutputValue;
     const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
     const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
     
@@ -856,9 +861,10 @@ async function createCancellationTransaction(
     txb.addOutput(cancellationAddress, cancellationAmount);
     
     console.log(`💰 Cancellation details:`);
-    console.log(`   Original fee: ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Our inputs: ${totalInputValue} sats`);
+    console.log(`   Our outputs in original: ${ourOriginalOutputValue} sats`);
+    console.log(`   Original fee (our portion): ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Original size: ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
-    console.log(`   Total input: ${totalInputValue} sats`);
     console.log(`   Cancellation fee: ${cancellationFee} sats (${cancellationFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Amount to wallet: ${cancellationAmount} sats`);
     console.log(`   Cancellation address: ${cancellationAddress} (index: ${nextAddressIndex})`);
