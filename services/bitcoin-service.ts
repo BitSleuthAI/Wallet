@@ -340,7 +340,16 @@ export const sendTransaction = async (
       
       // Calculate actual fee for selected UTXOs
       const totalInputValue = utxosToUse.reduce((sum, utxo) => sum + utxo.value, 0);
-      const estimatedSize = estimateTransactionSize(utxosToUse.length, 2); // recipient + change
+      
+      // Calculate change amount first
+      const tempFee = Math.ceil(estimateTransactionSize(utxosToUse.length, 2) * feeRate);
+      const tempChange = totalInputValue - amountSatoshis - tempFee;
+      
+      // Calculate actual output count based on change amount
+      const actualOutputCount = calculateOutputCount(tempChange);
+      
+      // Recalculate fee with accurate output count
+      const estimatedSize = estimateTransactionSize(utxosToUse.length, actualOutputCount);
       actualFee = Math.ceil(estimatedSize * feeRate);
       const totalNeeded = amountSatoshis + actualFee;
       
@@ -452,8 +461,15 @@ function selectUTXOs(utxos: UTXO[], targetAmount: number, feeRate: number): {
     selectedUTXOs.push(utxo);
     totalSelected += utxo.value;
     
-    // Estimate fee for current selection (2 outputs: recipient + change)
-    const estimatedSize = estimateTransactionSize(selectedUTXOs.length, 2);
+    // Calculate change amount first
+    const tempFee = Math.ceil(estimateTransactionSize(selectedUTXOs.length, 2) * feeRate);
+    const tempChange = totalSelected - targetAmount - tempFee;
+    
+    // Calculate actual output count based on change amount
+    const actualOutputCount = calculateOutputCount(tempChange);
+    
+    // Recalculate fee with accurate output count
+    const estimatedSize = estimateTransactionSize(selectedUTXOs.length, actualOutputCount);
     const fee = Math.ceil(estimatedSize * feeRate);
     const totalNeeded = targetAmount + fee;
     
@@ -464,6 +480,21 @@ function selectUTXOs(utxos: UTXO[], targetAmount: number, feeRate: number): {
   }
   
   throw new Error('Insufficient funds');
+}
+
+/**
+ * Calculate the actual number of outputs based on change amount and dust threshold
+ */
+function calculateOutputCount(changeAmount: number): number {
+  // Always have at least 1 output (recipient)
+  let outputCount = 1;
+  
+  // Add change output only if it exceeds dust threshold (546 satoshis)
+  if (changeAmount > 546) {
+    outputCount = 2; // recipient + change
+  }
+  
+  return outputCount;
 }
 
 /**
