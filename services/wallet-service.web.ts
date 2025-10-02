@@ -452,22 +452,32 @@ export const generateAddressFromXpub = async (xpub: string, index: number): Prom
 };
 
 /**
- * Find the next unused address index for web (simplified version)
- * Since web doesn't have real blockchain access, we'll use a deterministic approach
+ * Find the next address index using gap limit logic (web version)
+ * For web, we simulate the gap limit by cycling through a pool of addresses
  */
-const findNextUnusedAddressIndexWeb = async (xpub: string, startIndex: number = 0): Promise<number> => {
-  console.log(`🌐 Web: Finding next unused address index starting from ${startIndex}`);
+const findNextUnusedAddressIndexWeb = async (xpub: string, wallet: Wallet): Promise<number> => {
+  console.log(`🌐 Web: Finding next address with gap limit cycling for wallet: ${wallet.name}`);
   
   try {
-    // For web, we'll use a simple deterministic approach
-    // In a real implementation, this would check the blockchain
-    // For now, we'll just return the next sequential index
-    const nextIndex = startIndex;
-    console.log(`✅ Web: Next unused address index: ${nextIndex}`);
+    const GAP_LIMIT = 20; // Standard gap limit
+    
+    // For web, we'll maintain a pool of addresses that simulates the gap limit
+    // We'll cycle through the next GAP_LIMIT addresses from the current position
+    const currentIndex = wallet.currentAddressIndex;
+    
+    // Calculate the pool of addresses to cycle through (next GAP_LIMIT addresses)
+    const poolStart = Math.floor(currentIndex / GAP_LIMIT) * GAP_LIMIT;
+    const poolEnd = poolStart + GAP_LIMIT;
+    
+    // Find the next address in the pool
+    const nextIndex = ((currentIndex - poolStart + 1) % GAP_LIMIT) + poolStart;
+    
+    console.log(`🌐 Web: Cycling through address pool [${poolStart}-${poolEnd-1}]: ${currentIndex} -> ${nextIndex}`);
     return nextIndex;
   } catch (error) {
-    console.error(`❌ Web: Failed to find next unused address:`, error);
-    return startIndex;
+    console.error(`❌ Web: Failed to find next address with cycling:`, error);
+    // Fallback to simple increment
+    return wallet.currentAddressIndex + 1;
   }
 };
 
@@ -475,17 +485,36 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   console.log('🌐 Web: generateNewAddress called for wallet:', wallet.name);
   
   try {
-    // Find the next unused address index using smart logic
-    const nextUnusedIndex = await findNextUnusedAddressIndexWeb(wallet.xpub, wallet.currentAddressIndex + 1);
-    const newAddress = await generateAddressFromXpub(wallet.xpub, nextUnusedIndex);
+    // Find the next address index using cycling logic (0-19)
+    const nextIndex = await findNextUnusedAddressIndexWeb(wallet.xpub, wallet);
+    const newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
+    // Check if this address already exists in the wallet's address list
+    const isDuplicate = wallet.addresses.includes(newAddress);
+    if (isDuplicate) {
+      console.warn(`⚠️ Web: Generated address is already in wallet, cycling to next index`);
+      // Cycle to the next index
+      const nextCycledIndex = (nextIndex + 1) % 20;
+      const alternativeAddress = await generateAddressFromXpub(wallet.xpub, nextCycledIndex);
+      
+      const updatedWallet: Wallet = {
+        ...wallet,
+        addresses: [...wallet.addresses, alternativeAddress],
+        currentAddressIndex: nextCycledIndex,
+      };
+      
+      console.log(`✅ Web: Alternative address generated at index ${nextCycledIndex}:`, alternativeAddress);
+      return updatedWallet;
+    }
+    
+    // Update wallet with new address
     const updatedWallet: Wallet = {
       ...wallet,
       addresses: [...wallet.addresses, newAddress],
-      currentAddressIndex: nextUnusedIndex,
+      currentAddressIndex: nextIndex,
     };
     
-    console.log(`✅ Web: New unused address generated at index ${nextUnusedIndex}:`, newAddress);
+    console.log(`✅ Web: New address generated at index ${nextIndex}:`, newAddress);
     return updatedWallet;
   } catch (error) {
     console.error('❌ Web: Error generating new address:', error);
@@ -591,17 +620,27 @@ export const findNextUnusedAddressIndex = async (xpub: string, startIndex: numbe
 
 // Find next unused address index with cycling (simplified for web)
 export const findNextUnusedAddressIndexWithCycling = async (xpub: string, wallet: Wallet): Promise<number> => {
-  console.log(`🌐 Web: Finding next unused address with cycling for wallet: ${wallet.name}`);
+  console.log(`🌐 Web: Finding next address with gap limit cycling for wallet: ${wallet.name}`);
   
   try {
-    // For web, we'll use a simple deterministic approach
-    // In a real implementation, this would check the blockchain and cycle through unused addresses
-    // For now, we'll just return the next sequential index
-    const nextIndex = wallet.currentAddressIndex + 1;
-    console.log(`✅ Web: Next unused address index (cycling): ${nextIndex}`);
+    const GAP_LIMIT = 20; // Standard gap limit
+    
+    // For web, we'll maintain a pool of addresses that simulates the gap limit
+    // We'll cycle through the next GAP_LIMIT addresses from the current position
+    const currentIndex = wallet.currentAddressIndex;
+    
+    // Calculate the pool of addresses to cycle through (next GAP_LIMIT addresses)
+    const poolStart = Math.floor(currentIndex / GAP_LIMIT) * GAP_LIMIT;
+    const poolEnd = poolStart + GAP_LIMIT;
+    
+    // Find the next address in the pool
+    const nextIndex = ((currentIndex - poolStart + 1) % GAP_LIMIT) + poolStart;
+    
+    console.log(`🌐 Web: Cycling through address pool [${poolStart}-${poolEnd-1}]: ${currentIndex} -> ${nextIndex}`);
     return nextIndex;
   } catch (error) {
-    console.error(`❌ Web: Failed to find next unused address with cycling:`, error);
+    console.error(`❌ Web: Failed to find next address with cycling:`, error);
+    // Fallback to simple increment
     return wallet.currentAddressIndex + 1;
   }
 };
