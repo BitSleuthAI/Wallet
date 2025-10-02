@@ -568,8 +568,8 @@ async function createTransaction(
         const publicKey = child.publicKey;
         const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: publicKey });
         
-        // Sign the input
-        txb.sign(i, child, null, null, bitcoin.Transaction.SIGHASH_ALL);
+        // Sign the input with witnessValue for P2WPKH
+        txb.sign(i, child, null, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
       }
     } else {
       throw new Error('Mnemonic and address index required for signing');
