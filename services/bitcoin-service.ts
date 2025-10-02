@@ -243,9 +243,8 @@ export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
               console.log('✅ Bitcoin price fetched:', data.USD.last);
               
               resolve({
-                USD: { last: data.USD.last },
-                EUR: { last: data.EUR?.last || data.USD.last * 0.85 },
-                GBP: { last: data.GBP?.last || data.USD.last * 0.73 },
+                usd: data.USD.last,
+                usd_24h_change: 0, // Not available from this API
               });
             } catch (parseError) {
               console.error('❌ Failed to parse price response:', parseError);
@@ -442,6 +441,46 @@ function estimateTransactionSize(inputCount: number, outputCount: number): numbe
 }
 
 /**
+ * Generate a change address using the wallet's derivation path
+ */
+async function generateChangeAddress(mnemonic: string, changeIndex: number = 0): Promise<string> {
+  try {
+    console.log('🔧 Generating change address for index:', changeIndex);
+    
+    // Import required libraries
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Derive private key for change address (chain 1)
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
+    
+    if (!child.publicKey) {
+      throw new Error('Failed to derive public key for change address');
+    }
+    
+    // Generate P2WPKH address
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
+    
+    const sha256Hash = sha256(child.publicKey);
+    const hash160 = ripemd160(sha256Hash);
+    const words = bech32.bech32.toWords(hash160);
+    const address = bech32.bech32.encode('bc', [0, ...words]);
+    
+    console.log('✅ Generated change address:', address);
+    return address;
+  } catch (error) {
+    console.error('❌ Failed to generate change address:', error);
+    throw error;
+  }
+}
+
+/**
  * Create and sign transaction
  */
 async function createTransaction(
@@ -491,10 +530,16 @@ async function createTransaction(
     
     // Add change output if needed (dust threshold is 546 satoshis)
     if (changeAmount > 546) {
-      // For now, we'll skip change output since we need a change address
-      // This should be improved to generate a proper change address
-      console.log('⚠️ Change output skipped (change amount:', changeAmount, 'satoshis)');
-      console.log('⚠️ Note: Change address generation needed for proper implementation');
+      if (!mnemonic) {
+        throw new Error('Mnemonic required to generate change address');
+      }
+      
+      console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
+      const changeAddress = await generateChangeAddress(mnemonic, 0); // Use first change address
+      txb.addOutput(changeAddress, changeAmount);
+      console.log('✅ Added change output:', changeAddress, changeAmount, 'satoshis');
+    } else if (changeAmount > 0) {
+      console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
     }
     
     // Sign inputs
