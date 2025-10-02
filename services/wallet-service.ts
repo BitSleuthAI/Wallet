@@ -508,26 +508,31 @@ export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet
     const usedAddresses = await discoverUsedAddresses(xpub);
     console.log(`📊 Found ${usedAddresses.length} used addresses`);
     
+    // Create a set of used addresses for fast lookup
+    const usedAddressesSet = new Set(usedAddresses);
+    
     // Find the first unused address after the last used address
     let firstUnusedIndex = 0;
     if (usedAddresses.length > 0) {
-      // Find the highest index among used addresses
+      // Instead of regenerating addresses to find indices, we'll work backwards from a reasonable upper bound
+      // Most wallets don't have more than 1000 used addresses, so we'll check in batches
+      const maxCheckIndex = Math.min(usedAddresses.length * 10, 1000); // Reasonable upper bound
       let maxUsedIndex = -1;
-      for (const usedAddr of usedAddresses) {
-        // Generate addresses to find which index corresponds to this address
-        for (let i = 0; i < 1000; i++) { // Check up to index 1000
-          try {
-            const testAddr = await generateAddressFromXpub(xpub, i);
-            if (testAddr === usedAddr) {
-              maxUsedIndex = Math.max(maxUsedIndex, i);
-              break;
-            }
-          } catch (error) {
-            // Skip if we can't generate this address
-            continue;
+      
+      // Check addresses in batches to find the highest used index
+      const batchSize = 20;
+      for (let startIndex = 0; startIndex < maxCheckIndex; startIndex += batchSize) {
+        const endIndex = Math.min(startIndex + batchSize, maxCheckIndex);
+        const batch = await deriveAddressBatch(node, 0, startIndex, endIndex);
+        
+        for (let i = 0; i < batch.length; i++) {
+          const address = batch[startIndex + i];
+          if (usedAddressesSet.has(address)) {
+            maxUsedIndex = Math.max(maxUsedIndex, startIndex + i);
           }
         }
       }
+      
       firstUnusedIndex = maxUsedIndex + 1;
     }
     
@@ -542,18 +547,25 @@ export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet
       
       for (let j = 0; j < batch.length; j++) {
         const address = batch[j];
+        const addressIndex = i + j;
+        
+        // First check if this address is in our known used addresses set
+        if (usedAddressesSet.has(address)) {
+          continue; // Skip known used addresses
+        }
+        
         try {
           const result = await esploraGet(`/address/${address}/txs`, 30000);
           const hasTransactions = result && Array.isArray(result) && result.length > 0;
           
           if (!hasTransactions) {
-            unusedAddresses.push(i + j);
-            console.log(`✅ Found unused address at index ${i + j}`);
+            unusedAddresses.push(addressIndex);
+            console.log(`✅ Found unused address at index ${addressIndex}`);
           }
         } catch (error) {
-          console.warn(`⚠️ Failed to check address ${i + j}:`, error);
+          console.warn(`⚠️ Failed to check address ${addressIndex}:`, error);
           // Treat as unused if we can't check
-          unusedAddresses.push(i + j);
+          unusedAddresses.push(addressIndex);
         }
       }
     }
