@@ -42,29 +42,37 @@ export default function PinVerificationScreen({
   }, []);
 
   const handleNumberPress = useCallback((number: string) => {
-    if (pin.length < 4) {
-      const newPin = pin + number;
-      setPin(newPin);
-      setError('');
-      
-      // Trigger haptic feedback asynchronously to avoid blocking UI
-      triggerHaptic();
-      
-      if (newPin.length === 4) {
-        verifyPin(newPin);
+    setPin(currentPin => {
+      if (currentPin.length < 4) {
+        const newPin = currentPin + number;
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        if (newPin.length === 4) {
+          verifyPin(newPin);
+        }
+        
+        return newPin;
       }
-    }
-  }, [pin.length, triggerHaptic]);
+      return currentPin;
+    });
+  }, [triggerHaptic, verifyPin]);
 
   const handleDelete = useCallback(() => {
-    if (pin.length > 0) {
-      setPin(pin.slice(0, -1));
-      setError('');
-      
-      // Trigger haptic feedback asynchronously to avoid blocking UI
-      triggerHaptic();
-    }
-  }, [pin.length, triggerHaptic]);
+    setPin(currentPin => {
+      if (currentPin.length > 0) {
+        setError('');
+        
+        // Trigger haptic feedback asynchronously to avoid blocking UI
+        triggerHaptic();
+        
+        return currentPin.slice(0, -1);
+      }
+      return currentPin;
+    });
+  }, [triggerHaptic]);
 
   const verifyPin = useCallback(async (enteredPin: string) => {
     setIsLoading(true);

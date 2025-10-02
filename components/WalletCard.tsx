@@ -28,6 +28,50 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   // Memoize gradient colors to prevent recalculation on every render
   const gradientColors = useMemo(() => getWalletGradient(displayWallet.color), [displayWallet.color]);
 
+  // Menu button press handler
+  const handleMenuPress = useCallback(() => {
+    menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
+      const menuWidth = 150;
+      const padding = 20;
+      
+      // Always position menu to the left of the button with proper spacing
+      const menuX = pageX - menuWidth + width - padding;
+      
+      setMenuPosition({ 
+        x: Math.max(padding, menuX), 
+        y: pageY + height + 5 
+      });
+      setShowMenu(true);
+    });
+  }, []);
+
+  // Edit button press handler
+  const handleEditPress = useCallback(() => {
+    setShowMenu(false);
+    if (onEdit && displayWallet) {
+      onEdit(displayWallet);
+    }
+  }, [onEdit, displayWallet]);
+
+  // Delete button press handler
+  const handleDeletePress = useCallback(() => {
+    setShowMenu(false);
+    if (displayWallet) {
+      Alert.alert(
+        'Delete Wallet',
+        `Are you sure you want to delete "${displayWallet.name}"? This action cannot be undone.`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { 
+            text: 'Delete', 
+            style: 'destructive',
+            onPress: () => deleteWallet(displayWallet.id)
+          }
+        ]
+      );
+    }
+  }, [displayWallet, deleteWallet]);
+
   return (
     <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
       <LinearGradient
@@ -50,21 +94,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           <TouchableOpacity 
             ref={menuButtonRef}
             style={styles.menuButton}
-            onPress={useCallback(() => {
-              menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
-                const menuWidth = 150;
-                const padding = 20;
-                
-                // Always position menu to the left of the button with proper spacing
-                const menuX = pageX - menuWidth + width - padding;
-                
-                setMenuPosition({ 
-                  x: Math.max(padding, menuX), 
-                  y: pageY + height + 5 
-                });
-                setShowMenu(true);
-              });
-            }, [])} 
+            onPress={handleMenuPress} 
             testID="wallet-menu-button"
           >
             <MoreHorizontal color="white" size={24} />
@@ -120,12 +150,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           }]}>
             <TouchableOpacity 
               style={styles.menuItem}
-              onPress={useCallback(() => {
-                setShowMenu(false);
-                if (onEdit && displayWallet) {
-                  onEdit(displayWallet);
-                }
-              }, [onEdit, displayWallet])}
+              onPress={handleEditPress}
               testID="edit-wallet-button"
             >
               <Edit3 color="#333333" size={20} />
@@ -134,23 +159,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             
             <TouchableOpacity 
               style={styles.menuItem}
-              onPress={useCallback(() => {
-                setShowMenu(false);
-                if (displayWallet) {
-                  Alert.alert(
-                    'Delete Wallet',
-                    `Are you sure you want to delete "${displayWallet.name}"? This action cannot be undone.`,
-                    [
-                      { text: 'Cancel', style: 'cancel' },
-                      { 
-                        text: 'Delete', 
-                        style: 'destructive',
-                        onPress: () => deleteWallet(displayWallet.id)
-                      }
-                    ]
-                  );
-                }
-              }, [displayWallet, deleteWallet])}
+              onPress={handleDeletePress}
               testID="delete-wallet-button"
             >
               <Trash2 color="#FF3B30" size={20} />
