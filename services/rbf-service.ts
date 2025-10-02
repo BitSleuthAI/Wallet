@@ -689,6 +689,248 @@ export async function performRBF(
 }
 
 /**
+ * Cancel a transaction by creating a replacement that sends funds back to wallet
+ * This effectively cancels the original transaction by spending its inputs
+ */
+export async function cancelTransaction(
+  originalTxid: string,
+  mnemonic: string,
+  walletAddresses: string[]
+): Promise<{ success: boolean; cancellationTxid?: string; error?: string }> {
+  try {
+    console.log(`🚫 Starting transaction cancellation for: ${originalTxid}`);
+    
+    // Step 1: Validate the transaction can be cancelled
+    const validation = await validateRBFTransaction(originalTxid, walletAddresses);
+    if (!validation.isValid || !validation.canReplace) {
+      throw new Error(validation.reason || 'Transaction cannot be cancelled');
+    }
+    
+    const originalTx = validation.originalTx!;
+    const utxos = validation.utxos!;
+    
+    // Step 2: Create cancellation transaction
+    const cancellationTx = await createCancellationTransaction(
+      originalTx,
+      utxos,
+      mnemonic,
+      walletAddresses
+    );
+    
+    // Step 3: Broadcast cancellation transaction
+    const cancellationTxid = await broadcastReplacementTransaction(cancellationTx);
+    
+    console.log(`✅ Transaction cancelled successfully. Cancellation TXID: ${cancellationTxid}`);
+    
+    return {
+      success: true,
+      cancellationTxid
+    };
+  } catch (error) {
+    console.error(`❌ Transaction cancellation failed:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Create a cancellation transaction that sends funds back to the wallet
+ * This replaces the original transaction by spending its inputs and sending
+ * the funds to a new address in the wallet (minus fees)
+ */
+async function createCancellationTransaction(
+  originalTx: any,
+  utxos: UTXO[],
+  mnemonic: string,
+  walletAddresses: string[]
+): Promise<RBFTransaction> {
+  try {
+    console.log(`🔧 Creating cancellation transaction for: ${originalTx.txid}`);
+    
+    // Ensure ECC is initialized
+    await ensureECC();
+    
+    // Import required libraries
+    const bitcoin = require('bitcoinjs-lib');
+    const ecc = (global as any).ecc;
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    
+    if (!ecc) {
+      throw new Error('ECC library not available');
+    }
+    
+    // Initialize bitcoinjs-lib with ECC
+    bitcoin.initEccLib(ecc);
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Create transaction builder
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    
+    // Get our inputs from the original transaction
+    const walletAddressesSet = new Set(walletAddresses);
+    const ourInputs = originalTx.vin?.filter((input: any) => {
+      return input.prevout?.scriptpubkey_address && 
+             walletAddressesSet.has(input.prevout.scriptpubkey_address);
+    });
+    
+    if (!ourInputs || ourInputs.length === 0) {
+      throw new Error('No inputs found for this wallet');
+    }
+    
+    // Calculate total input value
+    let totalInputValue = 0;
+    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number }>();
+    
+    for (const input of ourInputs) {
+      const address = input.prevout.scriptpubkey_address;
+      const addressIndex = walletAddresses.indexOf(address);
+      
+      // Find the corresponding UTXO
+      const utxo = utxos.find(u => {
+        const txidMatch = u.txid === input.txid;
+        const voutMatch = u.vout === input.vout;
+        const addressMatch = u.address === address || !u.address;
+        return txidMatch && voutMatch && addressMatch;
+      });
+      
+      if (!utxo) {
+        throw new Error(`UTXO not found for input ${input.txid}:${input.vout}`);
+      }
+      
+      // Ensure the UTXO has the correct address for signing
+      if (!utxo.address) {
+        utxo.address = address;
+      }
+      
+      totalInputValue += utxo.value;
+      inputMap.set(`${input.txid}:${input.vout}`, {
+        input,
+        utxo,
+        addressIndex
+      });
+    }
+    
+    // Add inputs with RBF enabled (sequence number 0xFFFFFFFD)
+    for (const [key, { input, utxo }] of inputMap) {
+      txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+    }
+    
+    // Generate a new address in the wallet for the cancellation
+    // Use the next available address index
+    const nextAddressIndex = Math.max(...walletAddresses.map((_, i) => i)) + 1;
+    const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
+    
+    // Calculate fee for cancellation transaction
+    // Use a reasonable fee rate for cancellation (higher than original to ensure it gets mined)
+    const originalFee = originalTx.fee || 0;
+    const originalSize = estimateTransactionSize(ourInputs.length, 1); // Single output
+    const originalFeeRate = originalFee / originalSize;
+    
+    // Use a fee rate that's at least 2 sat/vB higher than original
+    const cancellationFeeRate = Math.max(originalFeeRate + 2, 10); // Minimum 10 sat/vB
+    const cancellationFee = Math.ceil(cancellationFeeRate * originalSize);
+    
+    // Calculate amount to send back (total input minus fee)
+    const cancellationAmount = totalInputValue - cancellationFee;
+    
+    if (cancellationAmount <= 546) { // Dust threshold
+      throw new Error('Cancellation amount would be below dust threshold. Cannot cancel this transaction.');
+    }
+    
+    // Add output to cancellation address
+    txb.addOutput(cancellationAddress, cancellationAmount);
+    
+    console.log(`💰 Cancellation details:`);
+    console.log(`   Total input: ${totalInputValue} sats`);
+    console.log(`   Cancellation fee: ${cancellationFee} sats (${cancellationFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Amount to wallet: ${cancellationAmount} sats`);
+    console.log(`   Cancellation address: ${cancellationAddress}`);
+    
+    // Sign the transaction
+    console.log(`🔐 Signing cancellation transaction...`);
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    
+    // Sign each input
+    let inputIndex = 0;
+    for (const [key, { input, utxo, addressIndex }] of inputMap) {
+      // Derive private key for this address
+      const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+      
+      if (!child.privateKey) {
+        throw new Error(`Failed to derive private key for address index ${addressIndex}`);
+      }
+      
+      // Sign the input
+      txb.sign(inputIndex, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      inputIndex++;
+    }
+    
+    // Build the transaction
+    const cancellationTx = txb.build();
+    const txHex = cancellationTx.toHex();
+    
+    console.log(`✅ Cancellation transaction created: ${txHex.substring(0, 100)}...`);
+    
+    return {
+      txid: originalTx.txid,
+      originalTx: originalTx as any,
+      newFeeRate: cancellationFeeRate,
+      newFee: cancellationFee,
+      replacementTx: txHex,
+      status: 'pending'
+    };
+  } catch (error) {
+    console.error(`❌ Failed to create cancellation transaction:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a cancellation address using the wallet's derivation path
+ */
+async function generateCancellationAddress(mnemonic: string, addressIndex: number): Promise<string> {
+  try {
+    console.log(`🔧 Generating cancellation address for index: ${addressIndex}`);
+    
+    // Import required libraries
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Derive private key for cancellation address
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+    
+    if (!child.publicKey) {
+      throw new Error('Failed to derive public key for cancellation address');
+    }
+    
+    // Generate P2WPKH address
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
+    
+    const sha256Hash = sha256(child.publicKey);
+    const hash160 = ripemd160(sha256Hash);
+    const words = bech32.bech32.toWords(hash160);
+    const address = bech32.bech32.encode('bc', [0, ...words]);
+    
+    console.log(`✅ Generated cancellation address: ${address}`);
+    return address;
+  } catch (error) {
+    console.error(`❌ Failed to generate cancellation address:`, error);
+    throw error;
+  }
+}
+
+/**
  * Estimate transaction size in bytes
  */
 function estimateTransactionSize(inputCount: number, outputCount: number): number {
