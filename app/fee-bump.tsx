@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -41,7 +41,7 @@ export default function FeeBumpScreen() {
 
   useEffect(() => {
     if (txid && transactions) {
-      const tx = transactions.find(t => t.txid === txid);
+      const tx = transactions.find((t: Transaction) => t.txid === txid);
       setTransaction(tx || null);
     }
   }, [txid, transactions]);
@@ -418,26 +418,9 @@ export default function FeeBumpScreen() {
         <TouchableOpacity
           style={[
             styles.actionButton,
-            styles.createButton,
-            { backgroundColor: theme.colors.primary },
-            !isValidFeeRate() && { opacity: 0.5 }
-          ]}
-          onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || isCreating}
-        >
-          {isCreating ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.createButtonText}>Create</Text>
-          )}
-        </TouchableOpacity>
-        
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
             styles.bumpButton,
             { backgroundColor: theme.colors.primary },
-            (!isValidFeeRate() || !canReplace || isValidating) && { opacity: 0.5 }
+            (!isValidFeeRate() || !canReplace || isValidating || isCreating) && { opacity: 0.5 }
           ]}
           onPress={handleCreateRBF}
           disabled={!isValidFeeRate() || !canReplace || isValidating || isCreating}
@@ -614,14 +597,6 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'center',
     marginBottom: platformStyles.spacing.md,
-  },
-  createButton: {
-    // Styles for create button
-  },
-  createButtonText: {
-    color: 'white',
-    ...platformStyles.typography.bodyLarge,
-    fontWeight: '600',
   },
   bumpButton: {
     // Styles for bump fee button
