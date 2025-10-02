@@ -34,7 +34,8 @@ export default function FeeBumpScreen() {
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
   const [customFeeRate, setCustomFeeRate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isBumpingFee, setIsBumpingFee] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [canReplace, setCanReplace] = useState<boolean>(false);
@@ -173,7 +174,7 @@ export default function FeeBumpScreen() {
       return;
     }
 
-    setIsCreating(true);
+    setIsBumpingFee(true);
     try {
       const newFeeRate = getCurrentFeeRate();
       
@@ -212,7 +213,7 @@ export default function FeeBumpScreen() {
         `Failed to create replacement transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     } finally {
-      setIsCreating(false);
+      setIsBumpingFee(false);
     }
   };
 
@@ -239,7 +240,7 @@ export default function FeeBumpScreen() {
           text: 'Confirm Cancel',
           style: 'destructive',
           onPress: async () => {
-            setIsCreating(true);
+            setIsCancelling(true);
             try {
               console.log('Starting transaction cancellation...');
               console.log('Original TXID:', transaction?.txid);
@@ -274,7 +275,7 @@ export default function FeeBumpScreen() {
                 `Failed to cancel transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
               );
             } finally {
-              setIsCreating(false);
+              setIsCancelling(false);
             }
           },
         },
@@ -468,12 +469,12 @@ export default function FeeBumpScreen() {
             styles.actionButton,
             styles.bumpButton,
             { backgroundColor: theme.colors.primary },
-            (!isValidFeeRate() || !canReplace || isValidating || isCreating) && { opacity: 0.5 }
+            (!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
           ]}
           onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || !canReplace || isValidating || isCreating}
+          disabled={!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling}
         >
-          {isCreating ? (
+          {isBumpingFee ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
             <Text style={styles.bumpButtonText}>Bump Fee</Text>
@@ -483,12 +484,12 @@ export default function FeeBumpScreen() {
         <TouchableOpacity
           style={[
             styles.cancelButton,
-            (!canReplace || isValidating || isCreating) && { opacity: 0.5 }
+            (!canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
           ]}
           onPress={handleCancelTransaction}
-          disabled={!canReplace || isValidating || isCreating}
+          disabled={!canReplace || isValidating || isBumpingFee || isCancelling}
         >
-          {isCreating ? (
+          {isCancelling ? (
             <ActivityIndicator color={theme.colors.error} size="small" />
           ) : (
             <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>
