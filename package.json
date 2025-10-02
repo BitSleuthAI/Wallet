@@ -3,13 +3,11 @@
   "main": "index.js",
   "version": "1.0.0",
   "scripts": {
-    "start": "bunx rork start -p ql9xyqo6zcas1chk2epxs --tunnel",
-    "start-web": "bunx rork start -p ql9xyqo6zcas1chk2epxs --web --tunnel",
-    "start-web-dev": "DEBUG=expo* bunx rork start -p ql9xyqo6zcas1chk2epxs --web --tunnel",
+    "start": "expo start",
+    "start-tunnel": "expo start --tunnel",
     "lint": "expo lint",
     "android": "expo run:android",
-    "ios": "expo run:ios",
-    "expo-start": "expo start"
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@craftzdog/react-native-buffer": "^6.1.0",
@@ -58,7 +56,6 @@
     "process": "^0.11.10",
     "querystring-es3": "^0.2.1",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
     "react-native": "0.79.5",
     "react-native-confetti-cannon": "^1.5.2",
     "react-native-gesture-handler": "~2.24.0",
@@ -70,7 +67,6 @@
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-url-polyfill": "^2.0.0",
-    "react-native-web": "^0.20.0",
     "stream-browserify": "^3.0.0",
     "string_decoder": "^1.3.0",
     "tiny-secp256k1": "^2.2.4",

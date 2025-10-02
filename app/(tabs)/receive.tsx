@@ -1,5 +1,5 @@
-import WalletSelector from '@/components/WalletSelector';
 import { GradientBackground } from '@/components/GradientBackground';
+import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
@@ -10,13 +10,12 @@ import React, { useState } from 'react';
 import {
     Alert,
     Animated,
-    Platform,
     SafeAreaView,
     Share,
     StyleSheet,
     Text,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -77,21 +76,11 @@ export default function ReceiveScreen() {
         return;
       }
       
-      if (Platform.OS === 'web') {
-        // Web fallback - copy to clipboard and show alert
-        await Clipboard.setStringAsync(currentAddress);
-        Alert.alert(
-          'Address Copied',
-          'Bitcoin address has been copied to clipboard since sharing is not available on web.',
-          [{ text: 'OK' }]
-        );
-      } else {
-        // Native sharing
-        await Share.share({
-          message: `Bitcoin Address: ${currentAddress}`,
-          title: 'Bitcoin Address',
-        });
-      }
+      // Native sharing
+      await Share.share({
+        message: `Bitcoin Address: ${currentAddress}`,
+        title: 'Bitcoin Address',
+      });
     } catch (error) {
       console.error('Error sharing:', error);
       // Fallback to copy

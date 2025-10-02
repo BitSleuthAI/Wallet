@@ -1,10 +1,8 @@
 import * as Haptics from 'expo-haptics';
-import { Platform } from 'react-native';
 
 export class HapticService {
   // Light haptic for subtle interactions (like button taps)
   static async light() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.selectionAsync();
     } catch (error) {
@@ -14,7 +12,6 @@ export class HapticService {
 
   // Medium haptic for more significant interactions (like tab changes)
   static async medium() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
@@ -24,7 +21,6 @@ export class HapticService {
 
   // Heavy haptic for important actions (like successful transactions)
   static async heavy() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch (error) {
@@ -34,7 +30,6 @@ export class HapticService {
 
   // Success haptic for positive outcomes
   static async success() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
@@ -44,7 +39,6 @@ export class HapticService {
 
   // Error haptic for negative outcomes
   static async error() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } catch (error) {
@@ -54,7 +48,6 @@ export class HapticService {
 
   // Warning haptic for cautionary situations
   static async warning() {
-    if (Platform.OS === 'web') return;
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (error) {

@@ -36,7 +36,7 @@ export class AnimationManager {
   shouldAnimate(): boolean {
     if (!this.animationsEnabled) return false;
     if (this.reducedMotionEnabled) return false;
-    if (Platform.OS === 'web') return false; // Disable on web for performance
+    // Animation is supported on mobile platforms
     
     return true;
   }
