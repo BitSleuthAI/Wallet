@@ -993,12 +993,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isLoadingPrice: priceQuery.isLoading,
     hasBalanceError: !!balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null),
     hasPriceError: !!priceQuery.error && !priceQuery.data,
+    balanceError: balanceQuery.error,
+    priceError: priceQuery.error,
   }), [balanceQuery.data, balanceQuery.isLoading, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
 
   const transactionData = useMemo(() => ({
     transactions: transactionsQuery.data || [],
     isLoadingTransactions: transactionsQuery.isLoading,
     hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
+    transactionsError: transactionsQuery.error,
   }), [transactionsQuery.data, transactionsQuery.isLoading, transactionsQuery.error]);
 
   const settingsData = useMemo(() => ({
@@ -1064,7 +1067,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     markFeedbackPromptDismissed,
   }), [shouldShowFeedbackPrompt, markFeedbackPromptShown, markFeedbackPromptDismissed]);
 
-  return {
+  // Memoize the final returned object to prevent unnecessary re-renders
+  const walletStoreData = useMemo(() => ({
     ...walletData,
     ...balanceData,
     ...transactionData,
@@ -1073,5 +1077,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     coinControl: coinControlData,
     ...feedbackData,
     isCreatingWallet: saveWalletsMutation.isPending,
-  };
+  }), [
+    walletData,
+    balanceData,
+    transactionData,
+    settingsData,
+    actionsData,
+    coinControlData,
+    feedbackData,
+    saveWalletsMutation.isPending,
+  ]);
+
+  return walletStoreData;
 });
