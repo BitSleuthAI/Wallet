@@ -36,11 +36,12 @@ try {
   walletService = {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
+    generateAddressesForView: importedService.generateAddressesForView,
     generateAddressBatchForView: importedService.generateAddressBatchForView
   };
   
   // Verify required functions are available
-  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress', 'generateAddressBatchForView'];
+  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress', 'generateAddressesForView'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -54,7 +55,7 @@ try {
   walletService = {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); }
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); }
   };
 }
 
@@ -75,51 +76,45 @@ export default function WalletAddressesScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
-  const [loadedBatches, setLoadedBatches] = useState<number>(1); // Start with 1 batch (20 addresses)
+  const [cachedAddresses, setCachedAddresses] = useState<{[key: string]: AddressInfo[]}>({});
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
-  const BATCH_SIZE = 20; // Load 20 addresses at a time
-
-  // Generate addresses in batches for display
+  // Generate addresses following gap limit logic
   const addressesQuery = useQuery({
-    queryKey: ['wallet-addresses-batched', currentWallet?.id, currentWallet?.xpub, loadedBatches],
+    queryKey: ['wallet-addresses-gap-limit', currentWallet?.id, currentWallet?.xpub, selectedTab],
     queryFn: async () => {
       if (!currentWallet?.xpub) return [];
       
-      console.log(`🔍 Generating ${loadedBatches} batches of addresses for display...`);
-      const allAddresses: AddressInfo[] = [];
+      console.log(`🔍 Generating addresses for ${selectedTab} chain using gap limit logic...`);
       
-      // Generate receiving addresses in batches
-      for (let batchIndex = 0; batchIndex < loadedBatches; batchIndex++) {
-        const startIndex = batchIndex * BATCH_SIZE;
-        console.log(`🔧 Generating receiving addresses batch ${batchIndex + 1}: indices ${startIndex}-${startIndex + BATCH_SIZE - 1}`);
+      try {
+        // Use the new gap limit function
+        const addressData = await walletService.generateAddressesForView(currentWallet.xpub, selectedTab);
         
-        try {
-          // Use the new batch generation function
-          const batchData = await walletService.generateAddressBatchForView(currentWallet.xpub, startIndex, BATCH_SIZE);
-          
-          batchData.forEach((addrData) => {
-            allAddresses.push({
-              address: addrData.address,
-              index: addrData.index,
-              balance: addrData.balance,
-              txCount: addrData.txCount,
-              receivedCount: 0, // Will be calculated separately if needed
-              sentCount: 0, // Will be calculated separately if needed
-              isUsed: addrData.isUsed,
-              type: 'receiving',
-              derivationPath: `m/84'/0'/0'/0/${addrData.index}`
-            });
-          });
-          
-          console.log(`✅ Generated batch ${batchIndex + 1}: ${batchData.length} addresses`);
-        } catch (error) {
-          console.warn(`❌ Failed to generate batch ${batchIndex + 1}:`, error);
-        }
+        const addresses: AddressInfo[] = addressData.map((addrData) => ({
+          address: addrData.address,
+          index: addrData.index,
+          balance: addrData.balance,
+          txCount: addrData.txCount,
+          receivedCount: 0, // Will be calculated separately if needed
+          sentCount: 0, // Will be calculated separately if needed
+          isUsed: addrData.isUsed,
+          type: addrData.type,
+          derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
+        }));
+        
+        // Cache the addresses for this tab
+        setCachedAddresses(prev => ({
+          ...prev,
+          [selectedTab]: addresses
+        }));
+        
+        console.log(`✅ Generated ${addresses.length} ${selectedTab} addresses using gap limit logic`);
+        return addresses;
+      } catch (error) {
+        console.error(`❌ Failed to generate ${selectedTab} addresses:`, error);
+        throw error;
       }
-      
-      console.log(`✅ Generated ${allAddresses.length} total addresses for display`);
-      return allAddresses;
     },
     enabled: !!currentWallet?.xpub,
     staleTime: 300000, // 5 minutes
@@ -131,8 +126,9 @@ export default function WalletAddressesScreen() {
     
     setIsLoadingMore(true);
     try {
-      setLoadedBatches(prev => prev + 1);
-      // The query will automatically refetch with the new batch count
+      // For now, we'll disable the load more button since we're using gap limit logic
+      // The gap limit logic already shows all used addresses + appropriate unused addresses
+      console.log('Load more is disabled when using gap limit logic');
     } catch (error) {
       console.error('Failed to load more addresses:', error);
       Alert.alert('Error', 'Failed to load more addresses');
@@ -141,11 +137,12 @@ export default function WalletAddressesScreen() {
     }
   };
 
-  // Combine address data with balance information
+  // Get address data for current tab (from cache or query)
   const addressData = useMemo((): AddressInfo[] => {
-    if (!addressesQuery.data) return [];
+    // Use cached addresses if available, otherwise use query data
+    const sourceData = cachedAddresses[selectedTab] || addressesQuery.data || [];
     
-    return addressesQuery.data
+    return sourceData
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
       .filter(addr => addr.type === selectedTab)
       .filter((addr, index, array) => {
@@ -159,7 +156,7 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [addressesQuery.data, selectedTab]);
+  }, [cachedAddresses, addressesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -178,6 +175,8 @@ export default function WalletAddressesScreen() {
   const refreshAddresses = async () => {
     setGeneratingAddresses(true);
     try {
+      // Clear cache and refetch
+      setCachedAddresses({});
       await addressesQuery.refetch();
     } catch (error) {
       console.error('Failed to refresh addresses:', error);
@@ -374,8 +373,8 @@ export default function WalletAddressesScreen() {
             <View style={styles.infoContainer}>
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
                 {selectedTab === 'receiving' 
-                  ? `Receiving addresses (m/84\'/0\'/0\'/0/x) - Showing ${addressData.length} addresses. Used addresses are shown first.`
-                  : 'Change addresses (m/84\'/0\'/0\'/1/x) - Automatically used for transaction change outputs.'}
+                  ? `Receiving addresses (m/84\'/0\'/0\'/0/x) - Following BIP44 gap limit: all used + up to 20 unused. Showing ${addressData.length} addresses.`
+                  : `Change addresses (m/84\'/0\'/0\'/1/x) - Following BIP44 gap limit: all used + up to 1 unused. Showing ${addressData.length} addresses.`}
               </Text>
               <View style={styles.summaryStats}>
                 <View style={styles.summaryItem}>
@@ -400,35 +399,15 @@ export default function WalletAddressesScreen() {
               <AddressItem key={`${addressInfo.type}-${addressInfo.index}-${index}-${addressInfo.address.slice(-8)}`} addressInfo={addressInfo} />
             ))}
             
-            {/* Load More Button */}
-            <TouchableOpacity
-              style={[
-                styles.loadMoreButton,
-                { 
-                  backgroundColor: theme.colors.primary + '20',
-                  borderColor: theme.colors.primary,
-                  opacity: isLoadingMore ? 0.6 : 1
+            {/* Gap Limit Info */}
+            <View style={styles.gapLimitInfo}>
+              <Text style={[styles.gapLimitText, { color: theme.colors.textSecondary }]}>
+                {selectedTab === 'receiving' 
+                  ? 'Gap Limit: Shows all used addresses + up to 20 unused addresses'
+                  : 'Gap Limit: Shows all used addresses + up to 1 unused address'
                 }
-              ]}
-              onPress={loadMoreAddresses}
-              disabled={isLoadingMore}
-            >
-              {isLoadingMore ? (
-                <>
-                  <ActivityIndicator size="small" color={theme.colors.primary} />
-                  <Text style={[styles.loadMoreText, { color: theme.colors.primary }]}>
-                    Loading more addresses...
-                  </Text>
-                </>
-              ) : (
-                <>
-                  <RefreshCw color={theme.colors.primary} size={20} />
-                  <Text style={[styles.loadMoreText, { color: theme.colors.primary }]}>
-                    Load More Addresses (+{BATCH_SIZE})
-                  </Text>
-                </>
-              )}
-            </TouchableOpacity>
+              </Text>
+            </View>
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -621,21 +600,18 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 4,
   },
-  loadMoreButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+  gapLimitInfo: {
     marginHorizontal: 20,
     marginVertical: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    borderWidth: 1,
-    gap: 8,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    alignItems: 'center',
   },
-  loadMoreText: {
-    fontSize: 16,
-    fontWeight: '600',
+  gapLimitText: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 
 });

@@ -638,7 +638,129 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 };
 
 /**
- * Generate addresses in batches for view addresses screen
+ * Generate addresses for view addresses screen following gap limit logic
+ * Returns addresses with their usage status following BIP44 gap limit rules
+ * For receiving addresses: all used + up to GAP_LIMIT unused
+ * For change addresses: all used + up to 1 unused
+ */
+export async function generateAddressesForView(xpub: string, chainType: 'receiving' | 'change' = 'receiving'): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}>> {
+  console.log(`🔍 Generating addresses for view: ${chainType} chain`);
+  
+  try {
+    await ensureECC();
+    
+    // Import bip32 dynamically
+    const bip32Module = await import('bip32');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32.fromBase58(xpub);
+    const chain = chainType === 'receiving' ? 0 : 1; // External (0) or Internal (1) chain
+    const maxUnusedLimit = chainType === 'receiving' ? GAP_LIMIT : 1; // 20 for receiving, 1 for change
+    
+    let allAddresses: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}> = [];
+    let gap = 0;
+    let index = 0;
+    let unusedCount = 0;
+    
+    console.log(`🔍 Starting ${chainType} address discovery with gap limit ${GAP_LIMIT}, max unused: ${maxUnusedLimit}`);
+    
+    // Discover addresses following gap limit logic
+    while (gap < GAP_LIMIT && unusedCount < maxUnusedLimit) {
+      const batchSize = Math.min(GAP_LIMIT, 20); // Check in batches for efficiency
+      const batch = await deriveAddressBatch(node, chain, index, index + batchSize);
+      
+      console.log(`🔍 Checking ${chainType} batch ${index}-${index + batchSize - 1} (${batch.length} addresses)`);
+      
+      // Check each address in the batch
+      for (let i = 0; i < batch.length; i++) {
+        const address = batch[i];
+        const addressIndex = index + i;
+        
+        try {
+          // Check if address has any transactions and get balance
+          const [txsResult, statsResult] = await Promise.all([
+            esploraGet(`/address/${address}/txs`, 30000),
+            getAddressStats(address)
+          ]);
+          
+          const hasTransactions = txsResult && Array.isArray(txsResult) && txsResult.length > 0;
+          const txCount = hasTransactions ? txsResult.length : 0;
+          
+          // Extract balance from stats
+          const balance = statsResult.data?.chain_stats ? 
+            (statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum) / 1e8 : 0;
+          
+          const isUsed = hasTransactions || balance > 0;
+          
+          const addressData = {
+            address,
+            index: addressIndex,
+            isUsed,
+            balance,
+            txCount,
+            type: chainType
+          };
+          
+          allAddresses.push(addressData);
+          
+          if (isUsed) {
+            gap = 0; // Reset gap when we find a used address
+            console.log(`✅ Found used ${chainType} address at index ${addressIndex}: ${hasTransactions ? `${txCount} txs` : `${balance.toFixed(8)} BTC`}`);
+          } else {
+            gap++; // Increment gap for unused address
+            unusedCount++;
+            console.log(`🔍 ${chainType} address ${addressIndex} unused, gap: ${gap}, unused count: ${unusedCount}`);
+            
+            // Stop if we've reached the unused limit for this chain type
+            if (unusedCount >= maxUnusedLimit) {
+              console.log(`🔍 Reached unused limit (${maxUnusedLimit}) for ${chainType} addresses`);
+              break;
+            }
+          }
+          
+        } catch (error) {
+          console.warn(`⚠️ Failed to check ${chainType} address ${addressIndex}:`, error);
+          // Treat as unused if we can't check
+          allAddresses.push({
+            address,
+            index: addressIndex,
+            isUsed: false,
+            balance: 0,
+            txCount: 0,
+            type: chainType
+          });
+          gap++;
+          unusedCount++;
+          
+          if (unusedCount >= maxUnusedLimit) {
+            break;
+          }
+        }
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      
+      // Check if we've reached the gap limit or unused limit
+      if (gap >= GAP_LIMIT || unusedCount >= maxUnusedLimit) {
+        console.log(`🔍 Gap limit (${gap}) or unused limit (${unusedCount}) reached for ${chainType} chain`);
+        break;
+      }
+      
+      index += batchSize;
+    }
+    
+    console.log(`✅ Generated ${allAddresses.length} ${chainType} addresses for view (${allAddresses.filter(a => a.isUsed).length} used, ${allAddresses.filter(a => !a.isUsed).length} unused)`);
+    return allAddresses;
+  } catch (error) {
+    console.error(`❌ Failed to generate addresses for view:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Generate addresses in batches for view addresses screen (DEPRECATED - use generateAddressesForView instead)
  * Returns addresses with their usage status
  */
 export async function generateAddressBatchForView(xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}>> {
