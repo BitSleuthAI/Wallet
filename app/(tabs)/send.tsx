@@ -358,6 +358,15 @@ export default function SendScreen() {
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
       
+      // Validate wallet addresses and current index
+      if (!currentWallet.addresses || currentWallet.addresses.length === 0) {
+        throw new Error('No addresses available in wallet');
+      }
+      
+      if (currentWallet.currentAddressIndex < 0 || currentWallet.currentAddressIndex >= currentWallet.addresses.length) {
+        throw new Error('Invalid current address index');
+      }
+      
       // Get the current address and its index for signing
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;
