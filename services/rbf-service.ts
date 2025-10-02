@@ -353,16 +353,17 @@ export async function createReplacementTransaction(
     // Calculate the target fee based on the desired fee rate
     const targetFee = Math.ceil(newFeeRate * originalSize);
     
-    // Ensure the new fee meets RBF requirements (must be higher than original)
-    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
-    const actualTargetFee = Math.max(targetFee, originalFee + minFeeIncrease);
-    
-    const feeIncrease = actualTargetFee - originalFee;
-    
     // Validate that the requested fee rate is reasonable
     if (newFeeRate < originalFeeRate) {
       throw new Error(`Requested fee rate (${newFeeRate} sat/vB) is lower than original fee rate (${originalFeeRate.toFixed(2)} sat/vB). RBF requires a higher fee rate.`);
     }
+    
+    // Ensure the new fee meets RBF requirements (must be higher than original)
+    // Only apply minimum increase if user's requested fee is too low
+    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
+    const actualTargetFee = Math.max(targetFee, originalFee + minFeeIncrease);
+    
+    const feeIncrease = actualTargetFee - originalFee;
     
     // Check if the fee increase is too small (less than 1 sat/vB improvement)
     const feeRateIncrease = (actualTargetFee / originalSize) - originalFeeRate;
@@ -371,7 +372,8 @@ export async function createReplacementTransaction(
     }
     
     console.log(`💰 Fee calculation: Original fee: ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
-    console.log(`💰 Target fee: ${actualTargetFee} sats (${newFeeRate} sat/vB requested)`);
+    console.log(`💰 Target fee: ${actualTargetFee} sats (${(actualTargetFee / originalSize).toFixed(2)} sat/vB)`);
+    console.log(`💰 Requested fee rate: ${newFeeRate} sat/vB`);
     console.log(`💰 Fee increase: ${feeIncrease} sats`);
     console.log(`💰 Change output: ${changeOutputValue} sats at index ${changeOutputIndex}`);
     
@@ -474,6 +476,11 @@ export async function createReplacementTransaction(
     console.log(`✅ Replacement transaction created: ${txHex.substring(0, 100)}...`);
     console.log(`✅ Actual fee: ${actualFee} sats, Target fee: ${actualTargetFee} sats`);
     console.log(`✅ Actual fee rate: ${actualFeeRate.toFixed(2)} sat/vB, Requested: ${newFeeRate} sat/vB`);
+    
+    // Log if the fee was adjusted due to RBF requirements
+    if (actualTargetFee > targetFee) {
+      console.log(`⚠️ Fee was increased from ${(targetFee / originalSize).toFixed(2)} to ${actualFeeRate.toFixed(2)} sat/vB to meet RBF minimum requirements`);
+    }
     
     // Verify the transaction is valid
     if (actualFee < actualTargetFee * 0.9) { // Allow 10% tolerance
