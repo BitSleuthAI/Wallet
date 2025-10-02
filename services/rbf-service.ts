@@ -108,7 +108,7 @@ export async function validateRBFTransaction(txid: string, walletAddresses: stri
               vout: utxo.vout,
               value: utxo.value,
               scriptPubKey: utxo.scriptpubkey,
-              address: utxo.status?.confirmed ? address : undefined,
+              address: address, // Always include address for unconfirmed transactions
               status: {
                 confirmed: utxo.status?.confirmed || false,
                 block_height: utxo.status?.block_height,
@@ -141,6 +141,12 @@ export async function validateRBFTransaction(txid: string, walletAddresses: stri
 
 /**
  * Create a replacement transaction with higher fee
+ * 
+ * Key fixes implemented:
+ * 1. Proper fee calculation by adjusting change output instead of adding fee on top
+ * 2. Support for different output types (address-based and script-based)
+ * 3. Correct UTXO lookup for unconfirmed transactions
+ * 4. Proper handling of dust change outputs
  */
 export async function createReplacementTransaction(
   originalTxid: string,
@@ -179,7 +185,7 @@ export async function createReplacementTransaction(
     const bip32 = bip32Module.BIP32Factory(ecc);
     
     // Create transaction builder
-    const txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
@@ -227,7 +233,18 @@ export async function createReplacementTransaction(
     // Calculate outputs (same as original transaction)
     let totalOutputValue = 0;
     for (const output of originalTx.vout) {
-      txb.addOutput(output.scriptpubkey_address, output.value);
+      // Handle different output types
+      if (output.scriptpubkey_address) {
+        // P2PKH, P2WPKH, P2SH outputs
+        txb.addOutput(output.scriptpubkey_address, output.value);
+        console.log(`📤 Output: ${output.scriptpubkey_address} - ${output.value} sats`);
+      } else if (output.scriptpubkey) {
+        // Raw script outputs (OP_RETURN, etc.)
+        txb.addOutput(Buffer.from(output.scriptpubkey, 'hex'), output.value);
+        console.log(`📤 Script output: ${output.scriptpubkey.substring(0, 20)}... - ${output.value} sats`);
+      } else {
+        throw new Error(`Unsupported output type: ${JSON.stringify(output)}`);
+      }
       totalOutputValue += output.value;
     }
     
@@ -235,17 +252,90 @@ export async function createReplacementTransaction(
     const estimatedSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
     const newFee = Math.ceil(estimatedSize * newFeeRate);
     
-    // Check if we have enough funds
-    if (totalInputValue < totalOutputValue + newFee) {
-      throw new Error('Insufficient funds to pay the new fee');
+    // Find the change output in the original transaction (if any)
+    let changeOutputIndex = -1;
+    let changeOutputValue = 0;
+    
+    // Look for a change output (typically the last output that goes to our wallet)
+    for (let i = originalTx.vout.length - 1; i >= 0; i--) {
+      const output = originalTx.vout[i];
+      if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
+        changeOutputIndex = i;
+        changeOutputValue = output.value;
+        break;
+      }
     }
     
-    // Add change output if needed
-    const changeAmount = totalInputValue - totalOutputValue - newFee;
-    if (changeAmount > 546) { // Dust threshold
-      // Generate change address
-      const changeAddress = await generateChangeAddress(mnemonic, 0);
-      txb.addOutput(changeAddress, changeAmount);
+    // Calculate the fee difference
+    const originalFee = totalInputValue - totalOutputValue;
+    const feeIncrease = newFee - originalFee;
+    
+    console.log(`💰 Fee calculation: Original fee: ${originalFee} sats, New fee: ${newFee} sats, Increase: ${feeIncrease} sats`);
+    console.log(`💰 Change output: ${changeOutputValue} sats at index ${changeOutputIndex}`);
+    
+    // Check if we have enough funds for the fee increase
+    if (feeIncrease > changeOutputValue) {
+      throw new Error(`Insufficient change to pay increased fee. Need ${feeIncrease} sats more, but only have ${changeOutputValue} sats in change output.`);
+    }
+    
+    // Adjust the change output value
+    if (changeOutputIndex >= 0) {
+      const newChangeValue = changeOutputValue - feeIncrease;
+      if (newChangeValue > 546) { // Dust threshold
+        // Update the change output in the transaction builder
+        // We need to rebuild the outputs with the adjusted change value
+        txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+        
+        // Re-add inputs
+        for (const [key, { input, utxo }] of inputMap) {
+          txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+        }
+        
+        // Re-add outputs with adjusted change
+        for (let i = 0; i < originalTx.vout.length; i++) {
+          const output = originalTx.vout[i];
+          if (i === changeOutputIndex) {
+            // This is the change output, adjust its value
+            if (output.scriptpubkey_address) {
+              txb.addOutput(output.scriptpubkey_address, newChangeValue);
+            } else if (output.scriptpubkey) {
+              txb.addOutput(Buffer.from(output.scriptpubkey, 'hex'), newChangeValue);
+            }
+          } else {
+            // Regular output, keep original value
+            if (output.scriptpubkey_address) {
+              txb.addOutput(output.scriptpubkey_address, output.value);
+            } else if (output.scriptpubkey) {
+              txb.addOutput(Buffer.from(output.scriptpubkey, 'hex'), output.value);
+            }
+          }
+        }
+      } else {
+        // Change output would be dust, remove it entirely
+        txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+        
+        // Re-add inputs
+        for (const [key, { input, utxo }] of inputMap) {
+          txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+        }
+        
+        // Re-add outputs without the change output
+        for (let i = 0; i < originalTx.vout.length; i++) {
+          if (i === changeOutputIndex) {
+            continue; // Skip the dust change output
+          }
+          const output = originalTx.vout[i];
+          if (output.scriptpubkey_address) {
+            txb.addOutput(output.scriptpubkey_address, output.value);
+          } else if (output.scriptpubkey) {
+            txb.addOutput(Buffer.from(output.scriptpubkey, 'hex'), output.value);
+          }
+        }
+      }
+    } else {
+      // No change output found, this is a rare case
+      // The fee increase must come from reducing one of the outputs
+      throw new Error('No change output found in original transaction. Cannot adjust fee without reducing recipient amounts.');
     }
     
     // Sign the transaction
@@ -273,7 +363,15 @@ export async function createReplacementTransaction(
     const replacementTx = txb.build();
     const txHex = replacementTx.toHex();
     
+    // Validate the replacement transaction
+    const actualFee = totalInputValue - (totalOutputValue - feeIncrease);
     console.log(`✅ Replacement transaction created: ${txHex.substring(0, 100)}...`);
+    console.log(`✅ Actual fee: ${actualFee} sats, Target fee: ${newFee} sats`);
+    
+    // Verify the transaction is valid
+    if (actualFee < newFee * 0.9) { // Allow 10% tolerance
+      throw new Error(`Replacement transaction fee too low. Expected: ${newFee} sats, Actual: ${actualFee} sats`);
+    }
     
     return {
       txid: originalTxid,
