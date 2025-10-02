@@ -84,6 +84,7 @@ export interface UTXO {
     block_time?: number;
   };
   address?: string;
+  addressIndex?: number; // Index of the address in the wallet's address array
   scriptPubKey?: string;
   frozen?: boolean; // For coin control
   label?: string;

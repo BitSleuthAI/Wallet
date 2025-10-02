@@ -1,11 +1,11 @@
+import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
-import { GradientBackground } from '@/components/GradientBackground';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import { getAddressUTXOs, getBitcoinPrice, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
+import { getAddressUTXOs, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
@@ -103,8 +103,9 @@ export default function SendScreen() {
       try {
         if (!currentWallet) return;
         const all: any[] = [];
-        for (const addr of currentWallet.addresses) {
-          const list = await getAddressUTXOs(addr);
+        for (let i = 0; i < currentWallet.addresses.length; i++) {
+          const addr = currentWallet.addresses[i];
+          const list = await getAddressUTXOs(addr, i);
           list.forEach((u: any) => all.push({ ...u, address: addr }));
         }
         setAvailableUtxos(all);
@@ -357,13 +358,34 @@ export default function SendScreen() {
       
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
+      
+      // Validate wallet addresses and current index
+      if (!currentWallet.addresses || currentWallet.addresses.length === 0) {
+        throw new Error('No addresses available in wallet');
+      }
+      
+      if (currentWallet.currentAddressIndex < 0 || currentWallet.currentAddressIndex >= currentWallet.addresses.length) {
+        throw new Error('Invalid current address index');
+      }
+      
+      if (!currentWallet.mnemonic || currentWallet.mnemonic.trim() === '') {
+        throw new Error('Wallet mnemonic is required for transaction signing');
+      }
+      
+      // Get the current address and its index for signing
+      const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
+      const addressIndex = currentWallet.currentAddressIndex;
+      
       const result = await sendTransaction(
-        currentWallet,
+        currentAddress,
         recipientAddress.trim(),
         amountInBTC,
         feeRate,
+        currentWallet.mnemonic,
+        addressIndex,
         enableRBF,
-        selected
+        selected.length > 0 ? selected : undefined,
+        currentWallet.addresses
       );
       
       console.log('✅ Real Bitcoin transaction sent successfully:', result);

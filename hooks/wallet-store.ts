@@ -723,6 +723,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const updatedWallet = await walletService.generateNewAddress(currentWallet);
       const updatedWallets = wallets.map(w => w.id === updatedWallet.id ? updatedWallet : w);
       saveWallets(updatedWallets);
+      
+      // Validate that the wallet has addresses before accessing
+      if (!updatedWallet.addresses || updatedWallet.addresses.length === 0) {
+        return { success: false, error: 'No addresses available in updated wallet' };
+      }
+      
       const newAddress = updatedWallet.addresses[updatedWallet.addresses.length - 1];
       return { success: true, address: newAddress };
     } catch (error) {

@@ -1,8 +1,8 @@
 ### **1. Transaction Sending**
-- **Status**: ❌ **Placeholder only**
-- **Location**: `services/bitcoin-service.ts:272-297`
-- **Issue**: `sendTransaction` function throws `Error('Transaction sending not yet implemented')`
-- **Impact**: Users cannot actually send Bitcoin transactions
+- **Status**: ✅ **Implemented**
+- **Location**: `services/bitcoin-service.ts:283-387`
+- **Issue**: ~~`sendTransaction` function throws `Error('Transaction sending not yet implemented')`~~ **FIXED**
+- **Impact**: ~~Users cannot actually send Bitcoin transactions~~ **Users can now send Bitcoin transactions with proper change handling**
 
 ### **2. Replace-by-Fee (RBF)**
 - **Status**: ❌ **UI only, no backend implementation**

@@ -1,34 +1,34 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  RefreshControl,
-  Switch,
-  Platform,
-  Pressable,
-} from 'react-native';
-import { Stack, useRouter } from 'expo-router';
-import {
-  Coins,
-  Filter,
-  Snowflake,
-  CheckCircle,
-  Circle,
-  Info,
-  Zap,
-  ChevronDown,
-  ChevronUp,
-  ArrowLeft,
-} from 'lucide-react-native';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs } from '@/services/bitcoin-service';
 import type { UTXO } from '@/types/wallet';
-import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { Stack, useRouter } from 'expo-router';
+import {
+    ArrowLeft,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
+    Circle,
+    Coins,
+    Filter,
+    Info,
+    Snowflake,
+    Zap,
+} from 'lucide-react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import {
+    Alert,
+    Platform,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
@@ -54,9 +54,10 @@ export default function CoinControlScreen() {
         return;
       }
       const all: UTXO[] = [];
-      for (const addr of currentWallet.addresses) {
+      for (let i = 0; i < currentWallet.addresses.length; i++) {
+        const addr = currentWallet.addresses[i];
         try {
-          const list = await getAddressUTXOs(addr);
+          const list = await getAddressUTXOs(addr, i);
           for (const u of list) {
             all.push({ ...u, address: addr, frozen: coinControl.isFrozen(`${u.txid}:${u.vout}`) });
           }
