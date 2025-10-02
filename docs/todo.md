@@ -1,9 +1,3 @@
-# Wallet App Feature Analysis - Placeholder
-
-Based on comprehensive analysis of the codebase, here's a detailed breakdown of which features are implemented as placeholders versus functional implementations:
-
-## **Placeholder/Non-Functional Features:**
-
 ### **1. Transaction Sending**
 - **Status**: ❌ **Placeholder only**
 - **Location**: `services/bitcoin-service.ts:272-297`
@@ -66,15 +60,3 @@ Based on comprehensive analysis of the codebase, here's a detailed breakdown of 
 - **Location**: `app/passkeys-security.tsx:535-553`
 - **Issue**: Setting exists but no enforcement during transaction signing
 - **Impact**: Biometric requirement for transactions not functional
-
-## **Summary:**
-
-The app has a **solid foundation** with working wallet management, balance tracking, transaction history, and coin control. However, **all transaction-related features are non-functional**:
-
-- ❌ **Cannot send Bitcoin** (main functionality missing)
-- ❌ **RBF/Cancel transactions** (UI only)
-- ❌ **Custom fees** (not applied to transactions)
-- ❌ **Security keys** (mock implementation)
-- ❌ **MFA/Transaction security** (not enforced)
-
-This appears to be a **wallet viewer** rather than a fully functional Bitcoin wallet. Users can view their balance and transaction history but cannot perform any actual Bitcoin operations.
