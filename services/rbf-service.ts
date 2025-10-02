@@ -214,6 +214,8 @@ export async function validateRBFTransaction(txid: string, walletAddresses: stri
  * 2. Support for different output types (address-based and script-based)
  * 3. Correct UTXO lookup for unconfirmed transactions
  * 4. Proper handling of dust change outputs
+ * 5. Uses the requested newFeeRate parameter instead of hardcoded 10% increase
+ * 6. Validates that the new fee rate meets RBF requirements
  */
 export async function createReplacementTransaction(
   originalTxid: string,
@@ -344,11 +346,33 @@ export async function createReplacementTransaction(
     // Calculate the original fee
     const originalFee = totalInputValue - totalOutputValue;
     
-    // Calculate the fee increase needed
-    const feeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
-    const targetFee = originalFee + feeIncrease;
+    // Calculate the original fee rate
+    const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
+    const originalFeeRate = originalFee / originalSize;
     
-    console.log(`💰 Fee calculation: Original fee: ${originalFee} sats, Target fee: ${targetFee} sats, Increase: ${feeIncrease} sats`);
+    // Calculate the target fee based on the desired fee rate
+    const targetFee = Math.ceil(newFeeRate * originalSize);
+    
+    // Ensure the new fee meets RBF requirements (must be higher than original)
+    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
+    const actualTargetFee = Math.max(targetFee, originalFee + minFeeIncrease);
+    
+    const feeIncrease = actualTargetFee - originalFee;
+    
+    // Validate that the requested fee rate is reasonable
+    if (newFeeRate < originalFeeRate) {
+      throw new Error(`Requested fee rate (${newFeeRate} sat/vB) is lower than original fee rate (${originalFeeRate.toFixed(2)} sat/vB). RBF requires a higher fee rate.`);
+    }
+    
+    // Check if the fee increase is too small (less than 1 sat/vB improvement)
+    const feeRateIncrease = (actualTargetFee / originalSize) - originalFeeRate;
+    if (feeRateIncrease < 1) {
+      console.warn(`⚠️ Fee rate increase is very small: ${feeRateIncrease.toFixed(2)} sat/vB. This may not be sufficient for RBF.`);
+    }
+    
+    console.log(`💰 Fee calculation: Original fee: ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`💰 Target fee: ${actualTargetFee} sats (${newFeeRate} sat/vB requested)`);
+    console.log(`💰 Fee increase: ${feeIncrease} sats`);
     console.log(`💰 Change output: ${changeOutputValue} sats at index ${changeOutputIndex}`);
     
     // Check if we have enough funds for the fee increase
@@ -448,12 +472,12 @@ export async function createReplacementTransaction(
     const txHex = replacementTx.toHex();
     
     console.log(`✅ Replacement transaction created: ${txHex.substring(0, 100)}...`);
-    console.log(`✅ Actual fee: ${actualFee} sats, Target fee: ${targetFee} sats`);
+    console.log(`✅ Actual fee: ${actualFee} sats, Target fee: ${actualTargetFee} sats`);
     console.log(`✅ Actual fee rate: ${actualFeeRate.toFixed(2)} sat/vB, Requested: ${newFeeRate} sat/vB`);
     
     // Verify the transaction is valid
-    if (actualFee < targetFee * 0.9) { // Allow 10% tolerance
-      throw new Error(`Replacement transaction fee too low. Expected: ${targetFee} sats, Actual: ${actualFee} sats`);
+    if (actualFee < actualTargetFee * 0.9) { // Allow 10% tolerance
+      throw new Error(`Replacement transaction fee too low. Expected: ${actualTargetFee} sats, Actual: ${actualFee} sats`);
     }
     
     return {
