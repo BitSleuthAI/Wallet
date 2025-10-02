@@ -6,14 +6,14 @@ import { router } from 'expo-router';
 import { Delete, Fingerprint, Lock, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    SafeAreaView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    Vibration,
-    View,
+  Alert,
+  Platform,
+  SafeAreaView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  Vibration,
+  View,
 } from 'react-native';
 
 export default function PinUnlockScreen() {
@@ -61,7 +61,7 @@ export default function PinUnlockScreen() {
       triggerHaptic();
       setPin(prev => prev + number);
     }
-  }, [pin.length, maxPinLength, triggerHaptic]);
+  }, [maxPinLength, triggerHaptic]);
 
   const handleDelete = useCallback(async () => {
     if (pin.length > 0) {
@@ -69,7 +69,7 @@ export default function PinUnlockScreen() {
       triggerHaptic();
       setPin(prev => prev.slice(0, -1));
     }
-  }, [pin.length, triggerHaptic]);
+  }, [triggerHaptic]);
 
   const handleForgotPin = useCallback(() => {
     Alert.alert(
