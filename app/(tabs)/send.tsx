@@ -367,6 +367,10 @@ export default function SendScreen() {
         throw new Error('Invalid current address index');
       }
       
+      if (!currentWallet.mnemonic || currentWallet.mnemonic.trim() === '') {
+        throw new Error('Wallet mnemonic is required for transaction signing');
+      }
+      
       // Get the current address and its index for signing
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;

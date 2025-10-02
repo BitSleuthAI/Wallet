@@ -285,8 +285,8 @@ export const sendTransaction = async (
   toAddress: string,
   amount: number,
   feeRate: number = 10,
-  mnemonic?: string,
-  addressIndex?: number,
+  mnemonic: string,
+  addressIndex: number,
   enableRBF?: boolean,
   selectedUTXOs?: UTXO[]
 ): Promise<{ txid: string; fee: number; amount: number }> => {
@@ -312,6 +312,12 @@ export const sendTransaction = async (
     }
     if (feeRate <= 0) {
       throw new Error('Fee rate must be positive');
+    }
+    if (!mnemonic || mnemonic.trim() === '') {
+      throw new Error('Mnemonic is required for transaction signing');
+    }
+    if (addressIndex < 0) {
+      throw new Error('Address index must be non-negative');
     }
     
     // Convert amount to satoshis
@@ -489,8 +495,8 @@ async function createTransaction(
   amountSatoshis: number,
   feeAmount: number,
   feeRate: number,
-  mnemonic?: string,
-  addressIndex?: number,
+  mnemonic: string,
+  addressIndex: number,
   enableRBF?: boolean
 ): Promise<string> {
   try {
@@ -530,10 +536,6 @@ async function createTransaction(
     
     // Add change output if needed (dust threshold is 546 satoshis)
     if (changeAmount > 546) {
-      if (!mnemonic) {
-        throw new Error('Mnemonic required to generate change address');
-      }
-      
       console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
       const changeAddress = await generateChangeAddress(mnemonic, 0); // Use first change address
       txb.addOutput(changeAddress, changeAmount);
@@ -543,36 +545,32 @@ async function createTransaction(
     }
     
     // Sign inputs
-    if (mnemonic && addressIndex !== undefined) {
-      console.log('🔐 Signing transaction with private key...');
+    console.log('🔐 Signing transaction with private key...');
+    
+    // Import bip32 and bip39
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Derive private key
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+    
+    if (!child.privateKey) {
+      throw new Error('Failed to derive private key');
+    }
+    
+    // Sign each input
+    for (let i = 0; i < utxos.length; i++) {
+      const utxo = utxos[i];
       
-      // Import bip32 and bip39
-      const bip32Module = await import('bip32');
-      const bip39 = require('bip39');
-      const bip32 = bip32Module.BIP32Factory(ecc);
+      // Get the public key for this UTXO
+      const publicKey = child.publicKey;
+      const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: publicKey });
       
-      // Derive private key
-      const seed = await bip39.mnemonicToSeed(mnemonic);
-      const root = bip32.fromSeed(seed);
-      const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
-      
-      if (!child.privateKey) {
-        throw new Error('Failed to derive private key');
-      }
-      
-      // Sign each input
-      for (let i = 0; i < utxos.length; i++) {
-        const utxo = utxos[i];
-        
-        // Get the public key for this UTXO
-        const publicKey = child.publicKey;
-        const p2wpkh = bitcoin.payments.p2wpkh({ pubkey: publicKey });
-        
-        // Sign the input with witnessValue for P2WPKH
-        txb.sign(i, child, null, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
-      }
-    } else {
-      throw new Error('Mnemonic and address index required for signing');
+      // Sign the input with witnessValue for P2WPKH
+      txb.sign(i, child, null, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
     }
     
     // Build transaction
