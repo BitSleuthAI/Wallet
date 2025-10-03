@@ -583,7 +583,7 @@ class SecureAuthService {
     try {
       // In a real implementation, this would verify the attestation object
       // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(new TextDecoder().decode(toByteArray(response.response.clientDataJSON)));
+      const clientDataJSON = JSON.parse(response.response.clientDataJSON);
       
       // Verify challenge matches
       const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
@@ -616,7 +616,7 @@ class SecureAuthService {
     try {
       // In a real implementation, this would verify the signature
       // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(new TextDecoder().decode(toByteArray(response.response.clientDataJSON)));
+      const clientDataJSON = JSON.parse(response.response.clientDataJSON);
       
       // Verify challenge matches
       const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
