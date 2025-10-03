@@ -76,11 +76,24 @@ export default function SendScreen() {
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
   const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
+  const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
 
-  // Reset user interaction state when wallet changes
+  // Reset user interaction state only when component mounts or fee settings change
   useEffect(() => {
     setUserHasInteractedWithFees(false);
-  }, [currentWallet?.id]);
+    setHasShownFeeRateAlert(false);
+  }, []);
+
+  // Reset interaction flag when fee settings change (but not on wallet changes)
+  useEffect(() => {
+    if (feeSettings) {
+      const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}-${feeSettings.enableRBF}`;
+      if (lastAppliedFeeSettings !== settingsKey) {
+        setUserHasInteractedWithFees(false);
+        setLastAppliedFeeSettings(settingsKey);
+      }
+    }
+  }, [feeSettings, lastAppliedFeeSettings]);
 
   // Load fee estimates on component mount and wallet change
   useEffect(() => {
@@ -120,16 +133,15 @@ export default function SendScreen() {
     // Only proceed if fee settings have finished loading and we have valid settings
     if (feeSettingsLoading || !feeSettings) return;
 
-    // Update fee settings that don't conflict with user interactions
-    setCustomFeeRate(feeSettings.customFeeRate.toString());
-    setEnableRBF(feeSettings.enableRBF);
-    
-    // Only update fee rate and selected type if user hasn't manually interacted
+    // Only apply fee settings if user hasn't manually interacted
     if (!userHasInteractedWithFees) {
+      // Apply all fee settings when user hasn't interacted
       const presetType = feeSettings.defaultPreset === 'economy' ? 'slow' : 
                         feeSettings.defaultPreset === 'standard' ? 'normal' : 
                         feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
       setSelectedFeeType(presetType);
+      setCustomFeeRate(feeSettings.customFeeRate.toString());
+      setEnableRBF(feeSettings.enableRBF);
       
       // Set fee rate based on preset and available estimates
       if (feeSettings.defaultPreset === 'custom') {
