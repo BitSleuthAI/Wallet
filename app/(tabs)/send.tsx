@@ -896,24 +896,30 @@ export default function SendScreen() {
                   ]}
                   onPress={() => {
                     setUserHasInteractedWithFees(true);
-                    setSelectedFeeType('custom');
+                    
+                    // Validate custom fee rate before setting the selected type
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
                       const rate = parseFloat(customFeeRate);
                       // Validate against max fee rate before setting
                       const maxRate = feeSettings.maxFeeRate;
                       if (rate <= maxRate) {
+                        // Valid rate - set both the type and the rate
+                        setSelectedFeeType('custom');
                         setFeeRate(rate);
                         setHasShownFeeRateAlert(false);
                       } else {
-                        // Show alert if current custom rate exceeds maximum
+                        // Invalid rate - show alert and don't change the selection
                         Alert.alert(
                           'Fee Rate Too High',
                           `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
                           [{ text: 'OK' }]
                         );
                         setHasShownFeeRateAlert(true);
-                        // Don't set the fee rate - keep it at the previous valid value
+                        // Don't change the selected type or fee rate
                       }
+                    } else {
+                      // No valid custom rate entered - still allow selection but don't update fee rate
+                      setSelectedFeeType('custom');
                     }
                   }}
                 >
