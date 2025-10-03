@@ -2,7 +2,7 @@ import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
-import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock } from 'lucide-react-native';
+import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
 import React from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -118,6 +118,34 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
               {transaction.status === 'confirmed' ? 'Completed' : 'Pending'}
             </Text>
           </View>
+          
+          {/* RBF and CPFP Indicators */}
+          <View style={styles.featureIndicators}>
+            {transaction.rbf && (
+              <View style={[styles.featureBadge, { backgroundColor: theme.colors.warning + '20' }]}>
+                <Zap color={theme.colors.warning} size={12} />
+                <Text style={[styles.featureText, { color: theme.colors.warning }]}>
+                  RBF
+                </Text>
+              </View>
+            )}
+            {transaction.cpfp && (
+              <View style={[styles.featureBadge, { backgroundColor: theme.colors.success + '20' }]}>
+                <DollarSign color={theme.colors.success} size={12} />
+                <Text style={[styles.featureText, { color: theme.colors.success }]}>
+                  CPFP
+                </Text>
+              </View>
+            )}
+            {transaction.childTxids && transaction.childTxids.length > 0 && (
+              <View style={[styles.featureBadge, { backgroundColor: theme.colors.primary + '20' }]}>
+                <DollarSign color={theme.colors.primary} size={12} />
+                <Text style={[styles.featureText, { color: theme.colors.primary }]}>
+                  Parent
+                </Text>
+              </View>
+            )}
+          </View>
         </View>
 
         <Text style={[styles.address, { color: theme.colors.textSecondary }]}>
@@ -185,10 +213,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: platformStyles.spacing.xs,
   },
   statusBadge: {
-    alignSelf: 'flex-start',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: platformStyles.spacing.sm,
@@ -200,6 +230,23 @@ const styles = StyleSheet.create({
     color: 'white',
     ...platformStyles.typography.caption,
     fontWeight: '600',
+  },
+  featureIndicators: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  featureBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 8,
+    gap: 2,
+  },
+  featureText: {
+    ...platformStyles.typography.caption,
+    fontWeight: '600',
+    fontSize: 10,
   },
   address: {
     ...platformStyles.typography.caption,

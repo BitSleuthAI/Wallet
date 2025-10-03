@@ -12,6 +12,7 @@ import {
     CheckCircle,
     Clock,
     Copy,
+    DollarSign,
     ExternalLink,
     Share as ShareIcon,
     XCircle,
@@ -157,6 +158,18 @@ export default function TransactionDetailsScreen() {
     }
 
     router.push(`/fee-bump?txid=${transaction.txid}`);
+  };
+
+  const handleCPFP = () => {
+    if (transaction.status !== 'pending') {
+      Alert.alert(
+        'CPFP Not Available',
+        'Child-Pays-for-Parent is only available for pending transactions.'
+      );
+      return;
+    }
+
+    router.push(`/cpfp-bump?txid=${transaction.txid}`);
   };
 
 
@@ -308,6 +321,39 @@ export default function TransactionDetailsScreen() {
               </Text>
             </View>
           )}
+
+          {/* RBF and CPFP Information */}
+          {(transaction.rbf || transaction.cpfp || transaction.childTxids) && (
+            <View style={styles.detailRow}>
+              <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Features</Text>
+              <View style={styles.featureTags}>
+                {transaction.rbf && (
+                  <View style={[styles.featureTag, { backgroundColor: theme.colors.warning + '20' }]}>
+                    <Zap color={theme.colors.warning} size={12} />
+                    <Text style={[styles.featureTagText, { color: theme.colors.warning }]}>
+                      RBF Enabled
+                    </Text>
+                  </View>
+                )}
+                {transaction.cpfp && (
+                  <View style={[styles.featureTag, { backgroundColor: theme.colors.success + '20' }]}>
+                    <DollarSign color={theme.colors.success} size={12} />
+                    <Text style={[styles.featureTagText, { color: theme.colors.success }]}>
+                      CPFP Child
+                    </Text>
+                  </View>
+                )}
+                {transaction.childTxids && transaction.childTxids.length > 0 && (
+                  <View style={[styles.featureTag, { backgroundColor: theme.colors.primary + '20' }]}>
+                    <DollarSign color={theme.colors.primary} size={12} />
+                    <Text style={[styles.featureTagText, { color: theme.colors.primary }]}>
+                      CPFP Parent ({transaction.childTxids.length} child{transaction.childTxids.length > 1 ? 'ren' : ''})
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Actions */}
@@ -320,6 +366,26 @@ export default function TransactionDetailsScreen() {
               View on Block Explorer
             </Text>
           </TouchableOpacity>
+
+          {/* RBF Button for sent transactions */}
+          {!isReceived && transaction.status === 'pending' && (
+            <TouchableOpacity style={styles.actionButton} onPress={handleRBF}>
+              <Zap color={theme.colors.warning} size={20} />
+              <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+                Replace-by-Fee (RBF)
+              </Text>
+            </TouchableOpacity>
+          )}
+
+          {/* CPFP Button for received transactions */}
+          {isReceived && transaction.status === 'pending' && (
+            <TouchableOpacity style={styles.actionButton} onPress={handleCPFP}>
+              <Zap color={theme.colors.success} size={20} />
+              <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+                Child-Pays-for-Parent (CPFP)
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
     </GradientBackground>
@@ -450,5 +516,23 @@ const styles = StyleSheet.create({
   },
   headerButton: {
     padding: platformStyles.spacing.sm,
+  },
+  featureTags: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  featureTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  featureTagText: {
+    ...platformStyles.typography.caption,
+    fontWeight: '600',
+    fontSize: 12,
   },
 });

@@ -1,9 +1,9 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
-import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -511,6 +511,37 @@ export default function FeeSettingsScreen() {
           icon={DollarSign}
         />
         
+        {/* CPFP Information Card */}
+        {settings.enableCPFP && (
+          <View style={[styles.cpfpInfoCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.cpfpInfoHeader}>
+              <View style={[styles.cpfpInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Info color={theme.colors.primary} size={20} />
+              </View>
+              <Text style={[styles.cpfpInfoTitle, { color: theme.colors.text }]}>
+                How CPFP Works
+              </Text>
+            </View>
+            <Text style={[styles.cpfpInfoText, { color: theme.colors.textSecondary }]}>
+              CPFP allows you to bump the fee of a received transaction by creating a child transaction that spends its outputs. The child transaction pays a higher fee, effectively increasing the priority of the parent transaction.
+            </Text>
+            <View style={styles.cpfpInfoFeatures}>
+              <Text style={[styles.cpfpInfoFeature, { color: theme.colors.textSecondary }]}>
+                • Works with any received transaction
+              </Text>
+              <Text style={[styles.cpfpInfoFeature, { color: theme.colors.textSecondary }]}>
+                • No need for RBF on the original transaction
+              </Text>
+              <Text style={[styles.cpfpInfoFeature, { color: theme.colors.textSecondary }]}>
+                • Effective fee rate combines parent + child fees
+              </Text>
+              <Text style={[styles.cpfpInfoFeature, { color: theme.colors.textSecondary }]}>
+                • Can send to any address or back to your wallet
+              </Text>
+            </View>
+          </View>
+        )}
+        
         <SettingToggle
           title="Auto-Adjust Fees"
           subtitle="Automatically adjust fees based on network conditions"
@@ -911,5 +942,41 @@ const styles = StyleSheet.create({
   congestionSubtext: {
     fontSize: 12,
     fontStyle: 'italic',
+  },
+  cpfpInfoCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  cpfpInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  cpfpInfoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  cpfpInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cpfpInfoText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  cpfpInfoFeatures: {
+    marginTop: 8,
+  },
+  cpfpInfoFeature: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
   },
 });

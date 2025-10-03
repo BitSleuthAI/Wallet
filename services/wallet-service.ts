@@ -252,6 +252,29 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       const fromAddress = tx.vin?.map((i: any) => i.prevout?.scriptpubkey_address).filter(Boolean) ?? [];
       const toAddress = tx.vout?.map((o: any) => o.scriptpubkey_address).filter(Boolean) ?? [];
 
+      // Check for RBF and CPFP
+      const hasRBF = tx.vin?.some((input: any) => {
+        const sequence = typeof input.sequence === 'string' 
+          ? (input.sequence.startsWith('0x') ? parseInt(input.sequence, 16) : parseInt(input.sequence, 10))
+          : input.sequence;
+        return sequence < 0xFFFFFFFE;
+      }) || false;
+
+      // Check for CPFP - only if this transaction spends outputs from an UNCONFIRMED parent transaction
+      const isCPFPChild = tx.vin?.some((input: any) => {
+        const parentTx = allTxs.get(input.txid);
+        // Only consider it CPFP if parent is unconfirmed (pending)
+        return parentTx && !parentTx.status?.confirmed;
+      }) || false;
+
+      // Check if this transaction has child transactions (CPFP parent)
+      // Only consider it a CPFP parent if this transaction is unconfirmed
+      const childTxids = isConfirmed ? [] : Array.from(allTxs.values())
+        .filter((childTx: any) => 
+          childTx.vin?.some((input: any) => input.txid === tx.txid)
+        )
+        .map((childTx: any) => childTx.txid);
+
       return {
         txid: tx.txid,
         type: netBtc >= 0 ? 'received' : 'sent',
@@ -263,6 +286,30 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
         timestamp: txDate.getTime(),
         confirmations,
         status: isConfirmed ? 'confirmed' : 'pending',
+        rbf: hasRBF,
+        cpfp: isCPFPChild,
+        childTxids: childTxids.length > 0 ? childTxids : undefined,
+        fee: tx.fee ? tx.fee / 1e8 : undefined, // Convert satoshis to BTC
+        feeRate: tx.fee && tx.vsize ? (tx.fee / tx.vsize) : undefined,
+        size: tx.size,
+        vsize: tx.vsize,
+        inputs: tx.vin?.map((input: any) => ({
+          txid: input.txid,
+          vout: input.vout,
+          value: input.prevout?.value || 0,
+          address: input.prevout?.scriptpubkey_address,
+          scriptSig: input.scriptsig,
+          witness: input.witness,
+        })),
+        outputs: tx.vout?.map((output: any, index: number) => ({
+          value: output.value,
+          address: output.scriptpubkey_address,
+          scriptPubKey: output.scriptpubkey,
+          n: index,
+          spent: false, // We don't track spent status in this context
+        })),
+        blockHeight: tx.status?.block_height,
+        blockHash: tx.status?.block_hash,
       };
     });
 
