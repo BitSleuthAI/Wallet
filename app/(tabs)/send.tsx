@@ -35,15 +35,16 @@ export default function SendScreen() {
     getCurrencySymbol,
     bitcoinPrice: walletBitcoinPrice,
     feeSettings,
+    feeSettingsLoading,
   } = useWallet();
   const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(feeSettings.customFeeRate);
-  const [customFeeRate, setCustomFeeRate] = useState(feeSettings.customFeeRate.toString());
-  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
-  const [enableRBF, setEnableRBF] = useState(feeSettings.enableRBF);
+  const [feeRate, setFeeRate] = useState(5); // Default fallback, will be updated when fee settings load
+  const [customFeeRate, setCustomFeeRate] = useState('10'); // Default fallback
+  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal'); // Default fallback
+  const [enableRBF, setEnableRBF] = useState(true); // Default fallback
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -64,11 +65,14 @@ export default function SendScreen() {
 
   // Update fee settings when they change in wallet store
   useEffect(() => {
-    setFeeRate(feeSettings.customFeeRate);
-    setCustomFeeRate(feeSettings.customFeeRate.toString());
-    setSelectedFeeType(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
-    setEnableRBF(feeSettings.enableRBF);
-  }, [feeSettings]);
+    // Only update if fee settings have finished loading
+    if (!feeSettingsLoading) {
+      setFeeRate(feeSettings.customFeeRate);
+      setCustomFeeRate(feeSettings.customFeeRate.toString());
+      setSelectedFeeType(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
+      setEnableRBF(feeSettings.enableRBF);
+    }
+  }, [feeSettings, feeSettingsLoading]);
 
   // Load fee estimates on component mount
   useEffect(() => {
@@ -78,7 +82,7 @@ export default function SendScreen() {
         setFeeEstimates(fees);
         
         // Set default fee rate based on saved settings or estimates
-        if (fees) {
+        if (fees && !feeSettingsLoading) {
           // Use saved fee settings if available, otherwise use estimates
           if (feeSettings.defaultPreset === 'custom') {
             setFeeRate(feeSettings.customFeeRate);
@@ -89,8 +93,14 @@ export default function SendScreen() {
                              fees.halfHourFee;
             setFeeRate(presetFee);
           }
-          
-          // Load fee confidence data
+        } else if (fees && feeSettingsLoading) {
+          // Use default estimates while fee settings are loading
+          setFeeRate(fees.halfHourFee || 5);
+          setSelectedFeeType('normal');
+        }
+        
+        // Load fee confidence data
+        if (fees) {
           try {
             const [fastInfo, mediumInfo, slowInfo] = await Promise.all([
               feeEstimationService.getFeeWithConfidence('fast'),
@@ -113,7 +123,7 @@ export default function SendScreen() {
     };
     
     loadInitialData();
-  }, [currentWallet, feeSettings]);
+  }, [currentWallet, feeSettings, feeSettingsLoading]);
 
   useEffect(() => {
     const fetchUtxos = async () => {

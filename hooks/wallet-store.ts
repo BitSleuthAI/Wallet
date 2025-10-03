@@ -1058,7 +1058,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     hideBalance,
     autoLockTimeout,
     feeSettings,
-  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings]);
+    feeSettingsLoading: feeSettingsQuery.isLoading,
+  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsQuery.isLoading]);
 
   const actionsData = useMemo(() => ({
     createWallet,
