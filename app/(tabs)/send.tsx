@@ -78,11 +78,9 @@ export default function SendScreen() {
     if (feeSettings) {
       const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}-${feeSettings.enableRBF}`;
       if (lastAppliedFeeSettings !== settingsKey) {
-        // Only reset user interaction if this is the initial load (lastAppliedFeeSettings is null)
-        // Never reset user interaction if user has already interacted with fees
-        if (lastAppliedFeeSettings === null) {
-          setUserHasInteractedWithFees(false);
-        }
+        // Reset user interaction when settings actually change (not just initial load)
+        // This allows new default presets to be applied when user updates fee settings
+        setUserHasInteractedWithFees(false);
         setLastAppliedFeeSettings(settingsKey);
       }
     }
