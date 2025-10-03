@@ -892,7 +892,18 @@ export default function SendScreen() {
                     setSelectedFeeType('custom');
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
                       const rate = parseFloat(customFeeRate);
-                      setFeeRate(rate);
+                      // Validate against max fee rate before setting
+                      const maxRate = feeSettings.maxFeeRate;
+                      if (rate <= maxRate) {
+                        setFeeRate(rate);
+                      } else {
+                        // Show alert if current custom rate exceeds maximum
+                        Alert.alert(
+                          'Fee Rate Too High',
+                          `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
+                          [{ text: 'OK' }]
+                        );
+                      }
                     }
                   }}
                 >
@@ -923,9 +934,15 @@ export default function SendScreen() {
                         if (rate <= maxRate) {
                           setFeeRate(rate);
                         } else {
-                          // Show warning but still allow user to proceed
+                          // Prevent setting fee rate that exceeds maximum
                           console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
-                          setFeeRate(rate);
+                          // Show alert to user about the limit
+                          Alert.alert(
+                            'Fee Rate Too High',
+                            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
+                            [{ text: 'OK' }]
+                          );
+                          // Don't set the fee rate - keep it at the previous valid value
                         }
                       }
                     }}
