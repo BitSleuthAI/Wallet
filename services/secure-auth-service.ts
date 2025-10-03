@@ -1,9 +1,9 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type {
-    AuthenticationResponseJSON,
-    PublicKeyCredentialCreationOptionsJSON,
-    PublicKeyCredentialRequestOptionsJSON,
-    RegistrationResponseJSON
+  AuthenticationResponseJSON,
+  PublicKeyCredentialCreationOptionsJSON,
+  PublicKeyCredentialRequestOptionsJSON,
+  RegistrationResponseJSON
 } from '@simplewebauthn/browser';
 import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -50,7 +50,7 @@ export interface FIDOAuthResult {
 class SecureAuthService {
   private rnBiometrics: ReactNativeBiometrics;
   private biometricAvailable: boolean = false;
-  private biometricType: BiometryTypes | null = null;
+  private biometricType: typeof BiometryTypes[keyof typeof BiometryTypes] | null = null;
 
   constructor() {
     this.rnBiometrics = new ReactNativeBiometrics({ allowDeviceCredentials: true });
@@ -61,7 +61,7 @@ class SecureAuthService {
     try {
       const { available, biometryType } = await this.rnBiometrics.isSensorAvailable();
       this.biometricAvailable = available;
-      this.biometricType = biometryType;
+      this.biometricType = biometryType || null;
       console.log('🔐 Biometric sensor available:', available, 'Type:', biometryType);
     } catch (error) {
       console.error('❌ Error initializing biometrics:', error);
@@ -115,18 +115,17 @@ class SecureAuthService {
       console.log('🔐 Starting secure biometric authentication...');
 
       // Use react-native-biometrics for cryptographic operations
-      const { success, signature, publicKey } = await this.rnBiometrics.createSignature({
+      const { success, signature } = await this.rnBiometrics.createSignature({
         promptMessage: promptMessage || 'Authenticate to continue',
-        payload: this.generateChallenge(),
+        payload: this.arrayBufferToBase64(this.generateChallenge()),
       });
 
-      if (success && signature && publicKey) {
+      if (success && signature) {
         console.log('✅ Biometric authentication successful with cryptographic verification');
         return {
           success: true,
           biometricType: this.getBiometricType(),
           signature,
-          publicKey,
         };
       } else {
         console.log('❌ Biometric authentication failed');
@@ -150,9 +149,9 @@ class SecureAuthService {
       console.log('🔐 Registering new biometric key...');
 
       // Create a new key pair for this biometric registration
-      const { success, publicKey } = await this.rnBiometrics.createKeys();
+      const result = await this.rnBiometrics.createKeys();
       
-      if (!success || !publicKey) {
+      if (!result.publicKey) {
         throw new Error('Failed to create biometric key pair');
       }
 
@@ -168,7 +167,6 @@ class SecureAuthService {
         name: this.getBiometricType(),
         type: 'biometric',
         dateAdded: new Date().toISOString(),
-        publicKey,
         isVerified: true,
       };
 
@@ -187,34 +185,36 @@ class SecureAuthService {
     try {
       console.log('🔐 Registering FIDO2 passkey...');
 
-      // Generate a secure challenge
+      // Generate a secure challenge as ArrayBuffer
       const challenge = this.generateChallenge();
+      const userId = this.generateUserIdAsArrayBuffer();
       
       const options: PublicKeyCredentialCreationOptionsJSON = {
         challenge: this.arrayBufferToBase64(challenge),
         rp: {
           name: 'BitSleuth Wallet',
-          id: 'bitsleuth.ai',
+          id: this.getRpId(), // Dynamic rpId for mobile app context
         },
         user: {
-          id: this.generateUserId(),
+          id: this.arrayBufferToBase64(userId), // Convert ArrayBuffer to base64 for JSON
           name: 'BitSleuth User',
           displayName: 'BitSleuth User',
         },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 }, // ES256
           { type: 'public-key', alg: -257 }, // RS256
+          { type: 'public-key', alg: -8 }, // EdDSA
         ],
         timeout: 60000,
         attestation: 'direct',
         authenticatorSelection: {
-          authenticatorAttachment: 'platform', // Use platform authenticator (device biometric)
+          // Remove platform authenticator limitation - allow both platform and cross-platform
           userVerification: 'required',
         },
       };
 
       // Start WebAuthn registration
-      const registrationResponse = await startRegistration(options);
+      const registrationResponse = await startRegistration({ optionsJSON: options });
       
       if (!registrationResponse) {
         throw new Error('WebAuthn registration failed');
@@ -253,23 +253,25 @@ class SecureAuthService {
     try {
       console.log('🔐 Registering hardware FIDO security key...');
 
-      // Generate a secure challenge
+      // Generate a secure challenge as ArrayBuffer
       const challenge = this.generateChallenge();
+      const userId = this.generateUserIdAsArrayBuffer();
       
       const options: PublicKeyCredentialCreationOptionsJSON = {
         challenge: this.arrayBufferToBase64(challenge),
         rp: {
           name: 'BitSleuth Wallet',
-          id: 'bitsleuth.ai',
+          id: this.getRpId(), // Dynamic rpId for mobile app context
         },
         user: {
-          id: this.generateUserId(),
+          id: this.arrayBufferToBase64(userId), // Convert ArrayBuffer to base64 for JSON
           name: 'BitSleuth User',
           displayName: 'BitSleuth User',
         },
         pubKeyCredParams: [
           { type: 'public-key', alg: -7 }, // ES256
           { type: 'public-key', alg: -257 }, // RS256
+          { type: 'public-key', alg: -8 }, // EdDSA
         ],
         timeout: 60000,
         attestation: 'direct',
@@ -280,7 +282,7 @@ class SecureAuthService {
       };
 
       // Start WebAuthn registration for hardware key
-      const registrationResponse = await startRegistration(options);
+      const registrationResponse = await startRegistration({ optionsJSON: options });
       
       if (!registrationResponse) {
         throw new Error('Hardware FIDO key registration failed');
@@ -319,13 +321,13 @@ class SecureAuthService {
     try {
       console.log('🔐 Authenticating with FIDO key...');
 
-      // Generate a secure challenge
+      // Generate a secure challenge as ArrayBuffer
       const challenge = this.generateChallenge();
       
       const options: PublicKeyCredentialRequestOptionsJSON = {
         challenge: this.arrayBufferToBase64(challenge),
         timeout: 60000,
-        rpId: 'bitsleuth.ai',
+        rpId: this.getRpId(), // Dynamic rpId for mobile app context
         allowCredentials: [
           {
             id: credentialId,
@@ -336,7 +338,7 @@ class SecureAuthService {
       };
 
       // Start WebAuthn authentication
-      const authenticationResponse = await startAuthentication(options);
+      const authenticationResponse = await startAuthentication({ optionsJSON: options });
       
       if (!authenticationResponse) {
         return { success: false, error: 'FIDO authentication failed' };
@@ -513,12 +515,35 @@ class SecureAuthService {
   }
 
   /**
-   * Generate a unique user ID
+   * Generate a unique user ID as ArrayBuffer
    */
-  private generateUserId(): string {
+  private generateUserIdAsArrayBuffer(): ArrayBuffer {
     const array = new Uint8Array(16);
     crypto.getRandomValues(array);
-    return this.arrayBufferToBase64(array.buffer);
+    return array.buffer;
+  }
+
+  /**
+   * Generate a unique user ID as base64 string (legacy method for compatibility)
+   */
+  private generateUserId(): string {
+    return this.arrayBufferToBase64(this.generateUserIdAsArrayBuffer());
+  }
+
+  /**
+   * Get the appropriate Relying Party ID for the current platform
+   */
+  private getRpId(): string {
+    // For mobile apps, use a generic domain or localhost
+    // This allows WebAuthn to work in mobile app contexts
+    if (Platform.OS === 'web') {
+      // For web, use the current hostname
+      return window.location.hostname;
+    } else {
+      // For mobile apps, use a generic domain that works with WebAuthn
+      // This is a common pattern for mobile WebAuthn implementations
+      return 'localhost';
+    }
   }
 
   /**
