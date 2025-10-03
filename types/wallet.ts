@@ -48,6 +48,9 @@ export interface Transaction {
   size?: number; // transaction size in bytes
   vsize?: number; // virtual size
   rbf?: boolean; // Replace-by-fee enabled
+  cpfp?: boolean; // Child-pays-for-parent enabled
+  parentTxid?: string; // For CPFP child transactions
+  childTxids?: string[]; // For CPFP parent transactions
   inputs?: TransactionInput[];
   outputs?: TransactionOutput[];
   blockHeight?: number;
@@ -115,6 +118,7 @@ export interface WalletSettings {
   pinEnabled: boolean;
   hideBalance: boolean;
   enableRBF: boolean;
+  enableCPFP: boolean;
   defaultFeeRate: 'fast' | 'medium' | 'slow' | 'custom';
   customFeeRate?: number;
   addressGap: number;
@@ -162,4 +166,41 @@ export interface Theme {
     cardBackground: string;
     cardBorder: string;
   };
+}
+
+// CPFP (Child-Pays-for-Parent) related types
+export interface CPFPTransaction {
+  parentTxid: string;
+  childTxid?: string;
+  parentTx: Transaction;
+  childTx?: string; // hex transaction
+  targetFeeRate: number;
+  childFee: number;
+  effectiveFeeRate: number; // Combined fee rate of parent + child
+  status: 'pending' | 'broadcasted' | 'confirmed' | 'failed';
+  error?: string;
+}
+
+export interface CPFPValidationResult {
+  isValid: boolean;
+  canCPFP: boolean;
+  reason?: string;
+  parentTx?: any;
+  utxos?: UTXO[];
+  estimatedChildFee?: number;
+  effectiveFeeRate?: number;
+}
+
+export interface CPFPOptions {
+  targetFeeRate: number;
+  maxChildFee?: number;
+  includeUnconfirmed?: boolean;
+  customOutputs?: Array<{ address: string; amount: number }>;
+}
+
+export interface CPFPRecommendation {
+  recommendedFeeRate: number;
+  estimatedChildFee: number;
+  effectiveFeeRate: number;
+  timeEstimate: string;
 }
