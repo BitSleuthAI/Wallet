@@ -81,11 +81,18 @@ export default function SendScreen() {
   // This prevents the fee management effect from overriding user-selected rates when settings change
   useEffect(() => {
     if (feeSettings) {
-      const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}-${feeSettings.enableRBF}`;
+      // Only track preset and custom fee rate changes, not RBF (which doesn't affect fee rates)
+      const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}`;
       if (lastAppliedFeeSettings !== settingsKey) {
-        // Reset user interaction when settings actually change (not just initial load)
-        // This allows new default presets to be applied when user updates fee settings
-        setUserHasInteractedWithFees(false);
+        // Only reset user interaction on initial load (when lastAppliedFeeSettings is null)
+        // or when preset/custom fee rate actually changes (not RBF or other settings)
+        if (lastAppliedFeeSettings === null) {
+          // Initial load - reset user interaction to allow default settings
+          setUserHasInteractedWithFees(false);
+        } else {
+          // Settings actually changed - only reset if it's a fee-related change
+          setUserHasInteractedWithFees(false);
+        }
         setLastAppliedFeeSettings(settingsKey);
       }
     }
@@ -142,8 +149,13 @@ export default function SendScreen() {
   useEffect(() => {
     if (feeSettingsLoading || !feeSettings) return;
 
-    // Always update fee rates based on current preset, even after user interaction
-    // This ensures users get updated network estimates while preserving their preset choice
+    // Only update fee rates if user hasn't manually interacted with fees
+    // This preserves user's manual fee selections while allowing automatic updates for new users
+    if (userHasInteractedWithFees) {
+      return; // Don't override user's manual selections
+    }
+
+    // Update fee rates based on current preset only when user hasn't interacted
     if (feeSettings.defaultPreset === 'custom') {
       // For custom preset, use the stored custom fee rate
       setFeeRate(feeSettings.customFeeRate);
@@ -162,7 +174,7 @@ export default function SendScreen() {
                          feeSettings.customFeeRate;
       setFeeRate(fallbackRate);
     }
-  }, [feeSettings, feeSettingsLoading, feeEstimates]);
+  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -876,7 +888,7 @@ export default function SendScreen() {
                   onPress={() => {
                     setSelectedFeeType('slow');
                     setFeeRate(feeEstimates?.economyFee || 1);
-                    // Don't mark as user interaction for preset changes - allow automatic updates
+                    setUserHasInteractedWithFees(true);
                   }}
                 >
                   <Text style={[
@@ -900,7 +912,7 @@ export default function SendScreen() {
                   onPress={() => {
                     setSelectedFeeType('normal');
                     setFeeRate(feeEstimates?.halfHourFee || 5);
-                    // Don't mark as user interaction for preset changes - allow automatic updates
+                    setUserHasInteractedWithFees(true);
                   }}
                 >
                   <Text style={[
@@ -924,7 +936,7 @@ export default function SendScreen() {
                   onPress={() => {
                     setSelectedFeeType('fast');
                     setFeeRate(feeEstimates?.fastestFee || 15);
-                    // Don't mark as user interaction for preset changes - allow automatic updates
+                    setUserHasInteractedWithFees(true);
                   }}
                 >
                   <Text style={[
