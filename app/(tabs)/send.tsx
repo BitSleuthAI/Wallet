@@ -67,10 +67,15 @@ export default function SendScreen() {
   useEffect(() => {
     // Only update if fee settings have finished loading
     if (!feeSettingsLoading) {
-      setFeeRate(feeSettings.customFeeRate);
       setCustomFeeRate(feeSettings.customFeeRate.toString());
       setSelectedFeeType(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
       setEnableRBF(feeSettings.enableRBF);
+      
+      // Only set fee rate to custom value if preset is 'custom'
+      if (feeSettings.defaultPreset === 'custom') {
+        setFeeRate(feeSettings.customFeeRate);
+      }
+      // For other presets, fee rate will be set by the fee estimates effect
     }
   }, [feeSettings, feeSettingsLoading]);
 
