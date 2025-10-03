@@ -226,7 +226,7 @@ export default function MFATestScreen() {
                         style={[
                             styles.runTestButton,
                             { 
-                                backgroundColor: isRunning ? theme.colors.textSecondary + '40$' : theme.colors.primary,
+                                backgroundColor: isRunning ? theme.colors.textSecondary + '40' : theme.colors.primary,
                                 opacity: isRunning ? 0.6 : 1
                             }
                         ]}
