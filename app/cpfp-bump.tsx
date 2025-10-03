@@ -4,28 +4,28 @@ import { useWallet } from '@/hooks/wallet-store';
 import { CPFPOptions, CPFPRecommendation } from '@/types/wallet';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import {
-    ArrowLeft,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    Info,
-    RefreshCw,
-    TrendingUp,
-    Zap,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Info,
+  RefreshCw,
+  TrendingUp,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function CPFPBumpScreen() {
@@ -111,7 +111,7 @@ export default function CPFPBumpScreen() {
     
     // Validate fee rate against user's maximum setting
     const feeRate = parseInt(targetFeeRate) || 15;
-    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+    const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
     
     if (feeRate > maxRate) {
       Alert.alert(
@@ -409,7 +409,7 @@ export default function CPFPBumpScreen() {
               <View style={styles.validationContainer}>
                 {(() => {
                   const rate = parseInt(targetFeeRate);
-                  const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                  const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
                   
                   if (isNaN(rate) || rate <= 0) {
                     return (

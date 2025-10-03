@@ -149,7 +149,7 @@ export default function FeeBumpScreen() {
   const isValidFeeRate = () => {
     const currentRate = getCurrentFeeRate();
     const minRate = getMinimumFeeRate();
-    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+    const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
     
     // Check minimum fee rate (RBF requirement)
     if (currentRate < minRate) {
@@ -168,7 +168,7 @@ export default function FeeBumpScreen() {
     if (!isValidFeeRate()) {
       const currentRate = getCurrentFeeRate();
       const minRate = getMinimumFeeRate();
-      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+      const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
       
       let errorMessage = '';
       if (currentRate < minRate) {
@@ -482,7 +482,7 @@ export default function FeeBumpScreen() {
               {(() => {
                 const rate = parseInt(customFeeRate);
                 const minRate = getMinimumFeeRate();
-                const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
                 
                 if (isNaN(rate) || rate <= 0) {
                   return (
