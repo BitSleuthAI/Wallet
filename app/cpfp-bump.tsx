@@ -30,7 +30,7 @@ import {
 
 export default function CPFPBumpScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, currentWallet } = useWallet();
+  const { theme, transactions, currentWallet, feeSettings } = useWallet();
   const [loading, setLoading] = useState<boolean>(true);
   const [validating, setValidating] = useState<boolean>(false);
   const [bumping, setBumping] = useState<boolean>(false);
@@ -44,6 +44,7 @@ export default function CPFPBumpScreen() {
   const [includeUnconfirmed, setIncludeUnconfirmed] = useState<boolean>(true);
   const [customOutputs, setCustomOutputs] = useState<Array<{ address: string; amount: number }>>([]);
   const [sendToSelf, setSendToSelf] = useState<boolean>(true);
+  const [isCustomFeeRate, setIsCustomFeeRate] = useState<boolean>(false);
 
   useEffect(() => {
     if (txid && transactions) {
@@ -109,13 +110,27 @@ export default function CPFPBumpScreen() {
   const performCPFP = async () => {
     if (!transaction || !currentWallet || !validationResult?.isValid) return;
     
+    const feeRate = parseInt(targetFeeRate) || 15;
+    
+    // Only validate custom fee rates against maxFeeRate setting
+    if (isCustomFeeRate) {
+      const maxRate = feeSettings?.maxFeeRate;
+      if (maxRate !== undefined && maxRate !== null && maxRate > 0 && feeRate > maxRate) {
+        Alert.alert(
+          'Fee Rate Too High',
+          `Fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`
+        );
+        return;
+      }
+    }
+    
     setBumping(true);
     try {
       console.log('🔄 Performing CPFP...');
       const { performCPFP } = await import('@/services/cpfp-service');
       
       const options: CPFPOptions = {
-        targetFeeRate: parseInt(targetFeeRate) || 15,
+        targetFeeRate: feeRate,
         maxChildFee: parseInt(maxChildFee) || 10000,
         includeUnconfirmed,
         customOutputs: customOutputs.length > 0 ? customOutputs : undefined,
@@ -179,7 +194,10 @@ export default function CPFPBumpScreen() {
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
-        onPress={() => setTargetFeeRate(feeRate.toString())}
+        onPress={() => {
+          setTargetFeeRate(feeRate.toString());
+          setIsCustomFeeRate(false);
+        }}
       >
         <View style={styles.presetHeader}>
           <View style={[styles.presetIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -381,7 +399,10 @@ export default function CPFPBumpScreen() {
                   },
                 ]}
                 value={targetFeeRate}
-                onChangeText={setTargetFeeRate}
+                onChangeText={(text) => {
+                  setTargetFeeRate(text);
+                  setIsCustomFeeRate(true);
+                }}
                 placeholder="Enter fee rate"
                 placeholderTextColor={theme.colors.textSecondary}
                 keyboardType="numeric"
@@ -391,6 +412,36 @@ export default function CPFPBumpScreen() {
                 sat/vB
               </Text>
             </View>
+            
+            {/* Fee Rate Validation Feedback - Only for custom fee rates */}
+            {isCustomFeeRate && targetFeeRate && (
+              <View style={styles.validationContainer}>
+                {(() => {
+                  const rate = parseInt(targetFeeRate);
+                  const maxRate = feeSettings?.maxFeeRate;
+                  
+                  if (isNaN(rate) || rate <= 0) {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                        Please enter a valid fee rate
+                      </Text>
+                    );
+                  } else if (maxRate !== undefined && maxRate !== null && maxRate > 0 && rate > maxRate) {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                        Cannot exceed {maxRate} sat/vB (your maximum fee rate setting)
+                      </Text>
+                    );
+                  } else {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.success }]}>
+                        Valid fee rate
+                      </Text>
+                    );
+                  }
+                })()}
+              </View>
+            )}
           </View>
 
           {/* CPFP Options */}
@@ -787,6 +838,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   inputUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  validationContainer: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  validationText: {
     fontSize: 12,
     fontWeight: '500',
   },
