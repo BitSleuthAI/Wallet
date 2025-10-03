@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -771,16 +771,6 @@ const styles = StyleSheet.create({
   validationContainer: {
     marginTop: platformStyles.spacing.sm,
     paddingHorizontal: platformStyles.spacing.sm,
-  },
-  validationStatus: {
-    marginHorizontal: platformStyles.spacing.lg,
-    marginVertical: platformStyles.spacing.sm,
-    padding: platformStyles.spacing.md,
-    borderRadius: platformStyles.borderRadius.medium,
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: platformStyles.spacing.sm,
   },
   validationText: {
     ...platformStyles.typography.caption,
