@@ -4,28 +4,28 @@ import { useWallet } from '@/hooks/wallet-store';
 import { CPFPOptions, CPFPRecommendation } from '@/types/wallet';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import {
-    ArrowLeft,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    Info,
-    RefreshCw,
-    TrendingUp,
-    Zap,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Info,
+  RefreshCw,
+  TrendingUp,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function CPFPBumpScreen() {
@@ -47,22 +47,23 @@ export default function CPFPBumpScreen() {
 
   useEffect(() => {
     if (txid && transactions) {
-      const tx = transactions.find(t => t.txid === txid);
+      const tx = transactions.find((t: any) => t.txid === txid);
       setTransaction(tx || null);
       if (tx) {
-        loadRecommendations();
+        loadRecommendations(tx);
       }
     }
   }, [txid, transactions]);
 
-  const loadRecommendations = async () => {
-    if (!transaction || !currentWallet) return;
+  const loadRecommendations = async (tx?: any) => {
+    const targetTransaction = tx || transaction;
+    if (!targetTransaction || !currentWallet) return;
     
     setLoading(true);
     try {
       console.log('📊 Loading CPFP recommendations...');
       const { getCPFPRecommendations } = await import('@/services/cpfp-service');
-      const rec = await getCPFPRecommendations(transaction.txid, currentWallet.addresses);
+      const rec = await getCPFPRecommendations(targetTransaction.txid, currentWallet.addresses);
       setRecommendation(rec);
       
       if (rec) {
@@ -281,7 +282,7 @@ export default function CPFPBumpScreen() {
             CPFP Fee Bump
           </Text>
           <TouchableOpacity
-            onPress={loadRecommendations}
+            onPress={() => loadRecommendations(transaction)}
             disabled={loading}
             style={styles.refreshButton}
           >
