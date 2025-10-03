@@ -1,11 +1,21 @@
 import { platformStyles } from '@/constants/themes';
 import { getWalletGradient } from '@/constants/wallet-colors';
 import { useWallet } from '@/hooks/wallet-store';
+import HapticService from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring
+} from 'react-native-reanimated';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 interface WalletCardProps {
   wallet?: Wallet;
@@ -20,6 +30,20 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuButtonRef = useRef<View>(null);
 
+  // Animation values
+  const scale = useSharedValue(1);
+  const elevation = useSharedValue(isActive ? 8 : 4);
+  const glowOpacity = useSharedValue(isActive ? 0.3 : 0);
+
+  const animatedCardStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+    shadowOpacity: 0.2 + (glowOpacity.value * 0.3),
+  }));
+
+  const animatedGlowStyle = useAnimatedStyle(() => ({
+    opacity: glowOpacity.value,
+  }));
+
   // Use provided wallet or fall back to current wallet
   const displayWallet = wallet || currentWallet;
   
@@ -27,6 +51,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
 
   // Memoize gradient colors to prevent recalculation on every render
   const gradientColors = useMemo(() => getWalletGradient(displayWallet.color), [displayWallet.color]);
+
+  // Update glow effect when active state changes
+  React.useEffect(() => {
+    glowOpacity.value = withSpring(isActive ? 0.4 : 0, { damping: 15, stiffness: 200 });
+    elevation.value = withSpring(isActive ? 12 : 4, { damping: 15, stiffness: 200 });
+  }, [isActive, glowOpacity, elevation]);
 
   // Menu button press handler
   const handleMenuPress = useCallback(() => {
@@ -72,9 +102,46 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
     }
   }, [displayWallet, deleteWallet]);
 
+  const handlePressIn = useCallback(() => {
+    HapticService.light();
+    scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    if (onPress) {
+      HapticService.medium();
+      // Subtle bounce animation
+      scale.value = withSequence(
+        withSpring(1.02, { damping: 10, stiffness: 300 }),
+        withSpring(1, { damping: 15, stiffness: 400 })
+      );
+      onPress();
+    }
+  }, [onPress, scale]);
+
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9}>
-      <LinearGradient
+    <AnimatedTouchable 
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handlePress} 
+      activeOpacity={0.95}
+      style={animatedCardStyle}
+    >
+      {/* Glow effect for active card */}
+      {isActive && (
+        <Animated.View 
+          style={[
+            styles.glowEffect, 
+            { backgroundColor: gradientColors[1] + '40' },
+            animatedGlowStyle,
+          ]} 
+        />
+      )}
+      <AnimatedLinearGradient
         colors={gradientColors}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
@@ -130,7 +197,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             </View>
           )}
         </View>
-      </LinearGradient>
+      </AnimatedLinearGradient>
       
       <Modal
         visible={showMenu}
@@ -168,7 +235,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
           </View>
         </TouchableOpacity>
       </Modal>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
@@ -184,8 +251,16 @@ const styles = StyleSheet.create({
     ...platformStyles.cardShadow,
   },
   activeCard: {
-    transform: [{ scale: 1.02 }],
     ...platformStyles.cardShadow,
+  },
+  glowEffect: {
+    position: 'absolute',
+    top: -10,
+    left: -10,
+    right: -10,
+    bottom: -10,
+    borderRadius: platformStyles.borderRadius.xl + 10,
+    zIndex: -1,
   },
   decorativeCircle1: {
     position: 'absolute',

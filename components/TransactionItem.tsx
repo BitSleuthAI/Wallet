@@ -1,10 +1,20 @@
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
+import HapticService from '@/services/haptic-service';
 import { Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSequence,
+    withSpring,
+    withTiming,
+} from 'react-native-reanimated';
+
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -15,6 +25,19 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
   
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
+  
+  // Animation values
+  const scale = useSharedValue(1);
+  const translateX = useSharedValue(0);
+  const opacity = useSharedValue(1);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [
+      { scale: scale.value },
+      { translateX: translateX.value },
+    ],
+    opacity: opacity.value,
+  }));
   
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -32,12 +55,29 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
     return `${address.slice(0, 8)}...${address.slice(-8)}`;
   };
 
-  const handlePress = () => {
+  const handlePressIn = useCallback(() => {
+    HapticService.light();
+    scale.value = withSpring(0.98, { damping: 15, stiffness: 400 });
+  }, [scale]);
+
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 15, stiffness: 400 });
+  }, [scale]);
+
+  const handlePress = useCallback(() => {
+    HapticService.medium();
+    
+    // Subtle slide animation on press
+    translateX.value = withSequence(
+      withTiming(4, { duration: 100 }),
+      withSpring(0, { damping: 15, stiffness: 300 })
+    );
+
     router.push({
       pathname: '/transaction-explorer',
       params: { txid: transaction.txid },
     });
-  };
+  }, [translateX, transaction.txid]);
 
   const getStatusIcon = () => {
     if (transaction.status === 'confirmed') {
@@ -54,15 +94,18 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
   };
 
   return (
-    <TouchableOpacity 
+    <AnimatedTouchable 
       style={[
         styles.container, 
         { 
           backgroundColor: theme.colors.surface,
-        }
+        },
+        animatedStyle,
       ]}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       onPress={handlePress}
-      activeOpacity={0.7}
+      activeOpacity={0.9}
     >
       <View style={[
         styles.iconContainer,
@@ -152,7 +195,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
           {isReceived ? 'From' : 'To'}: {truncateAddress(transaction.address)}
         </Text>
       </View>
-    </TouchableOpacity>
+    </AnimatedTouchable>
   );
 }
 
