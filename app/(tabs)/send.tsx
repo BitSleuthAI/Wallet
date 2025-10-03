@@ -63,7 +63,6 @@ export default function SendScreen() {
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
-  const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
   const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
   const [lastFeeEstimates, setLastFeeEstimates] = useState<any>(null);
   const [customFeeValidation, setCustomFeeValidation] = useState<{
@@ -74,7 +73,6 @@ export default function SendScreen() {
   // Reset user interaction state only when component mounts
   useEffect(() => {
     setUserHasInteractedWithFees(false);
-    setHasShownFeeRateAlert(false);
   }, []);
 
   // Track fee settings changes but preserve user's manual fee selections
@@ -422,6 +420,25 @@ export default function SendScreen() {
         return;
       }
 
+      // Validate fee rate for custom fee type
+      if (selectedFeeType === 'custom') {
+        const customRate = parseFloat(customFeeRate);
+        const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+        
+        if (isNaN(customRate) || customRate <= 0) {
+          Alert.alert('Error', 'Please enter a valid custom fee rate');
+          return;
+        }
+        
+        if (customRate > maxRate) {
+          Alert.alert(
+            'Fee Rate Too High',
+            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`
+          );
+          return;
+        }
+      }
+
       console.log('🚀 Starting real Bitcoin transaction send process...');
               const truncatedAddress = recipientAddress.substring(0, 20) + '...';
         console.log('Transaction details:', {
@@ -600,6 +617,25 @@ export default function SendScreen() {
           `You need ${totalNeededText} BTC (including fees) but only have ${balanceText} BTC available.`
         );
         return;
+      }
+
+      // Validate fee rate for custom fee type
+      if (selectedFeeType === 'custom') {
+        const customRate = parseFloat(customFeeRate);
+        const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+        
+        if (isNaN(customRate) || customRate <= 0) {
+          Alert.alert('Error', 'Please enter a valid custom fee rate');
+          return;
+        }
+        
+        if (customRate > maxRate) {
+          Alert.alert(
+            'Fee Rate Too High',
+            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`
+          );
+          return;
+        }
       }
 
       // Format fee display
@@ -958,60 +994,23 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    // Always set to custom type first
+                    // Switch to custom fee type
                     setSelectedFeeType('custom');
                     
-                    // Validate custom fee rate before updating feeRate
-                    if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
-                      const rate = parseFloat(customFeeRate);
-                      // Validate against max fee rate with proper null check
-                      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
-                      if (rate <= maxRate) {
-                        // Valid rate - update the fee rate
-                        setFeeRate(rate);
-                        setHasShownFeeRateAlert(false);
-                        setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
-                      } else {
-                        // Invalid rate - show alert and use current fee rate
-                        if (!hasShownFeeRateAlert) {
-                          Alert.alert(
-                            'Fee Rate Too High',
-                            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
-                            [{ text: 'OK' }]
-                          );
-                          setHasShownFeeRateAlert(true);
-                        }
-                        // Keep current fee rate, don't update it
-                      }
-                    } else {
-                      // No valid custom rate entered - use stored custom fee rate from settings
+                    // If no valid custom rate is entered, use the stored custom fee rate from settings
+                    if (!customFeeRate || isNaN(parseFloat(customFeeRate)) || parseFloat(customFeeRate) <= 0) {
                       const fallbackRate = feeSettings?.customFeeRate || 10;
                       const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                       
-                      // Validate fallback rate against maximum allowed rate
-                      if (fallbackRate <= maxRate) {
-                        setFeeRate(fallbackRate);
-                        setCustomFeeRate(fallbackRate.toString());
-                        setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
-                      } else {
-                        // Fallback rate exceeds maximum - use maximum allowed rate
-                        setFeeRate(maxRate);
-                        setCustomFeeRate(maxRate.toString());
-                        setCustomFeeValidation({ isValid: true, message: 'Adjusted to maximum allowed' });
-                        
-                        // Show alert about the adjustment
-                        if (!hasShownFeeRateAlert) {
-                          Alert.alert(
-                            'Fee Rate Adjusted',
-                            `Custom fee rate was adjusted to ${maxRate} sat/vB (maximum allowed).`,
-                            [{ text: 'OK' }]
-                          );
-                          setHasShownFeeRateAlert(true);
-                        }
-                      }
+                      // Use the smaller of fallback rate or max allowed rate
+                      const finalRate = Math.min(fallbackRate, maxRate);
+                      setFeeRate(finalRate);
+                      setCustomFeeRate(finalRate.toString());
+                      setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
                     }
+                    // If customFeeRate is already set and valid, the onChangeText handler will handle the validation
                     
-                    // Mark as user interaction only when switching to custom mode
+                    // Mark as user interaction
                     setUserHasInteractedWithFees(true);
                   }}
                 >
@@ -1043,9 +1042,9 @@ export default function SendScreen() {
                         const rate = parseFloat(text);
                         const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                         
-                        // Validate input and provide feedback
+                        // Validate input and update validation state
                         if (!text.trim()) {
-                          // Empty input - no validation message
+                          // Empty input - clear validation state
                           setCustomFeeValidation({ isValid: true, message: null });
                         } else if (isNaN(rate) || rate <= 0) {
                           // Invalid format
@@ -1067,33 +1066,13 @@ export default function SendScreen() {
                           });
                         }
                         
+                        // Always update feeRate to match the displayed value
+                        // This ensures consistency between UI and actual transaction
                         if (!isNaN(rate) && rate > 0) {
-                          // Validate against max fee rate with proper null check
-                          if (rate <= maxRate) {
-                            // Update feeRate only if the rate is valid
-                            setFeeRate(rate);
-                            // Reset alert flag when entering valid range
-                            setHasShownFeeRateAlert(false);
-                          } else {
-                            // Only show alert once per invalid session
-                            if (!hasShownFeeRateAlert) {
-                              console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
-                              Alert.alert(
-                                'Fee Rate Too High',
-                                `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
-                                [{ text: 'OK' }]
-                              );
-                              setHasShownFeeRateAlert(true);
-                            }
-                            // Don't update feeRate for invalid values
-                          }
-                        } else {
-                          // Reset alert flag when clearing or entering invalid format
-                          setHasShownFeeRateAlert(false);
-                          // Don't update feeRate for invalid values
+                          setFeeRate(rate);
                         }
                         
-                        // Mark as user interaction only when typing in custom fee field
+                        // Mark as user interaction
                         setUserHasInteractedWithFees(true);
                       }
                     }}
