@@ -5,30 +5,30 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-    AlertTriangle,
-    ArrowLeft,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    Info,
-    RefreshCw,
-    Settings,
-    TrendingUp,
-    Zap,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Info,
+  RefreshCw,
+  Settings,
+  TrendingUp,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
@@ -55,6 +55,13 @@ export default function FeeSettingsScreen() {
   useEffect(() => {
     loadFeeEstimates();
   }, []);
+
+  // Sync local state with wallet store feeSettings when it updates
+  useEffect(() => {
+    setSelectedPreset(feeSettings.defaultPreset);
+    setCustomFeeRate(feeSettings.customFeeRate.toString());
+    setSettings(feeSettings);
+  }, [feeSettings]);
 
   const loadFeeEstimates = async () => {
     try {
