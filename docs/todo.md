@@ -1,9 +1,3 @@
-### **5. Custom Transaction Fees**
-- **Status**: ⚠️ **Partially functional**
-- **Location**: `app/fee-settings.tsx` and `app/(tabs)/send.tsx`
-- **Issue**: UI allows setting custom fees, but actual transaction creation not implemented
-- **Impact**: Custom fee settings don't affect actual transactions
-
 ### **6. Auto-Adjust Fees**
 - **Status**: ❌ **UI only**
 - **Location**: `app/fee-settings.tsx:515-520`
