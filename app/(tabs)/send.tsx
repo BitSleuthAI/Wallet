@@ -79,30 +79,12 @@ export default function SendScreen() {
     }
   }, [feeSettings, feeSettingsLoading]);
 
-  // Load fee estimates on component mount
+  // Load fee estimates on component mount and wallet change only
   useEffect(() => {
-    const loadInitialData = async () => {
+    const loadFeeEstimates = async () => {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
-        
-        // Set default fee rate based on saved settings or estimates
-        if (fees && !feeSettingsLoading) {
-          // Use saved fee settings if available, otherwise use estimates
-          if (feeSettings.defaultPreset === 'custom') {
-            setFeeRate(feeSettings.customFeeRate);
-          } else {
-            const presetFee = feeSettings.defaultPreset === 'economy' ? fees.economyFee :
-                             feeSettings.defaultPreset === 'standard' ? fees.halfHourFee :
-                             feeSettings.defaultPreset === 'priority' ? fees.fastestFee :
-                             fees.halfHourFee;
-            setFeeRate(presetFee);
-          }
-        } else if (fees && feeSettingsLoading) {
-          // Use default estimates while fee settings are loading
-          setFeeRate(fees.halfHourFee || 5);
-          setSelectedFeeType('normal');
-        }
         
         // Load fee confidence data
         if (fees) {
@@ -127,8 +109,27 @@ export default function SendScreen() {
       }
     };
     
-    loadInitialData();
-  }, [currentWallet, feeSettings, feeSettingsLoading]);
+    loadFeeEstimates();
+  }, [currentWallet]);
+
+  // Apply fee settings when they change (separate from fee estimates loading)
+  useEffect(() => {
+    if (!feeSettingsLoading && feeEstimates) {
+      // Apply saved fee settings to current fee rate
+      if (feeSettings.defaultPreset === 'custom') {
+        setFeeRate(feeSettings.customFeeRate);
+      } else {
+        const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
+                         feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
+                         feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
+                         feeEstimates.halfHourFee;
+        setFeeRate(presetFee);
+      }
+    } else if (!feeSettingsLoading && !feeEstimates) {
+      // Fallback when fee estimates are not available
+      setFeeRate(feeSettings.defaultPreset === 'custom' ? feeSettings.customFeeRate : 5);
+    }
+  }, [feeSettings, feeSettingsLoading, feeEstimates]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
