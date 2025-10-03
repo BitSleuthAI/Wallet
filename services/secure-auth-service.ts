@@ -469,33 +469,98 @@ class SecureAuthService {
         console.log('✅ Security key verification successful');
       }
 
-      // Step 3: Multi-factor authentication (if enabled)
+      // Step 3: Multi-factor authentication enforcement
       if (securitySettings.multiFactorEnabled) {
-        console.log('🔐 Step 3: Multi-factor authentication required');
+        console.log('🔐 Step 3: Multi-factor authentication enforcement required');
         
-        const factorsEnabled = (securityKeys.some(key => key.type === 'biometric') ? 1 : 0) + 
-                             securityKeys.filter(key => key.type === 'fido' || key.type === 'passkey').length;
+        // Verify the user has configured multiple authentication factors
+        const biometricKeysCount = securityKeys.filter(key => key.type === 'biometric').length;
+        const securityKeysCount = securityKeys.filter(key => key.type === 'fido' || key.type === 'passkey').length;
+        const totalFactors = biometricKeysCount + securityKeysCount;
         
-        if (factorsEnabled < 2) {
+        if (totalFactors < 2) {
           console.log('❌ Insufficient authentication factors for multi-factor');
           Alert.alert(
             'Multi-Factor Authentication Required',
-            'You need at least two authentication factors enabled. Please configure additional security measures.',
+            'Multi-factor authentication is enabled but you need at least two authentication factors configured. Please add additional security measures in Settings.',
             [{ text: 'OK' }]
           );
           return false;
         }
 
-        // For multi-factor, we require both biometric AND security key
-        const hasBiometric = securityKeys.some(key => key.type === 'biometric');
-        const hasSecurityKey = securityKeys.some(key => key.type === 'fido' || key.type === 'passkey');
+        // For MFA enforcement, require both biometric AND security key authentication
+        // This ensures multiple factors are verified during transactions
+        const hasBiometricKey = biometricKeysCount > 0;
+        const hasSecurityKey = securityKeysCount > 0;
         
-        if (hasBiometric && hasSecurityKey) {
-          console.log('✅ Multi-factor authentication successful');
-        } else {
-          console.log('❌ Multi-factor authentication failed');
+        if (!hasBiometricKey || !hasSecurityKey) {
+          console.log('❌ Multi-factor authentication failed - missing required auth types');
+          Alert.alert(
+            'Multi-Factor Authentication Required',
+            'Multi-factor authentication requires both biometric authentication and a security key to be configured and verified.',
+            [{ text: 'OK' }]
+          );
           return false;
         }
+
+        // Track which factors have already been verified to avoid redundant prompts
+        let biometricVerified = false;
+        let securityKeyVerified = false;
+
+        // Check if biometric was already verified in Step 1
+        if (securitySettings.requireBiometricForTransactions) {
+          biometricVerified = true;
+          console.log('✅ Biometric already verified in Step 1');
+        }
+
+        // Check if security key was already verified in Step 2
+        if (shouldRequireSecurityKey) {
+          securityKeyVerified = true;
+          console.log('✅ Security key already verified in Step 2');
+        }
+
+        // Only prompt for factors that haven't been verified yet
+        console.log('🔐 Enforcing MFA: checking remaining factors');
+        
+        // Biometric authentication for MFA (only if not already verified)
+        if (!biometricVerified) {
+          console.log('🔐 MFA: Prompting for biometric authentication');
+          const biometricMFA = await this.authenticateWithBiometric(
+            'Multi-factor authentication: Verify your biometric'
+          );
+          if (!biometricMFA.success) {
+            console.log('❌ MFA biometric authentication failed');
+            Alert.alert(
+              'Multi-Factor Authentication Failed',
+              'Biometric authentication failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
+              [{ text: 'OK' }]
+            );
+            return false;
+          }
+          biometricVerified = true;
+        }
+
+        // Security key authentication for MFA (only if not already verified)
+        if (!securityKeyVerified) {
+          console.log('🔐 MFA: Prompting for security key authentication');
+          const availableKeys = securityKeys.filter(key => 
+            key.type === 'fido' || key.type === 'passkey'
+          );
+          
+          const securityKeyMFA = await this.verifySecurityKeyPresence(availableKeys[0]);
+          if (!securityKeyMFA) {
+            console.log('❌ MFA security key authentication failed');
+            Alert.alert(
+              'Multi-Factor Authentication Failed',
+              'Security key verification failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
+              [{ text: 'OK' }]
+            );
+            return false;
+          }
+          securityKeyVerified = true;
+        }
+
+        console.log('✅ Multi-factor authentication successful - both factors verified (no redundant prompts)');
       }
 
       console.log('✅ Enhanced transaction authentication completed successfully');
@@ -503,6 +568,71 @@ class SecureAuthService {
     } catch (error) {
       console.error('❌ Enhanced transaction authentication error:', error);
       return false;
+    }
+  }
+
+  /**
+   * Check if MFA is properly configured and enforced
+   */
+  async verifyMFAConfiguration(): Promise<{
+    isConfigured: boolean;
+    hasBiometric: boolean;
+    hasSecurityKey: boolean;
+    totalFactors: number;
+    message: string;
+  }> {
+    try {
+      const securitySettingsStr = await AsyncStorage.getItem('securitySettings');
+      const securitySettings: SecuritySettings = securitySettingsStr 
+        ? JSON.parse(securitySettingsStr) 
+        : {
+            multiFactorEnabled: false,
+          };
+
+      const securityKeysStr = await AsyncStorage.getItem('securityKeys');
+      const securityKeys: SecurityKey[] = securityKeysStr 
+        ? JSON.parse(securityKeysStr) 
+        : [];
+
+      const biometricCount = securityKeys.filter(key => key.type === 'biometric').length;
+      const securityKeyCount = securityKeys.filter(key => key.type === 'fido' || key.type === 'passkey').length;
+      const totalFactors = biometricCount + securityKeyCount;
+
+      const hasBiometric = biometricCount > 0;
+      const hasSecurityKey = securityKeyCount > 0;
+
+      if (securitySettings.multiFactorEnabled) {
+        const isProperlyConfigured = totalFactors >= 2 && hasBiometric && hasSecurityKey;
+        
+        return {
+          isConfigured: isProperlyConfigured,
+          hasBiometric,
+          hasSecurityKey,
+          totalFactors,
+          message: isProperlyConfigured 
+            ? 'Multi-factor authentication is properly configured'
+            : `Multi-factor authentication is enabled but not properly configured. You need both biometric authentication and a security key registered.`
+        };
+      } else {
+        return {
+          isConfigured: totalFactors > 0,
+          hasBiometric,
+          hasSecurityKey,
+          totalFactors,
+          message: totalFactors > 0 
+            ? 'Security measures are configured (MFA disabled)'
+            : 'No security measures are configured'
+        };
+      }
+    } catch (error) {
+      console.error('❌ Error verifying MFA configuration:', error);
+      return {
+        isConfigured: false,
+        hasBiometric: false,
+        hasSecurityKey: false,
+        totalFactors: 0,
+        message: 'Error verifying security configuration'
+      };
     }
   }
 

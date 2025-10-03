@@ -3,6 +3,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import { secureAuthService, SecurityKey, SecuritySettings } from '@/services/secure-auth-service';
+import { securityGuard } from '@/services/security-guard-service';
 import { securityTestService } from '@/services/security-test-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -211,6 +212,15 @@ export default function PasskeysSecurityScreen() {
             text: 'Disable',
             style: 'destructive',
             onPress: async () => {
+              // SECURITY HARDENING: Require authentication to disable biometric
+              const authSuccess = await securityGuard.requireAuthenticationForBiometricOperation(
+                'disable biometric authentication'
+              );
+              
+              if (!authSuccess) {
+                return; // Authentication failed, security guard handles user notification
+              }
+              
               try {
                 await disableBiometric();
                 
@@ -218,9 +228,9 @@ export default function PasskeysSecurityScreen() {
                 const updatedKeys = securityKeys.filter(key => key.type !== 'biometric');
                 await saveSecurityKeys(updatedKeys);
                 
-                Alert.alert('Success', 'Biometric authentication disabled!');
+                Alert.alert('Success', 'Biometric authentication disabled successfully!');
               } catch (error) {
-                console.error('Error disabling biometric:', error);
+                console.error('❌ Error disabling biometric:', error);
                 Alert.alert('Error', 'Failed to disable biometric authentication');
               }
             }
@@ -263,6 +273,15 @@ export default function PasskeysSecurityScreen() {
           text: 'Remove',
           style: 'destructive',
           onPress: async () => {
+            // SECURITY HARDENING: Require authentication to remove security keys
+            const authSuccess = await securityGuard.requireAuthenticationForSecurityKeyOperation(
+              'remove security key'
+            );
+            
+            if (!authSuccess) {
+              return; // Authentication failed, security guard handles user notification
+            }
+            
             try {
               if (keyId === 'biometric') {
                 await disableBiometric();
@@ -273,7 +292,7 @@ export default function PasskeysSecurityScreen() {
               
               Alert.alert('Success', `"${keyName}" has been removed successfully.`);
             } catch (error) {
-              console.error('Error removing security key:', error);
+              console.error('❌ Error removing security key:', error);
               Alert.alert('Error', 'Failed to remove security key');
             }
           }
@@ -283,6 +302,15 @@ export default function PasskeysSecurityScreen() {
   };
 
   const handleSecuritySettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
+    // SECURITY HARDENING: Require authentication before any security configuration changes
+    const authSuccess = await securityGuard.requireAuthenticationForSecurityOperation(
+      'modify security settings'
+    );
+    
+    if (!authSuccess) {
+      return; // Authentication failed, security guard handles user notification
+    }
+    
     const newSettings = { ...securitySettings, [setting]: value };
     
     // Validate multi-factor requirements
@@ -654,13 +682,23 @@ export default function PasskeysSecurityScreen() {
             Validate that all security features are working correctly with cryptographic verification.
           </Text>
           
-          <TouchableOpacity
-            style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
-            onPress={handleTestSecurity}
-          >
-            <TestTube color="white" size={16} />
-            <Text style={styles.testButtonText}>Run Security Tests</Text>
-          </TouchableOpacity>
+          <View style={styles.testButtons}>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleTestSecurity}
+            >
+              <TestTube color="white" size={16} />
+              <Text style={styles.testButtonText}>Run Security Tests</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.colors.primary, marginTop: 12 }]}
+              onPress={() => router.push('/mfa-test')}
+            >
+              <Shield color="white" size={16} />
+              <Text style={styles.testButtonText}>Test MFA Enforcement</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -969,5 +1007,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  testButtons: {
+    gap: 8,
   },
 });
