@@ -11,44 +11,30 @@ export interface SecurityTestResult {
 
 export class SecurityTestService {
   /**
-   * Run comprehensive security tests
+   * Run comprehensive security education assessment
    */
   async runAllTests(): Promise<SecurityTestResult[]> {
     const results: SecurityTestResult[] = [];
     
-    console.log('🧪 Starting comprehensive security tests...');
+    console.log('🧪 Starting security education assessment...');
     
-    // Test 1: Biometric availability check
-    results.push(await this.testBiometricAvailability());
-    
-    // Test 2: Biometric authentication
+    // Core User-Configurable Security Features (5 main features)
+    // Feature 1: Biometric Authentication
     results.push(await this.testBiometricAuthentication());
     
-    // Test 3: Biometric key registration
+    // Feature 2: Biometric Key Registration  
     results.push(await this.testBiometricKeyRegistration());
     
-    // Test 4: FIDO passkey registration
+    // Feature 3: FIDO Passkey Registration
     results.push(await this.testFIDOPasskeyRegistration());
     
-    // Test 5: Hardware FIDO key registration
+    // Feature 4: Hardware FIDO Key Registration
     results.push(await this.testHardwareFIDOKeyRegistration());
     
-    // Test 6: Security key verification
-    results.push(await this.testSecurityKeyVerification());
-    
-    // Test 7: Transaction authentication
-    results.push(await this.testTransactionAuthentication());
-    
-    // Test 8: Multi-factor authentication
+    // Feature 5: Multi-factor Authentication
     results.push(await this.testMultiFactorAuthentication());
     
-    // Test 9: Challenge generation
-    results.push(await this.testChallengeGeneration());
-    
-    // Test 10: Cryptographic verification
-    results.push(await this.testCryptographicVerification());
-    
-    console.log('🧪 Security tests completed');
+    console.log('🧪 Security education assessment completed');
     return results;
   }
 
@@ -79,6 +65,17 @@ export class SecurityTestService {
    */
   private async testBiometricAuthentication(): Promise<SecurityTestResult> {
     try {
+      const available = await secureAuthService.isBiometricAvailable();
+      
+      if (!available) {
+        return {
+          testName: 'Biometric Authentication',
+          passed: false,
+          details: 'Biometric authentication not available on this device',
+          error: 'Feature not available - Consider using Face ID, Touch ID, or fingerprint authentication for enhanced security',
+        };
+      }
+
       const result = await secureAuthService.authenticateWithBiometric('Test biometric authentication');
       
       return {
@@ -86,14 +83,14 @@ export class SecurityTestService {
         passed: result.success,
         details: result.success 
           ? `Authentication successful with ${result.biometricType}` 
-          : `Authentication failed: ${result.error}`,
-        error: result.success ? undefined : result.error,
+          : `Available but not registered. Enable biometric authentication in Security settings for enhanced protection`,
+        error: result.success ? undefined : 'Not enabled. Go to Settings > Security to enable biometric authentication',
       };
     } catch (error) {
       return {
         testName: 'Biometric Authentication',
         passed: false,
-        error: `Error during biometric authentication: ${error}`,
+        error: `Educational: Biometric authentication enhances security by using your unique biometric data (${error})`,
       };
     }
   }
@@ -103,21 +100,33 @@ export class SecurityTestService {
    */
   private async testBiometricKeyRegistration(): Promise<SecurityTestResult> {
     try {
-      const key = await secureAuthService.registerBiometricKey();
+      const available = await secureAuthService.isBiometricAvailable();
+      
+      if (!available) {
+        return {
+          testName: 'Biometric Key Registration',
+          passed: false,
+          details: 'Biometric hardware not available on this device',
+          error: 'Educational: Biometric keys provide cryptographic protection using your unique biometric data',
+        };
+      }
+
+      // Check if biometric key is already registered
+      const hasRegisteredKey = await secureAuthService.hasRegisteredBiometricKey();
       
       return {
         testName: 'Biometric Key Registration',
-        passed: key !== null,
-        details: key 
-          ? `Biometric key registered successfully: ${key.name}` 
-          : 'Failed to register biometric key',
-        error: key ? undefined : 'Failed to register biometric key',
+        passed: hasRegisteredKey,
+        details: hasRegisteredKey 
+          ? `Biometric key already registered - Providing secure authentication` 
+          : 'Available but not registered',
+        error: hasRegisteredKey ? undefined : 'Educational: Register a biometric key in Security settings to protect your wallet with cryptographic keys derived from your biometric data',
       };
     } catch (error) {
       return {
         testName: 'Biometric Key Registration',
         passed: false,
-        error: `Error during biometric key registration: ${error}`,
+        error: `Educational: Biometric keys enhance security by binding cryptographic operations to your biometric identity (${error})`,
       };
     }
   }
@@ -127,21 +136,35 @@ export class SecurityTestService {
    */
   private async testFIDOPasskeyRegistration(): Promise<SecurityTestResult> {
     try {
-      const key = await secureAuthService.registerFIDOPasskey('Test Passkey');
+      // Check if FIDO is available
+      const available = await secureAuthService.isFIDOAvailable();
+      
+      if (!available) {
+        return {
+          testName: 'FIDO Passkey Registration',
+          passed: false,
+          details: 'FIDO2/WebAuthn not available on this device',
+          error: 'Educational: FIDO2 passkeys provide phishing-resistant authentication using hardware-backed security keys',
+        };
+      }
+
+      // Check if any passkeys are registered
+      const registeredKeys = await secureAuthService.getRegisteredSecurityKeys();
+      const hasPasskey = registeredKeys.some(key => key.type === 'passkey');
       
       return {
         testName: 'FIDO Passkey Registration',
-        passed: key !== null,
-        details: key 
-          ? `FIDO passkey registered successfully: ${key.name}` 
-          : 'Failed to register FIDO passkey',
-        error: key ? undefined : 'Failed to register FIDO passkey',
+        passed: hasPasskey,
+        details: hasPasskey 
+          ? `FIDO2 passkey registered - Enhancing security with standardized protocols` 
+          : 'Available but not registered',
+        error: hasPasskey ? undefined : 'Educational: Register a FIDO2 passkey for phishing-resistant authentication that works across all modern browsers and devices',
       };
     } catch (error) {
       return {
         testName: 'FIDO Passkey Registration',
         passed: false,
-        error: `Error during FIDO passkey registration: ${error}`,
+        error: `Educational: FIDO2 passkeys protect against phishing by using hardware-backed cryptographic keys (${error})`,
       };
     }
   }
@@ -151,21 +174,35 @@ export class SecurityTestService {
    */
   private async testHardwareFIDOKeyRegistration(): Promise<SecurityTestResult> {
     try {
-      const key = await secureAuthService.registerHardwareFIDOKey('Test Hardware Key');
+      // Check if hardware FIDO is available
+      const available = await secureAuthService.isHardwareFIDOAvailable();
+      
+      if (!available) {
+        return {
+          testName: 'Hardware FIDO Key Registration',
+          passed: false,
+          details: 'Hardware FIDO2 keys not detected (USB/NFC security keys)',
+          error: 'Educational: Hardware security keys like YubiKey provide the strongest authentication by storing keys in tamper-proof hardware',
+        };
+      }
+
+      // Check if any hardware FIDO keys are registered
+      const registeredKeys = await secureAuthService.getRegisteredSecurityKeys();
+      const hasHardwareKey = registeredKeys.some(key => key.type === 'fido');
       
       return {
         testName: 'Hardware FIDO Key Registration',
-        passed: key !== null,
-        details: key 
-          ? `Hardware FIDO key registered successfully: ${key.name}` 
-          : 'Failed to register hardware FIDO key (may not be connected)',
-        error: key ? undefined : 'Hardware FIDO key not available or not connected',
+        passed: hasHardwareKey,
+        details: hasHardwareKey 
+          ? `Hardware FIDO2 key registered - Maximum security with tamper-proof hardware` 
+          : 'Hardware detected but no key registered',
+        error: hasHardwareKey ? undefined : 'Educational: Register a hardware security key (YubiKey, etc.) for the highest level of protection against sophisticated attacks',
       };
     } catch (error) {
       return {
         testName: 'Hardware FIDO Key Registration',
         passed: false,
-        error: `Error during hardware FIDO key registration: ${error}`,
+        error: `Educational: Hardware security keys provide unbeatable protection by keeping cryptographic secrets in tamper-proof hardware (${error})`,
       };
     }
   }
@@ -232,35 +269,24 @@ export class SecurityTestService {
   }
 
   /**
-   * Test multi-factor authentication
+   * Test multi-factor authentication setup
    */
   private async testMultiFactorAuthentication(): Promise<SecurityTestResult> {
     try {
-      // Set up multi-factor authentication
-      const securitySettings = {
-        requireBiometricForTransactions: true,
-        requireSecurityKeyForTransactions: false,
-        allowPINFallback: true,
-        multiFactorEnabled: true,
-      };
-      
-      await AsyncStorage.setItem('securitySettings', JSON.stringify(securitySettings));
-      
-      const result = await secureAuthService.authenticateForTransaction(0.01); // Higher amount
+      // Check current MFA configuration
+      const mfaConfig = await secureAuthService.verifyMFAConfiguration();
       
       return {
         testName: 'Multi-Factor Authentication',
-        passed: result,
-        details: result 
-          ? 'Multi-factor authentication successful' 
-          : 'Multi-factor authentication failed',
-        error: result ? undefined : 'Multi-factor authentication failed',
+        passed: mfaConfig.isConfigured,
+        details: mfaConfig.message,
+        error: mfaConfig.isConfigured ? undefined : 'Educational: Enable multi-factor authentication in Security settings for login protection using multiple verification methods (biometric + security key)',
       };
     } catch (error) {
       return {
         testName: 'Multi-Factor Authentication',
         passed: false,
-        error: `Error during multi-factor authentication: ${error}`,
+        error: `Educational: Multi-factor authentication adds an extra layer of security by requiring two verification methods (${error})`,
       };
     }
   }
@@ -326,26 +352,37 @@ export class SecurityTestService {
   displayTestResults(results: SecurityTestResult[]): void {
     const passedTests = results.filter(r => r.passed).length;
     const totalTests = results.length;
+    const educationalResults = results.filter(r => !r.passed && r.error?.includes('educational') || r.error?.includes('Educational')).length;
     
-    console.log(`\n🧪 Security Test Results: ${passedTests}/${totalTests} tests passed\n`);
+    console.log(`\n🧪 Security Education Assessment: ${passedTests}/5 features enabled\n`);
     
     results.forEach(result => {
-      const status = result.passed ? '✅' : '❌';
+      const status = result.passed ? '✅' : '📚';
       console.log(`${status} ${result.testName}`);
       if (result.details) {
         console.log(`   Details: ${result.details}`);
       }
       if (result.error) {
-        console.log(`   Error: ${result.error}`);
+        console.log(`   💡 ${result.error}`);
       }
       console.log('');
     });
     
-    // Show summary alert
+    // Show educational summary alert with contextual messaging
+    const summary = passedTests === totalTests 
+      ? '🛡️ Excellent! All 5 security features are enabled and protecting your wallet!'
+      : passedTests >= 3
+      ? `🛡️ Strong Security: ${passedTests}/5 features enabled\n\nYou have good protection! Consider enabling the remaining ${totalTests - passedTests} features for maximum security.`
+      : passedTests >= 1
+      ? `🔒 Basic Security: ${passedTests}/5 features enabled\n\nYour wallet has some protection. Enable biometric authentication and security keys for stronger defense against threats.`
+      : `📚 Security Recommended: ${passedTests}/5 features enabled\n\nConsider enabling security features to protect your Bitcoin wallet from unauthorized access.`;
+    
+    const buttonText = passedTests === totalTests ? 'Perfect!' : 'Got it';
+    
     Alert.alert(
-      'Security Test Results',
-      `${passedTests}/${totalTests} tests passed\n\n${passedTests === totalTests ? 'All security features are working correctly!' : 'Some security features need attention.'}`,
-      [{ text: 'OK' }]
+      'Security Education Report',
+      summary,
+      [{ text: buttonText }]
     );
   }
 

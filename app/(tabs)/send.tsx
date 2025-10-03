@@ -11,17 +11,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -35,6 +35,7 @@ export default function SendScreen() {
     getCurrencySymbol,
     bitcoinPrice: walletBitcoinPrice,
     feeSettings,
+    setFeeSettings,
     feeSettingsLoading,
   } = useWallet();
   const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
@@ -589,7 +590,7 @@ export default function SendScreen() {
           feeRate,
           enableRBF,
           network: 'mainnet',
-          enhancedSecurity: enhancedSecurityRequired
+          enhancedSecurity: isEnhancedSecurityRequired
         });
       
       // Send the real transaction
@@ -1267,6 +1268,35 @@ export default function SendScreen() {
                   </Text>
                 </View>
               )}
+              
+              {/* Transaction Fee Educational Section */}
+              <View style={[styles.feeEducationCard, { backgroundColor: theme.colors.primary + '05' }]}>
+                <View style={styles.feeEducationHeader}>
+                  <View style={[styles.feeEducationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                    <ArrowUpRight color={theme.colors.primary} size={18} />
+                  </View>
+                  <Text style={[styles.feeEducationTitle, { color: theme.colors.text }]}>
+                    Understanding Bitcoin Transaction Fees
+                  </Text>
+                </View>
+                <Text style={[styles.feeEducationDescription, { color: theme.colors.textSecondary }]}>
+                  Bitcoin transaction fees compensate miners for processing your transaction and securing the network:
+                </Text>
+                <View style={styles.feeEducationPoints}>
+                  <Text style={[styles.feeEducationPoint, { color: theme.colors.textSecondary }]}>
+                    • <Text style={{ fontWeight: '600' }}>Fee Rate:</Text> Measured in satoshis per virtual byte (sat/vB)
+                  </Text>
+                  <Text style={[styles.feeEducationPoint, { color: theme.colors.textSecondary }]}>
+                    • <Text style={{ fontWeight: '600' }}>Higher Fees:</Text> Faster confirmation (5-20 minutes)
+                  </Text>
+                  <Text style={[styles.feeEducationPoint, { color: theme.colors.textSecondary }]}>
+                    • <Text style={{ fontWeight: '600' }}>Lower Fees:</Text> Slower confirmation (1-6+ hours)
+                  </Text>
+                  <Text style={[styles.feeEducationPoint, { color: theme.colors.textSecondary }]}>
+                    • <Text style={{ fontWeight: '600' }}>Network Congestion:</Text> Fees change based on demand
+                  </Text>
+                </View>
+              </View>
             </View>
 
             {/* RBF Toggle */}
@@ -1645,5 +1675,42 @@ const styles = StyleSheet.create({
   autoAdjustmentDetails: {
     fontSize: 12,
     fontFamily: 'monospace',
+  },
+  feeEducationCard: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.1)',
+  },
+  feeEducationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  feeEducationIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  feeEducationTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  feeEducationDescription: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 8,
+  },
+  feeEducationPoints: {
+    marginTop: 4,
+  },
+  feeEducationPoint: {
+    fontSize: 11,
+    lineHeight: 15,
+    marginBottom: 2,
   },
 });

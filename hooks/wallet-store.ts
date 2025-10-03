@@ -6,11 +6,12 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
-// Wallet service imports
+// Wallet service imports with platform detection
 let walletService: any;
 try {
-  console.log('📱 Loading mobile wallet service in wallet store...');
+  console.log('📦 Loading wallet service in wallet store for platform:', Platform.OS);
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet store imported service keys:', Object.keys(importedService));
@@ -24,25 +25,25 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     getPrivateKey: importedService.getPrivateKey,
-    testAddressGeneration: importedService.testAddressGeneration,
-    testSmartAddressGeneration: importedService.testSmartAddressGeneration,
-    findNextUnusedAddressIndex: importedService.findNextUnusedAddressIndex,
     findNextUnusedAddressIndexWithCycling: importedService.findNextUnusedAddressIndexWithCycling,
     generateAddressBatchForView: importedService.generateAddressBatchForView,
-    isAddressInWallet: importedService.isAddressInWallet
+    generateAddressesForView: importedService.generateAddressesForView,
+    isAddressInWallet: importedService.isAddressInWallet,
+    discoverUsedAddresses: importedService.discoverUsedAddresses,
+    getWalletData: importedService.getWalletData
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration', 'testSmartAddressGeneration', 'findNextUnusedAddressIndex', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'isAddressInWallet'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'generateAddressesForView', 'isAddressInWallet', 'discoverUsedAddresses', 'getWalletData'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
     throw new Error(`Missing wallet service functions in store: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully in wallet store');
+  console.log('✅ Wallet service loaded successfully in wallet store for', Platform.OS);
 } catch (error) {
-  console.error('❌ Failed to load wallet service in wallet store:', error);
+  console.error('❌ Failed to load wallet service in wallet store for', Platform.OS, ':', error);
   // Provide a minimal fallback
   walletService = {
     generateMnemonic: async () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
@@ -52,12 +53,12 @@ try {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
     getPrivateKey: async () => { throw new Error('Wallet service not available'); },
-    testAddressGeneration: async () => { throw new Error('Wallet service not available'); },
-    testSmartAddressGeneration: async () => { throw new Error('Wallet service not available'); },
-    findNextUnusedAddressIndex: async () => { throw new Error('Wallet service not available'); },
     findNextUnusedAddressIndexWithCycling: async () => { throw new Error('Wallet service not available'); },
     generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); },
-    isAddressInWallet: async () => { throw new Error('Wallet service not available'); }
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
+    isAddressInWallet: async () => { throw new Error('Wallet service not available'); },
+    discoverUsedAddresses: async () => { throw new Error('Wallet service not available'); },
+    getWalletData: async () => { throw new Error('Wallet service not available'); }
   };
 }
 
@@ -90,7 +91,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [cryptoReady, setCryptoReady] = useState(false);
   const cryptoReadyRef = useRef(false);
   const [feeSettings, setFeeSettingsState] = useState({
-    defaultPreset: 'standard' as 'economy' | 'standard' | 'priority' | 'custom',
+    defaultPreset: 'economy' as 'economy' | 'standard' | 'priority' | 'custom',
     customFeeRate: 10,
     enableRBF: true,
     enableCPFP: false,
@@ -289,7 +290,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('feeSettings');
       return stored ? JSON.parse(stored) : {
-        defaultPreset: 'standard',
+        defaultPreset: 'economy',
         customFeeRate: 10,
         enableRBF: true,
         enableCPFP: false,

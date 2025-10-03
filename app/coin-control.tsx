@@ -545,12 +545,36 @@ export default function CoinControlScreen() {
               <UtxoItem key={`${utxo.txid}:${utxo.vout}`} utxo={utxo} />
             ))}
             
-            {/* Info Footer */}
-            <View style={[styles.infoFooter, { backgroundColor: theme.colors.surface }]}>
-              <Info color={theme.colors.textSecondary} size={16} />
-              <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                Coin control allows you to manage individual UTXOs. Frozen UTXOs won&apos;t be used in transactions unless manually selected.
+            {/* Coin Control Educational Section */}
+            <View style={[styles.educationCard, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.educationHeader}>
+                <View style={[styles.educationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <Info color={theme.colors.primary} size={20} />
+                </View>
+                <Text style={[styles.educationTitle, { color: theme.colors.text }]}>
+                  How Coin Control Works
+                </Text>
+              </View>
+              <Text style={[styles.educationText, { color: theme.colors.textSecondary }]}>
+                Coin control gives you precise control over which UTXOs (Unspent Transaction Outputs) to use in transactions:
               </Text>
+              <View style={styles.educationFeatures}>
+                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                  • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate "coin" that can be spent
+                </Text>
+                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                  • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction
+                </Text>
+                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                  • <Text style={{ fontWeight: '600' }}>Privacy:</Text> Avoid linking different Bitcoin sources together
+                </Text>
+                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                  • <Text style={{ fontWeight: '600' }}>Frozen UTXOs:</Text> Temporarily prevent UTXOs from being automatically selected
+                </Text>
+                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                  • <Text style={{ fontWeight: '600' }}>Change Management:</Text> Control how much Bitcoin you send back to yourself
+                </Text>
+              </View>
             </View>
           </>
         )}
@@ -804,6 +828,41 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     marginLeft: 8,
     flex: 1,
+  },
+  educationCard: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+  },
+  educationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  educationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  educationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  educationText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  educationFeatures: {
+    marginTop: 8,
+  },
+  educationFeature: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
   },
 
 });

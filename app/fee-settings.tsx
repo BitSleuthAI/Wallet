@@ -504,6 +504,40 @@ export default function FeeSettingsScreen() {
           icon={TrendingUp}
         />
         
+        {/* RBF Information Card */}
+        {settings.enableRBF && (
+          <View style={[styles.rbfInfoCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.rbfInfoHeader}>
+              <View style={[styles.rbfInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Info color={theme.colors.primary} size={20} />
+              </View>
+              <Text style={[styles.rbfInfoTitle, { color: theme.colors.text }]}>
+                How RBF Works
+              </Text>
+            </View>
+            <Text style={[styles.rbfInfoText, { color: theme.colors.textSecondary }]}>
+              Replace-by-Fee allows you to replace an unconfirmed transaction with a new one paying a higher fee rate. This helps when your transaction is taking longer than expected to confirm.
+            </Text>
+            <View style={styles.rbfInfoFeatures}>
+              <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Must be enabled:</Text> The original transaction must support RBF
+              </Text>
+              <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Replace, don't duplicate:</Text> Cancels the old transaction
+              </Text>
+              <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Higher fee required:</Text> New fee rate must be higher
+              </Text>
+              <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Same outputs:</Text> Receiving address stays the same
+              </Text>
+              <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Quick action:</Text> Works immediately on pending transactions
+              </Text>
+            </View>
+          </View>
+        )}
+        
         <SettingToggle
           title="Child-Pays-for-Parent (CPFP)"
           subtitle="Enable CPFP fee bumping for received transactions"
@@ -1043,6 +1077,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   autoAdjustInfoFeature: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  rbfInfoCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  rbfInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  rbfInfoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  rbfInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  rbfInfoText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  rbfInfoFeatures: {
+    marginTop: 8,
+  },
+  rbfInfoFeature: {
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
