@@ -1,11 +1,12 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
+import { secureAuthService, SecurityKey, SecuritySettings } from '@/services/secure-auth-service';
+import { securityTestService } from '@/services/security-test-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as LocalAuthentication from 'expo-local-authentication';
-import { GradientBackground } from '@/components/GradientBackground';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
-import { Stack, router } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import {
     AlertTriangle,
     ArrowLeft,
@@ -16,6 +17,7 @@ import {
     Plus,
     Shield,
     Smartphone,
+    TestTube,
     Trash2,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -29,22 +31,7 @@ import {
     View,
 } from 'react-native';
 
-interface SecurityKey {
-  id: string;
-  name: string;
-  type: 'passkey' | 'fido' | 'biometric';
-  dateAdded: string;
-  lastUsed?: string;
-  publicKey?: string; // For actual cryptographic verification
-  isVerified?: boolean; // Whether the key has been verified as present
-}
-
-interface SecuritySettings {
-  requireBiometricForTransactions: boolean;
-  requireSecurityKeyForTransactions: boolean;
-  allowPINFallback: boolean;
-  multiFactorEnabled: boolean;
-}
+// SecurityKey and SecuritySettings interfaces are now imported from secure-auth-service
 
 export default function PasskeysSecurityScreen() {
   const { theme } = useWallet();
@@ -100,9 +87,8 @@ export default function PasskeysSecurityScreen() {
 
   const checkBiometricAvailability = async () => {
     try {
-      const hasHardware = await LocalAuthentication.hasHardwareAsync();
-      const isEnrolled = await LocalAuthentication.isEnrolledAsync();
-      setBiometricAvailable(hasHardware && isEnrolled);
+      const available = await secureAuthService.isBiometricAvailable();
+      setBiometricAvailable(available);
     } catch (error) {
       console.error('Error checking biometric availability:', error);
       setBiometricAvailable(false);
@@ -119,92 +105,53 @@ export default function PasskeysSecurityScreen() {
     }
   };
 
-  // Enhanced passkey registration with actual WebAuthn support
+  // Secure passkey registration with WebAuthn support
   const handleAddPasskey = async () => {
-    if (Platform.OS === 'web') {
-      // Web implementation using WebAuthn API
-      try {
-        const credential = await navigator.credentials.create({
-          publicKey: {
-            challenge: new Uint8Array(32), // In real app, this would be a server challenge
-            rp: {
-              name: 'BitSleuth Wallet',
-              id: window.location.hostname,
-            },
-            user: {
-              id: new Uint8Array(16),
-              name: 'user@bitsleuth.ai',
-              displayName: 'BitSleuth User',
-            },
-            pubKeyCredParams: [
-              {
-                type: 'public-key',
-                alg: -7, // ES256
-              },
-            ],
-            timeout: 60000,
-            attestation: 'direct',
-          },
-        });
+    try {
+      // Get key name from user
+      const keyName = await new Promise<string>((resolve) => {
+        Alert.prompt(
+          'Name Your Passkey',
+          'Give your passkey a name for easy identification:',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve('') },
+            { text: 'Add', onPress: (text) => resolve(text || 'Device Passkey') }
+          ],
+          'plain-text',
+          'Device Passkey'
+        );
+      });
 
-        if (credential) {
-          const newKey: SecurityKey = {
-            id: credential.id,
-            name: 'Device Passkey',
-            type: 'passkey',
-            dateAdded: new Date().toISOString(),
-            publicKey: credential.id,
-            isVerified: true,
-          };
+      if (!keyName) return;
 
-          const updatedKeys = [...securityKeys, newKey];
-          await saveSecurityKeys(updatedKeys);
-          Alert.alert('Success', 'Passkey registered successfully!');
-        }
-      } catch (error) {
-        console.error('Error registering passkey:', error);
+      // Register passkey using secure authentication service
+      const newKey = await secureAuthService.registerFIDOPasskey(keyName);
+      
+      if (newKey) {
+        const updatedKeys = [...securityKeys, newKey];
+        await saveSecurityKeys(updatedKeys);
+        Alert.alert('Success', 'Passkey registered successfully!');
+      } else {
         Alert.alert('Error', 'Failed to register passkey. Please try again.');
       }
-    } else {
-      // Mobile implementation using device biometric
-      try {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Authenticate to register device passkey',
-          fallbackLabel: 'Use PIN',
-        });
-
-        if (result.success) {
-          const newKey: SecurityKey = {
-            id: `device-passkey-${Date.now()}`,
-            name: Platform.OS === 'ios' ? 'iPhone Passkey' : 'Android Passkey',
-            type: 'passkey',
-            dateAdded: new Date().toISOString(),
-            isVerified: true,
-          };
-
-          const updatedKeys = [...securityKeys, newKey];
-          await saveSecurityKeys(updatedKeys);
-          Alert.alert('Success', 'Device passkey registered successfully!');
-        }
-      } catch (error) {
-        console.error('Error registering device passkey:', error);
-        Alert.alert('Error', 'Failed to register device passkey');
-      }
+    } catch (error) {
+      console.error('Error registering passkey:', error);
+      Alert.alert('Error', 'Failed to register passkey. Please try again.');
     }
   };
 
-  // Enhanced FIDO key registration with actual hardware verification
+  // Secure FIDO key registration with hardware verification
   const handleAddFIDOKey = async () => {
     try {
       // Request user to connect their FIDO key
       Alert.alert(
         'Connect FIDO Security Key',
-        'Please connect your FIDO security key (like YubiKey) to your device, then tap Continue.',
+        'Please connect your FIDO security key (like YubiKey) to your device via USB or NFC, then tap Continue.',
         [
           { text: 'Cancel', style: 'cancel' },
           { text: 'Continue', onPress: async () => {
             try {
-              // In a real implementation, this would use WebAuthn to verify the key is present
+              // Get key name from user
               const keyName = await new Promise<string>((resolve) => {
                 Alert.prompt(
                   'Name Your Security Key',
@@ -220,22 +167,19 @@ export default function PasskeysSecurityScreen() {
 
               if (!keyName) return;
 
-              // Simulate key verification (in real app, this would test the key)
-              const newKey: SecurityKey = {
-                id: `fido-${Date.now()}`,
-                name: keyName,
-                type: 'fido',
-                dateAdded: new Date().toISOString(),
-                isVerified: true, // In real app, this would be set after verification
-              };
-
-              const updatedKeys = [...securityKeys, newKey];
-              await saveSecurityKeys(updatedKeys);
+              // Register hardware FIDO key using secure authentication service
+              const newKey = await secureAuthService.registerHardwareFIDOKey(keyName);
               
-              Alert.alert('Success', 'FIDO security key registered successfully!');
+              if (newKey) {
+                const updatedKeys = [...securityKeys, newKey];
+                await saveSecurityKeys(updatedKeys);
+                Alert.alert('Success', 'FIDO security key registered successfully!');
+              } else {
+                Alert.alert('Error', 'Failed to register FIDO security key. Please ensure your key is connected and try again.');
+              }
             } catch (error) {
               console.error('Error registering FIDO key:', error);
-              Alert.alert('Error', 'Failed to register FIDO security key');
+              Alert.alert('Error', 'Failed to register FIDO security key. Please ensure your key is connected and try again.');
             }
           }}
         ]
@@ -284,33 +228,23 @@ export default function PasskeysSecurityScreen() {
         ]
       );
     } else {
-      // Enable biometric
+      // Enable biometric with secure registration
       try {
-        const result = await LocalAuthentication.authenticateAsync({
-          promptMessage: 'Authenticate to enable biometric security for wallet unlock and transactions',
-          fallbackLabel: 'Use PIN',
-        });
-
-        if (result.success) {
-          const supportedTypes = await LocalAuthentication.supportedAuthenticationTypesAsync();
-          const isFaceID = supportedTypes.includes(LocalAuthentication.AuthenticationType.FACIAL_RECOGNITION);
-          const biometricTypeName = Platform.OS === 'ios' ? (isFaceID ? 'Face ID' : 'Touch ID') : 'Biometric';
+        // Register a new biometric key with cryptographic verification
+        const newKey = await secureAuthService.registerBiometricKey();
+        
+        if (newKey) {
+          const biometricTypeName = secureAuthService.getBiometricType();
           
           await enableBiometric(biometricTypeName);
           
           // Add biometric entry to security keys
-          const newKey: SecurityKey = {
-            id: 'biometric',
-            name: biometricTypeName,
-            type: 'biometric',
-            dateAdded: new Date().toISOString(),
-            isVerified: true,
-          };
-
           const updatedKeys = [...securityKeys.filter(key => key.type !== 'biometric'), newKey];
           await saveSecurityKeys(updatedKeys);
           
           Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
+        } else {
+          Alert.alert('Error', 'Failed to register biometric key');
         }
       } catch (error) {
         console.error('Error enabling biometric:', error);
@@ -378,6 +312,17 @@ export default function PasskeysSecurityScreen() {
     }
 
     await saveSecuritySettings(newSettings);
+  };
+
+  const handleTestSecurity = async () => {
+    Alert.alert(
+      'Test Security Features',
+      'This will run comprehensive tests to validate all security implementations. This may take a few moments.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Run Tests', onPress: () => securityTestService.runTestsAndDisplayResults() }
+      ]
+    );
   };
 
   const getKeyIcon = (type: SecurityKey['type']) => {
@@ -696,6 +641,28 @@ export default function PasskeysSecurityScreen() {
           </View>
         </View>
 
+        {/* Security Testing */}
+        <View style={[styles.testCard, { backgroundColor: theme.colors.surface }]}>
+          <View style={styles.testHeader}>
+            <TestTube color={theme.colors.primary} size={20} />
+            <Text style={[styles.testTitle, { color: theme.colors.text }]}>
+              Security Testing
+            </Text>
+          </View>
+          
+          <Text style={[styles.testDescription, { color: theme.colors.textSecondary }]}>
+            Validate that all security features are working correctly with cryptographic verification.
+          </Text>
+          
+          <TouchableOpacity
+            style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
+            onPress={handleTestSecurity}
+          >
+            <TestTube color="white" size={16} />
+            <Text style={styles.testButtonText}>Run Security Tests</Text>
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.bottomSpacing} />
         </ScrollView>
       </AndroidSafeContainer>
@@ -967,5 +934,40 @@ const styles = StyleSheet.create({
   recommendationItem: {
     fontSize: 14,
     marginBottom: 8,
+  },
+  testCard: {
+    margin: 20,
+    padding: 24,
+    borderRadius: 16,
+    marginBottom: 20,
+  },
+  testHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  testTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginLeft: 8,
+  },
+  testDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  testButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: 'white',
   },
 });
