@@ -934,8 +934,8 @@ export default function SendScreen() {
                     // Validate custom fee rate before setting the selected type
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
                       const rate = parseFloat(customFeeRate);
-                      // Validate against max fee rate before setting
-                      const maxRate = feeSettings.maxFeeRate;
+                      // Validate against max fee rate before setting (with null check)
+                      const maxRate = feeSettings?.maxFeeRate || 100; // Fallback to 100 if feeSettings is undefined
                       if (rate <= maxRate) {
                         // Valid rate - set both the type and the rate
                         setSelectedFeeType('custom');
@@ -952,8 +952,12 @@ export default function SendScreen() {
                         // Don't change the selected type or fee rate - keep current selection
                       }
                     } else {
-                      // No valid custom rate entered - allow selection but don't update fee rate
+                      // No valid custom rate entered - set to custom type and use current customFeeRate or fallback
                       setSelectedFeeType('custom');
+                      const fallbackRate = customFeeRate && !isNaN(parseFloat(customFeeRate)) 
+                        ? parseFloat(customFeeRate) 
+                        : 10; // Default fallback rate
+                      setFeeRate(fallbackRate);
                     }
                   }}
                 >
@@ -982,8 +986,8 @@ export default function SendScreen() {
                       
                       const rate = parseFloat(text);
                       if (!isNaN(rate) && rate > 0) {
-                        // Validate against max fee rate from settings
-                        const maxRate = feeSettings.maxFeeRate;
+                        // Validate against max fee rate from settings (with null check)
+                        const maxRate = feeSettings?.maxFeeRate || 100; // Fallback to 100 if feeSettings is undefined
                         if (rate <= maxRate) {
                           // Update feeRate only if the rate is valid
                           setFeeRate(rate);
