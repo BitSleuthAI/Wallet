@@ -1,9 +1,3 @@
-### **7. Fee Limits (Max Fee Rate/Dust Threshold)**
-- **Status**: ❌ **UI only**
-- **Location**: `app/fee-settings.tsx:523-592`
-- **Issue**: Settings exist but not enforced during transaction creation
-- **Impact**: Limits not applied to actual transactions
-
 ### **8. Passkeys & Security Keys**
 - **Status**: ❌ **Mock implementation**
 - **Location**: `app/passkeys-security.tsx:122-247`
