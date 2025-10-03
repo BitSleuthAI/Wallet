@@ -63,6 +63,7 @@ export default function SendScreen() {
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
+  const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
 
   // Consolidated fee management effect - prevents race conditions
   useEffect(() => {
@@ -902,6 +903,7 @@ export default function SendScreen() {
                       const maxRate = feeSettings.maxFeeRate;
                       if (rate <= maxRate) {
                         setFeeRate(rate);
+                        setHasShownFeeRateAlert(false);
                       } else {
                         // Show alert if current custom rate exceeds maximum
                         Alert.alert(
@@ -909,6 +911,7 @@ export default function SendScreen() {
                           `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
                           [{ text: 'OK' }]
                         );
+                        setHasShownFeeRateAlert(true);
                         // Don't set the fee rate - keep it at the previous valid value
                       }
                     }
@@ -944,15 +947,23 @@ export default function SendScreen() {
                         if (rate <= maxRate) {
                           // Update feeRate only if the rate is valid
                           setFeeRate(rate);
+                          // Reset alert flag when entering valid range
+                          setHasShownFeeRateAlert(false);
                         } else {
-                          // Show alert to user about the limit but don't prevent typing
-                          console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
-                          Alert.alert(
-                            'Fee Rate Too High',
-                            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
-                            [{ text: 'OK' }]
-                          );
+                          // Only show alert once per invalid session
+                          if (!hasShownFeeRateAlert) {
+                            console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
+                            Alert.alert(
+                              'Fee Rate Too High',
+                              `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
+                              [{ text: 'OK' }]
+                            );
+                            setHasShownFeeRateAlert(true);
+                          }
                         }
+                      } else {
+                        // Reset alert flag when clearing or entering invalid format
+                        setHasShownFeeRateAlert(false);
                       }
                     }}
                     keyboardType="numeric"
