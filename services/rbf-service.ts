@@ -327,7 +327,9 @@ export async function createReplacementTransaction(
     
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
-      const addressIndex = walletAddresses.indexOf(address);
+      
+      // Derive the actual BIP32 address index instead of using array index
+      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
       
       // Find the corresponding UTXO - improved matching logic
       const utxo = utxos.find(u => {
@@ -786,7 +788,9 @@ async function createCancellationTransaction(
     
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
-      const addressIndex = walletAddresses.indexOf(address);
+      
+      // Derive the actual BIP32 address index instead of using array index
+      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
       
       // Find the corresponding UTXO
       const utxo = utxos.find(u => {
@@ -819,11 +823,8 @@ async function createCancellationTransaction(
     }
     
     // Generate a new address in the wallet for the cancellation
-    // Calculate the next address index to avoid reuse
-    // Find the highest index from existing wallet addresses and add 1
-    const maxExistingIndex = walletAddresses.length > 0 ? walletAddresses.length - 1 : -1;
-    const nextAddressIndex = maxExistingIndex + 1;
-    const cancellationAddress = await generateCancellationAddress(mnemonic, nextAddressIndex);
+    // Use proper address index calculation to avoid reuse
+    const cancellationAddress = await generateCancellationAddress(mnemonic, walletAddresses);
     
     // Calculate fee for cancellation transaction
     // Fix: Calculate the original fee using only our inputs and outputs (consistent with totalInputValue)
@@ -867,7 +868,7 @@ async function createCancellationTransaction(
     console.log(`   Original size: ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
     console.log(`   Cancellation fee: ${cancellationFee} sats (${cancellationFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Amount to wallet: ${cancellationAmount} sats`);
-    console.log(`   Cancellation address: ${cancellationAddress} (index: ${nextAddressIndex})`);
+    console.log(`   Cancellation address: ${cancellationAddress}`);
     
     // Sign the transaction
     console.log(`🔐 Signing cancellation transaction...`);
@@ -911,11 +912,109 @@ async function createCancellationTransaction(
 }
 
 /**
+ * Derive the BIP32 address index from an address by testing derivation paths
+ * This is necessary because walletAddresses array order doesn't correspond to BIP32 indices
+ */
+export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
+  try {
+    console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
+    
+    // Import required libraries
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
+    
+    // Test addresses up to a reasonable limit (1000 addresses)
+    // This is safe because we're only testing derivation, not spending
+    const maxTestIndex = 1000;
+    
+    for (let i = 0; i < maxTestIndex; i++) {
+      try {
+        const child = externalChain.derive(i);
+        if (!child.publicKey) continue;
+        
+        // Generate P2WPKH address
+        const bech32 = await import('bech32');
+        const { sha256 } = await import('@noble/hashes/sha256');
+        const { ripemd160 } = await import('@noble/hashes/ripemd160');
+        
+        const sha256Hash = sha256(child.publicKey);
+        const hash160 = ripemd160(sha256Hash);
+        const words = bech32.bech32.toWords(hash160);
+        const address = bech32.bech32.encode('bc', [0, ...words]);
+        
+        if (address === targetAddress) {
+          console.log(`✅ Found BIP32 index ${i} for address: ${targetAddress}`);
+          return i;
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
+        continue;
+      }
+    }
+    
+    throw new Error(`Could not find BIP32 index for address: ${targetAddress}`);
+  } catch (error) {
+    console.error(`❌ Failed to derive address index:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Find the next unused address index for generating new addresses
+ * This ensures we don't reuse addresses and follow proper BIP32 gap limit
+ */
+export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
+  try {
+    console.log(`🔍 Finding next unused address index...`);
+    
+    // Import required libraries
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
+    
+    // Find the highest used index by testing all wallet addresses
+    let maxUsedIndex = -1;
+    for (const address of walletAddresses) {
+      try {
+        const index = await deriveAddressIndexFromAddress(mnemonic, address);
+        maxUsedIndex = Math.max(maxUsedIndex, index);
+      } catch (error) {
+        console.warn(`⚠️ Could not derive index for address ${address}:`, error);
+      }
+    }
+    
+    // The next unused index is the highest used index + 1
+    const nextIndex = maxUsedIndex + 1;
+    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex})`);
+    return nextIndex;
+  } catch (error) {
+    console.error(`❌ Failed to find next unused address index:`, error);
+    // Fallback to 0 if we can't determine the next index
+    console.warn(`⚠️ Using fallback index 0`);
+    return 0;
+  }
+}
+
+/**
  * Generate a cancellation address using the wallet's derivation path
  */
-async function generateCancellationAddress(mnemonic: string, addressIndex: number): Promise<string> {
+async function generateCancellationAddress(mnemonic: string, walletAddresses: string[]): Promise<string> {
   try {
-    console.log(`🔧 Generating cancellation address for index: ${addressIndex}`);
+    console.log(`🔧 Generating cancellation address...`);
+    
+    // Find the next unused address index instead of using array length
+    const addressIndex = await findNextUnusedAddressIndex(mnemonic, walletAddresses);
     
     // Import required libraries
     const bip32Module = await import('bip32');
@@ -942,7 +1041,7 @@ async function generateCancellationAddress(mnemonic: string, addressIndex: numbe
     const words = bech32.bech32.toWords(hash160);
     const address = bech32.bech32.encode('bc', [0, ...words]);
     
-    console.log(`✅ Generated cancellation address: ${address}`);
+    console.log(`✅ Generated cancellation address: ${address} (index: ${addressIndex})`);
     return address;
   } catch (error) {
     console.error(`❌ Failed to generate cancellation address:`, error);
