@@ -66,6 +66,10 @@ export default function SendScreen() {
   const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
   const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
   const [lastFeeEstimates, setLastFeeEstimates] = useState<any>(null);
+  const [customFeeValidation, setCustomFeeValidation] = useState<{
+    isValid: boolean;
+    message: string | null;
+  }>({ isValid: true, message: null });
 
   // Reset user interaction state only when component mounts
   useEffect(() => {
@@ -954,6 +958,7 @@ export default function SendScreen() {
                         // Valid rate - update the fee rate
                         setFeeRate(rate);
                         setHasShownFeeRateAlert(false);
+                        setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
                       } else {
                         // Invalid rate - show alert and use current fee rate
                         if (!hasShownFeeRateAlert) {
@@ -969,7 +974,29 @@ export default function SendScreen() {
                     } else {
                       // No valid custom rate entered - use stored custom fee rate from settings
                       const fallbackRate = feeSettings?.customFeeRate || 10;
-                      setFeeRate(fallbackRate);
+                      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                      
+                      // Validate fallback rate against maximum allowed rate
+                      if (fallbackRate <= maxRate) {
+                        setFeeRate(fallbackRate);
+                        setCustomFeeRate(fallbackRate.toString());
+                        setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
+                      } else {
+                        // Fallback rate exceeds maximum - use maximum allowed rate
+                        setFeeRate(maxRate);
+                        setCustomFeeRate(maxRate.toString());
+                        setCustomFeeValidation({ isValid: true, message: 'Adjusted to maximum allowed' });
+                        
+                        // Show alert about the adjustment
+                        if (!hasShownFeeRateAlert) {
+                          Alert.alert(
+                            'Fee Rate Adjusted',
+                            `Custom fee rate was adjusted to ${maxRate} sat/vB (maximum allowed).`,
+                            [{ text: 'OK' }]
+                          );
+                          setHasShownFeeRateAlert(true);
+                        }
+                      }
                     }
                     
                     // Mark as user interaction only when switching to custom mode
@@ -985,6 +1012,7 @@ export default function SendScreen() {
               
               {/* Custom Fee Input */}
               {selectedFeeType === 'custom' && (
+                <>
                 <View style={styles.customFeeContainer}>
                   <TextInput
                     style={[
@@ -1001,9 +1029,34 @@ export default function SendScreen() {
                       // Only update feeRate if we're currently in custom mode
                       if (selectedFeeType === 'custom') {
                         const rate = parseFloat(text);
+                        const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                        
+                        // Validate input and provide feedback
+                        if (!text.trim()) {
+                          // Empty input - no validation message
+                          setCustomFeeValidation({ isValid: true, message: null });
+                        } else if (isNaN(rate) || rate <= 0) {
+                          // Invalid format
+                          setCustomFeeValidation({ 
+                            isValid: false, 
+                            message: 'Please enter a valid fee rate' 
+                          });
+                        } else if (rate > maxRate) {
+                          // Exceeds maximum
+                          setCustomFeeValidation({ 
+                            isValid: false, 
+                            message: `Maximum allowed: ${maxRate} sat/vB` 
+                          });
+                        } else {
+                          // Valid rate
+                          setCustomFeeValidation({ 
+                            isValid: true, 
+                            message: 'Valid fee rate' 
+                          });
+                        }
+                        
                         if (!isNaN(rate) && rate > 0) {
                           // Validate against max fee rate with proper null check
-                          const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                           if (rate <= maxRate) {
                             // Update feeRate only if the rate is valid
                             setFeeRate(rate);
@@ -1036,6 +1089,28 @@ export default function SendScreen() {
                   />
                   <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>sat/vB</Text>
                 </View>
+                
+                {/* Custom Fee Validation Feedback */}
+                {customFeeValidation.message && (
+                  <View style={styles.validationContainer}>
+                    {customFeeValidation.isValid ? (
+                      <View style={styles.validationRow}>
+                        <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
+                          {customFeeValidation.message}
+                        </Text>
+                      </View>
+                    ) : (
+                      <View style={styles.validationRow}>
+                        <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
+                          {customFeeValidation.message}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+                </>
               )}
               
               {estimatedFee !== null && estimatedFee > 0 && (
