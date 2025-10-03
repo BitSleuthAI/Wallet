@@ -845,14 +845,29 @@ async function createCancellationTransaction(
     const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
     const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
     
-    // Use a fee rate that's at least 2 sat/vB higher than original
-    const cancellationFeeRate = Math.max(originalFeeRate + 2, 10); // Minimum 10 sat/vB
-    // Fix: Use cancellation transaction size (single output) instead of original transaction size
+    // Calculate cancellation transaction size (single output)
     const cancellationSize = estimateTransactionSize(ourInputs.length, 1); // Single output for cancellation
+    
+    // Calculate minimum fee increase required for RBF (10% of original fee)
+    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
+    const minCancellationFee = originalFee + minFeeIncrease;
+    
+    // Calculate fee rate that meets the absolute fee increase requirement
+    const minCancellationFeeRate = minCancellationFee / cancellationSize;
+    
+    // Use a fee rate that's at least 2 sat/vB higher than original, but must meet absolute fee increase
+    const cancellationFeeRate = Math.max(
+      Math.max(originalFeeRate + 2, minCancellationFeeRate), // Meet both rate and absolute requirements
+      10 // Minimum 10 sat/vB
+    );
+    
     const cancellationFee = Math.ceil(cancellationFeeRate * cancellationSize);
     
-    // Calculate amount to send back (total input minus fee)
-    const cancellationAmount = totalInputValue - cancellationFee;
+    // Ensure the cancellation fee meets RBF absolute fee increase requirements
+    const actualCancellationFee = Math.max(cancellationFee, minCancellationFee);
+    
+    // Calculate amount to send back (total input minus actual fee)
+    const cancellationAmount = totalInputValue - actualCancellationFee;
     
     if (cancellationAmount <= 546) { // Dust threshold
       throw new Error('Cancellation amount would be below dust threshold. Cannot cancel this transaction.');
@@ -861,12 +876,15 @@ async function createCancellationTransaction(
     // Add output to cancellation address
     txb.addOutput(cancellationAddress, cancellationAmount);
     
+    const actualCancellationFeeRate = actualCancellationFee / cancellationSize;
+    
     console.log(`💰 Cancellation details:`);
     console.log(`   Our inputs: ${totalInputValue} sats`);
     console.log(`   Our outputs in original: ${ourOriginalOutputValue} sats`);
     console.log(`   Original fee (our portion): ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Original size: ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
-    console.log(`   Cancellation fee: ${cancellationFee} sats (${cancellationFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Minimum fee increase required: ${minFeeIncrease} sats`);
+    console.log(`   Cancellation fee: ${actualCancellationFee} sats (${actualCancellationFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Amount to wallet: ${cancellationAmount} sats`);
     console.log(`   Cancellation address: ${cancellationAddress}`);
     
@@ -900,8 +918,8 @@ async function createCancellationTransaction(
     return {
       txid: originalTx.txid,
       originalTx: originalTx as any,
-      newFeeRate: cancellationFeeRate,
-      newFee: cancellationFee,
+      newFeeRate: actualCancellationFeeRate,
+      newFee: actualCancellationFee,
       replacementTx: txHex,
       status: 'pending'
     };
