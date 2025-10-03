@@ -9,6 +9,7 @@ import { startAuthentication, startRegistration } from '@simplewebauthn/browser'
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Alert, Platform } from 'react-native';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
+import { fromByteArray, toByteArray } from 'react-native-quick-base64';
 
 export interface SecurityKey {
   id: string;
@@ -534,15 +535,19 @@ class SecureAuthService {
    * Get the appropriate Relying Party ID for the current platform
    */
   private getRpId(): string {
-    // For mobile apps, use a generic domain or localhost
-    // This allows WebAuthn to work in mobile app contexts
+    // For mobile apps, use a proper domain that works with FIDO2/WebAuthn
+    // Mobile WebAuthn implementations need a valid domain, not localhost
     if (Platform.OS === 'web') {
-      // For web, use the current hostname
-      return window.location.hostname;
+      // For web, use the current hostname if window is available
+      if (typeof window !== 'undefined' && window.location) {
+        return window.location.hostname;
+      }
+      // Fallback for web environments without window
+      return 'bitsleuth.ai';
     } else {
-      // For mobile apps, use a generic domain that works with WebAuthn
-      // This is a common pattern for mobile WebAuthn implementations
-      return 'localhost';
+      // For mobile apps, use a proper domain that works with WebAuthn
+      // This allows FIDO2 operations to work correctly on mobile
+      return 'bitsleuth.ai';
     }
   }
 
@@ -551,11 +556,21 @@ class SecureAuthService {
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
+    // Use react-native-quick-base64 for React Native compatibility
+    return fromByteArray(bytes);
+  }
+
+  /**
+   * Convert base64 string to ArrayBuffer
+   */
+  private base64ToArrayBuffer(base64: string): ArrayBuffer {
+    // Use react-native-quick-base64 for React Native compatibility
+    const bytes = toByteArray(base64);
+    // Create a new ArrayBuffer with the correct size
+    const buffer = new ArrayBuffer(bytes.length);
+    const view = new Uint8Array(buffer);
+    view.set(bytes);
+    return buffer;
   }
 
   /**
@@ -568,12 +583,10 @@ class SecureAuthService {
     try {
       // In a real implementation, this would verify the attestation object
       // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(atob(response.response.clientDataJSON));
+      const clientDataJSON = JSON.parse(new TextDecoder().decode(toByteArray(response.response.clientDataJSON)));
       
       // Verify challenge matches
-      const responseChallenge = new Uint8Array(
-        atob(clientDataJSON.challenge).split('').map(c => c.charCodeAt(0))
-      );
+      const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
       const originalChallengeArray = new Uint8Array(originalChallenge);
       
       if (responseChallenge.length !== originalChallengeArray.length) {
@@ -603,12 +616,10 @@ class SecureAuthService {
     try {
       // In a real implementation, this would verify the signature
       // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(atob(response.response.clientDataJSON));
+      const clientDataJSON = JSON.parse(new TextDecoder().decode(toByteArray(response.response.clientDataJSON)));
       
       // Verify challenge matches
-      const responseChallenge = new Uint8Array(
-        atob(clientDataJSON.challenge).split('').map(c => c.charCodeAt(0))
-      );
+      const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
       const originalChallengeArray = new Uint8Array(originalChallenge);
       
       if (responseChallenge.length !== originalChallengeArray.length) {
