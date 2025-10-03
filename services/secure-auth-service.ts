@@ -503,40 +503,64 @@ class SecureAuthService {
           return false;
         }
 
-        // Force both biometric and security key authentication for MFA
-        console.log('🔐 Enforcing MFA: requiring biometric + security key');
-        
-        // Biometric authentication for MFA
-        const biometricMFA = await this.authenticateWithBiometric(
-          'Multi-factor authentication: Verify your biometric'
-        );
-        if (!biometricMFA.success) {
-          console.log('❌ MFA biometric authentication failed');
-          Alert.alert(
-            'Multi-Factor Authentication Failed',
-            'Biometric authentication failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
-            [{ text: 'OK' }]
-          );
-          return false;
+        // Track which factors have already been verified to avoid redundant prompts
+        let biometricVerified = false;
+        let securityKeyVerified = false;
+
+        // Check if biometric was already verified in Step 1
+        if (securitySettings.requireBiometricForTransactions) {
+          biometricVerified = true;
+          console.log('✅ Biometric already verified in Step 1');
         }
 
-        // Security key authentication for MFA
-        const availableKeys = securityKeys.filter(key => 
-          key.type === 'fido' || key.type === 'passkey'
-        );
-        
-        const securityKeyMFA = await this.verifySecurityKeyPresence(availableKeys[0]);
-        if (!securityKeyMFA) {
-          console.log('❌ MFA security key authentication failed');
-          Alert.alert(
-            'Multi-Factor Authentication Failed',
-            'Security key verification failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
-            [{ text: 'OK' }]
-          );
-          return false;
+        // Check if security key was already verified in Step 2
+        if (shouldRequireSecurityKey) {
+          securityKeyVerified = true;
+          console.log('✅ Security key already verified in Step 2');
         }
 
-        console.log('✅ Multi-factor authentication successful - both factors verified');
+        // Only prompt for factors that haven't been verified yet
+        console.log('🔐 Enforcing MFA: checking remaining factors');
+        
+        // Biometric authentication for MFA (only if not already verified)
+        if (!biometricVerified) {
+          console.log('🔐 MFA: Prompting for biometric authentication');
+          const biometricMFA = await this.authenticateWithBiometric(
+            'Multi-factor authentication: Verify your biometric'
+          );
+          if (!biometricMFA.success) {
+            console.log('❌ MFA biometric authentication failed');
+            Alert.alert(
+              'Multi-Factor Authentication Failed',
+              'Biometric authentication failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
+              [{ text: 'OK' }]
+            );
+            return false;
+          }
+          biometricVerified = true;
+        }
+
+        // Security key authentication for MFA (only if not already verified)
+        if (!securityKeyVerified) {
+          console.log('🔐 MFA: Prompting for security key authentication');
+          const availableKeys = securityKeys.filter(key => 
+            key.type === 'fido' || key.type === 'passkey'
+          );
+          
+          const securityKeyMFA = await this.verifySecurityKeyPresence(availableKeys[0]);
+          if (!securityKeyMFA) {
+            console.log('❌ MFA security key authentication failed');
+            Alert.alert(
+              'Multi-Factor Authentication Failed',
+              'Security key verification failed. Since multi-factor authentication is enabled, both biometric and security key verification are required.',
+              [{ text: 'OK' }]
+            );
+            return false;
+          }
+          securityKeyVerified = true;
+        }
+
+        console.log('✅ Multi-factor authentication successful - both factors verified (no redundant prompts)');
       }
 
       console.log('✅ Enhanced transaction authentication completed successfully');
