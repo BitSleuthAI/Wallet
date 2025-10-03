@@ -945,6 +945,7 @@ export default function SendScreen() {
                             [{ text: 'OK' }]
                           );
                           // Don't update either state - keep them at previous valid values
+                          return; // Exit early to prevent state update
                         }
                       } else {
                         // Allow updating customFeeRate for non-numeric or zero values (for editing)
