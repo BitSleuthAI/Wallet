@@ -842,7 +842,19 @@ async function createCancellationTransaction(
     // Calculate the fee that our wallet paid in the original transaction
     // This is the difference between our inputs and our outputs
     const originalFee = totalInputValue - ourOriginalOutputValue;
-    const originalSize = estimateTransactionSize(ourInputs.length, originalTx.vout.length);
+    
+    // Calculate the number of outputs that our wallet contributed to
+    // This should match the scope of ourOriginalOutputValue calculation
+    let ourOutputCount = 0;
+    for (const output of originalTx.vout) {
+      if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
+        ourOutputCount++;
+      }
+    }
+    
+    // Estimate transaction size based on our inputs and our outputs only
+    // This ensures consistency with the fee calculation scope
+    const originalSize = estimateTransactionSize(ourInputs.length, ourOutputCount);
     const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
     
     // Calculate cancellation transaction size (single output)
@@ -880,9 +892,9 @@ async function createCancellationTransaction(
     
     console.log(`💰 Cancellation details:`);
     console.log(`   Our inputs: ${totalInputValue} sats`);
-    console.log(`   Our outputs in original: ${ourOriginalOutputValue} sats`);
+    console.log(`   Our outputs in original: ${ourOriginalOutputValue} sats (${ourOutputCount} outputs)`);
     console.log(`   Original fee (our portion): ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
-    console.log(`   Original size: ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
+    console.log(`   Original size (our portion): ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
     console.log(`   Minimum fee increase required: ${minFeeIncrease} sats`);
     console.log(`   Cancellation fee: ${actualCancellationFee} sats (${actualCancellationFeeRate.toFixed(2)} sat/vB)`);
     console.log(`   Amount to wallet: ${cancellationAmount} sats`);
@@ -1062,16 +1074,21 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
  * Find the next unused address index for generating new addresses
  * This ensures we don't reuse addresses and follow proper BIP32 gap limit
  * 
+ * Fix: Instead of assuming sequential usage (max + 1), we now find the actual
+ * next unused index by checking for gaps in the address sequence. This prevents
+ * address reuse when there are gaps in the wallet's address usage.
+ * 
  * Performance improvements:
  * 1. Uses cached results from deriveAddressIndexFromAddress
  * 2. Processes addresses in parallel when possible
  * 3. Provides better error handling and fallback logic
+ * 4. Handles non-sequential address usage properly
  */
 export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
   try {
     console.log(`🔍 Finding next unused address index for ${walletAddresses.length} addresses...`);
     
-    // Find the highest used index by testing all wallet addresses
+    // Find all used indices by testing all wallet addresses
     // Use Promise.allSettled to process addresses in parallel for better performance
     const addressPromises = walletAddresses.map(async (address) => {
       try {
@@ -1084,12 +1101,12 @@ export async function findNextUnusedAddressIndex(mnemonic: string, walletAddress
     });
     
     const results = await Promise.allSettled(addressPromises);
-    let maxUsedIndex = -1;
+    const usedIndices = new Set<number>();
     let successfulDerivations = 0;
     
     for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.success) {
-        maxUsedIndex = Math.max(maxUsedIndex, result.value.index);
+      if (result.status === 'fulfilled' && result.value.success && result.value.index >= 0) {
+        usedIndices.add(result.value.index);
         successfulDerivations++;
       }
     }
@@ -1100,9 +1117,16 @@ export async function findNextUnusedAddressIndex(mnemonic: string, walletAddress
       return 0;
     }
     
-    // The next unused index is the highest used index + 1
-    const nextIndex = maxUsedIndex + 1;
-    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex}, ${successfulDerivations}/${walletAddresses.length} addresses processed)`);
+    // Find the next unused index by looking for the first gap or the next index after max
+    let nextIndex = 0;
+    while (usedIndices.has(nextIndex)) {
+      nextIndex++;
+    }
+    
+    const maxUsedIndex = Math.max(...usedIndices);
+    const hasGaps = nextIndex < maxUsedIndex;
+    
+    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex}, ${successfulDerivations}/${walletAddresses.length} addresses processed${hasGaps ? ', gaps detected' : ''})`);
     return nextIndex;
   } catch (error) {
     console.error(`❌ Failed to find next unused address index:`, error);
