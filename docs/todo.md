@@ -1,9 +1,3 @@
-### **3. Transaction Cancellation**
-- **Status**: ❌ **Explicitly marked as "Coming Soon"**
-- **Location**: `app/fee-bump.tsx:155-171`
-- **Issue**: Shows alert "Feature Coming Soon, Transaction cancellation will be available in a future update"
-- **Impact**: Users cannot cancel pending transactions
-
 ### **4. Child-Pays-for-Parent (CPFP)**
 - **Status**: ❌ **UI only, no implementation**
 - **Location**: `app/fee-settings.tsx:507-512`
