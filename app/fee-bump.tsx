@@ -709,14 +709,6 @@ const styles = StyleSheet.create({
     marginTop: platformStyles.spacing.md,
     paddingVertical: platformStyles.spacing.sm,
   },
-  validationError: {
-    ...platformStyles.typography.body,
-    fontWeight: '500',
-  },
-  validationSuccess: {
-    ...platformStyles.typography.body,
-    fontWeight: '500',
-  },
   sectionTitle: {
     ...platformStyles.typography.title,
     marginBottom: platformStyles.spacing.lg,
