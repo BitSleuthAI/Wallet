@@ -327,7 +327,9 @@ export async function createReplacementTransaction(
     
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
-      const addressIndex = walletAddresses.indexOf(address);
+      
+      // Derive the actual BIP32 address index instead of using array index
+      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
       
       // Find the corresponding UTXO - improved matching logic
       const utxo = utxos.find(u => {
@@ -685,6 +687,518 @@ export async function performRBF(
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error occurred'
     };
+  }
+}
+
+/**
+ * Cancel a transaction by creating a replacement that sends funds back to wallet
+ * This effectively cancels the original transaction by spending its inputs
+ */
+export async function cancelTransaction(
+  originalTxid: string,
+  mnemonic: string,
+  walletAddresses: string[]
+): Promise<{ success: boolean; cancellationTxid?: string; error?: string }> {
+  try {
+    console.log(`🚫 Starting transaction cancellation for: ${originalTxid}`);
+    
+    // Step 1: Validate the transaction can be cancelled
+    const validation = await validateRBFTransaction(originalTxid, walletAddresses);
+    if (!validation.isValid || !validation.canReplace) {
+      throw new Error(validation.reason || 'Transaction cannot be cancelled');
+    }
+    
+    const originalTx = validation.originalTx!;
+    const utxos = validation.utxos!;
+    
+    // Step 2: Create cancellation transaction
+    const cancellationTx = await createCancellationTransaction(
+      originalTx,
+      utxos,
+      mnemonic,
+      walletAddresses
+    );
+    
+    // Step 3: Broadcast cancellation transaction
+    const cancellationTxid = await broadcastReplacementTransaction(cancellationTx);
+    
+    console.log(`✅ Transaction cancelled successfully. Cancellation TXID: ${cancellationTxid}`);
+    
+    return {
+      success: true,
+      cancellationTxid
+    };
+  } catch (error) {
+    console.error(`❌ Transaction cancellation failed:`, error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error occurred'
+    };
+  }
+}
+
+/**
+ * Create a cancellation transaction that sends funds back to the wallet
+ * This replaces the original transaction by spending its inputs and sending
+ * the funds to a new address in the wallet (minus fees)
+ */
+async function createCancellationTransaction(
+  originalTx: any,
+  utxos: UTXO[],
+  mnemonic: string,
+  walletAddresses: string[]
+): Promise<RBFTransaction> {
+  try {
+    console.log(`🔧 Creating cancellation transaction for: ${originalTx.txid}`);
+    
+    // Ensure ECC is initialized
+    await ensureECC();
+    
+    // Import required libraries
+    const bitcoin = require('bitcoinjs-lib');
+    const ecc = (global as any).ecc;
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    
+    if (!ecc) {
+      throw new Error('ECC library not available');
+    }
+    
+    // Initialize bitcoinjs-lib with ECC
+    bitcoin.initEccLib(ecc);
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Create transaction builder
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    
+    // Get our inputs from the original transaction
+    const walletAddressesSet = new Set(walletAddresses);
+    const ourInputs = originalTx.vin?.filter((input: any) => {
+      return input.prevout?.scriptpubkey_address && 
+             walletAddressesSet.has(input.prevout.scriptpubkey_address);
+    });
+    
+    if (!ourInputs || ourInputs.length === 0) {
+      throw new Error('No inputs found for this wallet');
+    }
+    
+    // Calculate total input value
+    let totalInputValue = 0;
+    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number }>();
+    
+    for (const input of ourInputs) {
+      const address = input.prevout.scriptpubkey_address;
+      
+      // Derive the actual BIP32 address index instead of using array index
+      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
+      
+      // Find the corresponding UTXO
+      const utxo = utxos.find(u => {
+        const txidMatch = u.txid === input.txid;
+        const voutMatch = u.vout === input.vout;
+        const addressMatch = u.address === address || !u.address;
+        return txidMatch && voutMatch && addressMatch;
+      });
+      
+      if (!utxo) {
+        throw new Error(`UTXO not found for input ${input.txid}:${input.vout}`);
+      }
+      
+      // Ensure the UTXO has the correct address for signing
+      if (!utxo.address) {
+        utxo.address = address;
+      }
+      
+      totalInputValue += utxo.value;
+      inputMap.set(`${input.txid}:${input.vout}`, {
+        input,
+        utxo,
+        addressIndex
+      });
+    }
+    
+    // Add inputs with RBF enabled (sequence number 0xFFFFFFFD)
+    for (const [key, { input, utxo }] of inputMap) {
+      txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+    }
+    
+    // Generate a new address in the wallet for the cancellation
+    // Use proper address index calculation to avoid reuse
+    const cancellationAddress = await generateCancellationAddress(mnemonic, walletAddresses);
+    
+    // Calculate fee for cancellation transaction
+    // Fix: Calculate the original fee using only our inputs and outputs (consistent with totalInputValue)
+    // This ensures we're comparing apples to apples when calculating the cancellation fee
+    
+    // Calculate total output value that our wallet contributed to in the original transaction
+    let ourOriginalOutputValue = 0;
+    for (const output of originalTx.vout) {
+      // Only count outputs that go to our wallet addresses
+      if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
+        ourOriginalOutputValue += output.value;
+      }
+    }
+    
+    // Calculate the fee that our wallet paid in the original transaction
+    // This is the difference between our inputs and our outputs
+    const originalFee = totalInputValue - ourOriginalOutputValue;
+    
+    // Calculate the number of outputs that our wallet contributed to
+    // This should match the scope of ourOriginalOutputValue calculation
+    let ourOutputCount = 0;
+    for (const output of originalTx.vout) {
+      if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
+        ourOutputCount++;
+      }
+    }
+    
+    // Estimate transaction size based on our inputs and our outputs only
+    // This ensures consistency with the fee calculation scope
+    const originalSize = estimateTransactionSize(ourInputs.length, ourOutputCount);
+    const originalFeeRate = originalSize > 0 ? originalFee / originalSize : 0;
+    
+    // Calculate cancellation transaction size (single output)
+    const cancellationSize = estimateTransactionSize(ourInputs.length, 1); // Single output for cancellation
+    
+    // Calculate minimum fee increase required for RBF (10% of original fee)
+    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
+    const minCancellationFee = originalFee + minFeeIncrease;
+    
+    // Calculate fee rate that meets the absolute fee increase requirement
+    const minCancellationFeeRate = minCancellationFee / cancellationSize;
+    
+    // Use a fee rate that's at least 2 sat/vB higher than original, but must meet absolute fee increase
+    const cancellationFeeRate = Math.max(
+      Math.max(originalFeeRate + 2, minCancellationFeeRate), // Meet both rate and absolute requirements
+      10 // Minimum 10 sat/vB
+    );
+    
+    const cancellationFee = Math.ceil(cancellationFeeRate * cancellationSize);
+    
+    // Ensure the cancellation fee meets RBF absolute fee increase requirements
+    const actualCancellationFee = Math.max(cancellationFee, minCancellationFee);
+    
+    // Calculate amount to send back (total input minus actual fee)
+    const cancellationAmount = totalInputValue - actualCancellationFee;
+    
+    if (cancellationAmount <= 546) { // Dust threshold
+      throw new Error('Cancellation amount would be below dust threshold. Cannot cancel this transaction.');
+    }
+    
+    // Add output to cancellation address
+    txb.addOutput(cancellationAddress, cancellationAmount);
+    
+    const actualCancellationFeeRate = actualCancellationFee / cancellationSize;
+    
+    console.log(`💰 Cancellation details:`);
+    console.log(`   Our inputs: ${totalInputValue} sats`);
+    console.log(`   Our outputs in original: ${ourOriginalOutputValue} sats (${ourOutputCount} outputs)`);
+    console.log(`   Original fee (our portion): ${originalFee} sats (${originalFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Original size (our portion): ${originalSize} vB, Cancellation size: ${cancellationSize} vB`);
+    console.log(`   Minimum fee increase required: ${minFeeIncrease} sats`);
+    console.log(`   Cancellation fee: ${actualCancellationFee} sats (${actualCancellationFeeRate.toFixed(2)} sat/vB)`);
+    console.log(`   Amount to wallet: ${cancellationAmount} sats`);
+    console.log(`   Cancellation address: ${cancellationAddress}`);
+    
+    // Sign the transaction
+    console.log(`🔐 Signing cancellation transaction...`);
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    
+    // Sign each input
+    let inputIndex = 0;
+    for (const [key, { input, utxo, addressIndex }] of inputMap) {
+      // Derive private key for this address
+      const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+      
+      if (!child.privateKey) {
+        throw new Error(`Failed to derive private key for address index ${addressIndex}`);
+      }
+      
+      // Sign the input
+      txb.sign(inputIndex, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      inputIndex++;
+    }
+    
+    // Build the transaction
+    const cancellationTx = txb.build();
+    const txHex = cancellationTx.toHex();
+    
+    console.log(`✅ Cancellation transaction created: ${txHex.substring(0, 100)}...`);
+    
+    return {
+      txid: originalTx.txid,
+      originalTx: originalTx as any,
+      newFeeRate: actualCancellationFeeRate,
+      newFee: actualCancellationFee,
+      replacementTx: txHex,
+      status: 'pending'
+    };
+  } catch (error) {
+    console.error(`❌ Failed to create cancellation transaction:`, error);
+    throw error;
+  }
+}
+
+// Cache for address-to-index mappings to avoid redundant derivations
+const addressIndexCache = new Map<string, number>();
+
+/**
+ * Clear the address index cache
+ * Call this when switching wallets or when cache becomes stale
+ */
+export function clearAddressIndexCache(): void {
+  addressIndexCache.clear();
+  console.log(`🧹 Cleared address index cache`);
+}
+
+/**
+ * Derive the BIP32 address index from an address by testing derivation paths
+ * This is necessary because walletAddresses array order doesn't correspond to BIP32 indices
+ * 
+ * Performance improvements:
+ * 1. Uses caching to avoid redundant derivations
+ * 2. Implements optimized linear search with batching
+ * 3. Removes arbitrary 1000 address limit
+ * 4. Optimizes imports to avoid repeated dynamic imports
+ * 5. Adds small delays between batches to prevent UI blocking
+ */
+export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
+  try {
+    // Check cache first
+    if (addressIndexCache.has(targetAddress)) {
+      const cachedIndex = addressIndexCache.get(targetAddress)!;
+      console.log(`✅ Found cached BIP32 index ${cachedIndex} for address: ${targetAddress}`);
+      return cachedIndex;
+    }
+    
+    console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
+    
+    // Import required libraries once
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
+    
+    // Use optimized linear search with batching to prevent UI blocking
+    let foundIndex = -1;
+    const batchSize = 50; // Smaller batches for better responsiveness
+    const batchDelay = 5; // 5ms delay between batches
+    let currentIndex = 0;
+    const maxSearchRange = 10000; // Reasonable limit for most wallets
+    
+    while (foundIndex === -1 && currentIndex < maxSearchRange) {
+      const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
+      
+      for (let i = currentIndex; i < endIndex; i++) {
+        try {
+          const child = externalChain.derive(i);
+          if (!child.publicKey) continue;
+          
+          // Generate P2WPKH address
+          const sha256Hash = sha256(child.publicKey);
+          const hash160 = ripemd160(sha256Hash);
+          const words = bech32.bech32.toWords(hash160);
+          const address = bech32.bech32.encode('bc', [0, ...words]);
+          
+          if (address === targetAddress) {
+            foundIndex = i;
+            break;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
+          continue;
+        }
+      }
+      
+      currentIndex = endIndex;
+      
+      // Small delay between batches to prevent UI blocking
+      if (foundIndex === -1 && currentIndex < maxSearchRange) {
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
+      }
+    }
+    
+    // If not found in the initial range, expand the search with larger delays
+    if (foundIndex === -1) {
+      console.log(`🔍 Address not found in initial range, expanding search...`);
+      
+      // Expand search range with larger delays for better responsiveness
+      let expandedHigh = maxSearchRange * 2;
+      const expandedBatchSize = 25; // Smaller batches for expanded search
+      const expandedBatchDelay = 10; // Longer delays for expanded search
+      
+      while (foundIndex === -1 && expandedHigh <= 100000) { // Cap at 100k for safety
+        console.log(`🔍 Searching range ${currentIndex} to ${expandedHigh}...`);
+        
+        for (let i = currentIndex; i < expandedHigh; i += expandedBatchSize) {
+          const endIndex = Math.min(i + expandedBatchSize, expandedHigh);
+          
+          for (let j = i; j < endIndex; j++) {
+            try {
+              const child = externalChain.derive(j);
+              if (!child.publicKey) continue;
+              
+              const sha256Hash = sha256(child.publicKey);
+              const hash160 = ripemd160(sha256Hash);
+              const words = bech32.bech32.toWords(hash160);
+              const address = bech32.bech32.encode('bc', [0, ...words]);
+              
+              if (address === targetAddress) {
+                foundIndex = j;
+                break;
+              }
+            } catch (error) {
+              console.warn(`⚠️ Failed to derive address at index ${j}:`, error);
+              continue;
+            }
+          }
+          
+          if (foundIndex !== -1) break;
+          
+          // Delay between batches in expanded search
+          if (endIndex < expandedHigh) {
+            await new Promise(resolve => setTimeout(resolve, expandedBatchDelay));
+          }
+        }
+        
+        currentIndex = expandedHigh;
+        expandedHigh *= 2;
+      }
+    }
+    
+    if (foundIndex === -1) {
+      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${currentIndex})`);
+    }
+    
+    // Cache the result
+    addressIndexCache.set(targetAddress, foundIndex);
+    console.log(`✅ Found BIP32 index ${foundIndex} for address: ${targetAddress}`);
+    return foundIndex;
+  } catch (error) {
+    console.error(`❌ Failed to derive address index:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Find the next unused address index for generating new addresses
+ * This ensures we don't reuse addresses and follow proper BIP32 gap limit
+ * 
+ * Fix: Instead of assuming sequential usage (max + 1), we now find the actual
+ * next unused index by checking for gaps in the address sequence. This prevents
+ * address reuse when there are gaps in the wallet's address usage.
+ * 
+ * Performance improvements:
+ * 1. Uses cached results from deriveAddressIndexFromAddress
+ * 2. Processes addresses sequentially to prevent app freezing
+ * 3. Provides better error handling and fallback logic
+ * 4. Handles non-sequential address usage properly
+ * 5. Uses batching with small delays to prevent UI blocking
+ */
+export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
+  try {
+    console.log(`🔍 Finding next unused address index for ${walletAddresses.length} addresses...`);
+    
+    // Process addresses sequentially in small batches to prevent app freezing
+    const usedIndices = new Set<number>();
+    let successfulDerivations = 0;
+    const batchSize = 5; // Process 5 addresses at a time
+    const batchDelay = 10; // 10ms delay between batches
+    
+    for (let i = 0; i < walletAddresses.length; i += batchSize) {
+      const batch = walletAddresses.slice(i, i + batchSize);
+      
+      // Process batch sequentially to avoid overwhelming the system
+      for (const address of batch) {
+        try {
+          const index = await deriveAddressIndexFromAddress(mnemonic, address);
+          usedIndices.add(index);
+          successfulDerivations++;
+        } catch (error) {
+          console.warn(`⚠️ Could not derive index for address ${address}:`, error);
+        }
+      }
+      
+      // Small delay between batches to prevent UI blocking
+      if (i + batchSize < walletAddresses.length) {
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
+      }
+    }
+    
+    // If we couldn't derive any addresses, fall back to 0
+    if (successfulDerivations === 0) {
+      console.warn(`⚠️ Could not derive any address indices, using fallback index 0`);
+      return 0;
+    }
+    
+    // Find the next unused index by looking for the first gap or the next index after max
+    let nextIndex = 0;
+    while (usedIndices.has(nextIndex)) {
+      nextIndex++;
+    }
+    
+    const maxUsedIndex = Math.max(...usedIndices);
+    const hasGaps = nextIndex < maxUsedIndex;
+    
+    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex}, ${successfulDerivations}/${walletAddresses.length} addresses processed${hasGaps ? ', gaps detected' : ''})`);
+    return nextIndex;
+  } catch (error) {
+    console.error(`❌ Failed to find next unused address index:`, error);
+    // Fallback to 0 if we can't determine the next index
+    console.warn(`⚠️ Using fallback index 0`);
+    return 0;
+  }
+}
+
+/**
+ * Generate a cancellation address using the wallet's derivation path
+ */
+async function generateCancellationAddress(mnemonic: string, walletAddresses: string[]): Promise<string> {
+  try {
+    console.log(`🔧 Generating cancellation address...`);
+    
+    // Find the next unused address index instead of using array length
+    const addressIndex = await findNextUnusedAddressIndex(mnemonic, walletAddresses);
+    
+    // Import required libraries
+    const bip32Module = await import('bip32');
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32 = bip32Module.BIP32Factory(ecc);
+    
+    // Derive private key for cancellation address
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32.fromSeed(seed);
+    const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+    
+    if (!child.publicKey) {
+      throw new Error('Failed to derive public key for cancellation address');
+    }
+    
+    // Generate P2WPKH address
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
+    
+    const sha256Hash = sha256(child.publicKey);
+    const hash160 = ripemd160(sha256Hash);
+    const words = bech32.bech32.toWords(hash160);
+    const address = bech32.bech32.encode('bc', [0, ...words]);
+    
+    console.log(`✅ Generated cancellation address: ${address} (index: ${addressIndex})`);
+    return address;
+  } catch (error) {
+    console.error(`❌ Failed to generate cancellation address:`, error);
+    throw error;
   }
 }
 

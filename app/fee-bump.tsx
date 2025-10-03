@@ -3,7 +3,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
-import { performRBF, validateRBFTransaction } from '@/services/rbf-service';
+import { cancelTransaction, performRBF, validateRBFTransaction } from '@/services/rbf-service';
 import { Transaction } from '@/types/wallet';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
@@ -34,7 +34,8 @@ export default function FeeBumpScreen() {
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
   const [customFeeRate, setCustomFeeRate] = useState<string>('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isBumpingFee, setIsBumpingFee] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [canReplace, setCanReplace] = useState<boolean>(false);
@@ -173,7 +174,7 @@ export default function FeeBumpScreen() {
       return;
     }
 
-    setIsCreating(true);
+    setIsBumpingFee(true);
     try {
       const newFeeRate = getCurrentFeeRate();
       
@@ -212,22 +213,70 @@ export default function FeeBumpScreen() {
         `Failed to create replacement transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
     } finally {
-      setIsCreating(false);
+      setIsBumpingFee(false);
     }
   };
 
-  const handleCancelTransaction = () => {
+  const handleCancelTransaction = async () => {
+    if (!canReplace) {
+      Alert.alert(
+        'Cannot Cancel Transaction',
+        validationError || 'This transaction cannot be cancelled'
+      );
+      return;
+    }
+
+    if (!currentWallet) {
+      Alert.alert('Error', 'No wallet selected');
+      return;
+    }
+
     Alert.alert(
       'Cancel Transaction',
-      'This will create a replacement transaction that sends the funds back to your wallet, effectively canceling the original transaction.',
+      'This will create a replacement transaction that sends the funds back to your wallet, effectively canceling the original transaction. The cancellation fee will be deducted from the returned amount.',
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm Cancel',
           style: 'destructive',
-          onPress: () => {
-            // Implement transaction cancellation logic
-            Alert.alert('Feature Coming Soon', 'Transaction cancellation will be available in a future update.');
+          onPress: async () => {
+            setIsCancelling(true);
+            try {
+              console.log('Starting transaction cancellation...');
+              console.log('Original TXID:', transaction?.txid);
+              
+              const result = await cancelTransaction(
+                transaction!.txid,
+                currentWallet.mnemonic,
+                currentWallet.addresses
+              );
+              
+              if (result.success) {
+                Alert.alert(
+                  'Transaction Cancelled',
+                  `The transaction has been successfully cancelled.\n\nCancellation TXID: ${result.cancellationTxid}\n\nThe funds have been returned to your wallet (minus the cancellation fee).`,
+                  [
+                    {
+                      text: 'OK',
+                      onPress: () => router.back(),
+                    },
+                  ]
+                );
+              } else {
+                Alert.alert(
+                  'Cancellation Failed',
+                  result.error || 'Failed to cancel transaction. Please try again.'
+                );
+              }
+            } catch (error) {
+              console.error('Transaction cancellation failed:', error);
+              Alert.alert(
+                'Error', 
+                `Failed to cancel transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
+              );
+            } finally {
+              setIsCancelling(false);
+            }
           },
         },
       ]
@@ -420,12 +469,12 @@ export default function FeeBumpScreen() {
             styles.actionButton,
             styles.bumpButton,
             { backgroundColor: theme.colors.primary },
-            (!isValidFeeRate() || !canReplace || isValidating || isCreating) && { opacity: 0.5 }
+            (!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
           ]}
           onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || !canReplace || isValidating || isCreating}
+          disabled={!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling}
         >
-          {isCreating ? (
+          {isBumpingFee ? (
             <ActivityIndicator color="white" size="small" />
           ) : (
             <Text style={styles.bumpButtonText}>Bump Fee</Text>
@@ -433,12 +482,20 @@ export default function FeeBumpScreen() {
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={styles.cancelButton}
+          style={[
+            styles.cancelButton,
+            (!canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
+          ]}
           onPress={handleCancelTransaction}
+          disabled={!canReplace || isValidating || isBumpingFee || isCancelling}
         >
-          <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>
-            Cancel Transaction
-          </Text>
+          {isCancelling ? (
+            <ActivityIndicator color={theme.colors.error} size="small" />
+          ) : (
+            <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>
+              Cancel Transaction
+            </Text>
+          )}
         </TouchableOpacity>
         
         <TouchableOpacity style={styles.detailsButton}>
