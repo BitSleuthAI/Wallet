@@ -111,9 +111,10 @@ export default function CPFPBumpScreen() {
     
     // Validate fee rate against user's maximum setting
     const feeRate = parseInt(targetFeeRate) || 15;
-    const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
+    const maxRate = feeSettings?.maxFeeRate;
     
-    if (feeRate > maxRate) {
+    // Only validate if maxFeeRate is set and greater than 0
+    if (maxRate !== undefined && maxRate !== null && maxRate > 0 && feeRate > maxRate) {
       Alert.alert(
         'Fee Rate Too High',
         `Target fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`
@@ -409,7 +410,7 @@ export default function CPFPBumpScreen() {
               <View style={styles.validationContainer}>
                 {(() => {
                   const rate = parseInt(targetFeeRate);
-                  const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
+                  const maxRate = feeSettings?.maxFeeRate;
                   
                   if (isNaN(rate) || rate <= 0) {
                     return (
@@ -417,7 +418,7 @@ export default function CPFPBumpScreen() {
                         Please enter a valid fee rate
                       </Text>
                     );
-                  } else if (rate > maxRate) {
+                  } else if (maxRate !== undefined && maxRate !== null && maxRate > 0 && rate > maxRate) {
                     return (
                       <Text style={[styles.validationText, { color: theme.colors.error }]}>
                         Cannot exceed {maxRate} sat/vB (your maximum fee rate setting)

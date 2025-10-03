@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -149,16 +149,20 @@ export default function FeeBumpScreen() {
   const isValidFeeRate = () => {
     const currentRate = getCurrentFeeRate();
     const minRate = getMinimumFeeRate();
-    const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
     
     // Check minimum fee rate (RBF requirement)
     if (currentRate < minRate) {
       return false;
     }
     
-    // Check maximum fee rate (user setting)
-    if (currentRate > maxRate) {
-      return false;
+    // Only apply maxFeeRate validation to custom fee inputs, not preset options
+    // This prevents preset fee options from being blocked by user settings
+    if (selectedOption === 'Custom') {
+      const maxRate = feeSettings?.maxFeeRate;
+      // Only validate if maxFeeRate is set and greater than 0
+      if (maxRate !== undefined && maxRate !== null && maxRate > 0 && currentRate > maxRate) {
+        return false;
+      }
     }
     
     return true;
@@ -168,13 +172,15 @@ export default function FeeBumpScreen() {
     if (!isValidFeeRate()) {
       const currentRate = getCurrentFeeRate();
       const minRate = getMinimumFeeRate();
-      const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
       
       let errorMessage = '';
       if (currentRate < minRate) {
         errorMessage = `The fee rate must be higher than ${minRate} sat/vB for RBF`;
-      } else if (currentRate > maxRate) {
-        errorMessage = `Fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`;
+      } else if (selectedOption === 'Custom') {
+        const maxRate = feeSettings?.maxFeeRate;
+        if (maxRate !== undefined && maxRate !== null && maxRate > 0 && currentRate > maxRate) {
+          errorMessage = `Fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`;
+        }
       }
       
       Alert.alert('Invalid Fee Rate', errorMessage);
@@ -482,7 +488,7 @@ export default function FeeBumpScreen() {
               {(() => {
                 const rate = parseInt(customFeeRate);
                 const minRate = getMinimumFeeRate();
-                const maxRate = (feeSettings && feeSettings.maxFeeRate !== undefined && feeSettings.maxFeeRate !== null) ? feeSettings.maxFeeRate : 100;
+                const maxRate = feeSettings?.maxFeeRate;
                 
                 if (isNaN(rate) || rate <= 0) {
                   return (
@@ -496,7 +502,7 @@ export default function FeeBumpScreen() {
                       Must be higher than {minRate} sat/vB for RBF
                     </Text>
                   );
-                } else if (rate > maxRate) {
+                } else if (maxRate !== undefined && maxRate !== null && maxRate > 0 && rate > maxRate) {
                   return (
                     <Text style={[styles.validationText, { color: theme.colors.error }]}>
                       Cannot exceed {maxRate} sat/vB (your maximum fee rate setting)
@@ -629,10 +635,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginTop: platformStyles.spacing.md,
     paddingVertical: platformStyles.spacing.sm,
-  },
-  validationText: {
-    ...platformStyles.typography.body,
-    marginLeft: platformStyles.spacing.sm,
   },
   validationError: {
     ...platformStyles.typography.body,
