@@ -44,21 +44,13 @@ interface FeeSettings {
 }
 
 export default function FeeSettingsScreen() {
-  const { theme } = useWallet();
+  const { theme, feeSettings, setFeeSettings } = useWallet();
   const [feeEstimates, setFeeEstimates] = useState<FeeEstimate | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [selectedPreset, setSelectedPreset] = useState<FeePreset>('standard');
-  const [customFeeRate, setCustomFeeRate] = useState<string>('10');
-  const [settings, setSettings] = useState<FeeSettings>({
-    defaultPreset: 'standard',
-    customFeeRate: 10,
-    enableRBF: true,
-    enableCPFP: false,
-    autoAdjustFees: true,
-    maxFeeRate: 100,
-    dustThreshold: 546,
-  });
+  const [selectedPreset, setSelectedPreset] = useState<FeePreset>(feeSettings.defaultPreset);
+  const [customFeeRate, setCustomFeeRate] = useState<string>(feeSettings.customFeeRate.toString());
+  const [settings, setSettings] = useState<FeeSettings>(feeSettings);
 
   useEffect(() => {
     loadFeeEstimates();
@@ -93,7 +85,9 @@ export default function FeeSettingsScreen() {
   };
 
   const updateSetting = <K extends keyof FeeSettings>(key: K, value: FeeSettings[K]) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
+    const newSettings = { ...settings, [key]: value };
+    setSettings(newSettings);
+    setFeeSettings(newSettings);
   };
 
   const getFeePresetInfo = (preset: FeePreset) => {

@@ -89,6 +89,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
   const [cryptoReady, setCryptoReady] = useState(false);
   const cryptoReadyRef = useRef(false);
+  const [feeSettings, setFeeSettingsState] = useState({
+    defaultPreset: 'standard' as 'economy' | 'standard' | 'priority' | 'custom',
+    customFeeRate: 10,
+    enableRBF: true,
+    enableCPFP: false,
+    autoAdjustFees: true,
+    maxFeeRate: 100,
+    dustThreshold: 546,
+  });
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -270,6 +279,23 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         firstUsed: firstUsed ? parseInt(firstUsed, 10) : null,
         feedbackShown: feedbackShown === 'true',
         feedbackDismissed: feedbackDismissed === 'true',
+      };
+    },
+  });
+
+  // Load fee settings from storage
+  const feeSettingsQuery = useQuery({
+    queryKey: ['feeSettings'],
+    queryFn: async () => {
+      const stored = await AsyncStorage.getItem('feeSettings');
+      return stored ? JSON.parse(stored) : {
+        defaultPreset: 'standard',
+        customFeeRate: 10,
+        enableRBF: true,
+        enableCPFP: false,
+        autoAdjustFees: true,
+        maxFeeRate: 100,
+        dustThreshold: 546,
       };
     },
   });
@@ -545,6 +571,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveAutoLock } = saveAutoLockMutation;
 
+  // Save fee settings mutation
+  const saveFeeSettingsMutation = useMutation({
+    mutationFn: async (settings: typeof feeSettings) => {
+      await AsyncStorage.setItem('feeSettings', JSON.stringify(settings));
+      return settings;
+    },
+    onSuccess: (settings) => {
+      setFeeSettingsState(settings);
+      queryClient.invalidateQueries({ queryKey: ['feeSettings'] });
+    },
+  });
+  const { mutate: saveFeeSettings } = saveFeeSettingsMutation;
+
   // Track first app usage and feedback prompt
   useEffect(() => {
     const trackFirstUsage = async () => {
@@ -654,6 +693,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [autoLockQuery.data]);
 
+  useEffect(() => {
+    if (feeSettingsQuery.data) {
+      setFeeSettingsState(feeSettingsQuery.data);
+    }
+  }, [feeSettingsQuery.data]);
+
   const createWallet = useCallback(async (name: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
     try {
       const trimmedName = name.trim();
@@ -752,6 +797,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const setAutoLockTimeoutSetting = useCallback((timeout: number) => {
     saveAutoLock(timeout);
   }, [saveAutoLock]);
+
+  const setFeeSettings = useCallback((settings: typeof feeSettings) => {
+    saveFeeSettings(settings);
+  }, [saveFeeSettings]);
 
   const setCoinControlSelected = useCallback((ids: string[]) => {
     if (!currentWallet) return;
@@ -1008,7 +1057,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     selectedCurrency,
     hideBalance,
     autoLockTimeout,
-  }), [theme, selectedCurrency, hideBalance, autoLockTimeout]);
+    feeSettings,
+  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings]);
 
   const actionsData = useMemo(() => ({
     createWallet,
@@ -1026,6 +1076,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrencyName,
     setHideBalanceSetting,
     setAutoLockTimeoutSetting,
+    setFeeSettings,
   }), [
     createWallet,
     importWallet,
@@ -1042,6 +1093,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrencyName,
     setHideBalanceSetting,
     setAutoLockTimeoutSetting,
+    setFeeSettings,
   ]);
 
   const coinControlData = useMemo(() => ({

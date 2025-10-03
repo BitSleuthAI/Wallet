@@ -34,15 +34,16 @@ export default function SendScreen() {
     selectedCurrency,
     getCurrencySymbol,
     bitcoinPrice: walletBitcoinPrice,
+    feeSettings,
   } = useWallet();
   const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(5);
-  const [customFeeRate, setCustomFeeRate] = useState('');
-  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal');
-  const [enableRBF, setEnableRBF] = useState(true);
+  const [feeRate, setFeeRate] = useState(feeSettings.customFeeRate);
+  const [customFeeRate, setCustomFeeRate] = useState(feeSettings.customFeeRate.toString());
+  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
+  const [enableRBF, setEnableRBF] = useState(feeSettings.enableRBF);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -61,6 +62,14 @@ export default function SendScreen() {
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
 
+  // Update fee settings when they change in wallet store
+  useEffect(() => {
+    setFeeRate(feeSettings.customFeeRate);
+    setCustomFeeRate(feeSettings.customFeeRate.toString());
+    setSelectedFeeType(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
+    setEnableRBF(feeSettings.enableRBF);
+  }, [feeSettings]);
+
   // Load fee estimates on component mount
   useEffect(() => {
     const loadInitialData = async () => {
@@ -68,10 +77,18 @@ export default function SendScreen() {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
         
-        // Set default fee rate based on estimates
+        // Set default fee rate based on saved settings or estimates
         if (fees) {
-          setFeeRate(fees.halfHourFee || 5);
-          setSelectedFeeType('normal');
+          // Use saved fee settings if available, otherwise use estimates
+          if (feeSettings.defaultPreset === 'custom') {
+            setFeeRate(feeSettings.customFeeRate);
+          } else {
+            const presetFee = feeSettings.defaultPreset === 'economy' ? fees.economyFee :
+                             feeSettings.defaultPreset === 'standard' ? fees.halfHourFee :
+                             feeSettings.defaultPreset === 'priority' ? fees.fastestFee :
+                             fees.halfHourFee;
+            setFeeRate(presetFee);
+          }
           
           // Load fee confidence data
           try {
@@ -96,7 +113,7 @@ export default function SendScreen() {
     };
     
     loadInitialData();
-  }, [currentWallet]);
+  }, [currentWallet, feeSettings]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -858,7 +875,8 @@ export default function SendScreen() {
                   onPress={() => {
                     setSelectedFeeType('custom');
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
-                      setFeeRate(parseFloat(customFeeRate));
+                      const rate = parseFloat(customFeeRate);
+                      setFeeRate(rate);
                     }
                   }}
                 >
@@ -884,7 +902,15 @@ export default function SendScreen() {
                       setCustomFeeRate(text);
                       const rate = parseFloat(text);
                       if (!isNaN(rate) && rate > 0) {
-                        setFeeRate(rate);
+                        // Validate against max fee rate from settings
+                        const maxRate = feeSettings.maxFeeRate;
+                        if (rate <= maxRate) {
+                          setFeeRate(rate);
+                        } else {
+                          // Show warning but still allow user to proceed
+                          console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
+                          setFeeRate(rate);
+                        }
                       }
                     }}
                     keyboardType="numeric"
