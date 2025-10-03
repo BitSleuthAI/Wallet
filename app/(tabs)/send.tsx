@@ -72,16 +72,21 @@ export default function SendScreen() {
     setHasShownFeeRateAlert(false);
   }, []);
 
-  // Reset interaction flag when fee settings change (but not on wallet changes)
+  // Track fee settings changes but preserve user's manual fee selections
+  // This prevents the fee management effect from overriding user-selected rates when settings change
   useEffect(() => {
     if (feeSettings) {
       const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}-${feeSettings.enableRBF}`;
       if (lastAppliedFeeSettings !== settingsKey) {
-        setUserHasInteractedWithFees(false);
+        // Only reset user interaction if this is the initial load (lastAppliedFeeSettings is null)
+        // or if the user hasn't interacted yet (preserving user's manual fee selections)
+        if (lastAppliedFeeSettings === null || !userHasInteractedWithFees) {
+          setUserHasInteractedWithFees(false);
+        }
         setLastAppliedFeeSettings(settingsKey);
       }
     }
-  }, [feeSettings, lastAppliedFeeSettings]);
+  }, [feeSettings, lastAppliedFeeSettings, userHasInteractedWithFees]);
 
   // Load fee estimates on component mount and wallet change
   useEffect(() => {
@@ -117,6 +122,7 @@ export default function SendScreen() {
   }, [currentWallet]);
 
   // Consolidated fee management effect - handles all fee rate initialization
+  // Only applies default settings when user hasn't manually selected fees
   useEffect(() => {
     // Only proceed if fee settings have finished loading and we have valid settings
     if (feeSettingsLoading || !feeSettings) return;
@@ -133,16 +139,22 @@ export default function SendScreen() {
       
       // Set fee rate based on preset and available estimates
       if (feeSettings.defaultPreset === 'custom') {
+        // For custom preset, always use the stored custom fee rate
         setFeeRate(feeSettings.customFeeRate);
-      } else if (feeEstimates) {
+      } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
+        // Only use estimates if all required values are available
         const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
                          feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
                          feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
                          feeEstimates.halfHourFee;
         setFeeRate(presetFee);
       } else {
-        // Use stored custom fee rate as fallback
-        setFeeRate(feeSettings.customFeeRate);
+        // Use appropriate fallback rates for each preset when estimates aren't available yet
+        const fallbackRate = feeSettings.defaultPreset === 'economy' ? 1 :
+                           feeSettings.defaultPreset === 'standard' ? 5 :
+                           feeSettings.defaultPreset === 'priority' ? 15 :
+                           feeSettings.customFeeRate; // Only use customFeeRate for 'custom' preset
+        setFeeRate(fallbackRate);
       }
     }
   }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
