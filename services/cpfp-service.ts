@@ -234,8 +234,8 @@ export async function createCPFPTransaction(
     bitcoin.initEccLib(ecc);
     const bip32 = bip32Module.BIP32Factory(ecc);
     
-    // Create transaction builder
-    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    // Create PSBT (Partially Signed Bitcoin Transaction) for proper SegWit support
+    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
     
     // Calculate total input value from parent transaction outputs
     let totalInputValue = 0;
@@ -252,9 +252,21 @@ export async function createCPFPTransaction(
       });
     }
     
-    // Add inputs (spending parent transaction outputs)
+    // Add inputs (spending parent transaction outputs) with proper SegWit support
     for (const [key, { utxo }] of inputMap) {
-      txb.addInput(utxo.txid, utxo.vout);
+      // For P2WPKH inputs, we need to provide the witnessUtxo
+      if (!utxo.scriptPubKey) {
+        throw new Error(`Missing scriptPubKey for UTXO ${utxo.txid}:${utxo.vout}`);
+      }
+      
+      psbt.addInput({
+        hash: utxo.txid,
+        index: utxo.vout,
+        witnessUtxo: {
+          script: Buffer.from(utxo.scriptPubKey, 'hex'),
+          value: utxo.value
+        }
+      });
     }
     
     // Calculate outputs
@@ -263,7 +275,10 @@ export async function createCPFPTransaction(
     if (options.customOutputs && options.customOutputs.length > 0) {
       // Use custom outputs
       for (const output of options.customOutputs) {
-        txb.addOutput(output.address, Math.floor(output.amount * 1e8)); // Convert BTC to satoshis
+        psbt.addOutput({
+          address: output.address,
+          value: Math.floor(output.amount * 1e8) // Convert BTC to satoshis
+        });
         totalOutputValue += Math.floor(output.amount * 1e8);
       }
     } else {
@@ -272,7 +287,10 @@ export async function createCPFPTransaction(
       const changeAmount = totalInputValue - childFee;
       
       if (changeAmount > 546) { // Dust threshold
-        txb.addOutput(changeAddress, changeAmount);
+        psbt.addOutput({
+          address: changeAddress,
+          value: changeAmount
+        });
         totalOutputValue = changeAmount;
       } else {
         // If change would be dust, send everything as fee
@@ -292,7 +310,7 @@ export async function createCPFPTransaction(
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32.fromSeed(seed);
     
-    // Sign each input
+    // Sign each input using PSBT
     let inputIndex = 0;
     for (const [key, { utxo, addressIndex }] of inputMap) {
       // Derive private key for this address
@@ -302,13 +320,18 @@ export async function createCPFPTransaction(
         throw new Error(`Failed to derive private key for address index ${addressIndex}`);
       }
       
-      // Sign the input
-      txb.sign(inputIndex, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      // Sign the input using PSBT
+      psbt.signInput(inputIndex, child);
       inputIndex++;
     }
     
-    // Build the transaction
-    const childTx = txb.build();
+    // Finalize all inputs
+    for (let i = 0; i < inputMap.size; i++) {
+      psbt.finalizeInput(i);
+    }
+    
+    // Extract the final transaction
+    const childTx = psbt.extractTransaction();
     const txHex = childTx.toHex();
     
     // Calculate effective fee rate
