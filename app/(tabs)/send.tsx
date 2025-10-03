@@ -1044,8 +1044,11 @@ export default function SendScreen() {
                         
                         // Validate input and update validation state
                         if (!text.trim()) {
-                          // Empty input - clear validation state
+                          // Empty input - clear validation state and reset fee rate to default
                           setCustomFeeValidation({ isValid: true, message: null });
+                          // Reset to the stored custom fee rate from settings as fallback
+                          const fallbackRate = feeSettings?.customFeeRate || 10;
+                          setFeeRate(fallbackRate);
                         } else if (isNaN(rate) || rate <= 0) {
                           // Invalid format
                           setCustomFeeValidation({ 
