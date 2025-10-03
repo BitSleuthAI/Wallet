@@ -11,17 +11,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -69,6 +69,13 @@ export default function SendScreen() {
     isValid: boolean;
     message: string | null;
   }>({ isValid: true, message: null });
+  const [autoAdjustmentActive, setAutoAdjustmentActive] = useState(false);
+  const [lastAutoAdjustment, setLastAutoAdjustment] = useState<{
+    timestamp: number;
+    oldRate: number;
+    newRate: number;
+    reason: string;
+  } | null>(null);
 
   // Reset user interaction state only when component mounts
   useEffect(() => {
@@ -130,6 +137,25 @@ export default function SendScreen() {
     loadFeeEstimates();
   }, [currentWallet]);
 
+  // Periodic fee refresh for auto-adjustment
+  useEffect(() => {
+    if (!feeSettings?.autoAdjustFees || userHasInteractedWithFees) {
+      return;
+    }
+
+    const refreshInterval = setInterval(async () => {
+      try {
+        console.log('🔄 Periodic fee refresh for auto-adjustment...');
+        const freshEstimates = await feeEstimationService.refreshFeeEstimates();
+        setFeeEstimates(freshEstimates);
+      } catch (error) {
+        console.warn('Failed to refresh fees for auto-adjustment:', error);
+      }
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(refreshInterval);
+  }, [feeSettings?.autoAdjustFees, userHasInteractedWithFees]);
+
   // Initial fee settings application - only runs once when settings first load
   useEffect(() => {
     if (feeSettingsLoading || !feeSettings || userHasInteractedWithFees) return;
@@ -173,6 +199,131 @@ export default function SendScreen() {
       setFeeRate(fallbackRate);
     }
   }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
+
+  // Auto-adjust fees based on network conditions
+  useEffect(() => {
+    const performAutoAdjustment = async () => {
+      // Only auto-adjust if:
+      // 1. Auto-adjust is enabled in settings
+      // 2. User hasn't manually interacted with fees
+      // 3. We have fee estimates available
+      // 4. We're not in custom fee mode (auto-adjust doesn't override custom rates)
+      if (!feeSettings?.autoAdjustFees || 
+          userHasInteractedWithFees || 
+          !feeEstimates || 
+          selectedFeeType === 'custom') {
+        setAutoAdjustmentActive(false);
+        return;
+      }
+
+      try {
+        // Get current network congestion
+        const congestion = await feeEstimationService.getNetworkCongestion();
+        
+        // Determine target fee rate based on congestion and user's preset preference
+        let targetRate: number;
+        let reason: string;
+        
+        if (feeSettings.defaultPreset === 'economy') {
+          // Economy preset - use economy fee but adjust for congestion
+          targetRate = feeEstimates.economyFee;
+          if (congestion === 'high') {
+            // In high congestion, bump economy fee slightly
+            targetRate = Math.min(feeEstimates.halfHourFee, feeEstimates.economyFee * 1.5);
+            reason = 'High network congestion - increased economy fee';
+          } else if (congestion === 'low') {
+            // In low congestion, can use minimum fee
+            targetRate = Math.max(feeEstimates.minimumFee, feeEstimates.economyFee * 0.8);
+            reason = 'Low network congestion - optimized economy fee';
+          } else {
+            reason = 'Normal network conditions - standard economy fee';
+          }
+        } else if (feeSettings.defaultPreset === 'standard') {
+          // Standard preset - use half-hour fee but adjust for congestion
+          targetRate = feeEstimates.halfHourFee;
+          if (congestion === 'high') {
+            // In high congestion, bump to fastest fee
+            targetRate = feeEstimates.fastestFee;
+            reason = 'High network congestion - upgraded to priority fee';
+          } else if (congestion === 'low') {
+            // In low congestion, can use economy fee
+            targetRate = feeEstimates.economyFee;
+            reason = 'Low network congestion - downgraded to economy fee';
+          } else {
+            reason = 'Normal network conditions - standard fee';
+          }
+        } else if (feeSettings.defaultPreset === 'priority') {
+          // Priority preset - use fastest fee but adjust for congestion
+          targetRate = feeEstimates.fastestFee;
+          if (congestion === 'high') {
+            // In high congestion, add premium
+            targetRate = Math.ceil(feeEstimates.fastestFee * 1.2);
+            reason = 'High network congestion - premium priority fee';
+          } else if (congestion === 'low') {
+            // In low congestion, can use standard fee
+            targetRate = feeEstimates.halfHourFee;
+            reason = 'Low network congestion - downgraded to standard fee';
+          } else {
+            reason = 'Normal network conditions - priority fee';
+          }
+        } else {
+          // Unknown preset, use standard
+          targetRate = feeEstimates.halfHourFee;
+          reason = 'Using standard fee rate';
+        }
+
+        // Only adjust if the new rate is significantly different (>10% change)
+        const currentRate = feeRate;
+        const rateChangePercent = Math.abs(targetRate - currentRate) / currentRate;
+        
+        if (rateChangePercent > 0.1) { // 10% threshold
+          const oldRate = currentRate;
+          setFeeRate(targetRate);
+          setAutoAdjustmentActive(true);
+          
+          // Update the selected fee type to match the adjusted rate
+          if (targetRate <= feeEstimates.economyFee * 1.1) {
+            setSelectedFeeType('slow');
+          } else if (targetRate <= feeEstimates.halfHourFee * 1.1) {
+            setSelectedFeeType('normal');
+          } else {
+            setSelectedFeeType('fast');
+          }
+          
+          // Record the adjustment
+          setLastAutoAdjustment({
+            timestamp: Date.now(),
+            oldRate,
+            newRate: targetRate,
+            reason
+          });
+          
+          console.log(`🔄 Auto-adjusted fee: ${oldRate} → ${targetRate} sat/vB (${reason})`);
+        } else {
+          setAutoAdjustmentActive(false);
+        }
+      } catch (error) {
+        console.warn('Failed to perform auto-adjustment:', error);
+        setAutoAdjustmentActive(false);
+      }
+    };
+
+    // Perform auto-adjustment when fee estimates change
+    if (feeEstimates && lastFeeEstimates) {
+      // Check if estimates have changed significantly
+      const estimatesChanged = 
+        Math.abs(feeEstimates.fastestFee - lastFeeEstimates.fastestFee) > 1 ||
+        Math.abs(feeEstimates.halfHourFee - lastFeeEstimates.halfHourFee) > 1 ||
+        Math.abs(feeEstimates.economyFee - lastFeeEstimates.economyFee) > 1;
+      
+      if (estimatesChanged) {
+        performAutoAdjustment();
+      }
+    }
+    
+    // Update last estimates
+    setLastFeeEstimates(feeEstimates);
+  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -1109,8 +1260,28 @@ export default function SendScreen() {
               
               {estimatedFee !== null && estimatedFee > 0 && (
                 <View style={styles.feeEstimate}>
-                                  <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                     Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${getCurrencySymbol()}${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
+                  </Text>
+                </View>
+              )}
+              
+              {/* Auto-adjustment feedback */}
+              {autoAdjustmentActive && lastAutoAdjustment && (
+                <View style={[styles.autoAdjustmentCard, { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary + '30' }]}>
+                  <View style={styles.autoAdjustmentHeader}>
+                    <View style={[styles.autoAdjustmentIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                      <ArrowUpRight color={theme.colors.primary} size={16} />
+                    </View>
+                    <Text style={[styles.autoAdjustmentTitle, { color: theme.colors.primary }]}>
+                      Auto-Adjusted Fee
+                    </Text>
+                  </View>
+                  <Text style={[styles.autoAdjustmentReason, { color: theme.colors.textSecondary }]}>
+                    {lastAutoAdjustment.reason}
+                  </Text>
+                  <Text style={[styles.autoAdjustmentDetails, { color: theme.colors.textSecondary }]}>
+                    {lastAutoAdjustment.oldRate} → {lastAutoAdjustment.newRate} sat/vB
                   </Text>
                 </View>
               )}
@@ -1460,5 +1631,37 @@ const styles = StyleSheet.create({
   conversionText: {
     fontSize: 14,
     fontStyle: 'italic',
+  },
+  autoAdjustmentCard: {
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+  },
+  autoAdjustmentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  autoAdjustmentIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  autoAdjustmentTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  autoAdjustmentReason: {
+    fontSize: 13,
+    marginBottom: 2,
+    lineHeight: 18,
+  },
+  autoAdjustmentDetails: {
+    fontSize: 12,
+    fontFamily: 'monospace',
   },
 });

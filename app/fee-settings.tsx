@@ -5,30 +5,30 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Info,
-  RefreshCw,
-  Settings,
-  TrendingUp,
-  Zap,
+    AlertTriangle,
+    ArrowLeft,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Info,
+    RefreshCw,
+    Settings,
+    TrendingUp,
+    Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
@@ -551,6 +551,37 @@ export default function FeeSettingsScreen() {
           icon={Zap}
         />
 
+        {/* Auto-Adjust Information Card */}
+        {settings.autoAdjustFees && (
+          <View style={[styles.autoAdjustInfoCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.autoAdjustInfoHeader}>
+              <View style={[styles.autoAdjustInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Info color={theme.colors.primary} size={20} />
+              </View>
+              <Text style={[styles.autoAdjustInfoTitle, { color: theme.colors.text }]}>
+                How Auto-Adjust Works
+              </Text>
+            </View>
+            <Text style={[styles.autoAdjustInfoText, { color: theme.colors.textSecondary }]}>
+              When enabled, the wallet automatically adjusts your transaction fees based on current network conditions:
+            </Text>
+            <View style={styles.autoAdjustInfoFeatures}>
+              <Text style={[styles.autoAdjustInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>High Congestion:</Text> Increases fees to ensure faster confirmation
+              </Text>
+              <Text style={[styles.autoAdjustInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Low Congestion:</Text> Reduces fees to save money when possible
+              </Text>
+              <Text style={[styles.autoAdjustInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Respects Your Preset:</Text> Works within your chosen fee preference
+              </Text>
+              <Text style={[styles.autoAdjustInfoFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Manual Override:</Text> Stops auto-adjusting when you manually change fees
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Fee Limits */}
         <SectionHeader 
           title="Fee Limits" 
@@ -976,6 +1007,42 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cpfpInfoFeature: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  autoAdjustInfoCard: {
+    marginHorizontal: 20,
+    marginVertical: 6,
+    padding: 16,
+    borderRadius: 12,
+  },
+  autoAdjustInfoHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  autoAdjustInfoIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  autoAdjustInfoTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  autoAdjustInfoText: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  autoAdjustInfoFeatures: {
+    marginTop: 8,
+  },
+  autoAdjustInfoFeature: {
     fontSize: 13,
     lineHeight: 18,
     marginBottom: 4,
