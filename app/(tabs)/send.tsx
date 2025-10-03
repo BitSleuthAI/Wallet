@@ -41,10 +41,22 @@ export default function SendScreen() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(5); // Default fallback, will be updated when fee settings load
-  const [customFeeRate, setCustomFeeRate] = useState('10'); // Default fallback
-  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal'); // Default fallback
-  const [enableRBF, setEnableRBF] = useState(true); // Default fallback
+  const [feeRate, setFeeRate] = useState(() => {
+    // Initialize with stored fee settings if available, otherwise use defaults
+    return feeSettings?.customFeeRate || 5;
+  });
+  const [customFeeRate, setCustomFeeRate] = useState(() => {
+    return feeSettings?.customFeeRate?.toString() || '10';
+  });
+  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>(() => {
+    const presetType = feeSettings?.defaultPreset === 'economy' ? 'slow' : 
+                      feeSettings?.defaultPreset === 'standard' ? 'normal' : 
+                      feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom';
+    return presetType || 'normal';
+  });
+  const [enableRBF, setEnableRBF] = useState(() => {
+    return feeSettings?.enableRBF ?? true;
+  });
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -64,6 +76,11 @@ export default function SendScreen() {
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
   const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
+
+  // Reset user interaction state when wallet changes
+  useEffect(() => {
+    setUserHasInteractedWithFees(false);
+  }, [currentWallet?.id]);
 
   // Consolidated fee management effect - prevents race conditions
   useEffect(() => {
@@ -92,8 +109,8 @@ export default function SendScreen() {
                            feeEstimates.halfHourFee;
           setFeeRate(presetFee);
         } else {
-          // Fallback when fee estimates are not available
-          setFeeRate(5);
+          // Use stored custom fee rate as fallback instead of hardcoded 5
+          setFeeRate(feeSettings.customFeeRate);
         }
       }
     };
@@ -107,6 +124,15 @@ export default function SendScreen() {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
+        
+        // Update fee rate if user hasn't interacted and we have fee estimates
+        if (fees && !userHasInteractedWithFees && !feeSettingsLoading) {
+          const presetFee = feeSettings.defaultPreset === 'economy' ? fees.economyFee :
+                           feeSettings.defaultPreset === 'standard' ? fees.halfHourFee :
+                           feeSettings.defaultPreset === 'priority' ? fees.fastestFee :
+                           fees.halfHourFee;
+          setFeeRate(presetFee);
+        }
         
         // Load fee confidence data
         if (fees) {
@@ -132,7 +158,7 @@ export default function SendScreen() {
     };
     
     loadFeeEstimates();
-  }, [currentWallet]);
+  }, [currentWallet, userHasInteractedWithFees, feeSettingsLoading, feeSettings.defaultPreset]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
