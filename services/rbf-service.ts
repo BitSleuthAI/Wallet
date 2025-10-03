@@ -959,9 +959,10 @@ export function clearAddressIndexCache(): void {
  * 
  * Performance improvements:
  * 1. Uses caching to avoid redundant derivations
- * 2. Implements binary search for faster lookup
+ * 2. Implements optimized linear search with batching
  * 3. Removes arbitrary 1000 address limit
  * 4. Optimizes imports to avoid repeated dynamic imports
+ * 5. Adds small delays between batches to prevent UI blocking
  */
 export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
   try {
@@ -987,18 +988,17 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
     const root = bip32.fromSeed(seed);
     const externalChain = root.derivePath(`m/84'/0'/0'/0`);
     
-    // Use binary search for more efficient lookup
-    // Start with a reasonable range and expand if needed
-    let low = 0;
-    let high = 10000; // Increased from 1000 to support larger wallets
+    // Use optimized linear search with batching to prevent UI blocking
     let foundIndex = -1;
+    const batchSize = 50; // Smaller batches for better responsiveness
+    const batchDelay = 5; // 5ms delay between batches
+    let currentIndex = 0;
+    const maxSearchRange = 10000; // Reasonable limit for most wallets
     
-    // First, try a linear search in smaller batches to find the approximate range
-    const batchSize = 100;
-    for (let start = 0; start < high; start += batchSize) {
-      const end = Math.min(start + batchSize, high);
+    while (foundIndex === -1 && currentIndex < maxSearchRange) {
+      const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
       
-      for (let i = start; i < end; i++) {
+      for (let i = currentIndex; i < endIndex; i++) {
         try {
           const child = externalChain.derive(i);
           if (!child.publicKey) continue;
@@ -1019,45 +1019,64 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
         }
       }
       
-      if (foundIndex !== -1) break;
+      currentIndex = endIndex;
+      
+      // Small delay between batches to prevent UI blocking
+      if (foundIndex === -1 && currentIndex < maxSearchRange) {
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
+      }
     }
     
-    // If not found in the initial range, expand the search
+    // If not found in the initial range, expand the search with larger delays
     if (foundIndex === -1) {
       console.log(`🔍 Address not found in initial range, expanding search...`);
       
-      // Expand search range exponentially
-      let expandedHigh = high * 2;
+      // Expand search range with larger delays for better responsiveness
+      let expandedHigh = maxSearchRange * 2;
+      const expandedBatchSize = 25; // Smaller batches for expanded search
+      const expandedBatchDelay = 10; // Longer delays for expanded search
+      
       while (foundIndex === -1 && expandedHigh <= 100000) { // Cap at 100k for safety
-        console.log(`🔍 Searching range ${high} to ${expandedHigh}...`);
+        console.log(`🔍 Searching range ${currentIndex} to ${expandedHigh}...`);
         
-        for (let i = high; i < expandedHigh; i++) {
-          try {
-            const child = externalChain.derive(i);
-            if (!child.publicKey) continue;
-            
-            const sha256Hash = sha256(child.publicKey);
-            const hash160 = ripemd160(sha256Hash);
-            const words = bech32.bech32.toWords(hash160);
-            const address = bech32.bech32.encode('bc', [0, ...words]);
-            
-            if (address === targetAddress) {
-              foundIndex = i;
-              break;
+        for (let i = currentIndex; i < expandedHigh; i += expandedBatchSize) {
+          const endIndex = Math.min(i + expandedBatchSize, expandedHigh);
+          
+          for (let j = i; j < endIndex; j++) {
+            try {
+              const child = externalChain.derive(j);
+              if (!child.publicKey) continue;
+              
+              const sha256Hash = sha256(child.publicKey);
+              const hash160 = ripemd160(sha256Hash);
+              const words = bech32.bech32.toWords(hash160);
+              const address = bech32.bech32.encode('bc', [0, ...words]);
+              
+              if (address === targetAddress) {
+                foundIndex = j;
+                break;
+              }
+            } catch (error) {
+              console.warn(`⚠️ Failed to derive address at index ${j}:`, error);
+              continue;
             }
-          } catch (error) {
-            console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
-            continue;
+          }
+          
+          if (foundIndex !== -1) break;
+          
+          // Delay between batches in expanded search
+          if (endIndex < expandedHigh) {
+            await new Promise(resolve => setTimeout(resolve, expandedBatchDelay));
           }
         }
         
-        high = expandedHigh;
+        currentIndex = expandedHigh;
         expandedHigh *= 2;
       }
     }
     
     if (foundIndex === -1) {
-      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${high})`);
+      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${currentIndex})`);
     }
     
     // Cache the result
@@ -1080,34 +1099,38 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
  * 
  * Performance improvements:
  * 1. Uses cached results from deriveAddressIndexFromAddress
- * 2. Processes addresses in parallel when possible
+ * 2. Processes addresses sequentially to prevent app freezing
  * 3. Provides better error handling and fallback logic
  * 4. Handles non-sequential address usage properly
+ * 5. Uses batching with small delays to prevent UI blocking
  */
 export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
   try {
     console.log(`🔍 Finding next unused address index for ${walletAddresses.length} addresses...`);
     
-    // Find all used indices by testing all wallet addresses
-    // Use Promise.allSettled to process addresses in parallel for better performance
-    const addressPromises = walletAddresses.map(async (address) => {
-      try {
-        const index = await deriveAddressIndexFromAddress(mnemonic, address);
-        return { success: true, index };
-      } catch (error) {
-        console.warn(`⚠️ Could not derive index for address ${address}:`, error);
-        return { success: false, index: -1 };
-      }
-    });
-    
-    const results = await Promise.allSettled(addressPromises);
+    // Process addresses sequentially in small batches to prevent app freezing
     const usedIndices = new Set<number>();
     let successfulDerivations = 0;
+    const batchSize = 5; // Process 5 addresses at a time
+    const batchDelay = 10; // 10ms delay between batches
     
-    for (const result of results) {
-      if (result.status === 'fulfilled' && result.value.success && result.value.index >= 0) {
-        usedIndices.add(result.value.index);
-        successfulDerivations++;
+    for (let i = 0; i < walletAddresses.length; i += batchSize) {
+      const batch = walletAddresses.slice(i, i + batchSize);
+      
+      // Process batch sequentially to avoid overwhelming the system
+      for (const address of batch) {
+        try {
+          const index = await deriveAddressIndexFromAddress(mnemonic, address);
+          usedIndices.add(index);
+          successfulDerivations++;
+        } catch (error) {
+          console.warn(`⚠️ Could not derive index for address ${address}:`, error);
+        }
+      }
+      
+      // Small delay between batches to prevent UI blocking
+      if (i + batchSize < walletAddresses.length) {
+        await new Promise(resolve => setTimeout(resolve, batchDelay));
       }
     }
     
