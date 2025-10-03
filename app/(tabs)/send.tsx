@@ -41,22 +41,10 @@ export default function SendScreen() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(() => {
-    // Initialize with stored fee settings if available, otherwise use defaults
-    return feeSettings?.customFeeRate || 5;
-  });
-  const [customFeeRate, setCustomFeeRate] = useState(() => {
-    return feeSettings?.customFeeRate?.toString() || '10';
-  });
-  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>(() => {
-    const presetType = feeSettings?.defaultPreset === 'economy' ? 'slow' : 
-                      feeSettings?.defaultPreset === 'standard' ? 'normal' : 
-                      feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom';
-    return presetType || 'normal';
-  });
-  const [enableRBF, setEnableRBF] = useState(() => {
-    return feeSettings?.enableRBF ?? true;
-  });
+  const [feeRate, setFeeRate] = useState(5);
+  const [customFeeRate, setCustomFeeRate] = useState('10');
+  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal');
+  const [enableRBF, setEnableRBF] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -701,6 +689,27 @@ export default function SendScreen() {
             >
               <Text style={styles.setupButtonText}>Setup Wallet</Text>
             </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </GradientBackground>
+    );
+  }
+
+  // Show loading state while fee settings are being loaded
+  if (feeSettingsLoading) {
+    return (
+      <GradientBackground theme={theme} variant="primary" direction="vertical">
+        <SafeAreaView style={styles.container}>
+          <Stack.Screen 
+            options={{ 
+              title: 'Send',
+              headerStyle: { backgroundColor: 'transparent' },
+              headerTintColor: theme.colors.text,
+            }} 
+          />
+          <View style={styles.emptyState}>
+            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>Loading...</Text>
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Preparing transaction settings</Text>
           </View>
         </SafeAreaView>
       </GradientBackground>
