@@ -1,9 +1,3 @@
-### **4. Child-Pays-for-Parent (CPFP)**
-- **Status**: ❌ **UI only, no implementation**
-- **Location**: `app/fee-settings.tsx:507-512`
-- **Issue**: Only has UI toggle, no backend logic to create CPFP transactions
-- **Impact**: CPFP fee bumping not functional
-
 ### **5. Custom Transaction Fees**
 - **Status**: ⚠️ **Partially functional**
 - **Location**: `app/fee-settings.tsx` and `app/(tabs)/send.tsx`
