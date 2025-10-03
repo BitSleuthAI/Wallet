@@ -24,16 +24,16 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     getPrivateKey: importedService.getPrivateKey,
-    testAddressGeneration: importedService.testAddressGeneration,
-    testSmartAddressGeneration: importedService.testSmartAddressGeneration,
-    findNextUnusedAddressIndex: importedService.findNextUnusedAddressIndex,
     findNextUnusedAddressIndexWithCycling: importedService.findNextUnusedAddressIndexWithCycling,
     generateAddressBatchForView: importedService.generateAddressBatchForView,
-    isAddressInWallet: importedService.isAddressInWallet
+    generateAddressesForView: importedService.generateAddressesForView,
+    isAddressInWallet: importedService.isAddressInWallet,
+    discoverUsedAddresses: importedService.discoverUsedAddresses,
+    getWalletData: importedService.getWalletData
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'testAddressGeneration', 'testSmartAddressGeneration', 'findNextUnusedAddressIndex', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'isAddressInWallet'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'generateAddressesForView', 'isAddressInWallet', 'discoverUsedAddresses', 'getWalletData'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -52,12 +52,12 @@ try {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
     getPrivateKey: async () => { throw new Error('Wallet service not available'); },
-    testAddressGeneration: async () => { throw new Error('Wallet service not available'); },
-    testSmartAddressGeneration: async () => { throw new Error('Wallet service not available'); },
-    findNextUnusedAddressIndex: async () => { throw new Error('Wallet service not available'); },
     findNextUnusedAddressIndexWithCycling: async () => { throw new Error('Wallet service not available'); },
     generateAddressBatchForView: async () => { throw new Error('Wallet service not available'); },
-    isAddressInWallet: async () => { throw new Error('Wallet service not available'); }
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
+    isAddressInWallet: async () => { throw new Error('Wallet service not available'); },
+    discoverUsedAddresses: async () => { throw new Error('Wallet service not available'); },
+    getWalletData: async () => { throw new Error('Wallet service not available'); }
   };
 }
 
@@ -90,7 +90,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [cryptoReady, setCryptoReady] = useState(false);
   const cryptoReadyRef = useRef(false);
   const [feeSettings, setFeeSettingsState] = useState({
-    defaultPreset: 'standard' as 'economy' | 'standard' | 'priority' | 'custom',
+    defaultPreset: 'economy' as 'economy' | 'standard' | 'priority' | 'custom',
     customFeeRate: 10,
     enableRBF: true,
     enableCPFP: false,
@@ -289,7 +289,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('feeSettings');
       return stored ? JSON.parse(stored) : {
-        defaultPreset: 'standard',
+        defaultPreset: 'economy',
         customFeeRate: 10,
         enableRBF: true,
         enableCPFP: false,

@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type FeeOption = {
@@ -359,38 +359,65 @@ export default function FeeBumpScreen() {
           </View>
         </View>
 
-        {/* Description */}
+        {/* RBF Educational Section */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
-          <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
-            We will replace this transaction with the one with a higher fee, so it should be mined faster. This is called RBF - Replace By Fee.
+          <View style={styles.rbfEducationHeader}>
+            <View style={[styles.rbfEducationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+              <Text style={[styles.rbfEducationEmoji, { color: theme.colors.primary }]}>🔄</Text>
+            </View>
+            <Text style={[styles.rbfEducationTitle, { color: theme.colors.text }]}>
+              How Replace-by-Fee (RBF) Works
+            </Text>
+          </View>
+          <Text style={[styles.rbfEducationDescription, { color: theme.colors.textSecondary }]}>
+            RBF allows you to replace an unconfirmed transaction with a new one paying a higher fee. This helps when your transaction is taking longer than expected to confirm.
           </Text>
-          
-          {/* RBF Validation Status */}
-          {isValidating && (
-            <View style={styles.validationStatus}>
-              <ActivityIndicator color={theme.colors.primary} size="small" />
-              <Text style={[styles.validationText, { color: theme.colors.textSecondary }]}>
-                Validating RBF capability...
-              </Text>
-            </View>
-          )}
-          
-          {!isValidating && validationError && (
-            <View style={styles.validationStatus}>
-              <Text style={[styles.validationError, { color: theme.colors.error }]}>
-                ⚠️ {validationError}
-              </Text>
-            </View>
-          )}
-          
-          {!isValidating && canReplace && !validationError && (
-            <View style={styles.validationStatus}>
-              <Text style={[styles.validationSuccess, { color: theme.colors.success }]}>
-                ✅ Transaction can be replaced with higher fee
-              </Text>
-            </View>
-          )}
+          <View style={styles.rbfEducationSteps}>
+            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
+              <Text style={{ fontWeight: '600' }}>Step 1:</Text> Original transaction sent with lower fee
+            </Text>
+            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
+              <Text style={{ fontWeight: '600' }}>Step 2:</Text> Notice transaction is stuck or moving slowly
+            </Text>
+            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
+              <Text style={{ fontWeight: '600' }}>Step 3:</Text> Create replacement with higher fee rate
+            </Text>
+            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
+              <Text style={{ fontWeight: '600' }}>Step 4:</Text> Network prioritizes the new transaction
+            </Text>
+          </View>
+          <View style={styles.rbfEducationNote}>
+            <Text style={[styles.rbfEducationNoteText, { color: theme.colors.textSecondary }]}>
+              💡 <Text style={{ fontWeight: '600' }}>Tip:</Text> You can also cancel a transaction by sending the money back to yourself
+            </Text>
+          </View>
         </View>
+          
+        {/* RBF Validation Status */}
+        {isValidating && (
+          <View style={styles.validationStatus}>
+            <ActivityIndicator color={theme.colors.primary} size="small" />
+            <Text style={[styles.validationText, { color: theme.colors.textSecondary }]}>
+              Validating RBF capability...
+            </Text>
+          </View>
+        )}
+        
+        {!isValidating && validationError && (
+          <View style={styles.validationStatus}>
+            <Text style={[styles.validationError, { color: theme.colors.error }]}>
+              ⚠️ {validationError}
+            </Text>
+          </View>
+        )}
+        
+        {!isValidating && canReplace && !validationError && (
+          <View style={styles.validationStatus}>
+            <Text style={[styles.validationSuccess, { color: theme.colors.success }]}>
+              ✅ Transaction can be replaced with higher fee
+            </Text>
+          </View>
+        )}
 
         {/* Fee Suggestions */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
@@ -630,6 +657,52 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     textAlign: 'left',
   },
+  rbfEducationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: platformStyles.spacing.md,
+  },
+  rbfEducationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: platformStyles.spacing.md,
+  },
+  rbfEducationEmoji: {
+    fontSize: 16,
+  },
+  rbfEducationTitle: {
+    ...platformStyles.typography.title,
+    fontSize: 18,
+  },
+  rbfEducationDescription: {
+    ...platformStyles.typography.body,
+    lineHeight: 22,
+    marginBottom: platformStyles.spacing.md,
+  },
+  rbfEducationSteps: {
+    marginBottom: platformStyles.spacing.md,
+  },
+  rbfEducationStep: {
+    ...platformStyles.typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: platformStyles.spacing.xs,
+  },
+  rbfEducationNote: {
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    padding: platformStyles.spacing.md,
+    borderRadius: platformStyles.borderRadius.medium,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFC107',
+  },
+  rbfEducationNoteText: {
+    ...platformStyles.typography.body,
+    fontSize: 13,
+    lineHeight: 18,
+  },
   validationStatus: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -699,9 +772,29 @@ const styles = StyleSheet.create({
     marginTop: platformStyles.spacing.sm,
     paddingHorizontal: platformStyles.spacing.sm,
   },
+  validationStatus: {
+    marginHorizontal: platformStyles.spacing.lg,
+    marginVertical: platformStyles.spacing.sm,
+    padding: platformStyles.spacing.md,
+    borderRadius: platformStyles.borderRadius.medium,
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: platformStyles.spacing.sm,
+  },
   validationText: {
     ...platformStyles.typography.caption,
     fontSize: 12,
+    fontWeight: '500',
+  },
+  validationError: {
+    ...platformStyles.typography.body,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  validationSuccess: {
+    ...platformStyles.typography.body,
+    fontSize: 14,
     fontWeight: '500',
   },
   feeHint: {

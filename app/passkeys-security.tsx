@@ -344,11 +344,11 @@ export default function PasskeysSecurityScreen() {
 
   const handleTestSecurity = async () => {
     Alert.alert(
-      'Test Security Features',
-      'This will run comprehensive tests to validate all security implementations. This may take a few moments.',
+      'Security Education & Assessment',
+      'This will check your current security setup and educate you about available enhancements. No sensitive data is accessed.',
       [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Run Tests', onPress: () => securityTestService.runTestsAndDisplayResults() }
+        { text: 'Learn About Security', onPress: () => securityTestService.runTestsAndDisplayResults() }
       ]
     );
   };
@@ -674,12 +674,12 @@ export default function PasskeysSecurityScreen() {
           <View style={styles.testHeader}>
             <TestTube color={theme.colors.primary} size={20} />
             <Text style={[styles.testTitle, { color: theme.colors.text }]}>
-              Security Testing
+              Security Education
             </Text>
           </View>
           
           <Text style={[styles.testDescription, { color: theme.colors.textSecondary }]}>
-            Validate that all security features are working correctly with cryptographic verification.
+            Learn about available security features and get personalized recommendations for your wallet protection.
           </Text>
           
           <View style={styles.testButtons}>
@@ -688,7 +688,7 @@ export default function PasskeysSecurityScreen() {
               onPress={handleTestSecurity}
             >
               <TestTube color="white" size={16} />
-              <Text style={styles.testButtonText}>Run Security Tests</Text>
+              <Text style={styles.testButtonText}>Security Education</Text>
             </TouchableOpacity>
             
             <TouchableOpacity

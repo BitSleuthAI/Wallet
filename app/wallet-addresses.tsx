@@ -2,33 +2,27 @@ import { useWallet } from '@/hooks/wallet-store';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useRouter } from 'expo-router';
-import { ArrowLeft, Copy, ExternalLink, RefreshCw } from 'lucide-react-native';
+import { ArrowLeft, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
-// Platform-specific wallet service imports
+// Wallet service import
 let walletService: any;
 try {
-  let importedService: any;
-  if (Platform.OS === 'web') {
-    console.log('🌐 Loading web wallet service in wallet addresses...');
-    importedService = require('@/services/wallet-service.web');
-  } else {
-    console.log('📱 Loading mobile wallet service in wallet addresses...');
-    importedService = require('@/services/wallet-service');
-  }
+  console.log('📦 Loading wallet service in wallet addresses...');
+  const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet addresses imported service keys:', Object.keys(importedService));
   
@@ -425,6 +419,61 @@ export default function WalletAddressesScreen() {
                 Gap Limit: Shows all used addresses + up to 20 unused addresses
               </Text>
             </View>
+            
+            {/* Bitcoin Address Types Educational Section */}
+            <View style={[styles.addressTypesEducationCard, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.addressTypesEducationHeader}>
+                <View style={[styles.addressTypesEducationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                  <Info color={theme.colors.primary} size={20} />
+                </View>
+                <Text style={[styles.addressTypesEducationTitle, { color: theme.colors.text }]}>
+                  Bitcoin Address Types
+                </Text>
+              </View>
+              <Text style={[styles.addressTypesEducationDescription, { color: theme.colors.textSecondary }]}>
+                Bitcoin addresses come in different formats, each with distinct characteristics:
+              </Text>
+              <View style={styles.addressTypesEducationTypes}>
+                <View style={styles.addressTypeItem}>
+                  <Text style={[styles.addressTypeName, { color: theme.colors.text }]}>
+                    Native SegWit (P2WPKH)
+                  </Text>
+                  <Text style={[styles.addressTypeExample, { color: theme.colors.textSecondary }]}>
+                    Example: bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh
+                  </Text>
+                  <Text style={[styles.addressTypeDesc, { color: theme.colors.textSecondary }]}>
+                    Modern format with lowest fees (~40% cheaper). Recommended standard.
+                  </Text>
+                </View>
+                <View style={styles.addressTypeItem}>
+                  <Text style={[styles.addressTypeName, { color: theme.colors.text }]}>
+                    Nested SegWit (P2SH)
+                  </Text>
+                  <Text style={[styles.addressTypeExample, { color: theme.colors.textSecondary }]}>
+                    Example: 3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy
+                  </Text>
+                  <Text style={[styles.addressTypeDesc, { color: theme.colors.textSecondary }]}>
+                    Compatible with older wallets. Medium fees.
+                  </Text>
+                </View>
+                <View style={styles.addressTypeItem}>
+                  <Text style={[styles.addressTypeName, { color: theme.colors.text }]}>
+                    Legacy (P2PKH)
+                  </Text>
+                  <Text style={[styles.addressTypeExample, { color: theme.colors.textSecondary }]}>
+                    Example: 1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa
+                  </Text>
+                  <Text style={[styles.addressTypeDesc, { color: theme.colors.textSecondary }]}>
+                    Original Bitcoin format. Highest fees but universal compatibility.
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.addressTypesEducationNote}>
+                <Text style={[styles.addressTypesEducationNoteText, { color: theme.colors.textSecondary }]}>
+                  💡 <Text style={{ fontWeight: '600' }}>Your wallet uses:</Text> Native SegWit addresses for optimal performance and fees
+                </Text>
+              </View>
+            </View>
           </>
         ) : (
           <View style={styles.emptyState}>
@@ -629,6 +678,77 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     lineHeight: 16,
+  },
+  addressTypesEducationCard: {
+    marginHorizontal: 20,
+    marginVertical: 16,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  addressTypesEducationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  addressTypesEducationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  addressTypesEducationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  addressTypesEducationDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 16,
+  },
+  addressTypesEducationTypes: {
+    marginBottom: 16,
+  },
+  addressTypeItem: {
+    marginBottom: 16,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.03)',
+  },
+  addressTypeName: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  addressTypeExample: {
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 6,
+    opacity: 0.8,
+  },
+  addressTypeDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  addressTypesEducationNote: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#22C55E',
+  },
+  addressTypesEducationNoteText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 
 });

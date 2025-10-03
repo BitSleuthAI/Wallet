@@ -29,17 +29,11 @@ import {
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
-// Platform-specific wallet service imports
+// Wallet service import
 let walletService: any;
 try {
-  let importedService: any;
-  if (Platform.OS === 'web') {
-    console.log('🌐 Loading web wallet service...');
-    importedService = require('@/services/wallet-service.web');
-  } else {
-    console.log('📱 Loading mobile wallet service...');
-    importedService = require('@/services/wallet-service');
-  }
+  console.log('📦 Loading wallet service...');
+  const importedService = require('@/services/wallet-service');
   
   console.log('📦 Imported service keys:', Object.keys(importedService));
   
@@ -319,6 +313,40 @@ export default function WalletSetupScreen() {
         <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>
           Create a new wallet or import an existing one to get started
         </Text>
+      </View>
+
+      {/* Bitcoin Wallet Types Educational Section */}
+      <View style={[styles.walletTypeEducationCard, { backgroundColor: theme.colors.surface }]}>
+        <View style={styles.walletTypeEducationHeader}>
+          <View style={[styles.walletTypeEducationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+            <Text style={[styles.walletTypeEducationEmoji, { color: theme.colors.primary }]}>₿</Text>
+          </View>
+          <Text style={[styles.walletTypeEducationTitle, { color: theme.colors.text }]}>
+            What Type of Bitcoin Wallet?
+          </Text>
+        </View>
+        <Text style={[styles.walletTypeEducationDescription, { color: theme.colors.textSecondary }]}>
+          BitSleuth uses Native SegWit (P2WPKH) wallets, which offer the best combination of security, efficiency, and future compatibility:
+        </Text>
+        <View style={styles.walletTypeEducationPoints}>
+          <Text style={[styles.walletTypeEducationPoint, { color: theme.colors.textSecondary }]}>
+            • <Text style={{ fontWeight: '600' }}>Lower Fees:</Text> SegWit transactions cost ~40% less than legacy addresses
+          </Text>
+          <Text style={[styles.walletTypeEducationPoint, { color: theme.colors.textSecondary }]}>
+            • <Text style={{ fontWeight: '600' }}>Modern Standard:</Text> Uses Bech32 format (bc1q...) addresses
+          </Text>
+          <Text style={[styles.walletTypeEducationPoint, { color: theme.colors.textSecondary }]}>
+            • <Text style={{ fontWeight: '600' }}>Better Security:</Text> Signature data is separated from transaction data
+          </Text>
+          <Text style={[styles.walletTypeEducationPoint, { color: theme.colors.textSecondary }]}>
+            • <Text style={{ fontWeight: '600' }}>Future-Proof:</Text> Fully compatible with Lightning Network and Layer 2 solutions
+          </Text>
+        </View>
+        <View style={styles.walletTypeEducationNote}>
+          <Text style={[styles.walletTypeEducationNoteText, { color: theme.colors.textSecondary }]}>
+            💡 <Text style={{ fontWeight: '600' }}>Did you know?</Text> Native SegWit wallets are the modern standard recommended by Bitcoin Core
+          </Text>
+        </View>
       </View>
 
       <View style={styles.options}>
@@ -1243,5 +1271,63 @@ const styles = StyleSheet.create({
   },
   confirmationWordContainer: {
     marginBottom: 16,
+  },
+  walletTypeEducationCard: {
+    marginTop: 20,
+    marginBottom: 20,
+    padding: 16,
+    borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  walletTypeEducationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  walletTypeEducationIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  walletTypeEducationEmoji: {
+    fontSize: 16,
+  },
+  walletTypeEducationTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  walletTypeEducationDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  walletTypeEducationPoints: {
+    marginBottom: 12,
+  },
+  walletTypeEducationPoint: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  walletTypeEducationNote: {
+    backgroundColor: 'rgba(255, 193, 7, 0.1)',
+    padding: 12,
+    borderRadius: 8,
+    borderLeftWidth: 3,
+    borderLeftColor: '#FFC107',
+  },
+  walletTypeEducationNoteText: {
+    fontSize: 13,
+    lineHeight: 18,
   },
 });

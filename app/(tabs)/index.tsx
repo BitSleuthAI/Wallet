@@ -130,6 +130,14 @@ export default function WalletScreen() {
     markFeedbackPromptDismissed();
   }, [markFeedbackPromptDismissed]);
 
+  // Memoize wallet data early to ensure consistent hook order
+  const walletDataForList = useMemo(() => {
+    if (!wallets || !Array.isArray(wallets)) {
+      return [{ type: 'add' as const }];
+    }
+    return [...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }];
+  }, [wallets]);
+
   // Show loading state while wallet is being loaded
   if (isLoading) {
     return (
@@ -248,7 +256,7 @@ export default function WalletScreen() {
             decelerationRate="fast"
             snapToInterval={336} // 320 (card width) + 16 (margin)
             snapToAlignment="start"
-            data={useMemo(() => [...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }], [wallets])}
+            data={walletDataForList}
             keyExtractor={(item, index) => `${item.type}-${index}`}
             renderItem={useCallback(({ item }) => {
               if (item.type === 'add') {
