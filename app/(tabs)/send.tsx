@@ -927,29 +927,25 @@ export default function SendScreen() {
                     placeholderTextColor={theme.colors.textSecondary}
                     value={customFeeRate}
                     onChangeText={(text) => {
+                      // Always update customFeeRate to keep the input responsive
+                      setCustomFeeRate(text);
+                      
                       const rate = parseFloat(text);
                       if (!isNaN(rate) && rate > 0) {
                         // Validate against max fee rate from settings
                         const maxRate = feeSettings.maxFeeRate;
                         if (rate <= maxRate) {
-                          // Only update both states if the rate is valid
-                          setCustomFeeRate(text);
+                          // Update feeRate only if the rate is valid
                           setFeeRate(rate);
                         } else {
-                          // Don't update customFeeRate state if it exceeds maximum
+                          // Show alert to user about the limit but don't prevent typing
                           console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
-                          // Show alert to user about the limit
                           Alert.alert(
                             'Fee Rate Too High',
                             `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
                             [{ text: 'OK' }]
                           );
-                          // Don't update either state - keep them at previous valid values
-                          return; // Exit early to prevent state update
                         }
-                      } else {
-                        // Allow updating customFeeRate for non-numeric or zero values (for editing)
-                        setCustomFeeRate(text);
                       }
                     }}
                     keyboardType="numeric"
