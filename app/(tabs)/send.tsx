@@ -931,29 +931,32 @@ export default function SendScreen() {
                   onPress={() => {
                     setUserHasInteractedWithFees(true);
                     
-                    // Validate custom fee rate before setting the selected type
+                    // Always set to custom type first
+                    setSelectedFeeType('custom');
+                    
+                    // Validate custom fee rate before updating feeRate
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
                       const rate = parseFloat(customFeeRate);
-                      // Validate against max fee rate before setting (with null check)
-                      const maxRate = feeSettings?.maxFeeRate || 100; // Fallback to 100 if feeSettings is undefined
+                      // Validate against max fee rate with proper null check
+                      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                       if (rate <= maxRate) {
-                        // Valid rate - set both the type and the rate
-                        setSelectedFeeType('custom');
+                        // Valid rate - update the fee rate
                         setFeeRate(rate);
                         setHasShownFeeRateAlert(false);
                       } else {
-                        // Invalid rate - show alert and don't change the selection
-                        Alert.alert(
-                          'Fee Rate Too High',
-                          `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
-                          [{ text: 'OK' }]
-                        );
-                        setHasShownFeeRateAlert(true);
-                        // Don't change the selected type or fee rate - keep current selection
+                        // Invalid rate - show alert and use current fee rate
+                        if (!hasShownFeeRateAlert) {
+                          Alert.alert(
+                            'Fee Rate Too High',
+                            `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
+                            [{ text: 'OK' }]
+                          );
+                          setHasShownFeeRateAlert(true);
+                        }
+                        // Keep current fee rate, don't update it
                       }
                     } else {
-                      // No valid custom rate entered - set to custom type and use current customFeeRate or fallback
-                      setSelectedFeeType('custom');
+                      // No valid custom rate entered - use fallback rate
                       const fallbackRate = customFeeRate && !isNaN(parseFloat(customFeeRate)) 
                         ? parseFloat(customFeeRate) 
                         : 10; // Default fallback rate
@@ -984,30 +987,35 @@ export default function SendScreen() {
                       setCustomFeeRate(text);
                       setUserHasInteractedWithFees(true);
                       
-                      const rate = parseFloat(text);
-                      if (!isNaN(rate) && rate > 0) {
-                        // Validate against max fee rate from settings (with null check)
-                        const maxRate = feeSettings?.maxFeeRate || 100; // Fallback to 100 if feeSettings is undefined
-                        if (rate <= maxRate) {
-                          // Update feeRate only if the rate is valid
-                          setFeeRate(rate);
-                          // Reset alert flag when entering valid range
-                          setHasShownFeeRateAlert(false);
-                        } else {
-                          // Only show alert once per invalid session
-                          if (!hasShownFeeRateAlert) {
-                            console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
-                            Alert.alert(
-                              'Fee Rate Too High',
-                              `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
-                              [{ text: 'OK' }]
-                            );
-                            setHasShownFeeRateAlert(true);
+                      // Only update feeRate if we're currently in custom mode
+                      if (selectedFeeType === 'custom') {
+                        const rate = parseFloat(text);
+                        if (!isNaN(rate) && rate > 0) {
+                          // Validate against max fee rate with proper null check
+                          const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                          if (rate <= maxRate) {
+                            // Update feeRate only if the rate is valid
+                            setFeeRate(rate);
+                            // Reset alert flag when entering valid range
+                            setHasShownFeeRateAlert(false);
+                          } else {
+                            // Only show alert once per invalid session
+                            if (!hasShownFeeRateAlert) {
+                              console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
+                              Alert.alert(
+                                'Fee Rate Too High',
+                                `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
+                                [{ text: 'OK' }]
+                              );
+                              setHasShownFeeRateAlert(true);
+                            }
+                            // Don't update feeRate for invalid values
                           }
+                        } else {
+                          // Reset alert flag when clearing or entering invalid format
+                          setHasShownFeeRateAlert(false);
+                          // Don't update feeRate for invalid values
                         }
-                      } else {
-                        // Reset alert flag when clearing or entering invalid format
-                        setHasShownFeeRateAlert(false);
                       }
                     }}
                     keyboardType="numeric"
