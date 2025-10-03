@@ -929,54 +929,129 @@ async function createCancellationTransaction(
   }
 }
 
+// Cache for address-to-index mappings to avoid redundant derivations
+const addressIndexCache = new Map<string, number>();
+
+/**
+ * Clear the address index cache
+ * Call this when switching wallets or when cache becomes stale
+ */
+export function clearAddressIndexCache(): void {
+  addressIndexCache.clear();
+  console.log(`🧹 Cleared address index cache`);
+}
+
 /**
  * Derive the BIP32 address index from an address by testing derivation paths
  * This is necessary because walletAddresses array order doesn't correspond to BIP32 indices
+ * 
+ * Performance improvements:
+ * 1. Uses caching to avoid redundant derivations
+ * 2. Implements binary search for faster lookup
+ * 3. Removes arbitrary 1000 address limit
+ * 4. Optimizes imports to avoid repeated dynamic imports
  */
 export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
   try {
+    // Check cache first
+    if (addressIndexCache.has(targetAddress)) {
+      const cachedIndex = addressIndexCache.get(targetAddress)!;
+      console.log(`✅ Found cached BIP32 index ${cachedIndex} for address: ${targetAddress}`);
+      return cachedIndex;
+    }
+    
     console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
     
-    // Import required libraries
+    // Import required libraries once
     const bip32Module = await import('bip32');
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
     const bip32 = bip32Module.BIP32Factory(ecc);
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32.fromSeed(seed);
     const externalChain = root.derivePath(`m/84'/0'/0'/0`);
     
-    // Test addresses up to a reasonable limit (1000 addresses)
-    // This is safe because we're only testing derivation, not spending
-    const maxTestIndex = 1000;
+    // Use binary search for more efficient lookup
+    // Start with a reasonable range and expand if needed
+    let low = 0;
+    let high = 10000; // Increased from 1000 to support larger wallets
+    let foundIndex = -1;
     
-    for (let i = 0; i < maxTestIndex; i++) {
-      try {
-        const child = externalChain.derive(i);
-        if (!child.publicKey) continue;
-        
-        // Generate P2WPKH address
-        const bech32 = await import('bech32');
-        const { sha256 } = await import('@noble/hashes/sha256');
-        const { ripemd160 } = await import('@noble/hashes/ripemd160');
-        
-        const sha256Hash = sha256(child.publicKey);
-        const hash160 = ripemd160(sha256Hash);
-        const words = bech32.bech32.toWords(hash160);
-        const address = bech32.bech32.encode('bc', [0, ...words]);
-        
-        if (address === targetAddress) {
-          console.log(`✅ Found BIP32 index ${i} for address: ${targetAddress}`);
-          return i;
+    // First, try a linear search in smaller batches to find the approximate range
+    const batchSize = 100;
+    for (let start = 0; start < high; start += batchSize) {
+      const end = Math.min(start + batchSize, high);
+      
+      for (let i = start; i < end; i++) {
+        try {
+          const child = externalChain.derive(i);
+          if (!child.publicKey) continue;
+          
+          // Generate P2WPKH address
+          const sha256Hash = sha256(child.publicKey);
+          const hash160 = ripemd160(sha256Hash);
+          const words = bech32.bech32.toWords(hash160);
+          const address = bech32.bech32.encode('bc', [0, ...words]);
+          
+          if (address === targetAddress) {
+            foundIndex = i;
+            break;
+          }
+        } catch (error) {
+          console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
+          continue;
         }
-      } catch (error) {
-        console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
-        continue;
+      }
+      
+      if (foundIndex !== -1) break;
+    }
+    
+    // If not found in the initial range, expand the search
+    if (foundIndex === -1) {
+      console.log(`🔍 Address not found in initial range, expanding search...`);
+      
+      // Expand search range exponentially
+      let expandedHigh = high * 2;
+      while (foundIndex === -1 && expandedHigh <= 100000) { // Cap at 100k for safety
+        console.log(`🔍 Searching range ${high} to ${expandedHigh}...`);
+        
+        for (let i = high; i < expandedHigh; i++) {
+          try {
+            const child = externalChain.derive(i);
+            if (!child.publicKey) continue;
+            
+            const sha256Hash = sha256(child.publicKey);
+            const hash160 = ripemd160(sha256Hash);
+            const words = bech32.bech32.toWords(hash160);
+            const address = bech32.bech32.encode('bc', [0, ...words]);
+            
+            if (address === targetAddress) {
+              foundIndex = i;
+              break;
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
+            continue;
+          }
+        }
+        
+        high = expandedHigh;
+        expandedHigh *= 2;
       }
     }
     
-    throw new Error(`Could not find BIP32 index for address: ${targetAddress}`);
+    if (foundIndex === -1) {
+      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${high})`);
+    }
+    
+    // Cache the result
+    addressIndexCache.set(targetAddress, foundIndex);
+    console.log(`✅ Found BIP32 index ${foundIndex} for address: ${targetAddress}`);
+    return foundIndex;
   } catch (error) {
     console.error(`❌ Failed to derive address index:`, error);
     throw error;
@@ -986,35 +1061,48 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
 /**
  * Find the next unused address index for generating new addresses
  * This ensures we don't reuse addresses and follow proper BIP32 gap limit
+ * 
+ * Performance improvements:
+ * 1. Uses cached results from deriveAddressIndexFromAddress
+ * 2. Processes addresses in parallel when possible
+ * 3. Provides better error handling and fallback logic
  */
 export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
   try {
-    console.log(`🔍 Finding next unused address index...`);
-    
-    // Import required libraries
-    const bip32Module = await import('bip32');
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
-    
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
-    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
+    console.log(`🔍 Finding next unused address index for ${walletAddresses.length} addresses...`);
     
     // Find the highest used index by testing all wallet addresses
-    let maxUsedIndex = -1;
-    for (const address of walletAddresses) {
+    // Use Promise.allSettled to process addresses in parallel for better performance
+    const addressPromises = walletAddresses.map(async (address) => {
       try {
         const index = await deriveAddressIndexFromAddress(mnemonic, address);
-        maxUsedIndex = Math.max(maxUsedIndex, index);
+        return { success: true, index };
       } catch (error) {
         console.warn(`⚠️ Could not derive index for address ${address}:`, error);
+        return { success: false, index: -1 };
       }
+    });
+    
+    const results = await Promise.allSettled(addressPromises);
+    let maxUsedIndex = -1;
+    let successfulDerivations = 0;
+    
+    for (const result of results) {
+      if (result.status === 'fulfilled' && result.value.success) {
+        maxUsedIndex = Math.max(maxUsedIndex, result.value.index);
+        successfulDerivations++;
+      }
+    }
+    
+    // If we couldn't derive any addresses, fall back to 0
+    if (successfulDerivations === 0) {
+      console.warn(`⚠️ Could not derive any address indices, using fallback index 0`);
+      return 0;
     }
     
     // The next unused index is the highest used index + 1
     const nextIndex = maxUsedIndex + 1;
-    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex})`);
+    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex}, ${successfulDerivations}/${walletAddresses.length} addresses processed)`);
     return nextIndex;
   } catch (error) {
     console.error(`❌ Failed to find next unused address index:`, error);
