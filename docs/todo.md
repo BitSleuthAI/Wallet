@@ -1,12 +1,3 @@
-### **8. Passkeys & Security Keys**
-- **Status**: ❌ **Mock implementation**
-- **Location**: `app/passkeys-security.tsx:122-247`
-- **Issue**: 
-  - Web implementation uses mock WebAuthn with hardcoded challenge
-  - Mobile implementation just registers device biometric without actual cryptographic verification
-  - FIDO key registration is simulated without hardware verification
-- **Impact**: Security keys don't provide actual cryptographic security
-
 ### **9. Multi-Factor Authentication (MFA)**
 - **Status**: ❌ **UI only**
 - **Location**: `app/passkeys-security.tsx:367-381`
