@@ -157,7 +157,7 @@ export default function SendScreen() {
         setFeeRate(fallbackRate);
       }
     }
-  }, [feeSettings, feeSettingsLoading, feeEstimates]);
+  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
