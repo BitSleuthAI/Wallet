@@ -13,26 +13,26 @@ import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    Clipboard,
-    KeyboardAvoidingView,
-    Linking,
-    Modal,
-    Platform,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Clipboard,
+  KeyboardAvoidingView,
+  Linking,
+  Modal,
+  Platform,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
-// Wallet service import
+// Wallet service import with platform detection
 let walletService: any;
 try {
-  console.log('📦 Loading wallet service...');
+  console.log('📦 Loading wallet service for platform:', Platform.OS);
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Imported service keys:', Object.keys(importedService));
@@ -53,9 +53,9 @@ try {
     throw new Error(`Missing wallet service functions: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully');
+  console.log('✅ Wallet service loaded successfully for', Platform.OS);
 } catch (error) {
-  console.error('❌ Failed to load wallet service:', error);
+  console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
   // Provide a minimal fallback
   walletService = {
     generateMnemonic: () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',

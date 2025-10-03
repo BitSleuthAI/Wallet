@@ -6,11 +6,12 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Platform } from 'react-native';
 
-// Wallet service imports
+// Wallet service imports with platform detection
 let walletService: any;
 try {
-  console.log('📱 Loading mobile wallet service in wallet store...');
+  console.log('📦 Loading wallet service in wallet store for platform:', Platform.OS);
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet store imported service keys:', Object.keys(importedService));
@@ -40,9 +41,9 @@ try {
     throw new Error(`Missing wallet service functions in store: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully in wallet store');
+  console.log('✅ Wallet service loaded successfully in wallet store for', Platform.OS);
 } catch (error) {
-  console.error('❌ Failed to load wallet service in wallet store:', error);
+  console.error('❌ Failed to load wallet service in wallet store for', Platform.OS, ':', error);
   // Provide a minimal fallback
   walletService = {
     generateMnemonic: async () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',

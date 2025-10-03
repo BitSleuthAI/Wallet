@@ -18,10 +18,10 @@ import {
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
-// Wallet service import
+// Wallet service import with platform detection
 let walletService: any;
 try {
-  console.log('📦 Loading wallet service in wallet addresses...');
+  console.log('📦 Loading wallet service in wallet addresses for platform:', Platform.OS);
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet addresses imported service keys:', Object.keys(importedService));
@@ -42,9 +42,9 @@ try {
     throw new Error(`Missing wallet service functions in addresses: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully in wallet addresses');
+  console.log('✅ Wallet service loaded successfully in wallet addresses for', Platform.OS);
 } catch (error) {
-  console.error('❌ Failed to load wallet service in wallet addresses:', error);
+  console.error('❌ Failed to load wallet service in wallet addresses for', Platform.OS, ':', error);
   // Provide a minimal fallback
   walletService = {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
