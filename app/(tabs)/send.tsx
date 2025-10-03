@@ -79,14 +79,14 @@ export default function SendScreen() {
       const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}-${feeSettings.enableRBF}`;
       if (lastAppliedFeeSettings !== settingsKey) {
         // Only reset user interaction if this is the initial load (lastAppliedFeeSettings is null)
-        // or if the user hasn't interacted yet (preserving user's manual fee selections)
-        if (lastAppliedFeeSettings === null || !userHasInteractedWithFees) {
+        // Never reset user interaction if user has already interacted with fees
+        if (lastAppliedFeeSettings === null) {
           setUserHasInteractedWithFees(false);
         }
         setLastAppliedFeeSettings(settingsKey);
       }
     }
-  }, [feeSettings, lastAppliedFeeSettings, userHasInteractedWithFees]);
+  }, [feeSettings, lastAppliedFeeSettings]);
 
   // Load fee estimates on component mount and wallet change
   useEffect(() => {
@@ -157,7 +157,7 @@ export default function SendScreen() {
         setFeeRate(fallbackRate);
       }
     }
-  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
+  }, [feeSettings, feeSettingsLoading, feeEstimates]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
