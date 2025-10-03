@@ -966,10 +966,8 @@ export default function SendScreen() {
                         // Keep current fee rate, don't update it
                       }
                     } else {
-                      // No valid custom rate entered - use fallback rate
-                      const fallbackRate = customFeeRate && !isNaN(parseFloat(customFeeRate)) 
-                        ? parseFloat(customFeeRate) 
-                        : 10; // Default fallback rate
+                      // No valid custom rate entered - use stored custom fee rate from settings
+                      const fallbackRate = feeSettings?.customFeeRate || 10;
                       setFeeRate(fallbackRate);
                     }
                   }}
