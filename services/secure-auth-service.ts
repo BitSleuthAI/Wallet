@@ -574,6 +574,25 @@ class SecureAuthService {
   }
 
   /**
+   * Perform constant-time comparison of two ArrayBuffers to prevent timing attacks
+   */
+  private timingSafeEqual(a: ArrayBuffer, b: ArrayBuffer): boolean {
+    if (a.byteLength !== b.byteLength) {
+      return false;
+    }
+
+    const viewA = new Uint8Array(a);
+    const viewB = new Uint8Array(b);
+    
+    let result = 0;
+    for (let i = 0; i < a.byteLength; i++) {
+      result |= viewA[i] ^ viewB[i];
+    }
+    
+    return result === 0;
+  }
+
+  /**
    * Verify WebAuthn registration response
    */
   private async verifyRegistrationResponse(
@@ -581,25 +600,13 @@ class SecureAuthService {
     originalChallenge: ArrayBuffer
   ): Promise<boolean> {
     try {
-      // In a real implementation, this would verify the attestation object
-      // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(response.response.clientDataJSON);
+      // Decode base64-encoded clientDataJSON before parsing
+      const clientDataJSONString = atob(response.response.clientDataJSON);
+      const clientDataJSON = JSON.parse(clientDataJSONString);
       
-      // Verify challenge matches
-      const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
-      const originalChallengeArray = new Uint8Array(originalChallenge);
-      
-      if (responseChallenge.length !== originalChallengeArray.length) {
-        return false;
-      }
-      
-      for (let i = 0; i < responseChallenge.length; i++) {
-        if (responseChallenge[i] !== originalChallengeArray[i]) {
-          return false;
-        }
-      }
-      
-      return true;
+      // Verify challenge matches using constant-time comparison
+      const responseChallenge = this.base64ToArrayBuffer(clientDataJSON.challenge);
+      return this.timingSafeEqual(responseChallenge, originalChallenge);
     } catch (error) {
       console.error('❌ Error verifying registration response:', error);
       return false;
@@ -614,25 +621,13 @@ class SecureAuthService {
     originalChallenge: ArrayBuffer
   ): Promise<boolean> {
     try {
-      // In a real implementation, this would verify the signature
-      // and check the challenge matches the original
-      const clientDataJSON = JSON.parse(response.response.clientDataJSON);
+      // Decode base64-encoded clientDataJSON before parsing
+      const clientDataJSONString = atob(response.response.clientDataJSON);
+      const clientDataJSON = JSON.parse(clientDataJSONString);
       
-      // Verify challenge matches
-      const responseChallenge = new Uint8Array(this.base64ToArrayBuffer(clientDataJSON.challenge));
-      const originalChallengeArray = new Uint8Array(originalChallenge);
-      
-      if (responseChallenge.length !== originalChallengeArray.length) {
-        return false;
-      }
-      
-      for (let i = 0; i < responseChallenge.length; i++) {
-        if (responseChallenge[i] !== originalChallengeArray[i]) {
-          return false;
-        }
-      }
-      
-      return true;
+      // Verify challenge matches using constant-time comparison
+      const responseChallenge = this.base64ToArrayBuffer(clientDataJSON.challenge);
+      return this.timingSafeEqual(responseChallenge, originalChallenge);
     } catch (error) {
       console.error('❌ Error verifying authentication response:', error);
       return false;
