@@ -11,17 +11,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -45,6 +45,7 @@ export default function SendScreen() {
   const [feeRate, setFeeRate] = useState(5);
   const [customFeeRate, setCustomFeeRate] = useState('10');
   const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal');
+  const [enableRBF, setEnableRBF] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
@@ -166,6 +167,7 @@ export default function SendScreen() {
                       feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
     setSelectedFeeType(presetType);
     setCustomFeeRate(feeSettings.customFeeRate.toString());
+    setEnableRBF(feeSettings.enableRBF);
   }, [feeSettings, feeSettingsLoading, userHasInteractedWithFees]);
 
   // Fee rate updates - handles both initial load and network estimate updates
@@ -586,9 +588,9 @@ export default function SendScreen() {
           to: truncatedAddress,
           amount: amountInBTC,
           feeRate,
-          enableRBF: feeSettings?.enableRBF ?? false,
+          enableRBF,
           network: 'mainnet',
-          enhancedSecurity: enhancedSecurityRequired
+          enhancedSecurity: isEnhancedSecurityRequired
         });
       
       // Send the real transaction
@@ -618,7 +620,7 @@ export default function SendScreen() {
         feeRate,
         currentWallet.mnemonic,
         addressIndex,
-        feeSettings?.enableRBF ?? false,
+        enableRBF,
         selected.length > 0 ? selected : undefined,
         currentWallet.addresses
       );
@@ -798,7 +800,7 @@ export default function SendScreen() {
       
       const recipientPreview = recipientAddress.slice(0, 30);
       const feeRateText = feeRate.toString();
-      const rbfStatus = (feeSettings?.enableRBF ?? false) ? 'Enabled' : 'Disabled';
+      const rbfStatus = enableRBF ? 'Enabled' : 'Disabled';
       
       const reviewMessage = `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
         `📤 Send: ${displayAmount}\n` +
@@ -1304,12 +1306,8 @@ export default function SendScreen() {
                 <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>Replace-by-fee allows you to increase the fee later</Text>
               </View>
               <Switch
-                value={feeSettings?.enableRBF ?? false}
-                onValueChange={(value) => {
-                  if (feeSettings) {
-                    setFeeSettings({ ...feeSettings, enableRBF: value });
-                  }
-                }}
+                value={enableRBF}
+                onValueChange={setEnableRBF}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor="white"
               />
