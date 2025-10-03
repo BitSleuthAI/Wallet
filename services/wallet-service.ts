@@ -260,13 +260,16 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
         return sequence < 0xFFFFFFFE;
       }) || false;
 
-      // Check for CPFP - if this transaction spends outputs from another transaction in our wallet
+      // Check for CPFP - only if this transaction spends outputs from an UNCONFIRMED parent transaction
       const isCPFPChild = tx.vin?.some((input: any) => {
-        return allTxs.has(input.txid); // Parent transaction exists in our transaction set
+        const parentTx = allTxs.get(input.txid);
+        // Only consider it CPFP if parent is unconfirmed (pending)
+        return parentTx && !parentTx.status?.confirmed;
       }) || false;
 
       // Check if this transaction has child transactions (CPFP parent)
-      const childTxids = Array.from(allTxs.values())
+      // Only consider it a CPFP parent if this transaction is unconfirmed
+      const childTxids = isConfirmed ? [] : Array.from(allTxs.values())
         .filter((childTx: any) => 
           childTx.vin?.some((input: any) => input.txid === tx.txid)
         )
