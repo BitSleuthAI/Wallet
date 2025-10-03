@@ -502,26 +502,16 @@ export default function SendScreen() {
         amountInBTC = parseFloat(amount) / bitcoinPrice;
       }
 
-      // Check if enhanced security is required for this transaction
-      const enhancedSecurityRequired = await isEnhancedSecurityRequired(amountInBTC);
+      // Always use enhanced security service to ensure MFA enforcement
+      console.log('🔐 Requesting transaction authentication with MFA enforcement...');
       
-      // Request appropriate level of authentication
-      let authResult: boolean;
-      if (enhancedSecurityRequired) {
-        console.log('🔐 Enhanced security required for transaction amount:', amountInBTC, 'BTC');
-        authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
-      } else {
-        console.log('🔐 Standard biometric authentication for transaction');
-        authResult = await authenticateForTransaction();
-      }
+      // Use the enhanced authentication service which properly enforces MFA settings
+      const authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
 
       if (!authResult) {
-        const authMessage = enhancedSecurityRequired 
-          ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
-          : 'Biometric authentication is required to send transactions.';
         Alert.alert(
           'Authentication Required',
-          authMessage,
+          'Transaction authentication failed. This may be due to:\n\n• Multi-factor authentication requirements\n• Security key verification needed\n• Biometric authentication requirements\n\nPlease ensure all required authentication factors are available and try again.',
           [{ text: 'OK' }]
         );
         return;
@@ -828,27 +818,19 @@ export default function SendScreen() {
             text: 'Send Bitcoin', 
             style: 'destructive',
             onPress: async () => {
-            // Check if enhanced security is required for this transaction
+            // Calculate amount for authentication
             const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
-            const enhancedSecurityRequired = await isEnhancedSecurityRequired(amountInBTC);
             
-            // Request appropriate level of authentication
-            let authResult: boolean;
-            if (enhancedSecurityRequired) {
-              console.log('🔐 Enhanced security required for transaction review');
-              authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
-            } else {
-              console.log('🔐 Standard biometric authentication for transaction review');
-              authResult = await authenticateForTransaction();
-            }
+            // Always use enhanced security service to ensure MFA enforcement
+            console.log('🔐 Requesting review transaction authentication with MFA enforcement...');
+            
+            // Use the enhanced authentication service which properly enforces MFA settings
+            const authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
 
             if (!authResult) {
-              const authMessage = enhancedSecurityRequired 
-                ? 'Enhanced security authentication is required for this transaction. Please ensure your security key is accessible and try again.'
-                : 'Biometric authentication is required to send transactions.';
               Alert.alert(
                 'Authentication Required',
-                authMessage,
+                'Transaction review authentication failed. This may be due to:\n\n• Multi-factor authentication requirements\n• Security key verification needed\n• Biometric authentication requirements\n\nPlease ensure all required authentication factors are available and try again.',
                 [{ text: 'OK' }]
               );
               return;

@@ -654,13 +654,23 @@ export default function PasskeysSecurityScreen() {
             Validate that all security features are working correctly with cryptographic verification.
           </Text>
           
-          <TouchableOpacity
-            style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
-            onPress={handleTestSecurity}
-          >
-            <TestTube color="white" size={16} />
-            <Text style={styles.testButtonText}>Run Security Tests</Text>
-          </TouchableOpacity>
+          <View style={styles.testButtons}>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
+              onPress={handleTestSecurity}
+            >
+              <TestTube color="white" size={16} />
+              <Text style={styles.testButtonText}>Run Security Tests</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.colors.primary, marginTop: 12 }]}
+              onPress={() => router.push('/mfa-test')}
+            >
+              <Shield color="white" size={16} />
+              <Text style={styles.testButtonText}>Test MFA Enforcement</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         <View style={styles.bottomSpacing} />
@@ -969,5 +979,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  testButtons: {
+    gap: 8,
   },
 });
