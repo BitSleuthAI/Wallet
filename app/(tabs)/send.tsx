@@ -65,8 +65,9 @@ export default function SendScreen() {
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
   const [hasShownFeeRateAlert, setHasShownFeeRateAlert] = useState(false);
   const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
+  const [lastFeeEstimates, setLastFeeEstimates] = useState<any>(null);
 
-  // Reset user interaction state only when component mounts or fee settings change
+  // Reset user interaction state only when component mounts
   useEffect(() => {
     setUserHasInteractedWithFees(false);
     setHasShownFeeRateAlert(false);
@@ -92,6 +93,7 @@ export default function SendScreen() {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
+        setLastFeeEstimates(fees);
         
         // Load fee confidence data
         if (fees) {
@@ -119,43 +121,44 @@ export default function SendScreen() {
     loadFeeEstimates();
   }, [currentWallet]);
 
-  // Consolidated fee management effect - handles all fee rate initialization
-  // Only applies default settings when user hasn't manually selected fees
+  // Initial fee settings application - only runs once when settings first load
   useEffect(() => {
-    // Only proceed if fee settings have finished loading and we have valid settings
+    if (feeSettingsLoading || !feeSettings || userHasInteractedWithFees) return;
+
+    // Apply fee settings only on initial load or when settings change
+    const presetType = feeSettings.defaultPreset === 'economy' ? 'slow' : 
+                      feeSettings.defaultPreset === 'standard' ? 'normal' : 
+                      feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
+    setSelectedFeeType(presetType);
+    setCustomFeeRate(feeSettings.customFeeRate.toString());
+    setEnableRBF(feeSettings.enableRBF);
+  }, [feeSettings, feeSettingsLoading, userHasInteractedWithFees]);
+
+  // Fee rate updates - handles both initial load and network estimate updates
+  useEffect(() => {
     if (feeSettingsLoading || !feeSettings) return;
 
-    // Only apply fee settings if user hasn't manually interacted
-    if (!userHasInteractedWithFees) {
-      // Apply all fee settings when user hasn't interacted
-      const presetType = feeSettings.defaultPreset === 'economy' ? 'slow' : 
-                        feeSettings.defaultPreset === 'standard' ? 'normal' : 
-                        feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
-      setSelectedFeeType(presetType);
-      setCustomFeeRate(feeSettings.customFeeRate.toString());
-      setEnableRBF(feeSettings.enableRBF);
-      
-      // Set fee rate based on preset and available estimates
-      if (feeSettings.defaultPreset === 'custom') {
-        // For custom preset, always use the stored custom fee rate
-        setFeeRate(feeSettings.customFeeRate);
-      } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
-        // Only use estimates if all required values are available
-        const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
-                         feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
-                         feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
-                         feeEstimates.halfHourFee;
-        setFeeRate(presetFee);
-      } else {
-        // Use appropriate fallback rates for each preset when estimates aren't available yet
-        const fallbackRate = feeSettings.defaultPreset === 'economy' ? 1 :
-                           feeSettings.defaultPreset === 'standard' ? 5 :
-                           feeSettings.defaultPreset === 'priority' ? 15 :
-                           feeSettings.customFeeRate; // Only use customFeeRate for 'custom' preset
-        setFeeRate(fallbackRate);
-      }
+    // Always update fee rates based on current preset, even after user interaction
+    // This ensures users get updated network estimates while preserving their preset choice
+    if (feeSettings.defaultPreset === 'custom') {
+      // For custom preset, use the stored custom fee rate
+      setFeeRate(feeSettings.customFeeRate);
+    } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
+      // Use network estimates when available
+      const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
+                       feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
+                       feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
+                       feeEstimates.halfHourFee;
+      setFeeRate(presetFee);
+    } else {
+      // Use fallback rates when estimates aren't available
+      const fallbackRate = feeSettings.defaultPreset === 'economy' ? 1 :
+                         feeSettings.defaultPreset === 'standard' ? 5 :
+                         feeSettings.defaultPreset === 'priority' ? 15 :
+                         feeSettings.customFeeRate;
+      setFeeRate(fallbackRate);
     }
-  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
+  }, [feeSettings, feeSettingsLoading, feeEstimates]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -867,9 +870,9 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('slow');
                     setFeeRate(feeEstimates?.economyFee || 1);
+                    // Don't mark as user interaction for preset changes - allow automatic updates
                   }}
                 >
                   <Text style={[
@@ -891,9 +894,9 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('normal');
                     setFeeRate(feeEstimates?.halfHourFee || 5);
+                    // Don't mark as user interaction for preset changes - allow automatic updates
                   }}
                 >
                   <Text style={[
@@ -915,9 +918,9 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('fast');
                     setFeeRate(feeEstimates?.fastestFee || 15);
+                    // Don't mark as user interaction for preset changes - allow automatic updates
                   }}
                 >
                   <Text style={[
@@ -939,8 +942,6 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setUserHasInteractedWithFees(true);
-                    
                     // Always set to custom type first
                     setSelectedFeeType('custom');
                     
@@ -970,6 +971,9 @@ export default function SendScreen() {
                       const fallbackRate = feeSettings?.customFeeRate || 10;
                       setFeeRate(fallbackRate);
                     }
+                    
+                    // Mark as user interaction only when switching to custom mode
+                    setUserHasInteractedWithFees(true);
                   }}
                 >
                   <Text style={[
@@ -993,7 +997,6 @@ export default function SendScreen() {
                     onChangeText={(text) => {
                       // Always update customFeeRate to keep the input responsive
                       setCustomFeeRate(text);
-                      setUserHasInteractedWithFees(true);
                       
                       // Only update feeRate if we're currently in custom mode
                       if (selectedFeeType === 'custom') {
@@ -1024,6 +1027,9 @@ export default function SendScreen() {
                           setHasShownFeeRateAlert(false);
                           // Don't update feeRate for invalid values
                         }
+                        
+                        // Mark as user interaction only when typing in custom fee field
+                        setUserHasInteractedWithFees(true);
                       }
                     }}
                     keyboardType="numeric"
