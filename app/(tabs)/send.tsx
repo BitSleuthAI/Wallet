@@ -915,10 +915,10 @@ export default function SendScreen() {
                           [{ text: 'OK' }]
                         );
                         setHasShownFeeRateAlert(true);
-                        // Don't change the selected type or fee rate
+                        // Don't change the selected type or fee rate - keep current selection
                       }
                     } else {
-                      // No valid custom rate entered - still allow selection but don't update fee rate
+                      // No valid custom rate entered - allow selection but don't update fee rate
                       setSelectedFeeType('custom');
                     }
                   }}
