@@ -4,33 +4,33 @@ import { useWallet } from '@/hooks/wallet-store';
 import { CPFPOptions, CPFPRecommendation } from '@/types/wallet';
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import {
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Info,
-  RefreshCw,
-  TrendingUp,
-  Zap,
+    ArrowLeft,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Info,
+    RefreshCw,
+    TrendingUp,
+    Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function CPFPBumpScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, currentWallet } = useWallet();
+  const { theme, transactions, currentWallet, feeSettings } = useWallet();
   const [loading, setLoading] = useState<boolean>(true);
   const [validating, setValidating] = useState<boolean>(false);
   const [bumping, setBumping] = useState<boolean>(false);
@@ -109,13 +109,25 @@ export default function CPFPBumpScreen() {
   const performCPFP = async () => {
     if (!transaction || !currentWallet || !validationResult?.isValid) return;
     
+    // Validate fee rate against user's maximum setting
+    const feeRate = parseInt(targetFeeRate) || 15;
+    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+    
+    if (feeRate > maxRate) {
+      Alert.alert(
+        'Fee Rate Too High',
+        `Target fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`
+      );
+      return;
+    }
+    
     setBumping(true);
     try {
       console.log('🔄 Performing CPFP...');
       const { performCPFP } = await import('@/services/cpfp-service');
       
       const options: CPFPOptions = {
-        targetFeeRate: parseInt(targetFeeRate) || 15,
+        targetFeeRate: feeRate,
         maxChildFee: parseInt(maxChildFee) || 10000,
         includeUnconfirmed,
         customOutputs: customOutputs.length > 0 ? customOutputs : undefined,
@@ -391,6 +403,36 @@ export default function CPFPBumpScreen() {
                 sat/vB
               </Text>
             </View>
+            
+            {/* Fee Rate Validation Feedback */}
+            {targetFeeRate && (
+              <View style={styles.validationContainer}>
+                {(() => {
+                  const rate = parseInt(targetFeeRate);
+                  const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                  
+                  if (isNaN(rate) || rate <= 0) {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                        Please enter a valid fee rate
+                      </Text>
+                    );
+                  } else if (rate > maxRate) {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                        Cannot exceed {maxRate} sat/vB (your maximum fee rate setting)
+                      </Text>
+                    );
+                  } else {
+                    return (
+                      <Text style={[styles.validationText, { color: theme.colors.success }]}>
+                        Valid fee rate
+                      </Text>
+                    );
+                  }
+                })()}
+              </View>
+            )}
           </View>
 
           {/* CPFP Options */}
@@ -787,6 +829,14 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   inputUnit: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  validationContainer: {
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  validationText: {
     fontSize: 12,
     fontWeight: '500',
   },

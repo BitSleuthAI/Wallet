@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type FeeOption = {
@@ -28,7 +28,7 @@ type FeeOption = {
 
 export default function FeeBumpScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, currentWallet } = useWallet();
+  const { theme, transactions, currentWallet, feeSettings } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
@@ -149,15 +149,35 @@ export default function FeeBumpScreen() {
   const isValidFeeRate = () => {
     const currentRate = getCurrentFeeRate();
     const minRate = getMinimumFeeRate();
-    return currentRate >= minRate;
+    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+    
+    // Check minimum fee rate (RBF requirement)
+    if (currentRate < minRate) {
+      return false;
+    }
+    
+    // Check maximum fee rate (user setting)
+    if (currentRate > maxRate) {
+      return false;
+    }
+    
+    return true;
   };
 
   const handleCreateRBF = async () => {
     if (!isValidFeeRate()) {
-      Alert.alert(
-        'Invalid Fee Rate',
-        `The fee rate must be higher than ${getMinimumFeeRate()} sat/byte`
-      );
+      const currentRate = getCurrentFeeRate();
+      const minRate = getMinimumFeeRate();
+      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+      
+      let errorMessage = '';
+      if (currentRate < minRate) {
+        errorMessage = `The fee rate must be higher than ${minRate} sat/vB for RBF`;
+      } else if (currentRate > maxRate) {
+        errorMessage = `Fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`;
+      }
+      
+      Alert.alert('Invalid Fee Rate', errorMessage);
       return;
     }
 
@@ -456,6 +476,43 @@ export default function FeeBumpScreen() {
             </View>
           </TouchableOpacity>
           
+          {/* Custom Fee Validation Feedback */}
+          {selectedOption === 'Custom' && customFeeRate && (
+            <View style={styles.validationContainer}>
+              {(() => {
+                const rate = parseInt(customFeeRate);
+                const minRate = getMinimumFeeRate();
+                const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+                
+                if (isNaN(rate) || rate <= 0) {
+                  return (
+                    <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                      Please enter a valid fee rate
+                    </Text>
+                  );
+                } else if (rate < minRate) {
+                  return (
+                    <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                      Must be higher than {minRate} sat/vB for RBF
+                    </Text>
+                  );
+                } else if (rate > maxRate) {
+                  return (
+                    <Text style={[styles.validationText, { color: theme.colors.error }]}>
+                      Cannot exceed {maxRate} sat/vB (your maximum fee rate setting)
+                    </Text>
+                  );
+                } else {
+                  return (
+                    <Text style={[styles.validationText, { color: theme.colors.success }]}>
+                      Valid fee rate
+                    </Text>
+                  );
+                }
+              })()}
+            </View>
+          )}
+          
           <Text style={[styles.feeHint, { color: theme.colors.textSecondary }]}>
             The total fee rate (satoshi per byte) you want to pay should be higher than {getMinimumFeeRate()} sat/byte
           </Text>
@@ -635,6 +692,15 @@ const styles = StyleSheet.create({
   },
   customFeeUnit: {
     ...platformStyles.typography.body,
+  },
+  validationContainer: {
+    marginTop: platformStyles.spacing.sm,
+    paddingHorizontal: platformStyles.spacing.sm,
+  },
+  validationText: {
+    ...platformStyles.typography.caption,
+    fontSize: 12,
+    fontWeight: '500',
   },
   feeHint: {
     ...platformStyles.typography.caption,
