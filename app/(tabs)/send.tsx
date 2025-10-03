@@ -903,6 +903,7 @@ export default function SendScreen() {
                           `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
                           [{ text: 'OK' }]
                         );
+                        // Don't set the fee rate - keep it at the previous valid value
                       }
                     }
                   }}
@@ -926,15 +927,16 @@ export default function SendScreen() {
                     placeholderTextColor={theme.colors.textSecondary}
                     value={customFeeRate}
                     onChangeText={(text) => {
-                      setCustomFeeRate(text);
                       const rate = parseFloat(text);
                       if (!isNaN(rate) && rate > 0) {
                         // Validate against max fee rate from settings
                         const maxRate = feeSettings.maxFeeRate;
                         if (rate <= maxRate) {
+                          // Only update both states if the rate is valid
+                          setCustomFeeRate(text);
                           setFeeRate(rate);
                         } else {
-                          // Prevent setting fee rate that exceeds maximum
+                          // Don't update customFeeRate state if it exceeds maximum
                           console.warn(`Custom fee rate ${rate} exceeds maximum allowed rate ${maxRate}`);
                           // Show alert to user about the limit
                           Alert.alert(
@@ -942,8 +944,11 @@ export default function SendScreen() {
                             `Custom fee rate cannot exceed ${maxRate} sat/vB. Please enter a lower value.`,
                             [{ text: 'OK' }]
                           );
-                          // Don't set the fee rate - keep it at the previous valid value
+                          // Don't update either state - keep them at previous valid values
                         }
+                      } else {
+                        // Allow updating customFeeRate for non-numeric or zero values (for editing)
+                        setCustomFeeRate(text);
                       }
                     }}
                     keyboardType="numeric"
