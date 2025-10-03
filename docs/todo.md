@@ -1,9 +1,3 @@
-### **6. Auto-Adjust Fees**
-- **Status**: ❌ **UI only**
-- **Location**: `app/fee-settings.tsx:515-520`
-- **Issue**: Toggle exists but no logic to automatically adjust fees based on network conditions
-- **Impact**: Feature doesn't work
-
 ### **7. Fee Limits (Max Fee Rate/Dust Threshold)**
 - **Status**: ❌ **UI only**
 - **Location**: `app/fee-settings.tsx:523-592`
