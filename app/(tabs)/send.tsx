@@ -62,22 +62,43 @@ export default function SendScreen() {
   } | null>(null);
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
+  const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
 
-  // Update fee settings when they change in wallet store
+  // Consolidated fee management effect - prevents race conditions
   useEffect(() => {
-    // Only update if fee settings have finished loading
-    if (!feeSettingsLoading) {
+    const initializeFeeSettings = async () => {
+      // Only proceed if fee settings have finished loading
+      if (feeSettingsLoading) return;
+
+      // Update fee settings that don't conflict with user interactions
       setCustomFeeRate(feeSettings.customFeeRate.toString());
-      setSelectedFeeType(feeSettings.defaultPreset === 'economy' ? 'slow' : feeSettings.defaultPreset === 'standard' ? 'normal' : feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom');
       setEnableRBF(feeSettings.enableRBF);
       
-      // Only set fee rate to custom value if preset is 'custom'
-      if (feeSettings.defaultPreset === 'custom') {
-        setFeeRate(feeSettings.customFeeRate);
+      // Only update fee rate and selected type if user hasn't manually interacted
+      if (!userHasInteractedWithFees) {
+        const presetType = feeSettings.defaultPreset === 'economy' ? 'slow' : 
+                          feeSettings.defaultPreset === 'standard' ? 'normal' : 
+                          feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
+        setSelectedFeeType(presetType);
+        
+        // Set fee rate based on preset and available estimates
+        if (feeSettings.defaultPreset === 'custom') {
+          setFeeRate(feeSettings.customFeeRate);
+        } else if (feeEstimates) {
+          const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
+                           feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
+                           feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
+                           feeEstimates.halfHourFee;
+          setFeeRate(presetFee);
+        } else {
+          // Fallback when fee estimates are not available
+          setFeeRate(5);
+        }
       }
-      // For other presets, fee rate will be set by the fee estimates effect
-    }
-  }, [feeSettings, feeSettingsLoading]);
+    };
+
+    initializeFeeSettings();
+  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
 
   // Load fee estimates on component mount and wallet change only
   useEffect(() => {
@@ -111,25 +132,6 @@ export default function SendScreen() {
     
     loadFeeEstimates();
   }, [currentWallet]);
-
-  // Apply fee settings when they change (separate from fee estimates loading)
-  useEffect(() => {
-    if (!feeSettingsLoading && feeEstimates) {
-      // Apply saved fee settings to current fee rate
-      if (feeSettings.defaultPreset === 'custom') {
-        setFeeRate(feeSettings.customFeeRate);
-      } else {
-        const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
-                         feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
-                         feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
-                         feeEstimates.halfHourFee;
-        setFeeRate(presetFee);
-      }
-    } else if (!feeSettingsLoading && !feeEstimates) {
-      // Fallback when fee estimates are not available
-      setFeeRate(feeSettings.defaultPreset === 'custom' ? feeSettings.customFeeRate : 5);
-    }
-  }, [feeSettings, feeSettingsLoading, feeEstimates]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -820,6 +822,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
+                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('slow');
                     setFeeRate(feeEstimates?.economyFee || 1);
                   }}
@@ -843,6 +846,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
+                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('normal');
                     setFeeRate(feeEstimates?.halfHourFee || 5);
                   }}
@@ -866,6 +870,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
+                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('fast');
                     setFeeRate(feeEstimates?.fastestFee || 15);
                   }}
@@ -889,6 +894,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
+                    setUserHasInteractedWithFees(true);
                     setSelectedFeeType('custom');
                     if (customFeeRate && !isNaN(parseFloat(customFeeRate))) {
                       const rate = parseFloat(customFeeRate);
@@ -929,6 +935,7 @@ export default function SendScreen() {
                     onChangeText={(text) => {
                       // Always update customFeeRate to keep the input responsive
                       setCustomFeeRate(text);
+                      setUserHasInteractedWithFees(true);
                       
                       const rate = parseFloat(text);
                       if (!isNaN(rate) && rate > 0) {
