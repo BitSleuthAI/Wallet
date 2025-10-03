@@ -44,6 +44,7 @@ export default function CPFPBumpScreen() {
   const [includeUnconfirmed, setIncludeUnconfirmed] = useState<boolean>(true);
   const [customOutputs, setCustomOutputs] = useState<Array<{ address: string; amount: number }>>([]);
   const [sendToSelf, setSendToSelf] = useState<boolean>(true);
+  const [isCustomFeeRate, setIsCustomFeeRate] = useState<boolean>(false);
 
   useEffect(() => {
     if (txid && transactions) {
@@ -109,17 +110,18 @@ export default function CPFPBumpScreen() {
   const performCPFP = async () => {
     if (!transaction || !currentWallet || !validationResult?.isValid) return;
     
-    // Validate fee rate against user's maximum setting
     const feeRate = parseInt(targetFeeRate) || 15;
-    const maxRate = feeSettings?.maxFeeRate;
     
-    // Only validate if maxFeeRate is set and greater than 0
-    if (maxRate !== undefined && maxRate !== null && maxRate > 0 && feeRate > maxRate) {
-      Alert.alert(
-        'Fee Rate Too High',
-        `Target fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`
-      );
-      return;
+    // Only validate custom fee rates against maxFeeRate setting
+    if (isCustomFeeRate) {
+      const maxRate = feeSettings?.maxFeeRate;
+      if (maxRate !== undefined && maxRate !== null && maxRate > 0 && feeRate > maxRate) {
+        Alert.alert(
+          'Fee Rate Too High',
+          `Fee rate cannot exceed ${maxRate} sat/vB (your maximum fee rate setting)`
+        );
+        return;
+      }
     }
     
     setBumping(true);
@@ -192,7 +194,10 @@ export default function CPFPBumpScreen() {
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
-        onPress={() => setTargetFeeRate(feeRate.toString())}
+        onPress={() => {
+          setTargetFeeRate(feeRate.toString());
+          setIsCustomFeeRate(false);
+        }}
       >
         <View style={styles.presetHeader}>
           <View style={[styles.presetIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -394,7 +399,10 @@ export default function CPFPBumpScreen() {
                   },
                 ]}
                 value={targetFeeRate}
-                onChangeText={setTargetFeeRate}
+                onChangeText={(text) => {
+                  setTargetFeeRate(text);
+                  setIsCustomFeeRate(true);
+                }}
                 placeholder="Enter fee rate"
                 placeholderTextColor={theme.colors.textSecondary}
                 keyboardType="numeric"
@@ -405,8 +413,8 @@ export default function CPFPBumpScreen() {
               </Text>
             </View>
             
-            {/* Fee Rate Validation Feedback */}
-            {targetFeeRate && (
+            {/* Fee Rate Validation Feedback - Only for custom fee rates */}
+            {isCustomFeeRate && targetFeeRate && (
               <View style={styles.validationContainer}>
                 {(() => {
                   const rate = parseInt(targetFeeRate);
