@@ -3,11 +3,11 @@ import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSequence,
-    withSpring,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 interface PremiumButtonProps {
@@ -55,16 +55,15 @@ export default function PremiumButton({
   const handlePress = useCallback(async () => {
     if (disabled || loading) return;
 
-    // Success animation
-    scale.value = withSequence(
-      withSpring(1.05, { damping: 10, stiffness: 300 }),
-      withSpring(1, { damping: 15, stiffness: 400 })
-    );
-
-    HapticService.success();
-
     try {
       await onPress();
+      
+      // Success animation - only triggered after successful completion
+      scale.value = withSequence(
+        withSpring(1.05, { damping: 10, stiffness: 300 }),
+        withSpring(1, { damping: 15, stiffness: 400 })
+      );
+      HapticService.success();
     } catch (error) {
       // Error feedback animation
       opacity.value = withSequence(
