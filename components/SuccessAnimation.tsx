@@ -30,7 +30,7 @@ export default function SuccessAnimation({
 
   useEffect(() => {
     // Trigger haptic feedback
-    setTimeout(() => HapticService.success(), 100);
+    const hapticTimeout = setTimeout(() => HapticService.success(), 100);
 
     // Main circle animation
     scale.value = withSpring(1, { damping: 10, stiffness: 200 });
@@ -60,10 +60,19 @@ export default function SuccessAnimation({
     );
 
     // Call onComplete after animation
+    let completeTimeout: NodeJS.Timeout | undefined;
     if (onComplete) {
-      setTimeout(onComplete, 1000);
+      completeTimeout = setTimeout(onComplete, 1000);
     }
-  }, [onComplete]);
+
+    // Cleanup function to clear timeouts
+    return () => {
+      clearTimeout(hapticTimeout);
+      if (completeTimeout) {
+        clearTimeout(completeTimeout);
+      }
+    };
+  }, []); // Empty dependency array - animation should only run once on mount
 
   const circleStyle = useAnimatedStyle(() => ({
     transform: [
