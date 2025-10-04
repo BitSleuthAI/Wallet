@@ -3,12 +3,12 @@ import { Check } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withDelay,
-    withSequence,
-    withSpring,
-    withTiming,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 interface SuccessAnimationProps {
@@ -63,7 +63,7 @@ export default function SuccessAnimation({
     if (onComplete) {
       setTimeout(onComplete, 1000);
     }
-  }, []);
+  }, [onComplete]);
 
   const circleStyle = useAnimatedStyle(() => ({
     transform: [
