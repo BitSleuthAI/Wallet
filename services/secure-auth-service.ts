@@ -1,15 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type {
-  AuthenticationResponseJSON,
-  PublicKeyCredentialCreationOptionsJSON,
-  PublicKeyCredentialRequestOptionsJSON,
-  RegistrationResponseJSON
-} from '@simplewebauthn/browser';
-import { startAuthentication, startRegistration } from '@simplewebauthn/browser';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Alert, Platform } from 'react-native';
 import ReactNativeBiometrics, { BiometryTypes } from 'react-native-biometrics';
-import { fromByteArray, toByteArray } from 'react-native-quick-base64';
 
 export interface SecurityKey {
   id: string;
@@ -149,6 +141,15 @@ class SecureAuthService {
 
       console.log('🔐 Registering new biometric key...');
 
+      // Check if keys already exist
+      const { keysExist } = await this.rnBiometrics.biometricKeysExist();
+      
+      // Delete existing keys if present to start fresh
+      if (keysExist) {
+        console.log('🔑 Deleting existing biometric keys...');
+        await this.rnBiometrics.deleteKeys();
+      }
+
       // Create a new key pair for this biometric registration
       const result = await this.rnBiometrics.createKeys();
       
@@ -156,18 +157,34 @@ class SecureAuthService {
         throw new Error('Failed to create biometric key pair');
       }
 
-      // Verify the key by requiring biometric authentication
-      const authResult = await this.authenticateWithBiometric('Verify your biometric to complete registration');
-      
-      if (!authResult.success) {
+      console.log('✅ Biometric key pair created with public key');
+
+      // Test the newly created key with a signature to verify it works
+      try {
+        const testPayload = this.arrayBufferToBase64(this.generateChallenge());
+        const { success, signature } = await this.rnBiometrics.createSignature({
+          promptMessage: 'Verify your biometric to complete setup',
+          payload: testPayload,
+        });
+
+        if (!success || !signature) {
+          throw new Error('Failed to verify biometric key with test signature');
+        }
+
+        console.log('✅ Biometric key verified with test signature');
+      } catch (testError) {
+        console.error('❌ Failed to verify biometric key:', testError);
+        // Clean up the failed key
+        await this.rnBiometrics.deleteKeys();
         throw new Error('Biometric verification failed during registration');
       }
 
       const newKey: SecurityKey = {
-        id: `biometric-${Date.now()}`,
+        id: 'biometric',
         name: this.getBiometricType(),
         type: 'biometric',
         dateAdded: new Date().toISOString(),
+        publicKey: result.publicKey,
         isVerified: true,
       };
 
@@ -181,66 +198,18 @@ class SecureAuthService {
 
   /**
    * Register a FIDO2/WebAuthn passkey with hardware verification
+   * NOTE: WebAuthn is not natively supported in React Native without additional native modules.
+   * This method is kept for future implementation but will return an error.
    */
   async registerFIDOPasskey(keyName: string): Promise<SecurityKey | null> {
     try {
-      console.log('🔐 Registering FIDO2 passkey...');
-
-      // Generate a secure challenge as ArrayBuffer
-      const challenge = this.generateChallenge();
-      const userId = this.generateUserIdAsArrayBuffer();
-      
-      const options: PublicKeyCredentialCreationOptionsJSON = {
-        challenge: this.arrayBufferToBase64(challenge),
-        rp: {
-          name: 'BitSleuth Wallet',
-          id: this.getRpId(), // Dynamic rpId for mobile app context
-        },
-        user: {
-          id: this.arrayBufferToBase64(userId), // Convert ArrayBuffer to base64 for JSON
-          name: 'BitSleuth User',
-          displayName: 'BitSleuth User',
-        },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 }, // ES256
-          { type: 'public-key', alg: -257 }, // RS256
-          { type: 'public-key', alg: -8 }, // EdDSA
-        ],
-        timeout: 60000,
-        attestation: 'direct',
-        authenticatorSelection: {
-          // Remove platform authenticator limitation - allow both platform and cross-platform
-          userVerification: 'required',
-        },
-      };
-
-      // Start WebAuthn registration
-      const registrationResponse = await startRegistration({ optionsJSON: options });
-      
-      if (!registrationResponse) {
-        throw new Error('WebAuthn registration failed');
-      }
-
-      // Verify the registration response
-      const isValid = await this.verifyRegistrationResponse(registrationResponse, challenge);
-      
-      if (!isValid) {
-        throw new Error('Registration response verification failed');
-      }
-
-      const newKey: SecurityKey = {
-        id: registrationResponse.id,
-        name: keyName,
-        type: 'passkey',
-        dateAdded: new Date().toISOString(),
-        credentialId: registrationResponse.id,
-        attestationObject: registrationResponse.response.attestationObject,
-        clientDataJSON: registrationResponse.response.clientDataJSON,
-        isVerified: true,
-      };
-
-      console.log('✅ FIDO2 passkey registered successfully');
-      return newKey;
+      console.log('❌ FIDO2 passkey registration not supported in React Native');
+      Alert.alert(
+        'Not Supported',
+        'Passkey registration requires WebAuthn API which is not available in React Native. Please use biometric authentication instead.',
+        [{ text: 'OK' }]
+      );
+      return null;
     } catch (error) {
       console.error('❌ Error registering FIDO2 passkey:', error);
       throw error;
@@ -249,66 +218,18 @@ class SecureAuthService {
 
   /**
    * Register a hardware FIDO security key (YubiKey, etc.)
+   * NOTE: WebAuthn is not natively supported in React Native without additional native modules.
+   * This method is kept for future implementation but will return an error.
    */
   async registerHardwareFIDOKey(keyName: string): Promise<SecurityKey | null> {
     try {
-      console.log('🔐 Registering hardware FIDO security key...');
-
-      // Generate a secure challenge as ArrayBuffer
-      const challenge = this.generateChallenge();
-      const userId = this.generateUserIdAsArrayBuffer();
-      
-      const options: PublicKeyCredentialCreationOptionsJSON = {
-        challenge: this.arrayBufferToBase64(challenge),
-        rp: {
-          name: 'BitSleuth Wallet',
-          id: this.getRpId(), // Dynamic rpId for mobile app context
-        },
-        user: {
-          id: this.arrayBufferToBase64(userId), // Convert ArrayBuffer to base64 for JSON
-          name: 'BitSleuth User',
-          displayName: 'BitSleuth User',
-        },
-        pubKeyCredParams: [
-          { type: 'public-key', alg: -7 }, // ES256
-          { type: 'public-key', alg: -257 }, // RS256
-          { type: 'public-key', alg: -8 }, // EdDSA
-        ],
-        timeout: 60000,
-        attestation: 'direct',
-        authenticatorSelection: {
-          authenticatorAttachment: 'cross-platform', // Use cross-platform authenticator (hardware key)
-          userVerification: 'required',
-        },
-      };
-
-      // Start WebAuthn registration for hardware key
-      const registrationResponse = await startRegistration({ optionsJSON: options });
-      
-      if (!registrationResponse) {
-        throw new Error('Hardware FIDO key registration failed');
-      }
-
-      // Verify the registration response
-      const isValid = await this.verifyRegistrationResponse(registrationResponse, challenge);
-      
-      if (!isValid) {
-        throw new Error('Hardware FIDO key registration verification failed');
-      }
-
-      const newKey: SecurityKey = {
-        id: registrationResponse.id,
-        name: keyName,
-        type: 'fido',
-        dateAdded: new Date().toISOString(),
-        credentialId: registrationResponse.id,
-        attestationObject: registrationResponse.response.attestationObject,
-        clientDataJSON: registrationResponse.response.clientDataJSON,
-        isVerified: true,
-      };
-
-      console.log('✅ Hardware FIDO security key registered successfully');
-      return newKey;
+      console.log('❌ Hardware FIDO key registration not supported in React Native');
+      Alert.alert(
+        'Not Supported',
+        'Hardware FIDO key registration requires WebAuthn API which is not available in React Native. This feature requires native platform integration.',
+        [{ text: 'OK' }]
+      );
+      return null;
     } catch (error) {
       console.error('❌ Error registering hardware FIDO key:', error);
       throw error;
@@ -317,46 +238,15 @@ class SecureAuthService {
 
   /**
    * Authenticate using a registered FIDO key
+   * NOTE: WebAuthn is not natively supported in React Native without additional native modules.
+   * This method is kept for future implementation but will return an error.
    */
   async authenticateWithFIDOKey(credentialId: string): Promise<FIDOAuthResult> {
     try {
-      console.log('🔐 Authenticating with FIDO key...');
-
-      // Generate a secure challenge as ArrayBuffer
-      const challenge = this.generateChallenge();
-      
-      const options: PublicKeyCredentialRequestOptionsJSON = {
-        challenge: this.arrayBufferToBase64(challenge),
-        timeout: 60000,
-        rpId: this.getRpId(), // Dynamic rpId for mobile app context
-        allowCredentials: [
-          {
-            id: credentialId,
-            type: 'public-key',
-          },
-        ],
-        userVerification: 'required',
-      };
-
-      // Start WebAuthn authentication
-      const authenticationResponse = await startAuthentication({ optionsJSON: options });
-      
-      if (!authenticationResponse) {
-        return { success: false, error: 'FIDO authentication failed' };
-      }
-
-      // Verify the authentication response
-      const isValid = await this.verifyAuthenticationResponse(authenticationResponse, challenge);
-      
-      if (!isValid) {
-        return { success: false, error: 'FIDO authentication verification failed' };
-      }
-
-      console.log('✅ FIDO key authentication successful');
-      return {
-        success: true,
-        credentialId: authenticationResponse.id,
-        signature: authenticationResponse.response.signature,
+      console.log('❌ FIDO key authentication not supported in React Native');
+      return { 
+        success: false, 
+        error: 'FIDO authentication not supported in React Native' 
       };
     } catch (error) {
       console.error('❌ Error authenticating with FIDO key:', error);
@@ -645,124 +535,21 @@ class SecureAuthService {
     return array.buffer;
   }
 
-  /**
-   * Generate a unique user ID as ArrayBuffer
-   */
-  private generateUserIdAsArrayBuffer(): ArrayBuffer {
-    const array = new Uint8Array(16);
-    crypto.getRandomValues(array);
-    return array.buffer;
-  }
-
-  /**
-   * Generate a unique user ID as base64 string (legacy method for compatibility)
-   */
-  private generateUserId(): string {
-    return this.arrayBufferToBase64(this.generateUserIdAsArrayBuffer());
-  }
-
-  /**
-   * Get the appropriate Relying Party ID for the current platform
-   */
-  private getRpId(): string {
-    // For mobile apps, use a proper domain that works with FIDO2/WebAuthn
-    // Mobile WebAuthn implementations need a valid domain, not localhost
-    if (Platform.OS === 'web') {
-      // For web, use the current hostname if window is available
-      if (typeof window !== 'undefined' && window.location) {
-        return window.location.hostname;
-      }
-      // Fallback for web environments without window
-      return 'bitsleuth.ai';
-    } else {
-      // For mobile apps, use a proper domain that works with WebAuthn
-      // This allows FIDO2 operations to work correctly on mobile
-      return 'bitsleuth.ai';
-    }
-  }
 
   /**
    * Convert ArrayBuffer to base64 string
    */
   private arrayBufferToBase64(buffer: ArrayBuffer): string {
     const bytes = new Uint8Array(buffer);
-    // Use react-native-quick-base64 for React Native compatibility
-    return fromByteArray(bytes);
-  }
-
-  /**
-   * Convert base64 string to ArrayBuffer
-   */
-  private base64ToArrayBuffer(base64: string): ArrayBuffer {
-    // Use react-native-quick-base64 for React Native compatibility
-    const bytes = toByteArray(base64);
-    // Create a new ArrayBuffer with the correct size
-    const buffer = new ArrayBuffer(bytes.length);
-    const view = new Uint8Array(buffer);
-    view.set(bytes);
-    return buffer;
-  }
-
-  /**
-   * Perform constant-time comparison of two ArrayBuffers to prevent timing attacks
-   */
-  private timingSafeEqual(a: ArrayBuffer, b: ArrayBuffer): boolean {
-    if (a.byteLength !== b.byteLength) {
-      return false;
+    // Convert to binary string
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
     }
-
-    const viewA = new Uint8Array(a);
-    const viewB = new Uint8Array(b);
-    
-    let result = 0;
-    for (let i = 0; i < a.byteLength; i++) {
-      result |= viewA[i] ^ viewB[i];
-    }
-    
-    return result === 0;
+    // Use built-in btoa for base64 encoding
+    return btoa(binary);
   }
 
-  /**
-   * Verify WebAuthn registration response
-   */
-  private async verifyRegistrationResponse(
-    response: RegistrationResponseJSON,
-    originalChallenge: ArrayBuffer
-  ): Promise<boolean> {
-    try {
-      // Decode base64-encoded clientDataJSON before parsing
-      const clientDataJSONString = atob(response.response.clientDataJSON);
-      const clientDataJSON = JSON.parse(clientDataJSONString);
-      
-      // Verify challenge matches using constant-time comparison
-      const responseChallenge = this.base64ToArrayBuffer(clientDataJSON.challenge);
-      return this.timingSafeEqual(responseChallenge, originalChallenge);
-    } catch (error) {
-      console.error('❌ Error verifying registration response:', error);
-      return false;
-    }
-  }
-
-  /**
-   * Verify WebAuthn authentication response
-   */
-  private async verifyAuthenticationResponse(
-    response: AuthenticationResponseJSON,
-    originalChallenge: ArrayBuffer
-  ): Promise<boolean> {
-    try {
-      // Decode base64-encoded clientDataJSON before parsing
-      const clientDataJSONString = atob(response.response.clientDataJSON);
-      const clientDataJSON = JSON.parse(clientDataJSONString);
-      
-      // Verify challenge matches using constant-time comparison
-      const responseChallenge = this.base64ToArrayBuffer(clientDataJSON.challenge);
-      return this.timingSafeEqual(responseChallenge, originalChallenge);
-    } catch (error) {
-      console.error('❌ Error verifying authentication response:', error);
-      return false;
-    }
-  }
 }
 
 // Export singleton instance
