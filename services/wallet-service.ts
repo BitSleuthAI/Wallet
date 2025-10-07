@@ -646,31 +646,30 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   try {
     console.log('🔧 Generating new address for wallet:', wallet.name);
     
+    // Build a set of existing wallet addresses for O(1) lookup
+    const existingAddresses = new Set(wallet.addresses);
+    
     // Find the next address index using proper BIP44 gap limit logic
     let nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
     let newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
-    // Check if this address already exists in the wallet's address list
-    // If it does, keep searching for a non-duplicate address
+    // If the address is already in the wallet, manually cycle through indices
+    // until we find one that's not in the wallet (avoiding the infinite loop bug)
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loop
     
-    while (wallet.addresses.includes(newAddress) && attempts < maxAttempts) {
+    while (existingAddresses.has(newAddress) && attempts < maxAttempts) {
       attempts++;
-      console.warn(`⚠️ Address at index ${nextIndex} already exists in wallet, searching for next unique address (attempt ${attempts})`);
+      console.warn(`⚠️ Address at index ${nextIndex} already exists in wallet, trying next index (attempt ${attempts})`);
       
-      // Create a temporary wallet state with updated index to find the next address
-      const tempWallet = {
-        ...wallet,
-        currentAddressIndex: nextIndex,
-      };
-      
-      nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, tempWallet);
+      // Simply increment and wrap around, checking each index sequentially
+      // This ensures we don't get stuck in a loop
+      nextIndex = (nextIndex + 1) % 20;
       newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     }
     
     // If we exhausted all attempts, throw an error
-    if (wallet.addresses.includes(newAddress)) {
+    if (existingAddresses.has(newAddress)) {
       throw new Error('Unable to generate a unique address after maximum attempts');
     }
     
