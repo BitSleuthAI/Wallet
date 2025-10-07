@@ -531,6 +531,11 @@ export async function isAddressInWallet(wallet: Wallet, address: string): Promis
  * Find next unused address index using proper BIP44 gap limit logic
  * Discovers used addresses and returns the next truly unused address
  * Implements proper gap limit (20 consecutive unused addresses) before stopping
+ * 
+ * This function properly follows BIP44 gap limit rules:
+ * 1. Find the highest used address index
+ * 2. Check sequentially from that point until we find an unused address
+ * 3. Never wrap around (no modulo) - addresses are sequential
  */
 export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet: Wallet): Promise<number> {
   console.log(`🔍 Finding next unused address for wallet: ${wallet.name}, current index: ${wallet.currentAddressIndex || 0}`);
@@ -554,64 +559,59 @@ export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet
     const usedAddressesSet = new Set(usedAddresses);
     console.log(`📊 Found ${usedAddresses.length} used addresses`);
     
-    // Find the next unused address after the current index
-    // Check addresses in order starting from currentIndex + 1, wrapping around
-    for (let offset = 1; offset <= 20; offset++) {
-      const checkIndex = (currentIndex + offset) % 20;
+    // Find the highest used address index by checking sequentially
+    // This is necessary because used addresses might be out of order
+    let highestUsedIndex = -1;
+    
+    // Check from index 0 up to a reasonable limit to find the highest used index
+    // We need to check beyond currentIndex in case addresses were used out of order
+    const checkLimit = Math.max(currentIndex + GAP_LIMIT, 100); // Check at least 100 addresses
+    
+    for (let checkIndex = 0; checkIndex < checkLimit; checkIndex++) {
       const address = await generateAddressFromXpub(xpub, checkIndex);
       
-      if (!usedAddressesSet.has(address)) {
-        console.log(`✅ Found unused address at index ${checkIndex} (${offset} steps from current)`);
-        return checkIndex;
-      } else {
-        console.log(`🔍 Address at index ${checkIndex} is used, checking next...`);
+      if (usedAddressesSet.has(address)) {
+        highestUsedIndex = checkIndex;
+        console.log(`🔍 Found used address at index ${checkIndex}`);
       }
     }
     
-    // If we've checked all 20 addresses and they're all used,
-    // we need to expand our search beyond the current 20-address window
-    console.log(`⚠️ All addresses 0-19 appear to be used, expanding search...`);
+    console.log(`📊 Highest used address index: ${highestUsedIndex}`);
     
-    // Find the first truly unused address beyond our current window
-    let searchIndex = 20;
-    while (searchIndex < 1000) { // Reasonable upper bound
+    // The next unused address should be after the highest of:
+    // - The highest used index
+    // - The current index (to ensure we move forward)
+    const startSearchIndex = Math.max(highestUsedIndex + 1, currentIndex + 1);
+    
+    console.log(`🔍 Starting search from index ${startSearchIndex}`);
+    
+    // Search sequentially from the start point to find the first unused address
+    let searchIndex = startSearchIndex;
+    const maxSearchIndex = startSearchIndex + 1000; // Reasonable upper bound
+    
+    while (searchIndex < maxSearchIndex) {
       const address = await generateAddressFromXpub(xpub, searchIndex);
       
-      try {
-        // Check if this address has any transactions
-        const result = await esploraGet(`/address/${address}/txs`, 30000);
-        const hasTransactions = result && Array.isArray(result) && result.length > 0;
-        
-        if (!hasTransactions) {
-          console.log(`✅ Found unused address at expanded index ${searchIndex}`);
-          return searchIndex;
-        }
-        
-        console.log(`🔍 Address at index ${searchIndex} is used, checking next...`);
-        searchIndex++;
-        
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-      } catch (error) {
-        console.warn(`⚠️ Failed to check address ${searchIndex}:`, error);
-        // Treat as unused if we can't check
-        console.log(`✅ Treating address at index ${searchIndex} as unused due to check failure`);
+      // Check if this address is in our discovered used addresses
+      if (!usedAddressesSet.has(address)) {
+        console.log(`✅ Found unused address at index ${searchIndex}`);
         return searchIndex;
       }
+      
+      console.log(`🔍 Address at index ${searchIndex} is used, checking next...`);
+      searchIndex++;
     }
     
     // Fallback: if we still can't find an unused address, return next sequential
-    console.log(`⚠️ Could not find unused address, returning next sequential index`);
-    const fallbackIndex = (currentIndex + 1) % 20;
-    console.log(`✅ Fallback: returning index ${fallbackIndex}`);
-    return fallbackIndex;
+    console.log(`⚠️ Could not find unused address after checking ${maxSearchIndex - startSearchIndex} addresses`);
+    console.log(`✅ Fallback: returning index ${startSearchIndex}`);
+    return startSearchIndex;
     
   } catch (error) {
     console.error(`❌ Failed to find next unused address:`, error);
-    // Fallback to simple increment with wrap-around
+    // Fallback to simple increment (no wrap-around)
     const currentIndex = wallet.currentAddressIndex || 0;
-    const fallbackIndex = (currentIndex + 1) % 20;
+    const fallbackIndex = currentIndex + 1;
     console.log(`✅ Error fallback: returning index ${fallbackIndex}`);
     return fallbackIndex;
   }
@@ -653,7 +653,7 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
     let nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
     let newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
-    // If the address is already in the wallet, manually cycle through indices
+    // If the address is already in the wallet, sequentially increment the index
     // until we find one that's not in the wallet (avoiding the infinite loop bug)
     let attempts = 0;
     const maxAttempts = 100; // Prevent infinite loop
@@ -662,9 +662,9 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
       attempts++;
       console.warn(`⚠️ Address at index ${nextIndex} already exists in wallet, trying next index (attempt ${attempts})`);
       
-      // Simply increment and wrap around, checking each index sequentially
-      // This ensures we don't get stuck in a loop
-      nextIndex = (nextIndex + 1) % 20;
+      // Simply increment sequentially (no modulo wrap-around)
+      // This ensures we don't get stuck in a loop and follows BIP44 sequential addressing
+      nextIndex = nextIndex + 1;
       newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     }
     
