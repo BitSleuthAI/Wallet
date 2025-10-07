@@ -17,6 +17,30 @@ try {
 
 const GAP_LIMIT = 20; // Standard gap limit for address discovery
 
+// Cache for address metadata to avoid redundant blockchain queries
+// Key: xpub, Value: { metadata, timestamp }
+const addressMetadataCache: Map<string, { 
+  metadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }>, 
+  timestamp: number 
+}> = new Map();
+
+// Cache TTL: 5 minutes (same as the UI query cache)
+const METADATA_CACHE_TTL = 5 * 60 * 1000;
+
+/**
+ * Clear the address metadata cache for a specific xpub or all xpubs
+ * Useful when user manually refreshes or wants fresh data
+ */
+export function clearAddressCache(xpub?: string): void {
+  if (xpub) {
+    addressMetadataCache.delete(xpub);
+    console.log(`🗑️ Cleared address cache for xpub: ${xpub.substring(0, 20)}...`);
+  } else {
+    addressMetadataCache.clear();
+    console.log(`🗑️ Cleared all address caches`);
+  }
+}
+
 /**
  * Generate P2WPKH address from public key
  */
@@ -64,11 +88,32 @@ async function deriveAddressBatch(node: any, chain: number, from: number, to: nu
 /**
  * Discover used addresses using BIP32 derivation with gap limit
  * Returns both addresses and their metadata (index, chain, isUsed)
+ * OPTIMIZED: Uses in-memory cache to avoid redundant blockchain queries within TTL window
  */
 export async function discoverUsedAddresses(xpub: string): Promise<string[]>;
 export async function discoverUsedAddresses(xpub: string, returnMetadata: true): Promise<Array<{ address: string; index: number; chain: number; isUsed: boolean }>>;
 export async function discoverUsedAddresses(xpub: string, returnMetadata: boolean = false): Promise<string[] | Array<{ address: string; index: number; chain: number; isUsed: boolean }>> {
   console.log(`🔍 Starting address discovery for xpub: ${xpub.substring(0, 20)}...`);
+  
+  // Check cache first
+  const cached = addressMetadataCache.get(xpub);
+  const now = Date.now();
+  
+  if (cached && (now - cached.timestamp) < METADATA_CACHE_TTL) {
+    console.log(`✅ Using cached address metadata (age: ${Math.round((now - cached.timestamp) / 1000)}s)`);
+    
+    if (returnMetadata) {
+      return cached.metadata;
+    }
+    
+    const usedAddresses = cached.metadata
+      .filter(a => a.isUsed)
+      .map(a => a.address);
+    
+    return Array.from(new Set(usedAddresses));
+  }
+  
+  console.log(`🔍 Cache miss or expired, performing address discovery...`);
   
   try {
     await ensureECC();
@@ -147,6 +192,13 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         index += GAP_LIMIT;
       }
     }
+    
+    // Cache the metadata for future use
+    addressMetadataCache.set(xpub, {
+      metadata: allAddressMetadata,
+      timestamp: Date.now()
+    });
+    console.log(`✅ Cached address metadata for xpub: ${xpub.substring(0, 20)}...`);
     
     if (returnMetadata) {
       console.log(`✅ Address discovery complete: ${allAddressMetadata.filter(a => a.isUsed).length} used addresses found`);
@@ -715,118 +767,79 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 /**
  * Generate addresses for view addresses screen following gap limit logic
  * Returns addresses with their usage status following BIP44 gap limit rules
- * Discovers all used addresses and stops only when encountering GAP_LIMIT consecutive unused addresses
- * This ensures no used addresses are missed, regardless of chain type (receiving/change)
+ * OPTIMIZED: Uses cached metadata from discoverUsedAddresses to avoid redundant blockchain queries
+ * This is the same caching strategy used for new address generation
  */
 export async function generateAddressesForView(xpub: string, chainType: 'receiving' | 'change' = 'receiving'): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}>> {
-  console.log(`🔍 Generating addresses for view: ${chainType} chain`);
+  console.log(`🔍 Generating addresses for view: ${chainType} chain (using cached metadata)`);
   
   try {
-    await ensureECC();
+    // Use the same optimized discovery function that caches metadata
+    // This avoids redundant blockchain queries
+    console.log(`🔍 Fetching address metadata with caching...`);
+    const addressMetadata = await discoverUsedAddresses(xpub, true);
+    console.log(`✅ Retrieved ${addressMetadata.length} addresses from cache (${addressMetadata.filter(a => a.isUsed).length} used)`);
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
-    
-    const node = bip32.fromBase58(xpub);
     const chain = chainType === 'receiving' ? 0 : 1; // External (0) or Internal (1) chain
     
-    let allAddresses: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}> = [];
-    let gap = 0;
-    let index = 0;
+    // Filter to the requested chain
+    const chainAddresses = addressMetadata.filter(a => a.chain === chain);
+    console.log(`📊 Filtered to ${chainAddresses.length} ${chainType} addresses`);
     
-    console.log(`🔍 Starting ${chainType} address discovery with gap limit ${GAP_LIMIT}`);
+    // Now fetch balance and transaction count for each address
+    // This is still necessary, but we're reusing the address discovery cache
+    const result: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}> = [];
     
-    // Discover addresses following BIP44 gap limit logic
-    // Stop only when we encounter GAP_LIMIT consecutive unused addresses
-    while (gap < GAP_LIMIT) {
-      const batchSize = Math.min(GAP_LIMIT, 20); // Check in batches for efficiency
-      const batch = await deriveAddressBatch(node, chain, index, index + batchSize);
-      
-      console.log(`🔍 Checking ${chainType} batch ${index}-${index + batchSize - 1} (${batch.length} addresses)`);
-      
-      // Check each address in the batch
-      for (let i = 0; i < batch.length; i++) {
-        const address = batch[i];
-        const addressIndex = index + i;
+    for (const addrMeta of chainAddresses) {
+      try {
+        // Only fetch stats if the address is used (optimization)
+        let balance = 0;
+        let txCount = 0;
         
-        try {
-          // Check if address has any transactions and get balance
+        if (addrMeta.isUsed) {
           const [txsResult, statsResult] = await Promise.all([
-            esploraGet(`/address/${address}/txs`, 30000),
-            getAddressStats(address)
+            esploraGet(`/address/${addrMeta.address}/txs`, 30000),
+            getAddressStats(addrMeta.address)
           ]);
           
-          const hasTransactions = txsResult && Array.isArray(txsResult) && txsResult.length > 0;
-          const txCount = hasTransactions ? txsResult.length : 0;
-          
-          // Extract balance from stats
-          const balance = statsResult.data?.chain_stats ? 
+          txCount = txsResult && Array.isArray(txsResult) ? txsResult.length : 0;
+          balance = statsResult.data?.chain_stats ? 
             (statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum) / 1e8 : 0;
-          
-          const isUsed = hasTransactions || balance > 0;
-          
-          const addressData = {
-            address,
-            index: addressIndex,
-            isUsed,
-            balance,
-            txCount,
-            type: chainType
-          };
-          
-          allAddresses.push(addressData);
-          
-          if (isUsed) {
-            gap = 0; // Reset gap when we find a used address
-            console.log(`✅ Found used ${chainType} address at index ${addressIndex}: ${hasTransactions ? `${txCount} txs` : `${balance.toFixed(8)} BTC`}`);
-          } else {
-            gap++; // Increment gap for unused address
-            console.log(`🔍 ${chainType} address ${addressIndex} unused, gap: ${gap}`);
-            
-            // Stop if we've reached the gap limit (consecutive unused addresses)
-            if (gap >= GAP_LIMIT) {
-              console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain`);
-              break;
-            }
-          }
-          
-        } catch (error) {
-          console.warn(`⚠️ Failed to check ${chainType} address ${addressIndex}:`, error);
-          // Treat as unused if we can't check
-          allAddresses.push({
-            address,
-            index: addressIndex,
-            isUsed: false,
-            balance: 0,
-            txCount: 0,
-            type: chainType
-          });
-          gap++;
-          
-          // Stop if we've reached the gap limit
-          if (gap >= GAP_LIMIT) {
-            console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain after error`);
-            break;
-          }
         }
         
-        // Small delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 50));
+        result.push({
+          address: addrMeta.address,
+          index: addrMeta.index,
+          isUsed: addrMeta.isUsed,
+          balance,
+          txCount,
+          type: chainType
+        });
+        
+        if (addrMeta.isUsed) {
+          console.log(`✅ ${chainType} address ${addrMeta.index}: ${txCount} txs, ${balance.toFixed(8)} BTC`);
+        }
+        
+        // Small delay to avoid rate limiting (only for used addresses)
+        if (addrMeta.isUsed) {
+          await new Promise(resolve => setTimeout(resolve, 50));
+        }
+      } catch (error) {
+        console.warn(`⚠️ Failed to get stats for ${chainType} address ${addrMeta.index}:`, error);
+        // Still add the address with metadata we already have
+        result.push({
+          address: addrMeta.address,
+          index: addrMeta.index,
+          isUsed: addrMeta.isUsed,
+          balance: 0,
+          txCount: 0,
+          type: chainType
+        });
       }
-      
-      // Check if we've reached the gap limit
-      if (gap >= GAP_LIMIT) {
-        console.log(`🔍 Gap limit (${gap}) reached for ${chainType} chain`);
-        break;
-      }
-      
-      index += batchSize;
     }
     
-    console.log(`✅ Generated ${allAddresses.length} ${chainType} addresses for view (${allAddresses.filter(a => a.isUsed).length} used, ${allAddresses.filter(a => !a.isUsed).length} unused)`);
-    return allAddresses;
+    console.log(`✅ Generated ${result.length} ${chainType} addresses for view (${result.filter(a => a.isUsed).length} used, ${result.filter(a => !a.isUsed).length} unused)`);
+    return result;
   } catch (error) {
     console.error(`❌ Failed to generate addresses for view:`, error);
     throw error;

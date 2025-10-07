@@ -31,7 +31,8 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     generateAddressesForView: importedService.generateAddressesForView,
-    generateAddressBatchForView: importedService.generateAddressBatchForView
+    generateAddressBatchForView: importedService.generateAddressBatchForView,
+    clearAddressCache: importedService.clearAddressCache
   };
   
   // Verify required functions are available
@@ -49,7 +50,8 @@ try {
   walletService = {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    generateAddressesForView: async () => { throw new Error('Wallet service not available'); }
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
+    clearAddressCache: () => { console.warn('Wallet service not available'); }
   };
 }
 
@@ -74,18 +76,23 @@ export default function WalletAddressesScreen() {
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Generate addresses following gap limit logic
+  // OPTIMIZED: Fetch both chains at once to leverage shared caching from discoverUsedAddresses
   const addressesQuery = useQuery({
-    queryKey: ['wallet-addresses-gap-limit', currentWallet?.id, currentWallet?.xpub, selectedTab],
+    queryKey: ['wallet-addresses-all-chains', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
       if (!currentWallet?.xpub) return [];
       
-      console.log(`🔍 Generating addresses for ${selectedTab} chain using gap limit logic...`);
+      console.log(`🔍 Generating addresses for both chains using gap limit logic with caching...`);
       
       try {
-        // Use the new gap limit function
-        const addressData = await walletService.generateAddressesForView(currentWallet.xpub, selectedTab);
+        // Fetch both receiving and change addresses in parallel
+        // They share the same discoverUsedAddresses cache, so the second call is very fast
+        const [receivingData, changeData] = await Promise.all([
+          walletService.generateAddressesForView(currentWallet.xpub, 'receiving'),
+          walletService.generateAddressesForView(currentWallet.xpub, 'change')
+        ]);
         
-        const addresses: AddressInfo[] = addressData.map((addrData: {address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}) => ({
+        const allAddresses: AddressInfo[] = [...receivingData, ...changeData].map((addrData) => ({
           address: addrData.address,
           index: addrData.index,
           balance: addrData.balance,
@@ -97,10 +104,10 @@ export default function WalletAddressesScreen() {
           derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
         }));
         
-        console.log(`✅ Generated ${addresses.length} ${selectedTab} addresses using gap limit logic`);
-        return addresses;
+        console.log(`✅ Generated ${allAddresses.length} addresses total (${receivingData.length} receiving, ${changeData.length} change)`);
+        return allAddresses;
       } catch (error) {
-        console.error(`❌ Failed to generate ${selectedTab} addresses:`, error);
+        console.error(`❌ Failed to generate addresses:`, error);
         throw error;
       }
     },
@@ -189,8 +196,14 @@ export default function WalletAddressesScreen() {
   const refreshAddresses = async () => {
     setGeneratingAddresses(true);
     try {
-      // Clear cache and refetch
+      // Clear both local cache and service-level cache for fresh data
       setCachedAddresses({});
+      
+      // Clear the service-level address metadata cache to force fresh blockchain queries
+      if (currentWallet?.xpub && walletService.clearAddressCache) {
+        walletService.clearAddressCache(currentWallet.xpub);
+      }
+      
       await addressesQuery.refetch();
     } catch (error) {
       console.error('Failed to refresh addresses:', error);
