@@ -647,21 +647,31 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
     console.log('🔧 Generating new address for wallet:', wallet.name);
     
     // Find the next address index using proper BIP44 gap limit logic
-    const nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
-    const newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
+    let nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
+    let newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
     // Check if this address already exists in the wallet's address list
-    const isDuplicate = wallet.addresses.includes(newAddress);
-    if (isDuplicate) {
-      console.warn(`⚠️ Generated address ${newAddress} already exists in wallet, skipping addition`);
-      // Return wallet with updated index but without adding duplicate address
-      const updatedWallet = {
+    // If it does, keep searching for a non-duplicate address
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    while (wallet.addresses.includes(newAddress) && attempts < maxAttempts) {
+      attempts++;
+      console.warn(`⚠️ Address at index ${nextIndex} already exists in wallet, searching for next unique address (attempt ${attempts})`);
+      
+      // Create a temporary wallet state with updated index to find the next address
+      const tempWallet = {
         ...wallet,
         currentAddressIndex: nextIndex,
       };
       
-      console.log(`✅ Address index updated to ${nextIndex} without adding duplicate`);
-      return updatedWallet;
+      nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, tempWallet);
+      newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
+    }
+    
+    // If we exhausted all attempts, throw an error
+    if (wallet.addresses.includes(newAddress)) {
+      throw new Error('Unable to generate a unique address after maximum attempts');
     }
     
     // Update wallet with new address
