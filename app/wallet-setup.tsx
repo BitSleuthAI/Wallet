@@ -13,19 +13,19 @@ import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Alert,
-  Clipboard,
-  KeyboardAvoidingView,
-  Linking,
-  Modal,
-  Platform,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Clipboard,
+    KeyboardAvoidingView,
+    Linking,
+    Modal,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 
@@ -295,7 +295,14 @@ export default function WalletSetupScreen() {
   };
 
   const renderSelectMode = () => (
-    <View style={styles.content}>
+    <ScrollView 
+      style={styles.content}
+      contentContainerStyle={[
+        styles.scrollContent,
+        Platform.OS === 'android' && { paddingBottom: 100 }
+      ]}
+      showsVerticalScrollIndicator={false}
+    >
       <TouchableOpacity
         style={styles.backToDashboardButton}
         onPress={() => router.replace('/(tabs)')}
@@ -402,7 +409,7 @@ export default function WalletSetupScreen() {
           </Text>
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 
   const handleBackFromCreate = () => {
