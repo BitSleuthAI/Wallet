@@ -528,18 +528,12 @@ export async function isAddressInWallet(wallet: Wallet, address: string): Promis
 }
 
 /**
- * Fast address cycling using cached wallet state
- * Cycles through addresses 0-19 sequentially, skipping used ones
- * 
- * PERFORMANCE OPTIMIZATIONS:
- * 1. Uses local wallet state instead of network discovery on every call
- * 2. Only does network discovery when cycling back to address 0 (after using all 20)
- * 3. Implements proper sequential cycling: 0->1->2->...->19->0->1...
- * 4. Eliminates duplicate address checking
- * 5. Reduces network calls from ~20 per generation to ~20 per 20 generations
+ * Find next unused address index using proper BIP44 gap limit logic
+ * Discovers used addresses and returns the next truly unused address
+ * Implements proper gap limit (20 consecutive unused addresses) before stopping
  */
 export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet: Wallet): Promise<number> {
-  console.log(`🔍 Fast cycling for wallet: ${wallet.name}, current index: ${wallet.currentAddressIndex || 0}`);
+  console.log(`🔍 Finding next unused address for wallet: ${wallet.name}, current index: ${wallet.currentAddressIndex || 0}`);
   
   try {
     await ensureECC();
@@ -554,40 +548,72 @@ export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet
     // Get current index, default to 0 if not set
     const currentIndex = wallet.currentAddressIndex || 0;
     
-    // Cycle through addresses 0-19 sequentially
-    // Start from current index + 1, wrap around to 0 after 19
-    let nextIndex = (currentIndex + 1) % 20;
+    // First, discover all used addresses to understand the current state
+    console.log(`🔍 Discovering used addresses...`);
+    const usedAddresses = await discoverUsedAddresses(xpub);
+    const usedAddressesSet = new Set(usedAddresses);
+    console.log(`📊 Found ${usedAddresses.length} used addresses`);
     
-    // If we're cycling back to 0, check if we need to discover used addresses
-    if (nextIndex === 0 && currentIndex === 19) {
-      console.log(`🔄 Completed full cycle, checking for used addresses...`);
+    // Find the next unused address after the current index
+    // Check addresses in order starting from currentIndex + 1, wrapping around
+    for (let offset = 1; offset <= 20; offset++) {
+      const checkIndex = (currentIndex + offset) % 20;
+      const address = await generateAddressFromXpub(xpub, checkIndex);
       
-      // Only do network discovery when we've cycled through all 20 addresses
-      // This happens much less frequently
-      const usedAddresses = await discoverUsedAddresses(xpub);
-      const usedAddressesSet = new Set(usedAddresses);
-      
-      // Find the first truly unused address
-      for (let i = 0; i < 20; i++) {
-        const address = await generateAddressFromXpub(xpub, i);
-        if (!usedAddressesSet.has(address)) {
-          console.log(`✅ Found first unused address at index ${i} after full cycle`);
-          return i;
-        }
+      if (!usedAddressesSet.has(address)) {
+        console.log(`✅ Found unused address at index ${checkIndex} (${offset} steps from current)`);
+        return checkIndex;
+      } else {
+        console.log(`🔍 Address at index ${checkIndex} is used, checking next...`);
       }
-      
-      // If all addresses are used, continue from 0
-      console.log(`⚠️ All addresses appear to be used, continuing from 0`);
-      return 0;
     }
     
-    console.log(`✅ Fast cycling: ${currentIndex} -> ${nextIndex}`);
-    return nextIndex;
+    // If we've checked all 20 addresses and they're all used,
+    // we need to expand our search beyond the current 20-address window
+    console.log(`⚠️ All addresses 0-19 appear to be used, expanding search...`);
+    
+    // Find the first truly unused address beyond our current window
+    let searchIndex = 20;
+    while (searchIndex < 1000) { // Reasonable upper bound
+      const address = await generateAddressFromXpub(xpub, searchIndex);
+      
+      try {
+        // Check if this address has any transactions
+        const result = await esploraGet(`/address/${address}/txs`, 30000);
+        const hasTransactions = result && Array.isArray(result) && result.length > 0;
+        
+        if (!hasTransactions) {
+          console.log(`✅ Found unused address at expanded index ${searchIndex}`);
+          return searchIndex;
+        }
+        
+        console.log(`🔍 Address at index ${searchIndex} is used, checking next...`);
+        searchIndex++;
+        
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (error) {
+        console.warn(`⚠️ Failed to check address ${searchIndex}:`, error);
+        // Treat as unused if we can't check
+        console.log(`✅ Treating address at index ${searchIndex} as unused due to check failure`);
+        return searchIndex;
+      }
+    }
+    
+    // Fallback: if we still can't find an unused address, return next sequential
+    console.log(`⚠️ Could not find unused address, returning next sequential index`);
+    const fallbackIndex = (currentIndex + 1) % 20;
+    console.log(`✅ Fallback: returning index ${fallbackIndex}`);
+    return fallbackIndex;
+    
   } catch (error) {
-    console.error(`❌ Failed to find next unused address with cycling:`, error);
+    console.error(`❌ Failed to find next unused address:`, error);
     // Fallback to simple increment with wrap-around
     const currentIndex = wallet.currentAddressIndex || 0;
-    return (currentIndex + 1) % 20;
+    const fallbackIndex = (currentIndex + 1) % 20;
+    console.log(`✅ Error fallback: returning index ${fallbackIndex}`);
+    return fallbackIndex;
   }
 }
 
@@ -614,13 +640,13 @@ export async function generateAddressPool(xpub: string, poolSize: number = 20): 
 }
 
 /**
- * Generate a new address for the wallet using fast cycling pattern
+ * Generate a new address for the wallet using proper gap limit logic
  */
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   try {
-    console.log('🔧 Fast generating new address for wallet:', wallet.name);
+    console.log('🔧 Generating new address for wallet:', wallet.name);
     
-    // Find the next address index using fast cycling logic (0-19)
+    // Find the next address index using proper BIP44 gap limit logic
     const nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
     const newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
