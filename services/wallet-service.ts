@@ -650,6 +650,20 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
     const nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
     const newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
     
+    // Check if this address already exists in the wallet's address list
+    const isDuplicate = wallet.addresses.includes(newAddress);
+    if (isDuplicate) {
+      console.warn(`⚠️ Generated address ${newAddress} already exists in wallet, skipping addition`);
+      // Return wallet with updated index but without adding duplicate address
+      const updatedWallet = {
+        ...wallet,
+        currentAddressIndex: nextIndex,
+      };
+      
+      console.log(`✅ Address index updated to ${nextIndex} without adding duplicate`);
+      return updatedWallet;
+    }
+    
     // Update wallet with new address
     const updatedWallet = {
       ...wallet,
