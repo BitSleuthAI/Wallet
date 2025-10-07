@@ -8,14 +8,14 @@ import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    SafeAreaView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  SafeAreaView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -30,8 +30,10 @@ export default function ReceiveScreen() {
 
   // Spin animation for the refresh icon
   useEffect(() => {
+    let spinAnimation: Animated.CompositeAnimation | null = null;
+    
     if (isGeneratingAddress) {
-      const spinAnimation = Animated.loop(
+      spinAnimation = Animated.loop(
         Animated.timing(spinValue, {
           toValue: 1,
           duration: 1000,
@@ -42,6 +44,13 @@ export default function ReceiveScreen() {
     } else {
       spinValue.setValue(0);
     }
+    
+    // Cleanup: stop the animation when component unmounts or isGeneratingAddress changes
+    return () => {
+      if (spinAnimation) {
+        spinAnimation.stop();
+      }
+    };
   }, [isGeneratingAddress, spinValue]);
 
   const spin = spinValue.interpolate({
