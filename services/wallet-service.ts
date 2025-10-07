@@ -63,8 +63,11 @@ async function deriveAddressBatch(node: any, chain: number, from: number, to: nu
 
 /**
  * Discover used addresses using BIP32 derivation with gap limit
+ * Returns both addresses and their metadata (index, chain, isUsed)
  */
-export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
+export async function discoverUsedAddresses(xpub: string): Promise<string[]>;
+export async function discoverUsedAddresses(xpub: string, returnMetadata: true): Promise<Array<{ address: string; index: number; chain: number; isUsed: boolean }>>;
+export async function discoverUsedAddresses(xpub: string, returnMetadata: boolean = false): Promise<string[] | Array<{ address: string; index: number; chain: number; isUsed: boolean }>> {
   console.log(`🔍 Starting address discovery for xpub: ${xpub.substring(0, 20)}...`);
   
   try {
@@ -77,6 +80,7 @@ export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
     
     const node = bip32.fromBase58(xpub);
     let allUsedAddresses: string[] = [];
+    let allAddressMetadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }> = [];
 
     // Test provider connectivity first
     try {
@@ -112,13 +116,25 @@ export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
         
         // Process addresses in order and track gap correctly
         for (let i = 0; i < addressTxs.length; i++) {
-          if (addressTxs[i] && Array.isArray(addressTxs[i]) && addressTxs[i].length > 0) {
+          const isUsed = addressTxs[i] && Array.isArray(addressTxs[i]) && addressTxs[i].length > 0;
+          const addressIndex = index + i;
+          
+          if (returnMetadata) {
+            allAddressMetadata.push({
+              address: batch[i],
+              index: addressIndex,
+              chain,
+              isUsed
+            });
+          }
+          
+          if (isUsed) {
             allUsedAddresses.push(batch[i]);
             gap = 0; // Reset gap when we find a used address
-            console.log(`✅ Found used address at index ${index + i}: ${batch[i]}`);
+            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i]}`);
           } else {
             gap++; // Increment gap for unused address
-            console.log(`🔍 Address ${index + i} unused, gap: ${gap}`);
+            console.log(`🔍 Address ${addressIndex} unused, gap: ${gap}`);
           }
         }
         
@@ -130,6 +146,11 @@ export async function discoverUsedAddresses(xpub: string): Promise<string[]> {
 
         index += GAP_LIMIT;
       }
+    }
+    
+    if (returnMetadata) {
+      console.log(`✅ Address discovery complete: ${allAddressMetadata.filter(a => a.isUsed).length} used addresses found`);
+      return allAddressMetadata;
     }
     
     const uniqueAddresses = Array.from(new Set(allUsedAddresses));
@@ -528,145 +549,152 @@ export async function isAddressInWallet(wallet: Wallet, address: string): Promis
 }
 
 /**
- * Find the next unused address index using gap limit logic with cycling
- * Discovers up to GAP_LIMIT unused addresses, then cycles through them
+ * Find next unused address index using proper BIP44 gap limit logic
+ * Discovers used addresses and returns the next truly unused address
+ * Implements proper gap limit (20 consecutive unused addresses) before stopping
+ * 
+ * This function properly follows BIP44 gap limit rules:
+ * 1. Find the highest used address index (on blockchain)
+ * 2. Check sequentially from that point until we find an address not in the wallet
+ * 3. Never wrap around (no modulo) - addresses are sequential
+ * 
+ * Performance optimized: Uses metadata from discoverUsedAddresses to avoid redundant
+ * cryptographic operations. Checks both blockchain usage AND wallet-local existence.
  */
 export async function findNextUnusedAddressIndexWithCycling(xpub: string, wallet: Wallet): Promise<number> {
-  console.log(`🔍 Finding next unused address with gap limit cycling for wallet: ${wallet.name}`);
+  console.log(`🔍 Finding next unused address for wallet: ${wallet.name}, current index: ${wallet.currentAddressIndex || 0}`);
   
   try {
+    // Get current index, default to 0 if not set
+    const currentIndex = wallet.currentAddressIndex || 0;
+    
+    // Discover all addresses with metadata (includes index and usage status)
+    // This single call replaces the expensive loop that was regenerating addresses
+    console.log(`🔍 Discovering addresses with metadata...`);
+    const addressMetadata = await discoverUsedAddresses(xpub, true);
+    console.log(`📊 Found ${addressMetadata.length} addresses (${addressMetadata.filter(a => a.isUsed).length} used on blockchain)`);
+    
+    // Build a set of wallet addresses for O(1) lookup
+    const walletAddressSet = new Set(wallet.addresses);
+    
+    // Filter to only external chain (0) addresses for receiving
+    const externalAddresses = addressMetadata.filter(a => a.chain === 0);
+    
+    // Find the highest used address index on the blockchain
+    const usedExternalAddresses = externalAddresses.filter(a => a.isUsed);
+    const highestUsedIndex = usedExternalAddresses.length > 0
+      ? Math.max(...usedExternalAddresses.map(a => a.index))
+      : -1;
+    
+    console.log(`📊 Highest used address index on blockchain: ${highestUsedIndex}`);
+    
+    // Start searching from the maximum of:
+    // 1. One past the highest blockchain-used index
+    // 2. One past the current wallet index (to ensure we move forward)
+    const startSearchIndex = Math.max(highestUsedIndex + 1, currentIndex + 1);
+    console.log(`🔍 Starting search from index ${startSearchIndex}`);
+    
+    // Search through discovered addresses first (fast - no crypto operations needed)
+    for (const addrMeta of externalAddresses) {
+      if (addrMeta.index >= startSearchIndex && 
+          !addrMeta.isUsed && 
+          !walletAddressSet.has(addrMeta.address)) {
+        console.log(`✅ Found unused address at index ${addrMeta.index} (from cached metadata)`);
+        return addrMeta.index;
+      }
+    }
+    
+    // If not found in discovered addresses, generate sequentially from the start point
+    // This handles the case where we need addresses beyond what was discovered
+    console.log(`🔍 No suitable address found in cache, generating new addresses...`);
     await ensureECC();
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    let searchIndex = startSearchIndex;
+    const maxSearchIndex = startSearchIndex + 100; // Reasonable upper bound
     
-    const node = bip32.fromBase58(xpub);
-    const externalChain = node.derive(0); // External chain (receiving addresses)
-    
-    // Discover used addresses to find the gap
-    const usedAddresses = await discoverUsedAddresses(xpub);
-    console.log(`📊 Found ${usedAddresses.length} used addresses`);
-    
-    // Create a set of used addresses for fast lookup
-    const usedAddressesSet = new Set(usedAddresses);
-    
-    // Find the first unused address after the last used address
-    let firstUnusedIndex = 0;
-    if (usedAddresses.length > 0) {
-      // Find the highest used index by checking addresses in batches
-      const maxCheckIndex = Math.min(usedAddresses.length * 10, 1000); // Reasonable upper bound
-      let maxUsedIndex = -1;
+    while (searchIndex < maxSearchIndex) {
+      const address = await generateAddressFromXpub(xpub, searchIndex);
       
-      const batchSize = 20;
-      for (let startIndex = 0; startIndex < maxCheckIndex; startIndex += batchSize) {
-        const endIndex = Math.min(startIndex + batchSize, maxCheckIndex);
-        const batch = await deriveAddressBatch(node, 0, startIndex, endIndex);
-        
-        for (let i = 0; i < batch.length; i++) {
-          const address = batch[startIndex + i];
-          if (usedAddressesSet.has(address)) {
-            maxUsedIndex = Math.max(maxUsedIndex, startIndex + i);
-          }
-        }
+      // Check if this address is NOT in the wallet (wallet-local check)
+      // This is the key difference from blockchain usage check
+      if (!walletAddressSet.has(address)) {
+        console.log(`✅ Found unused address at index ${searchIndex} (newly generated)`);
+        return searchIndex;
       }
       
-      firstUnusedIndex = maxUsedIndex + 1;
+      console.log(`🔍 Address at index ${searchIndex} already in wallet, checking next...`);
+      searchIndex++;
     }
     
-    console.log(`🔍 First unused address index: ${firstUnusedIndex}`);
+    // Fallback: if we still can't find an unused address, return next sequential
+    console.log(`⚠️ Could not find unused address after checking ${maxSearchIndex - startSearchIndex} addresses`);
+    console.log(`✅ Fallback: returning index ${startSearchIndex}`);
+    return startSearchIndex;
     
-    // Find the next GAP_LIMIT unused addresses
-    const unusedAddresses: number[] = [];
-    const batchSize = Math.min(GAP_LIMIT, 10);
-    
-    for (let i = firstUnusedIndex; i < firstUnusedIndex + GAP_LIMIT; i += batchSize) {
-      const batch = await deriveAddressBatch(node, 0, i, i + batchSize);
-      
-      for (let j = 0; j < batch.length && unusedAddresses.length < GAP_LIMIT; j++) {
-        const address = batch[j];
-        const addressIndex = i + j;
-        
-        // Skip known used addresses
-        if (usedAddressesSet.has(address)) {
-          continue;
-        }
-        
-        try {
-          const result = await esploraGet(`/address/${address}/txs`, 30000);
-          const hasTransactions = result && Array.isArray(result) && result.length > 0;
-          
-          if (!hasTransactions) {
-            unusedAddresses.push(addressIndex);
-            console.log(`✅ Found unused address at index ${addressIndex}`);
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to check address ${addressIndex}:`, error);
-          // Treat as unused if we can't check
-          unusedAddresses.push(addressIndex);
-        }
-      }
-    }
-    
-    console.log(`📊 Found ${unusedAddresses.length} unused addresses:`, unusedAddresses);
-    
-    if (unusedAddresses.length === 0) {
-      console.log(`⚠️ No unused addresses found, returning first unused index`);
-      return firstUnusedIndex;
-    }
-    
-    // Find the next unused address to use (cycling through the unused addresses)
-    const currentIndex = wallet.currentAddressIndex;
-    
-    // If current index is not in our unused addresses list, start from the first unused
-    if (!unusedAddresses.includes(currentIndex)) {
-      const nextUnusedIndex = unusedAddresses[0];
-      console.log(`✅ Current index ${currentIndex} not in unused list, using first unused: ${nextUnusedIndex}`);
-      return nextUnusedIndex;
-    }
-    
-    // Find the next unused address after current, or cycle back to first
-    const currentPosition = unusedAddresses.indexOf(currentIndex);
-    const nextPosition = (currentPosition + 1) % unusedAddresses.length;
-    const nextUnusedIndex = unusedAddresses[nextPosition];
-    
-    console.log(`✅ Cycling through unused addresses: ${currentIndex} -> ${nextUnusedIndex}`);
-    return nextUnusedIndex;
   } catch (error) {
-    console.error(`❌ Failed to find next unused address with cycling:`, error);
-    // Fallback to simple increment
-    return wallet.currentAddressIndex + 1;
+    console.error(`❌ Failed to find next unused address:`, error);
+    // Fallback to simple increment (no wrap-around)
+    const currentIndex = wallet.currentAddressIndex || 0;
+    const fallbackIndex = currentIndex + 1;
+    console.log(`✅ Error fallback: returning index ${fallbackIndex}`);
+    return fallbackIndex;
   }
 }
 
 /**
- * Generate a new address for the wallet using simple cycling pattern
+ * Pre-generate a pool of addresses for fast access
+ * This eliminates the need to generate addresses on-demand
+ */
+export async function generateAddressPool(xpub: string, poolSize: number = 20): Promise<string[]> {
+  try {
+    await ensureECC();
+    
+    const addresses: string[] = [];
+    for (let i = 0; i < poolSize; i++) {
+      const address = await generateAddressFromXpub(xpub, i);
+      addresses.push(address);
+    }
+    
+    console.log(`✅ Generated address pool of ${poolSize} addresses`);
+    return addresses;
+  } catch (error) {
+    console.error('❌ Failed to generate address pool:', error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a new address for the wallet using proper gap limit logic
  */
 export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
   try {
     console.log('🔧 Generating new address for wallet:', wallet.name);
     
-    // Find the next address index using cycling logic (0-19)
-    const nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
-    const newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
+    // Build a set of existing wallet addresses for O(1) lookup
+    const existingAddresses = new Set(wallet.addresses);
     
-    // Check if this address already exists in the wallet's address list
-    const isDuplicate = wallet.addresses.includes(newAddress);
-    if (isDuplicate) {
-      console.warn(`⚠️ Generated address is already in wallet, cycling to next index`);
-      // Cycle to the next index
-      const nextCycledIndex = (nextIndex + 1) % 20;
-      const alternativeAddress = await generateAddressFromXpub(wallet.xpub, nextCycledIndex);
+    // Find the next address index using proper BIP44 gap limit logic
+    let nextIndex = await findNextUnusedAddressIndexWithCycling(wallet.xpub, wallet);
+    let newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
+    
+    // If the address is already in the wallet, sequentially increment the index
+    // until we find one that's not in the wallet (avoiding the infinite loop bug)
+    let attempts = 0;
+    const maxAttempts = 100; // Prevent infinite loop
+    
+    while (existingAddresses.has(newAddress) && attempts < maxAttempts) {
+      attempts++;
+      console.warn(`⚠️ Address at index ${nextIndex} already exists in wallet, trying next index (attempt ${attempts})`);
       
-      const updatedWallet = {
-        ...wallet,
-        addresses: [...wallet.addresses, alternativeAddress],
-        currentAddressIndex: nextCycledIndex,
-      };
-      
-      console.log(`✅ Alternative address generated at index ${nextCycledIndex}:`, alternativeAddress);
-      return updatedWallet;
+      // Simply increment sequentially (no modulo wrap-around)
+      // This ensures we don't get stuck in a loop and follows BIP44 sequential addressing
+      nextIndex = nextIndex + 1;
+      newAddress = await generateAddressFromXpub(wallet.xpub, nextIndex);
+    }
+    
+    // If we exhausted all attempts, throw an error
+    if (existingAddresses.has(newAddress)) {
+      throw new Error('Unable to generate a unique address after maximum attempts');
     }
     
     // Update wallet with new address

@@ -766,6 +766,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const generateNewAddress = useCallback(async (): Promise<{ success: boolean; address?: string; error?: string }> => {
     if (!currentWallet) return { success: false, error: 'No wallet selected' };
     try {
+      console.log('🚀 Fast address generation starting...');
+      const startTime = Date.now();
+      
       const updatedWallet = await walletService.generateNewAddress(currentWallet);
       const updatedWallets = wallets.map(w => w.id === updatedWallet.id ? updatedWallet : w);
       saveWallets(updatedWallets);
@@ -776,9 +779,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       const newAddress = updatedWallet.addresses[updatedWallet.addresses.length - 1];
+      const endTime = Date.now();
+      console.log(`✅ Fast address generation completed in ${endTime - startTime}ms`);
+      
       return { success: true, address: newAddress };
     } catch (error) {
-      // console.error('Error generating new address:', error);
+      console.error('Error generating new address:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to generate new address' };
     }
   }, [currentWallet, wallets, saveWallets]);
