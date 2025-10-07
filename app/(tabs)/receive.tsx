@@ -6,7 +6,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -25,6 +25,29 @@ export default function ReceiveScreen() {
   const [currentAddress, setCurrentAddress] = useState<string>(
     currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
   );
+  const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
+  const spinValue = useRef(new Animated.Value(0)).current;
+
+  // Spin animation for the refresh icon
+  useEffect(() => {
+    if (isGeneratingAddress) {
+      const spinAnimation = Animated.loop(
+        Animated.timing(spinValue, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      );
+      spinAnimation.start();
+    } else {
+      spinValue.setValue(0);
+    }
+  }, [isGeneratingAddress, spinValue]);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   // Update current address when wallet changes
   React.useEffect(() => {
@@ -37,13 +60,17 @@ export default function ReceiveScreen() {
   }, [currentWallet?.addresses, currentAddress]);
 
   const handleNewAddress = async () => {
+    if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
+    
     try {
+      setIsGeneratingAddress(true);
       console.log('🔄 Generating new address...');
       const result = await generateNewAddress();
       if (result.success && result.address) {
         console.log('✅ New address generated:', result.address);
         setCurrentAddress(result.address);
-        Alert.alert('Success', 'New address generated successfully');
+        // Remove the success alert for faster UX
+        // Alert.alert('Success', 'New address generated successfully');
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
         Alert.alert('Warning', result.error || 'Address generation failed');
@@ -51,6 +78,8 @@ export default function ReceiveScreen() {
     } catch (error) {
       console.error('❌ Unexpected error generating new address:', error);
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsGeneratingAddress(false);
     }
   };
 
@@ -186,12 +215,20 @@ export default function ReceiveScreen() {
             style={[
               createButtonStyle(theme, 'primary'),
               styles.newAddressButton,
-              { alignSelf: 'center' }
+              { 
+                alignSelf: 'center',
+                opacity: isGeneratingAddress ? 0.7 : 1
+              }
             ]}
             onPress={handleNewAddress}
+            disabled={isGeneratingAddress}
           >
-            <RefreshCw color="white" size={20} />
-            <Text style={styles.newAddressText}>New Address</Text>
+            <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <RefreshCw color="white" size={20} />
+            </Animated.View>
+            <Text style={styles.newAddressText}>
+              {isGeneratingAddress ? 'Generating...' : 'New Address'}
+            </Text>
           </TouchableOpacity>
         </View>
         
