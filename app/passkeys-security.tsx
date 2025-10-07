@@ -15,11 +15,10 @@ import {
     Fingerprint,
     Key,
     Lock,
-    Plus,
     Shield,
     Smartphone,
     TestTube,
-    Trash2,
+    Trash2
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -606,39 +605,20 @@ export default function PasskeysSecurityScreen() {
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Security Keys
             </Text>
-            <TouchableOpacity 
-              style={styles.addKeyButton}
-              onPress={() => {
-                Alert.alert(
-                  'Add Security Key',
-                  'Choose the type of security key you want to add:',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { text: 'Passkey', onPress: handleAddPasskey },
-                    { text: 'FIDO Key', onPress: handleAddFIDOKey },
-                  ]
-                );
-              }}
-            >
-              <Plus color={theme.colors.primary} size={16} />
-              <Text style={[styles.addKeyText, { color: theme.colors.primary }]}>
-                Add Key
-              </Text>
-            </TouchableOpacity>
           </View>
           
-          {securityKeys.length === 0 ? (
+          {securityKeys.filter(k => k.type !== 'biometric').length === 0 ? (
             <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
               <Key color={theme.colors.textSecondary} size={32} />
               <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
-                No security keys registered
+                Hardware Security Keys Not Supported
               </Text>
               <Text style={[styles.emptyStateSubtitle, { color: theme.colors.textSecondary }]}>
-                Add a passkey or hardware security key for enhanced protection
+                Passkeys and FIDO hardware keys require WebAuthn API which is not available in React Native. Use biometric authentication for secure wallet protection.
               </Text>
             </View>
           ) : (
-            securityKeys.map((key) => (
+            securityKeys.filter(k => k.type !== 'biometric').map((key) => (
               <SecurityKeyItem key={key.id} securityKey={key} />
             ))
           )}
@@ -655,16 +635,16 @@ export default function PasskeysSecurityScreen() {
           
           <View style={styles.recommendationsList}>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Enable biometric authentication for quick access
+              • Enable biometric authentication for quick and secure access
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Register a hardware security key for high-value transactions
+              • Set a strong PIN as a backup authentication method
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Use multi-factor authentication for maximum security
+              • Keep your device physically secure
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Keep your device and security keys secure
+              • Regularly review your security settings
             </Text>
           </View>
         </View>
