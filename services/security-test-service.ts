@@ -80,10 +80,13 @@ export class SecurityTestService {
       
       return {
         testName: 'Biometric Authentication',
-        passed: true,
+        passed: isEnabled,
         details: isEnabled 
           ? `${biometricType} is enabled and ready to use` 
-          : `${biometricType} is available but not enabled in app. Enable it in Passkeys & Security settings for enhanced protection`,
+          : `${biometricType} is available but not enabled in app`,
+        error: !isEnabled 
+          ? 'Enable it in Passkeys & Security settings for enhanced protection'
+          : undefined,
       };
     } catch (error) {
       return {
