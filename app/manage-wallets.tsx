@@ -1,33 +1,33 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-  Alert,
-  TextInput,
-  Modal,
-} from 'react-native';
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
+import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
+import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useWallet } from '@/hooks/wallet-store';
+import { getWalletTypeDisplayName } from '@/types/wallet';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
 import {
-  Edit3,
-  Trash2,
-  Plus,
-  X,
-  Check,
-  ArrowLeft,
+    ArrowLeft,
+    Check,
+    Edit3,
+    Plus,
+    Trash2,
+    X,
 } from 'lucide-react-native';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
-import { useWallet } from '@/hooks/wallet-store';
-import { useAutoLock } from '@/hooks/auto-lock-store';
-import { getWalletTypeDisplayName } from '@/types/wallet';
-import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
-import { LinearGradient } from 'expo-linear-gradient';
-import { GradientBackground } from '@/components/GradientBackground';
+import React, { useState } from 'react';
+import {
+    Alert,
+    Modal,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 export default function ManageWalletsScreen() {
-  const { theme, wallets, editWallet, deleteWallet } = useWallet();
+  const walletContext = useWallet();
   const { hasPin } = useAutoLock();
   const router = useRouter();
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -35,6 +35,14 @@ export default function ManageWalletsScreen() {
   const [editName, setEditName] = useState<string>('');
   const [editColor, setEditColor] = useState<string>('#8B5CF6');
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
+
+  // Safely destructure with fallbacks to prevent crashes
+  const { 
+    theme, 
+    wallets = [], 
+    editWallet, 
+    deleteWallet 
+  } = walletContext || {};
 
   const handleEditWallet = (wallet: any) => {
     setEditingWallet(wallet);
@@ -44,7 +52,7 @@ export default function ManageWalletsScreen() {
   };
 
   const handleSaveEdit = async () => {
-    if (!editingWallet || !editName.trim()) return;
+    if (!editingWallet || !editName.trim() || !editWallet) return;
 
     try {
       await editWallet(editingWallet.id, editName.trim(), editColor);
@@ -58,6 +66,11 @@ export default function ManageWalletsScreen() {
   };
 
   const handleDeleteWallet = async (wallet: any) => {
+    if (!wallet || !deleteWallet) {
+      Alert.alert('Error', 'Unable to delete wallet at this time.');
+      return;
+    }
+
     if (wallets.length <= 1) {
       Alert.alert(
         'Cannot Delete',
@@ -77,14 +90,22 @@ export default function ManageWalletsScreen() {
           onPress: async () => {
             setIsDeleting(true);
             try {
-              console.log('Deleting wallet:', wallet.id, wallet.name);
+              console.log('🗑️ Starting wallet deletion:', wallet.id, wallet.name);
+              
+              // Wait for deletion to complete
               await deleteWallet(wallet.id);
-              console.log('Wallet deleted successfully');
+              
+              console.log('✅ Wallet deleted successfully');
+              
+              // Give time for state to settle before any navigation
+              setTimeout(() => {
+                setIsDeleting(false);
+              }, 300);
+              
             } catch (error) {
-              console.error('Error deleting wallet:', error);
-              Alert.alert('Error', 'Failed to delete wallet. Please try again.');
-            } finally {
+              console.error('❌ Error deleting wallet:', error);
               setIsDeleting(false);
+              Alert.alert('Error', 'Failed to delete wallet. Please try again.');
             }
           },
         },

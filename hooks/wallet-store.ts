@@ -393,7 +393,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['wallet-balance-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
-      if (!currentWallet || !currentWallet.xpub) return 0;
+      // Guard against undefined wallet during state transitions
+      if (!currentWallet || !currentWallet.xpub) {
+        console.log('⏸️ Skipping balance fetch - no current wallet');
+        return 0;
+      }
       try {
         console.log('💰 Fetching wallet balance using improved service...');
         const result = await getWalletData(currentWallet.xpub);
@@ -422,6 +426,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
+    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
   });
 
   // Transaction history query
@@ -429,8 +434,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['transactions-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
+      // Guard against undefined wallet during state transitions
       if (!currentWallet || !currentWallet.xpub) {
-        console.log('🚫 No current wallet or xpub available for transaction fetching');
+        console.log('⏸️ Skipping transaction fetch - no current wallet');
         return [];
       }
       
@@ -464,6 +470,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
+    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
   });
 
   // Save wallets mutation
@@ -474,7 +481,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
     onSuccess: (walletsToSave) => {
       setWallets(walletsToSave);
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      // Don't invalidate immediately - let the state settle first
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      }, 100);
     },
   });
   const { mutate: saveWallets } = saveWalletsMutation;
@@ -487,7 +497,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
     onSuccess: (walletId) => {
       setCurrentWalletId(walletId);
-      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      // Invalidate dependent queries after state updates
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      }, 150);
     },
   });
   const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
@@ -716,16 +731,34 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       if (existingWalletWithName) {
         return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
       }
+      
+      console.log('💼 Creating new wallet:', trimmedName);
       const wallet = await walletService.createWallet(trimmedName, color);
       const updatedWallets = [...wallets, wallet];
-      saveWallets(updatedWallets);
-      saveCurrentWalletId(wallet.id);
+      
+      // Update state and storage synchronously
+      await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
+      await AsyncStorage.setItem('currentWalletId', wallet.id);
+      
+      setWallets(updatedWallets);
+      setCurrentWalletId(wallet.id);
+      
+      // Wait for state to settle
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      
+      console.log('✅ Wallet created successfully');
       return { success: true, wallet };
     } catch (error) {
-      // console.error('Error creating wallet:', error);
+      console.error('❌ Error creating wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId]);
+  }, [wallets, queryClient]);
 
   const importWallet = useCallback(async (name: string, mnemonic: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
     try {
@@ -752,16 +785,34 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       if (existingWalletWithName) {
         return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
       }
+      
+      console.log('📥 Importing wallet:', trimmedName);
       const wallet = await walletService.importWallet(trimmedName, trimmedMnemonic, color);
       const updatedWallets = [...wallets, wallet];
-      saveWallets(updatedWallets);
-      saveCurrentWalletId(wallet.id);
+      
+      // Update state and storage synchronously
+      await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
+      await AsyncStorage.setItem('currentWalletId', wallet.id);
+      
+      setWallets(updatedWallets);
+      setCurrentWalletId(wallet.id);
+      
+      // Wait for state to settle
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Invalidate queries
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      
+      console.log('✅ Wallet imported successfully');
       return { success: true, wallet };
     } catch (error) {
-      // console.error('Error importing wallet:', error);
+      console.error('❌ Error importing wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId]);
+  }, [wallets, queryClient]);
 
   const generateNewAddress = useCallback(async (): Promise<{ success: boolean; address?: string; error?: string }> => {
     if (!currentWallet) return { success: false, error: 'No wallet selected' };
@@ -956,23 +1007,51 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const deleteWallet = useCallback(async (walletId: string) => {
     try {
+      console.log('🗑️ Starting wallet deletion for ID:', walletId);
       const updatedWallets = wallets.filter(w => w.id !== walletId);
-      saveWallets(updatedWallets);
       
-      // If we deleted the current wallet, switch to the first available wallet
-      if (currentWalletId === walletId) {
+      // Update state synchronously first to prevent race conditions
+      const needsSwitchWallet = currentWalletId === walletId;
+      const newCurrentWalletId = needsSwitchWallet && updatedWallets.length > 0 
+        ? updatedWallets[0].id 
+        : currentWalletId;
+      
+      // Update all state and storage together
+      await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
+      setWallets(updatedWallets);
+      
+      if (needsSwitchWallet) {
         if (updatedWallets.length > 0) {
-          saveCurrentWalletId(updatedWallets[0].id);
+          await AsyncStorage.setItem('currentWalletId', newCurrentWalletId!);
+          setCurrentWalletId(newCurrentWalletId);
         } else {
-          setCurrentWalletId(null);
           await AsyncStorage.removeItem('currentWalletId');
+          setCurrentWalletId(null);
         }
       }
+      
+      // Cancel any pending queries for the deleted wallet
+      queryClient.cancelQueries({ queryKey: ['wallet-balance-improved', walletId] });
+      queryClient.cancelQueries({ queryKey: ['transactions-improved', walletId] });
+      
+      // Wait for state to settle before invalidating queries
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Now invalidate queries for the new current wallet
+      queryClient.invalidateQueries({ queryKey: ['wallets'] });
+      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      
+      if (newCurrentWalletId) {
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved', newCurrentWalletId] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-improved', newCurrentWalletId] });
+      }
+      
+      console.log('✅ Wallet deletion completed successfully');
     } catch (error) {
-      // console.error('Error deleting wallet:', error);
+      console.error('❌ Error deleting wallet:', error);
       throw error;
     }
-  }, [wallets, currentWalletId, saveWallets, saveCurrentWalletId]);
+  }, [wallets, currentWalletId, queryClient]);
 
   const logoutAndEraseWallet = useCallback(async () => {
     try {
@@ -1148,4 +1227,5 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   ]);
 
   return walletStoreData;
+});
 });
