@@ -5,14 +5,14 @@ import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
@@ -31,7 +31,8 @@ try {
     generateAddressFromXpub: importedService.generateAddressFromXpub,
     generateNewAddress: importedService.generateNewAddress,
     generateAddressesForView: importedService.generateAddressesForView,
-    generateAddressBatchForView: importedService.generateAddressBatchForView
+    generateAddressBatchForView: importedService.generateAddressBatchForView,
+    clearAddressCache: importedService.clearAddressCache
   };
   
   // Verify required functions are available
@@ -49,7 +50,8 @@ try {
   walletService = {
     generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
     generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    generateAddressesForView: async () => { throw new Error('Wallet service not available'); }
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
+    clearAddressCache: () => { console.warn('Wallet service not available'); }
   };
 }
 
@@ -70,22 +72,26 @@ export default function WalletAddressesScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
-  const [cachedAddresses, setCachedAddresses] = useState<{[key: string]: AddressInfo[]}>({});
   const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Generate addresses following gap limit logic
+  // OPTIMIZED: Fetch both chains at once to leverage shared caching from discoverUsedAddresses
   const addressesQuery = useQuery({
-    queryKey: ['wallet-addresses-gap-limit', currentWallet?.id, currentWallet?.xpub, selectedTab],
+    queryKey: ['wallet-addresses-all-chains', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
       if (!currentWallet?.xpub) return [];
       
-      console.log(`🔍 Generating addresses for ${selectedTab} chain using gap limit logic...`);
+      console.log(`🔍 Generating addresses for both chains using gap limit logic with caching...`);
       
       try {
-        // Use the new gap limit function
-        const addressData = await walletService.generateAddressesForView(currentWallet.xpub, selectedTab);
+        // Fetch both receiving and change addresses in parallel
+        // They share the same discoverUsedAddresses cache, so the second call is very fast
+        const [receivingData, changeData] = await Promise.all([
+          walletService.generateAddressesForView(currentWallet.xpub, 'receiving'),
+          walletService.generateAddressesForView(currentWallet.xpub, 'change')
+        ]);
         
-        const addresses: AddressInfo[] = addressData.map((addrData: {address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}) => ({
+        const allAddresses: AddressInfo[] = [...receivingData, ...changeData].map((addrData) => ({
           address: addrData.address,
           index: addrData.index,
           balance: addrData.balance,
@@ -97,10 +103,10 @@ export default function WalletAddressesScreen() {
           derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
         }));
         
-        console.log(`✅ Generated ${addresses.length} ${selectedTab} addresses using gap limit logic`);
-        return addresses;
+        console.log(`✅ Generated ${allAddresses.length} addresses total (${receivingData.length} receiving, ${changeData.length} change)`);
+        return allAddresses;
       } catch (error) {
-        console.error(`❌ Failed to generate ${selectedTab} addresses:`, error);
+        console.error(`❌ Failed to generate addresses:`, error);
         throw error;
       }
     },
@@ -108,16 +114,6 @@ export default function WalletAddressesScreen() {
     staleTime: 300000, // 5 minutes
     refetchOnWindowFocus: false,
   });
-
-  // Update cache when query data changes
-  React.useEffect(() => {
-    if (addressesQuery.data && !addressesQuery.isLoading && !addressesQuery.error) {
-      setCachedAddresses(prev => ({
-        ...prev,
-        [selectedTab]: addressesQuery.data
-      }));
-    }
-  }, [addressesQuery.data, addressesQuery.isLoading, addressesQuery.error, selectedTab]);
 
   const loadMoreAddresses = async () => {
     if (isLoadingMore) return;
@@ -135,26 +131,10 @@ export default function WalletAddressesScreen() {
     }
   };
 
-  // Get address data for current tab (from cache or query)
+  // Get address data for current tab (filtered from query data)
   const addressData = useMemo((): AddressInfo[] => {
-    // Determine the best data source for the current tab
-    let sourceData: AddressInfo[] = [];
-    
-    // If query is loading or has an error, don't use stale cached data
-    if (addressesQuery.isLoading || addressesQuery.error) {
-      // Only use cached data if query is loading (not if it has an error)
-      if (addressesQuery.isLoading && cachedAddresses[selectedTab]) {
-        sourceData = cachedAddresses[selectedTab];
-      } else {
-        sourceData = [];
-      }
-    } else if (addressesQuery.data) {
-      // Query succeeded - use fresh query data
-      sourceData = addressesQuery.data;
-    } else if (cachedAddresses[selectedTab]) {
-      // Fallback to cached data if no fresh query data
-      sourceData = cachedAddresses[selectedTab];
-    }
+    // Use query data directly - it contains both receiving and change addresses
+    const sourceData = addressesQuery.data || [];
     
     return sourceData
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
@@ -170,7 +150,7 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [cachedAddresses, addressesQuery.data, addressesQuery.isLoading, addressesQuery.error, selectedTab]);
+  }, [addressesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -189,8 +169,11 @@ export default function WalletAddressesScreen() {
   const refreshAddresses = async () => {
     setGeneratingAddresses(true);
     try {
-      // Clear cache and refetch
-      setCachedAddresses({});
+      // Clear the service-level address metadata cache to force fresh blockchain queries
+      if (currentWallet?.xpub && walletService.clearAddressCache) {
+        walletService.clearAddressCache(currentWallet.xpub);
+      }
+      
       await addressesQuery.refetch();
     } catch (error) {
       console.error('Failed to refresh addresses:', error);
