@@ -4,34 +4,37 @@ import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-  ArrowLeft,
-  ChevronRight,
-  Coins,
-  FileKey,
-  Key,
-  List,
-  Trash2,
-  Wallet,
-  Zap,
+    ArrowLeft,
+    ChevronRight,
+    Coins,
+    FileKey,
+    Key,
+    List,
+    Trash2,
+    Wallet,
+    Zap,
 } from 'lucide-react-native';
 import React from 'react';
 import {
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 
 export default function WalletSettingsScreen() {
+  const walletContext = useWallet();
+  
+  // Safely destructure with fallbacks to prevent crashes
   const { 
     theme, 
     currentWallet, 
     deleteWallet,
-    wallets
-  } = useWallet();
+    wallets = []
+  } = walletContext || {};
 
   const handleDeleteWallet = () => {
     // Check if there's no current wallet
@@ -40,6 +43,12 @@ export default function WalletSettingsScreen() {
         'No Wallet Selected',
         'Please select a wallet to delete.'
       );
+      return;
+    }
+
+    // Check if deleteWallet function is available
+    if (!deleteWallet) {
+      Alert.alert('Error', 'Unable to delete wallet at this time.');
       return;
     }
 
@@ -64,12 +73,15 @@ export default function WalletSettingsScreen() {
             try {
               console.log('🗑️ User confirmed wallet deletion for:', currentWallet.name);
               
+              // Wait for deletion to complete
               await deleteWallet(currentWallet.id);
               
               console.log('✅ Wallet deletion completed successfully');
               
-              // Navigate back to manage wallets or home screen
-              router.back();
+              // Give time for state to settle before navigating
+              setTimeout(() => {
+                router.back();
+              }, 300);
               
             } catch (error) {
               console.error('❌ Error during wallet deletion:', error);

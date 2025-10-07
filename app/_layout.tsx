@@ -37,14 +37,20 @@ class ErrorBoundary extends Component<
   }
 
   static getDerivedStateFromError(error: Error) {
-    console.error('ErrorBoundary caught error:', error);
+    console.error('🚨 ErrorBoundary caught error:', error);
+    console.error('Error name:', error.name);
+    console.error('Error message:', error.message);
+    console.error('Error stack:', error.stack);
+    
     // Report to Crashlytics if available
     crashlyticsService.recordError(error);
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
-    console.error('ErrorBoundary componentDidCatch:', error, errorInfo);
+    console.error('🚨 ErrorBoundary componentDidCatch:', error, errorInfo);
+    console.error('Component stack:', errorInfo?.componentStack);
+    
     // Report to Crashlytics with additional context if available
     crashlyticsService.recordError(error, {
       errorBoundary: 'true',
