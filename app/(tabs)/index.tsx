@@ -11,20 +11,20 @@ import { Wallet } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -70,6 +70,7 @@ export default function WalletScreen() {
   const [editColor, setEditColor] = useState<string>('');
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>('1M');
   const [showFeedbackPopup, setShowFeedbackPopup] = useState<boolean>(false);
+  const carouselRef = useRef<FlatList<CarouselItem>>(null);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -130,6 +131,21 @@ export default function WalletScreen() {
     markFeedbackPromptDismissed();
   }, [markFeedbackPromptDismissed]);
 
+  // Function to scroll to a specific wallet in the carousel
+  const scrollToWallet = useCallback((walletId: string) => {
+    const walletIndex = wallets.findIndex(w => w.id === walletId);
+    if (walletIndex !== -1 && carouselRef.current) {
+      // Use setTimeout to ensure the FlatList is ready
+      setTimeout(() => {
+        carouselRef.current?.scrollToIndex({
+          index: walletIndex,
+          animated: true,
+          viewPosition: 0.5, // Center the item in the viewport
+        });
+      }, 100);
+    }
+  }, [wallets]);
+
   // Memoize wallet data early to ensure consistent hook order
   const walletDataForList = useMemo(() => {
     if (!wallets || !Array.isArray(wallets)) {
@@ -170,13 +186,14 @@ export default function WalletScreen() {
           onPress={() => {
             if (item.wallet.id !== currentWalletId) {
               switchWallet(item.wallet.id);
+              scrollToWallet(item.wallet.id);
             }
           }}
           onEdit={handleEditWallet}
         />
       </View>
     );
-  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet]);
+  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet, scrollToWallet]);
 
   // Show loading state while wallet is being loaded
   if (isLoading) {
@@ -290,6 +307,7 @@ export default function WalletScreen() {
         {/* Wallet Carousel */}
         <View style={styles.walletCarousel}>
           <FlatList<CarouselItem>
+            ref={carouselRef}
             horizontal
             showsHorizontalScrollIndicator={false}
             pagingEnabled={false}
@@ -304,6 +322,17 @@ export default function WalletScreen() {
             maxToRenderPerBatch={3}
             windowSize={5}
             initialNumToRender={3}
+            onScrollToIndexFailed={(info) => {
+              // Handle scroll failure by waiting and retrying
+              const wait = new Promise(resolve => setTimeout(resolve, 500));
+              wait.then(() => {
+                carouselRef.current?.scrollToIndex({ 
+                  index: info.index, 
+                  animated: true,
+                  viewPosition: 0.5 
+                });
+              });
+            }}
           />
         </View>
 
