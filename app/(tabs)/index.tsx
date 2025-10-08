@@ -135,16 +135,25 @@ export default function WalletScreen() {
   const scrollToWallet = useCallback((walletId: string) => {
     const walletIndex = wallets.findIndex(w => w.id === walletId);
     if (walletIndex !== -1 && carouselRef.current) {
-      // Use setTimeout to ensure the FlatList is ready
-      setTimeout(() => {
-        carouselRef.current?.scrollToIndex({
-          index: walletIndex,
-          animated: true,
-          viewPosition: 0.5, // Center the item in the viewport
-        });
-      }, 100);
+      // Use requestAnimationFrame to ensure the FlatList has completed rendering
+      requestAnimationFrame(() => {
+        setTimeout(() => {
+          carouselRef.current?.scrollToIndex({
+            index: walletIndex,
+            animated: true,
+            viewPosition: 0.5, // Center the item in the viewport
+          });
+        }, 300); // Increased timeout to allow for state updates
+      });
     }
   }, [wallets]);
+
+  // Auto-scroll to active wallet when it changes
+  useEffect(() => {
+    if (currentWalletId && wallets.length > 0) {
+      scrollToWallet(currentWalletId);
+    }
+  }, [currentWalletId, scrollToWallet]);
 
   // Memoize wallet data early to ensure consistent hook order
   const walletDataForList = useMemo(() => {
@@ -186,14 +195,14 @@ export default function WalletScreen() {
           onPress={() => {
             if (item.wallet.id !== currentWalletId) {
               switchWallet(item.wallet.id);
-              scrollToWallet(item.wallet.id);
+              // Scroll will be handled automatically by useEffect
             }
           }}
           onEdit={handleEditWallet}
         />
       </View>
     );
-  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet, scrollToWallet]);
+  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet]);
 
   // Show loading state while wallet is being loaded
   if (isLoading) {
