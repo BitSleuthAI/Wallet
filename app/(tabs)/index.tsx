@@ -330,11 +330,18 @@ export default function WalletScreen() {
               // Handle scroll failure by waiting and retrying
               const wait = new Promise(resolve => setTimeout(resolve, 500));
               wait.then(() => {
-                carouselRef.current?.scrollToIndex({ 
-                  index: info.index, 
-                  animated: true,
-                  viewPosition: 0.5 
-                });
+                try {
+                  carouselRef.current?.scrollToIndex({ 
+                    index: info.index, 
+                    animated: true,
+                    viewPosition: 0.5 
+                  });
+                } catch (error) {
+                  // If retry fails, fall back to scrollToOffset for more reliable positioning
+                  console.warn('Failed to scroll to wallet index after retry:', error);
+                  const offset = info.index * 336; // 320 (card width) + 16 (margin)
+                  carouselRef.current?.scrollToOffset({ offset, animated: true });
+                }
               });
             }}
           />
