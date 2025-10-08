@@ -131,29 +131,24 @@ export default function WalletScreen() {
     markFeedbackPromptDismissed();
   }, [markFeedbackPromptDismissed]);
 
-  // Function to scroll to a specific wallet in the carousel
-  const scrollToWallet = useCallback((walletId: string) => {
-    const walletIndex = wallets.findIndex(w => w.id === walletId);
-    if (walletIndex !== -1 && carouselRef.current) {
-      // Use requestAnimationFrame to ensure the FlatList has completed rendering
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          carouselRef.current?.scrollToIndex({
-            index: walletIndex,
-            animated: true,
-            viewPosition: 0.5, // Center the item in the viewport
-          });
-        }, 300); // Increased timeout to allow for state updates
-      });
-    }
-  }, [wallets]);
-
   // Auto-scroll to active wallet when it changes
   useEffect(() => {
     if (currentWalletId && wallets.length > 0) {
-      scrollToWallet(currentWalletId);
+      const walletIndex = wallets.findIndex(w => w.id === currentWalletId);
+      if (walletIndex !== -1 && carouselRef.current) {
+        // Use requestAnimationFrame to ensure the FlatList has completed rendering
+        requestAnimationFrame(() => {
+          setTimeout(() => {
+            carouselRef.current?.scrollToIndex({
+              index: walletIndex,
+              animated: true,
+              viewPosition: 0.5, // Center the item in the viewport
+            });
+          }, 300); // Increased timeout to allow for state updates
+        });
+      }
     }
-  }, [currentWalletId, scrollToWallet]);
+  }, [currentWalletId, wallets.length]); // Only depend on currentWalletId and wallets.length, not the entire wallets array
 
   // Memoize wallet data early to ensure consistent hook order
   const walletDataForList = useMemo(() => {
