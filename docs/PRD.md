@@ -58,11 +58,11 @@ Bitcoin adoption is growing rapidly, but security breaches and poor UX continue 
 - [x] **Cross-Platform Support**: iOS, Android, and Web compatibility
 
 ### Nice-to-Have Features
-- [ ] **Hardware Wallet Integration**: Support for Ledger/Trezor devices
+- [ ] **Hardware Wallet Integration**: Support for Ledger/Trezor/COLDCARD devices
 - [ ] **Lightning Network**: Fast, low-cost microtransactions
 - [ ] **Multi-Signature Wallets**: Shared wallet functionality
 - [ ] **Advanced Privacy Features**: CoinJoin and privacy-focused transactions
-- [ ] **FIDO2/WebAuthn Support**: Hardware security key authentication
+- [ ] **Bitcoin NFC Payments**: Enable users to send and receive Bitcoin using near-field communication technology.
 - [ ] **Tor/VPN Integration**: Anonymous transaction routing
 - [ ] **BIP39 Passphrase**: Additional passphrase encryption layer
 - [ ] **Advanced Coin Control**: UTXO labeling and advanced management
