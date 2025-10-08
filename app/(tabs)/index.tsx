@@ -138,6 +138,46 @@ export default function WalletScreen() {
     return [...wallets.map(wallet => ({ type: 'wallet' as const, wallet })), { type: 'add' as const }];
   }, [wallets]);
 
+  // Define renderItem at component level to avoid hooks violation
+  const renderCarouselItem = useCallback(({ item }: { item: CarouselItem }) => {
+    if (item.type === 'add') {
+      return (
+        <TouchableOpacity 
+          style={[
+            styles.addWalletCard, 
+            { 
+              backgroundColor: theme.colors.surface, 
+              borderColor: theme.colors.primary,
+              borderWidth: 2,
+              borderStyle: 'dashed',
+            }
+          ]}
+          onPress={() => router.push('/wallet-setup')}
+          activeOpacity={0.7}
+        >
+          <View style={[styles.addWalletIcon, { backgroundColor: theme.colors.primary }]}>
+            <Plus color="white" size={24} />
+          </View>
+          <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
+        </TouchableOpacity>
+      );
+    }
+    return (
+      <View style={styles.walletCardContainer}>
+        <WalletCard 
+          wallet={item.wallet} 
+          isActive={item.wallet.id === currentWalletId}
+          onPress={() => {
+            if (item.wallet.id !== currentWalletId) {
+              switchWallet(item.wallet.id);
+            }
+          }}
+          onEdit={handleEditWallet}
+        />
+      </View>
+    );
+  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet]);
+
   // Show loading state while wallet is being loaded
   if (isLoading) {
     return (
@@ -258,44 +298,7 @@ export default function WalletScreen() {
             snapToAlignment="start"
             data={walletDataForList}
             keyExtractor={(item, index) => `${item.type}-${index}`}
-            renderItem={useCallback(({ item }) => {
-              if (item.type === 'add') {
-                return (
-                  <TouchableOpacity 
-                    style={[
-                      styles.addWalletCard, 
-                      { 
-                        backgroundColor: theme.colors.surface, 
-                        borderColor: theme.colors.primary,
-                        borderWidth: 2,
-                        borderStyle: 'dashed',
-                      }
-                    ]}
-                    onPress={() => router.push('/wallet-setup')}
-                    activeOpacity={0.7}
-                  >
-                    <View style={[styles.addWalletIcon, { backgroundColor: theme.colors.primary }]}>
-                      <Plus color="white" size={24} />
-                    </View>
-                    <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
-                  </TouchableOpacity>
-                );
-              }
-              return (
-                <View style={styles.walletCardContainer}>
-                  <WalletCard 
-                    wallet={item.wallet} 
-                    isActive={item.wallet.id === currentWalletId}
-                    onPress={() => {
-                      if (item.wallet.id !== currentWalletId) {
-                        switchWallet(item.wallet.id);
-                      }
-                    }}
-                    onEdit={handleEditWallet}
-                  />
-                </View>
-              );
-            }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet])}
+            renderItem={renderCarouselItem}
             contentContainerStyle={styles.carouselContent}
             removeClippedSubviews={true}
             maxToRenderPerBatch={3}

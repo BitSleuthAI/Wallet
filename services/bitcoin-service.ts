@@ -11,9 +11,17 @@ let eccInitialized = false;
 export const ensureECC = async () => {
   console.log('🔧 ensureECC called, eccInitialized:', eccInitialized);
   
-  if (eccInitialized) {
-    console.log('✅ ECC already initialized, returning');
+  // Always check if ECC is actually available, even if flag says it's initialized
+  const eccCheck = (global as any).ecc;
+  
+  if (eccInitialized && eccCheck) {
+    console.log('✅ ECC already initialized and available, returning');
     return;
+  }
+  
+  if (eccInitialized && !eccCheck) {
+    console.warn('⚠️ eccInitialized flag is true but ECC not found, reinitializing...');
+    eccInitialized = false;
   }
   
   try {
@@ -29,11 +37,16 @@ export const ensureECC = async () => {
       throw new Error('Cryptographic library initialization failed');
     }
     
+    // Wait a tick to ensure global is set
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
     console.log('🔧 Checking global ECC...');
     const ecc = (global as any).ecc;
     console.log('🔧 Global ECC:', typeof ecc, ecc ? Object.keys(ecc) : 'null');
     
     if (!ecc) {
+      console.error('❌ ECC not found on global after initialization');
+      console.error('❌ Global keys:', Object.keys(global).filter(k => k.includes('ecc') || k.includes('crypto') || k.startsWith('__')));
       throw new Error('ECC library not available after initialization');
     }
     
