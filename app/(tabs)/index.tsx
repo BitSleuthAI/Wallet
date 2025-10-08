@@ -148,7 +148,7 @@ export default function WalletScreen() {
         });
       }
     }
-  }, [currentWalletId]); // Only depend on currentWalletId, not wallets array
+  }, [currentWalletId, wallets]); // Include wallets to prevent stale closure
 
   // Memoize wallet data early to ensure consistent hook order
   const walletDataForList = useMemo(() => {
