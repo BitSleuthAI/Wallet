@@ -514,19 +514,48 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       throw new Error('Invalid mnemonic phrase');
     }
     
+    console.log('🔧 Calling ensureECC...');
     await ensureECC();
+    console.log('🔧 ensureECC completed');
     
-    // Check ECC availability
+    // Check ECC availability with detailed logging
+    console.log('🔧 Checking global object for ecc...');
+    console.log('🔧 global object keys:', Object.keys(global).filter(k => k.includes('ecc') || k.includes('crypto')));
+    
     const ecc = (global as any).ecc;
+    console.log('🔧 ECC from global:', typeof ecc, ecc ? 'exists' : 'null/undefined');
+    
     if (!ecc) {
-      throw new Error('ECC library not available');
+      console.error('❌ ECC library not found on global object');
+      console.error('❌ Attempting to reinitialize...');
+      
+      // Try to reinitialize
+      const { initializeCrypto } = require('./crypto-polyfill');
+      const success = await initializeCrypto();
+      
+      if (!success) {
+        throw new Error('ECC library initialization failed');
+      }
+      
+      const eccRetry = (global as any).ecc;
+      if (!eccRetry) {
+        throw new Error('ECC library not available after reinitialization');
+      }
+      
+      console.log('✅ ECC library available after retry:', typeof eccRetry, Object.keys(eccRetry));
+    } else {
+      console.log('✅ ECC library available:', typeof ecc, Object.keys(ecc));
     }
     
-    console.log('🔧 ECC library available:', typeof ecc, Object.keys(ecc));
+    // Get ECC again to ensure we have the latest reference
+    const eccFinal = (global as any).ecc;
+    if (!eccFinal) {
+      throw new Error('ECC library lost after initialization');
+    }
     
     // Generate xpub from mnemonic
     const bip32Module = await import('bip32');
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32 = bip32Module.BIP32Factory(eccFinal);
     
     console.log('🔧 BIP32 factory created');
     

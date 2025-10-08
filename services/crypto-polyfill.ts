@@ -6,15 +6,24 @@ import { Buffer } from '@craftzdog/react-native-buffer';
 (global as any).Buffer = Buffer;
 
 // Initialize crypto and ECC library
-export const initializeCrypto = async (): Promise<boolean> => {
+export const initializeCrypto = async (forceReinit: boolean = false): Promise<boolean> => {
   try {
     console.log('🔧 Initializing crypto polyfills and ECC library...');
     console.log('🔧 Global crypto initialized flag:', (global as any).__cryptoInitialized);
+    console.log('🔧 Force reinit:', forceReinit);
     
-    // Check if already initialized
-    if ((global as any).__cryptoInitialized) {
+    // Check if already initialized (unless force reinit)
+    if ((global as any).__cryptoInitialized && !forceReinit) {
       console.log('✅ Crypto already initialized');
-      return true;
+      // Verify ECC is actually available
+      const ecc = (global as any).ecc;
+      if (ecc) {
+        console.log('✅ ECC verified available');
+        return true;
+      } else {
+        console.warn('⚠️ Crypto flag set but ECC missing, reinitializing...');
+        (global as any).__cryptoInitialized = false;
+      }
     }
     
     let nobleECC;
@@ -66,7 +75,22 @@ export const initializeCrypto = async (): Promise<boolean> => {
     // Set the global ECC instance
     console.log('🔧 Setting global ECC instance...');
     (global as any).ecc = nobleECC;
-    console.log('🔧 Global ECC set:', typeof (global as any).ecc, (global as any).ecc ? Object.keys((global as any).ecc) : 'null');
+    
+    // Immediately verify it was set
+    const eccVerify = (global as any).ecc;
+    console.log('🔧 Global ECC set verification:', typeof eccVerify, eccVerify ? Object.keys(eccVerify) : 'null');
+    
+    if (!eccVerify) {
+      console.error('❌ CRITICAL: Failed to set ECC on global object');
+      throw new Error('Failed to set ECC on global object');
+    }
+    
+    if (eccVerify !== nobleECC) {
+      console.error('❌ CRITICAL: ECC on global does not match created instance');
+      throw new Error('ECC on global does not match created instance');
+    }
+    
+    console.log('✅ ECC successfully set and verified on global object');
     
     // Initialize bitcoinjs-lib with our ECC implementation
     try {
