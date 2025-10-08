@@ -133,7 +133,7 @@ export default function WalletScreen() {
 
   // Auto-scroll to active wallet when it changes
   useEffect(() => {
-    if (currentWalletId && wallets.length > 0) {
+    if (currentWalletId && Array.isArray(wallets) && wallets.length > 0) {
       const walletIndex = wallets.findIndex(w => w.id === currentWalletId);
       if (walletIndex !== -1 && carouselRef.current) {
         // Use requestAnimationFrame to ensure the FlatList has completed rendering
@@ -148,7 +148,7 @@ export default function WalletScreen() {
         });
       }
     }
-  }, [currentWalletId, wallets.length]); // Only depend on currentWalletId and wallets.length, not the entire wallets array
+  }, [currentWalletId, wallets]);
 
   // Memoize wallet data early to ensure consistent hook order
   const walletDataForList = useMemo(() => {
