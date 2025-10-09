@@ -176,21 +176,28 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
       try {
         const data = await fetchJson(url, {}, 15000);
         
-        // Cache successful response and handle bulk transaction requests
-        if (txMatch) {
-          // Individual transaction request - cache it
-          const txid = txMatch[1];
-          await cacheTransaction(txid, data);
-        } else if (addressTxMatch && Array.isArray(data)) {
-          // Bulk address transaction request - cache all transactions
-          await cacheTransactions(data);
-          console.log(`💾 Cached ${data.length} transactions from address query`);
-        } else {
-          // Use general cache for other data
-          setCachedData(cacheKey, data, cacheTtlMs);
+        console.log(`✅ Success from ${base} for ${path}`);
+        
+        // Cache successful response AFTER confirming API success
+        // This prevents caching errors from triggering retry/fallback logic
+        try {
+          if (txMatch) {
+            // Individual transaction request - cache it
+            const txid = txMatch[1];
+            await cacheTransaction(txid, data);
+          } else if (addressTxMatch && Array.isArray(data)) {
+            // Bulk address transaction request - cache all transactions
+            await cacheTransactions(data);
+            console.log(`💾 Cached ${data.length} transactions from address query`);
+          } else {
+            // Use general cache for other data
+            setCachedData(cacheKey, data, cacheTtlMs);
+          }
+        } catch (cacheError) {
+          // Log caching errors but don't fail the request
+          console.warn(`⚠️ Failed to cache data for ${path}:`, cacheError);
         }
         
-        console.log(`✅ Success from ${base} for ${path}`);
         return data;
         
       } catch (e: any) {

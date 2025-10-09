@@ -168,10 +168,8 @@ export async function cacheTransaction(txid: string, data: any): Promise<void> {
     console.log(`💾 Cached UNCONFIRMED transaction: ${txid.substring(0, 8)}... (TTL: ${UNCONFIRMED_TTL / 1000}s)`);
   }
   
-  // Save to storage (async, don't wait)
-  saveTransactionCache().catch(err => {
-    console.error('❌ Failed to persist transaction cache:', err);
-  });
+  // Save to storage and await completion to ensure persistence
+  await saveTransactionCache();
 }
 
 /**
@@ -217,10 +215,8 @@ export async function cacheTransactions(transactions: any[]): Promise<void> {
   if (confirmedCount > 0 || unconfirmedCount > 0) {
     console.log(`💾 Cached ${confirmedCount} confirmed and ${unconfirmedCount} unconfirmed transactions`);
     
-    // Save to storage (async, don't wait)
-    saveTransactionCache().catch(err => {
-      console.error('❌ Failed to persist transaction cache:', err);
-    });
+    // Save to storage and await completion to ensure persistence
+    await saveTransactionCache();
   }
 }
 
