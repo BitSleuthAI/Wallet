@@ -498,14 +498,36 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       return walletId;
     },
     onSuccess: (walletId) => {
+      const oldWalletId = currentWalletId;
+      const oldWallet = wallets.find(w => w.id === oldWalletId);
+      const newWallet = wallets.find(w => w.id === walletId);
+      
       setCurrentWalletId(walletId);
+      
       // Invalidate dependent queries after state updates
-      // Explicitly invalidate balance and transaction queries for the new wallet
-      // to force a fresh fetch and prevent stale data from being displayed
+      // Use proper query key structure that matches the actual query keys
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved', walletId] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-improved', walletId] });
+        
+        // Invalidate old wallet queries with full key structure
+        if (oldWallet) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['wallet-balance-improved', oldWallet.id, oldWallet.xpub] 
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ['transactions-improved', oldWallet.id, oldWallet.xpub] 
+          });
+        }
+        
+        // Invalidate new wallet queries with full key structure to force fresh fetch
+        if (newWallet) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['wallet-balance-improved', newWallet.id, newWallet.xpub] 
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ['transactions-improved', newWallet.id, newWallet.xpub] 
+          });
+        }
       }, 150);
     },
   });
@@ -1010,13 +1032,17 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const deleteWallet = useCallback(async (walletId: string) => {
     try {
       console.log('🗑️ Starting wallet deletion for ID:', walletId);
+      
+      // Get wallet references before filtering
+      const deletedWallet = wallets.find(w => w.id === walletId);
       const updatedWallets = wallets.filter(w => w.id !== walletId);
       
       // Update state synchronously first to prevent race conditions
       const needsSwitchWallet = currentWalletId === walletId;
-      const newCurrentWalletId = needsSwitchWallet && updatedWallets.length > 0 
-        ? updatedWallets[0].id 
-        : currentWalletId;
+      const newCurrentWallet = needsSwitchWallet && updatedWallets.length > 0 
+        ? updatedWallets[0]
+        : null;
+      const newCurrentWalletId = newCurrentWallet?.id || currentWalletId;
       
       // Update all state and storage together
       await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
@@ -1032,9 +1058,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         }
       }
       
-      // Cancel any pending queries for the deleted wallet
-      queryClient.cancelQueries({ queryKey: ['wallet-balance-improved', walletId] });
-      queryClient.cancelQueries({ queryKey: ['transactions-improved', walletId] });
+      // Cancel any pending queries for the deleted wallet using full key structure
+      if (deletedWallet) {
+        queryClient.cancelQueries({ 
+          queryKey: ['wallet-balance-improved', deletedWallet.id, deletedWallet.xpub] 
+        });
+        queryClient.cancelQueries({ 
+          queryKey: ['transactions-improved', deletedWallet.id, deletedWallet.xpub] 
+        });
+      }
       
       // Wait for state to settle before invalidating queries
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -1043,9 +1075,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
       queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
       
-      if (newCurrentWalletId) {
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved', newCurrentWalletId] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-improved', newCurrentWalletId] });
+      // Invalidate new current wallet queries with full key structure
+      if (newCurrentWallet) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-balance-improved', newCurrentWallet.id, newCurrentWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['transactions-improved', newCurrentWallet.id, newCurrentWallet.xpub] 
+        });
       }
       
       console.log('✅ Wallet deletion completed successfully');
