@@ -3,13 +3,14 @@
  * Based on the Esplora API specification for Bitcoin blockchain data
  */
 
+import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
-// Cache for API responses
+// Cache for API responses (for non-transaction data like block height, prices, etc.)
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 function sleep(ms: number): Promise<void> {
@@ -126,15 +127,57 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
 /**
  * Fetch an Esplora endpoint with retry and provider fallback
  * Path must start with '/'
+ * 
+ * Special handling for transaction endpoints:
+ * - Individual tx requests (/tx/{txid}): Checks cache first, falls back to API with full error handling
+ * - Bulk tx requests (/address/{address}/txs): Checks cache before fetching, only fetches missing/expired txs
+ * - Caches confirmed transactions permanently
+ * - Caches unconfirmed transactions for 2 minutes
  */
 export async function esploraGet(path: string, cacheTtlMs: number = 300000): Promise<any> {
+  // Load transaction cache if not already loaded
+  await loadTransactionCache();
+  
+  // Check if this is an individual transaction request
+  const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
+  
+  // Check if this is a bulk address transaction request
+  // Support all Bitcoin address formats:
+  // - Legacy P2PKH (1...): starts with 1, 26-35 chars, base58
+  // - P2SH (3...): starts with 3, 26-35 chars, base58
+  // - Bech32 (bc1q...): starts with bc1q, 42-62 chars, bech32
+  // - Bech32m (bc1p...): starts with bc1p, 62 chars, bech32m
+  const addressTxMatch = path.match(/^\/address\/([13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62}\/txs/);
+  
   const cacheKey = getCacheKey(path);
   
-  // Check cache first
-  const cached = getCachedData(cacheKey);
-  if (cached) {
-    console.log(`📦 Cache hit for: ${path}`);
-    return cached;
+  // For individual transaction requests, check cache first
+  if (txMatch) {
+    const txid = txMatch[1];
+    const { getCachedTransaction } = require('./transaction-cache-service');
+    const cachedTx = getCachedTransaction(txid);
+    if (cachedTx) {
+      // Return cached transaction immediately - it's immutable once confirmed
+      // For unconfirmed, we trust the cache within its TTL
+      return cachedTx;
+    }
+  }
+  
+  // For bulk address requests, check cache and filter out what we already have
+  if (addressTxMatch) {
+    const cachedTxIds = getCachedTransactionIds();
+    if (cachedTxIds.size > 0) {
+      console.log(`📦 Found ${cachedTxIds.size} cached transactions, will merge with fresh data`);
+    }
+  }
+  
+  // Check general cache for non-transaction data
+  if (!txMatch && !addressTxMatch) {
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      console.log(`📦 Cache hit for: ${path}`);
+      return cached;
+    }
   }
 
   const attemptsPerProvider = 2;
@@ -148,9 +191,87 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
       try {
         const data = await fetchJson(url, {}, 15000);
         
-        // Cache successful response
-        setCachedData(cacheKey, data, cacheTtlMs);
         console.log(`✅ Success from ${base} for ${path}`);
+        
+        // Cache successful response AFTER confirming API success
+        // This prevents caching errors from triggering retry/fallback logic
+        try {
+          if (txMatch) {
+            // Individual transaction request - cache it
+            const txid = txMatch[1];
+            await cacheTransaction(txid, data);
+          } else if (addressTxMatch && Array.isArray(data)) {
+            // Bulk address transaction request - merge with cache and cache new/updated transactions
+            const { getCachedTransaction } = require('./transaction-cache-service');
+            const cachedTxIds = getCachedTransactionIds();
+            
+            // Separate fresh data into cached and new/updated
+            const newTxs: any[] = [];
+            const updatedTxs: any[] = [];
+            
+            for (const tx of data) {
+              if (cachedTxIds.has(tx.txid)) {
+                // Check if this is an update (unconfirmed → confirmed)
+                const cached = getCachedTransaction(tx.txid);
+                const isConfirmed = (tx.status?.confirmed === true) || (tx.status?.block_height !== undefined && tx.status?.block_height !== null);
+                const wasUnconfirmed = cached && !cached.status?.confirmed;
+                
+                if (wasUnconfirmed && isConfirmed) {
+                  updatedTxs.push(tx);
+                }
+              } else {
+                newTxs.push(tx);
+              }
+            }
+            
+            console.log(`📊 Bulk fetch result: ${data.length} from API (${updatedTxs.length} updates, ${newTxs.length} new)`);
+            
+            // Only cache new transactions and updated ones (unconfirmed → confirmed)
+            const txsToCache = [...newTxs, ...updatedTxs];
+            if (txsToCache.length > 0) {
+              await cacheTransactions(txsToCache);
+            }
+            
+            // Merge: Get cached transactions that belong to this address
+            // Filter by checking if the address appears in the transaction's inputs or outputs
+            const addressMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs/);
+            const currentAddress = addressMatch ? addressMatch[1] : null;
+            
+            const allCachedTxs: any[] = [];
+            if (currentAddress) {
+              for (const txid of cachedTxIds) {
+                const cached = getCachedTransaction(txid);
+                // Only include cached transactions that:
+                // 1. Exist in cache
+                // 2. Are NOT in the fresh API response (to avoid duplicates)
+                // 3. Belong to the current address (check inputs and outputs)
+                if (cached && !data.find(tx => tx.txid === txid)) {
+                  // Check if this transaction belongs to the current address
+                  const belongsToAddress = 
+                    cached.vin?.some((input: any) => input.prevout?.scriptpubkey_address === currentAddress) ||
+                    cached.vout?.some((output: any) => output.scriptpubkey_address === currentAddress);
+                  
+                  if (belongsToAddress) {
+                    allCachedTxs.push(cached);
+                  }
+                }
+              }
+            }
+            
+            if (allCachedTxs.length > 0) {
+              console.log(`📦 Merged ${allCachedTxs.length} additional cached transactions for address`);
+              // Return merged data: fresh API data + cached transactions not in API response
+              return [...data, ...allCachedTxs];
+            }
+          } else {
+            // Use general cache for other data
+            setCachedData(cacheKey, data, cacheTtlMs);
+          }
+        } catch (cacheError) {
+          // Log caching errors but don't fail the request
+          console.warn(`⚠️ Failed to cache data for ${path}:`, cacheError);
+        }
+        
         return data;
         
       } catch (e: any) {

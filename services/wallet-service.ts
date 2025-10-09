@@ -6,6 +6,7 @@
 import type { Transaction, Wallet } from '../types/wallet';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
+import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -223,6 +224,13 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
   try {
     console.log(`🔄 Getting wallet data for xpub: ${xpub.substring(0, 20)}...`);
     
+    // Load transaction cache on first call
+    await loadTransactionCache();
+    
+    // Log cache stats
+    const cacheStats = getCacheStats();
+    console.log(`📦 Transaction cache: ${cacheStats.confirmedCount} confirmed, ${cacheStats.unconfirmedCount} unconfirmed`);
+    
     // Discover used addresses
     const usedAddresses = await discoverUsedAddresses(xpub);
     
@@ -268,7 +276,11 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
-            txsResult.data.forEach((tx: any) => allTxs.set(tx.txid, tx));
+            // Add all transactions to the map
+            // Note: Caching is now handled transparently in esploraGet
+            for (const tx of txsResult.data) {
+              allTxs.set(tx.txid, tx);
+            }
           }
 
           if (utxosResult.data && Array.isArray(utxosResult.data)) {
@@ -298,6 +310,9 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     await Promise.all(Array.from({ length: Math.min(concurrency, usedAddresses.length) }, () => worker()));
 
     console.log(`📊 Collected ${allTxs.size} unique transactions and ${utxos.length} UTXOs`);
+    
+    // Note: Transaction caching is now handled transparently in esploraGet
+    // No need to manually cache transactions here
 
     // Process transactions
     const transactions: Transaction[] = Array.from(allTxs.values()).map((tx: any): Transaction => {
