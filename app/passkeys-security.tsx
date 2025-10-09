@@ -135,7 +135,17 @@ export default function PasskeysSecurityScreen() {
   };
 
   const handleSecuritySettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
-    // Validate prerequisites when enabling security settings
+    // SECURITY HARDENING: Require authentication FIRST before any security configuration changes
+    // This prevents unauthenticated users from probing system security configuration
+    const authSuccess = await securityGuard.requireAuthenticationForSecurityOperation(
+      'modify security settings'
+    );
+    
+    if (!authSuccess) {
+      return; // Authentication failed, security guard handles user notification
+    }
+
+    // Validate prerequisites when enabling security settings (after authentication)
     if (value) {
       if (setting === 'requireBiometricForTransactions') {
         // Only check if biometric is available, not if it's enabled
@@ -206,15 +216,6 @@ export default function PasskeysSecurityScreen() {
           return;
         }
       }
-    }
-
-    // SECURITY HARDENING: Require authentication before any security configuration changes
-    const authSuccess = await securityGuard.requireAuthenticationForSecurityOperation(
-      'modify security settings'
-    );
-    
-    if (!authSuccess) {
-      return; // Authentication failed, security guard handles user notification
     }
     
     const newSettings = { ...securitySettings, [setting]: value };
