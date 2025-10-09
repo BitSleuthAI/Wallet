@@ -381,9 +381,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: cryptoReady,
-    refetchInterval: 120000, // Refetch every 2 minutes (less aggressive)
+    refetchInterval: 300000, // Refetch every 5 minutes to match cache TTL
     retry: 1, // Reduced retries
-    retryDelay: 5000, // Fixed 5 second delay
+    retryDelay: 10000, // 10 second delay between retries
     staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
