@@ -65,12 +65,10 @@ class ErrorBoundary extends Component<
     // Report to Crashlytics if available
     crashlyticsService.recordError(error);
     
-    // Preserve colorScheme by getting current system color scheme
-    // This ensures the error UI renders with the correct theme
+    // Return minimal state update - colorScheme will be preserved from existing state
     return { 
       hasError: true, 
       error,
-      colorScheme: Appearance.getColorScheme(),
     };
   }
 
