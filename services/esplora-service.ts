@@ -3,7 +3,7 @@
  * Based on the Esplora API specification for Bitcoin blockchain data
  */
 
-import { cacheTransaction, cacheTransactions, getCachedTransaction, loadTransactionCache } from './transaction-cache-service';
+import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
@@ -129,8 +129,8 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
  * Path must start with '/'
  * 
  * Special handling for transaction endpoints:
- * - Individual tx requests (/tx/{txid}): Returns cached tx if available
- * - Bulk tx requests (/address/{address}/txs): Returns mix of cached + fresh txs
+ * - Individual tx requests (/tx/{txid}): Checks cache but still validates with provider fallback
+ * - Bulk tx requests (/address/{address}/txs): Checks cache before fetching, returns cached + fresh txs
  * - Caches confirmed transactions permanently
  * - Caches unconfirmed transactions for 2 minutes
  */
@@ -141,18 +141,9 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
   // Check if this is an individual transaction request
   const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
   
-  if (txMatch) {
-    const txid = txMatch[1];
-    
-    // Check transaction cache first
-    const cachedTx = getCachedTransaction(txid);
-    if (cachedTx) {
-      return cachedTx;
-    }
-  }
-  
   // Check if this is a bulk address transaction request
-  const addressTxMatch = path.match(/^\/address\/([a-zA-Z0-9]+)\/txs/);
+  // Support all Bitcoin address formats: Legacy (1...), P2SH (3...), Bech32 (bc1...), Bech32m (bc1p...)
+  const addressTxMatch = path.match(/^\/address\/([13bc][a-zA-Z0-9]+)\/txs/);
   
   const cacheKey = getCacheKey(path);
   
@@ -186,9 +177,19 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
             const txid = txMatch[1];
             await cacheTransaction(txid, data);
           } else if (addressTxMatch && Array.isArray(data)) {
-            // Bulk address transaction request - cache all transactions
+            // Bulk address transaction request - merge with cache and cache new transactions
+            const cachedTxIds = getCachedTransactionIds();
+            const newTxs = data.filter(tx => !cachedTxIds.has(tx.txid));
+            const cachedTxs = data.filter(tx => cachedTxIds.has(tx.txid));
+            
+            console.log(`📊 Bulk fetch result: ${data.length} total (${cachedTxs.length} cached, ${newTxs.length} new)`);
+            
+            // Cache all transactions (new ones will be added, existing confirmed ones will be skipped)
             await cacheTransactions(data);
-            console.log(`💾 Cached ${data.length} transactions from address query`);
+            
+            if (newTxs.length > 0) {
+              console.log(`💾 Cached ${newTxs.length} new transactions from address query`);
+            }
           } else {
             // Use general cache for other data
             setCachedData(cacheKey, data, cacheTtlMs);

@@ -36,53 +36,70 @@ let cache: TransactionCache = {
 
 // Track if cache has been loaded from storage
 let cacheLoaded = false;
+// Promise to track ongoing cache load operation
+let cacheLoadPromise: Promise<void> | null = null;
 
 /**
  * Load cache from AsyncStorage on app start
+ * Prevents race conditions by ensuring only one load operation runs at a time
  */
 export async function loadTransactionCache(): Promise<void> {
+  // If cache is already loaded, return immediately
   if (cacheLoaded) {
     return;
   }
 
-  try {
-    console.log('📦 Loading transaction cache from storage...');
-    
-    // Load confirmed transactions
-    const confirmedData = await AsyncStorage.getItem(CONFIRMED_CACHE_KEY);
-    if (confirmedData) {
-      const confirmedArray = JSON.parse(confirmedData) as CachedTransaction[];
-      cache.confirmed = new Map(confirmedArray.map(tx => [tx.txid, tx]));
-      console.log(`✅ Loaded ${cache.confirmed.size} confirmed transactions from cache`);
-    }
-    
-    // Load unconfirmed transactions
-    const unconfirmedData = await AsyncStorage.getItem(UNCONFIRMED_CACHE_KEY);
-    if (unconfirmedData) {
-      const unconfirmedArray = JSON.parse(unconfirmedData) as CachedTransaction[];
-      const now = Date.now();
-      
-      // Filter out expired unconfirmed transactions
-      const validUnconfirmed = unconfirmedArray.filter(tx => {
-        const age = now - tx.cachedAt;
-        return age < UNCONFIRMED_TTL;
-      });
-      
-      cache.unconfirmed = new Map(validUnconfirmed.map(tx => [tx.txid, tx]));
-      console.log(`✅ Loaded ${cache.unconfirmed.size} unconfirmed transactions from cache (${unconfirmedArray.length - validUnconfirmed.length} expired)`);
-    }
-    
-    cacheLoaded = true;
-    console.log(`✅ Transaction cache loaded: ${cache.confirmed.size} confirmed, ${cache.unconfirmed.size} unconfirmed`);
-  } catch (error) {
-    console.error('❌ Failed to load transaction cache:', error);
-    // Continue with empty cache
-    cache = {
-      confirmed: new Map(),
-      unconfirmed: new Map(),
-    };
-    cacheLoaded = true;
+  // If a load is already in progress, wait for it to complete
+  if (cacheLoadPromise) {
+    return cacheLoadPromise;
   }
+
+  // Set the flag immediately to prevent other calls from starting a load
+  cacheLoadPromise = (async () => {
+    try {
+      console.log('📦 Loading transaction cache from storage...');
+      
+      // Load confirmed transactions
+      const confirmedData = await AsyncStorage.getItem(CONFIRMED_CACHE_KEY);
+      if (confirmedData) {
+        const confirmedArray = JSON.parse(confirmedData) as CachedTransaction[];
+        cache.confirmed = new Map(confirmedArray.map(tx => [tx.txid, tx]));
+        console.log(`✅ Loaded ${cache.confirmed.size} confirmed transactions from cache`);
+      }
+      
+      // Load unconfirmed transactions
+      const unconfirmedData = await AsyncStorage.getItem(UNCONFIRMED_CACHE_KEY);
+      if (unconfirmedData) {
+        const unconfirmedArray = JSON.parse(unconfirmedData) as CachedTransaction[];
+        const now = Date.now();
+        
+        // Filter out expired unconfirmed transactions
+        const validUnconfirmed = unconfirmedArray.filter(tx => {
+          const age = now - tx.cachedAt;
+          return age < UNCONFIRMED_TTL;
+        });
+        
+        cache.unconfirmed = new Map(validUnconfirmed.map(tx => [tx.txid, tx]));
+        console.log(`✅ Loaded ${cache.unconfirmed.size} unconfirmed transactions from cache (${unconfirmedArray.length - validUnconfirmed.length} expired)`);
+      }
+      
+      cacheLoaded = true;
+      console.log(`✅ Transaction cache loaded: ${cache.confirmed.size} confirmed, ${cache.unconfirmed.size} unconfirmed`);
+    } catch (error) {
+      console.error('❌ Failed to load transaction cache:', error);
+      // Continue with empty cache
+      cache = {
+        confirmed: new Map(),
+        unconfirmed: new Map(),
+      };
+      cacheLoaded = true;
+    } finally {
+      // Clear the promise reference once loading is complete
+      cacheLoadPromise = null;
+    }
+  })();
+
+  return cacheLoadPromise;
 }
 
 /**
@@ -307,6 +324,30 @@ export function getCachedTransactionIds(): Set<string> {
   }
   
   return allTxids;
+}
+
+/**
+ * Get all cached transactions (both confirmed and valid unconfirmed)
+ * Returns an array of transaction data
+ */
+export function getAllCachedTransactions(): any[] {
+  const allTxs: any[] = [];
+  
+  // Add all confirmed transactions
+  for (const tx of cache.confirmed.values()) {
+    allTxs.push(tx.data);
+  }
+  
+  // Add valid unconfirmed transactions
+  const now = Date.now();
+  for (const tx of cache.unconfirmed.values()) {
+    const age = now - tx.cachedAt;
+    if (age < UNCONFIRMED_TTL) {
+      allTxs.push(tx.data);
+    }
+  }
+  
+  return allTxs;
 }
 
 /**
