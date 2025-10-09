@@ -366,21 +366,36 @@ export async function getCurrentBlockHeight(): Promise<{ data: number | null; er
 
 /**
  * Get BTC price from CoinGecko API (provides accurate 24h change data)
+ * Cached for 5 minutes to avoid rate limiting
  */
 export async function getBTCPrice(): Promise<{ data: { price: number; change24h: number } | null; error: string | null }> {
+  const cacheKey = 'btc-price-coingecko';
+  
+  // Check cache first
+  const cached = getCachedData(cacheKey);
+  if (cached) {
+    console.log(`📦 Cache hit for BTC price`);
+    return { data: cached, error: null };
+  }
+  
   try {
     console.log(`💲 Getting BTC price from CoinGecko...`);
-    const response = await fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {}, 60000); // Cache for 1 minute
+    const response = await fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {}, 60000);
     const bitcoinData = response?.bitcoin;
     const price = bitcoinData?.usd;
     const change24h = bitcoinData?.usd_24h_change;
     
     if (typeof price === 'number' && price > 0) {
+      const priceData = { 
+        price, 
+        change24h: typeof change24h === 'number' ? change24h : 0 
+      };
+      
+      // Cache for 5 minutes (300000ms)
+      setCachedData(cacheKey, priceData, 300000);
+      
       return { 
-        data: { 
-          price, 
-          change24h: typeof change24h === 'number' ? change24h : 0 
-        }, 
+        data: priceData, 
         error: null 
       };
     }
