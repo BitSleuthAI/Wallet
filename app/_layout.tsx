@@ -30,11 +30,30 @@ const queryClient = new QueryClient();
 // Error Boundary to catch hook ordering issues
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { hasError: boolean; error?: Error }
+  { hasError: boolean; error?: Error; colorScheme: 'light' | 'dark' | null | undefined }
 > {
+  private appearanceSubscription: any;
+
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { 
+      hasError: false,
+      colorScheme: Appearance.getColorScheme(),
+    };
+  }
+
+  componentDidMount() {
+    // Subscribe to color scheme changes
+    this.appearanceSubscription = Appearance.addChangeListener(({ colorScheme }) => {
+      this.setState({ colorScheme });
+    });
+  }
+
+  componentWillUnmount() {
+    // Clean up subscription
+    if (this.appearanceSubscription) {
+      this.appearanceSubscription.remove();
+    }
   }
 
   static getDerivedStateFromError(error: Error) {
@@ -62,9 +81,8 @@ class ErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
-      // Get current color scheme
-      const colorScheme = Appearance.getColorScheme();
-      const isDark = colorScheme === 'dark';
+      // Use color scheme from state (reactive to changes)
+      const isDark = this.state.colorScheme === 'dark';
       
       // Theme-aware colors
       const colors = {
