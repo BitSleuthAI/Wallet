@@ -131,8 +131,8 @@ export default function PasskeysSecurityScreen() {
         const newKey = await secureAuthService.registerBiometricKey();
         
         if (newKey) {
-          // Use the biometric type from the registered key for consistency
-          const biometricTypeName = newKey.name || 'Biometric';
+          // Get the biometric type directly from the service for accuracy
+          const biometricTypeName = secureAuthService.getBiometricType();
           await enableBiometric(biometricTypeName);
           Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
         } else {
