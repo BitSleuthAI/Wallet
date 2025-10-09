@@ -129,19 +129,20 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
  * Path must start with '/'
  * 
  * Special handling for transaction endpoints:
- * - Checks transaction cache first for confirmed transactions
+ * - Individual tx requests (/tx/{txid}): Returns cached tx if available
+ * - Bulk tx requests (/address/{address}/txs): Returns mix of cached + fresh txs
  * - Caches confirmed transactions permanently
  * - Caches unconfirmed transactions for 2 minutes
  */
 export async function esploraGet(path: string, cacheTtlMs: number = 300000): Promise<any> {
-  // Check if this is a transaction request
+  // Load transaction cache if not already loaded
+  await loadTransactionCache();
+  
+  // Check if this is an individual transaction request
   const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
   
   if (txMatch) {
     const txid = txMatch[1];
-    
-    // Load transaction cache if not already loaded
-    await loadTransactionCache();
     
     // Check transaction cache first
     const cachedTx = getCachedTransaction(txid);
@@ -150,10 +151,13 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
     }
   }
   
+  // Check if this is a bulk address transaction request
+  const addressTxMatch = path.match(/^\/address\/([a-zA-Z0-9]+)\/txs/);
+  
   const cacheKey = getCacheKey(path);
   
   // Check general cache for non-transaction data
-  if (!txMatch) {
+  if (!txMatch && !addressTxMatch) {
     const cached = getCachedData(cacheKey);
     if (cached) {
       console.log(`📦 Cache hit for: ${path}`);
@@ -172,11 +176,16 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
       try {
         const data = await fetchJson(url, {}, 15000);
         
-        // Cache successful response
+        // Cache successful response and handle bulk transaction requests
         if (txMatch) {
-          // Use transaction cache for transactions
+          // Individual transaction request - cache it
           const txid = txMatch[1];
           await cacheTransaction(txid, data);
+        } else if (addressTxMatch && Array.isArray(data)) {
+          // Bulk address transaction request - cache all transactions
+          const { cacheTransactions } = await import('./transaction-cache-service');
+          await cacheTransactions(data);
+          console.log(`💾 Cached ${data.length} transactions from address query`);
         } else {
           // Use general cache for other data
           setCachedData(cacheKey, data, cacheTtlMs);

@@ -6,7 +6,7 @@
 import type { Transaction, Wallet } from '../types/wallet';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
-import { cacheTransactions, getCachedTransaction, getCacheStats, loadTransactionCache } from './transaction-cache-service';
+import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
 let bip39: any;
@@ -262,8 +262,6 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     const allTxs = new Map<string, any>();
     const utxos: any[] = [];
     const addressInfos: any[] = [];
-    let cacheHits = 0;
-    let cacheMisses = 0;
 
     const worker = async () => {
       while (idx < usedAddresses.length) {
@@ -278,18 +276,10 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
-            // Check cache for each transaction before adding
+            // Add all transactions to the map
+            // Note: Caching is now handled transparently in esploraGet
             for (const tx of txsResult.data) {
-              const cachedTx = getCachedTransaction(tx.txid);
-              if (cachedTx) {
-                // Use cached version
-                allTxs.set(tx.txid, cachedTx);
-                cacheHits++;
-              } else {
-                // Use fresh data and cache it
-                allTxs.set(tx.txid, tx);
-                cacheMisses++;
-              }
+              allTxs.set(tx.txid, tx);
             }
           }
 
@@ -320,12 +310,9 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     await Promise.all(Array.from({ length: Math.min(concurrency, usedAddresses.length) }, () => worker()));
 
     console.log(`📊 Collected ${allTxs.size} unique transactions and ${utxos.length} UTXOs`);
-    console.log(`📦 Cache performance: ${cacheHits} hits, ${cacheMisses} misses (${cacheHits > 0 ? Math.round(cacheHits / (cacheHits + cacheMisses) * 100) : 0}% hit rate)`);
     
-    // Cache all transactions for future use
-    const allTxArray = Array.from(allTxs.values());
-    await cacheTransactions(allTxArray);
-    console.log(`💾 Cached ${allTxArray.length} transactions`);
+    // Note: Transaction caching is now handled transparently in esploraGet
+    // No need to manually cache transactions here
 
     // Process transactions
     const transactions: Transaction[] = Array.from(allTxs.values()).map((tx: any): Transaction => {
