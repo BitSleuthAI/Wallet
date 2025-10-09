@@ -25,7 +25,7 @@ import {
 
 export default function PasskeysSecurityScreen() {
   const { theme } = useWallet();
-  const { biometricEnabled, enableBiometric, disableBiometric } = useAutoLock();
+  const { biometricEnabled, biometricType, enableBiometric, disableBiometric } = useAutoLock();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
@@ -121,7 +121,8 @@ export default function PasskeysSecurityScreen() {
         const newKey = await secureAuthService.registerBiometricKey();
         
         if (newKey) {
-          const biometricTypeName = secureAuthService.getBiometricType();
+          // Use the biometric type from the registered key for consistency
+          const biometricTypeName = newKey.name || 'Biometric';
           await enableBiometric(biometricTypeName);
           Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
         } else {
