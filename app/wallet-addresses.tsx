@@ -5,14 +5,14 @@ import { Stack, useRouter } from 'expo-router';
 import { ArrowLeft, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
@@ -111,7 +111,8 @@ export default function WalletAddressesScreen() {
       }
     },
     enabled: !!currentWallet?.xpub,
-    staleTime: 300000, // 5 minutes
+    staleTime: 300000, // 5 minutes - consider data fresh
+    gcTime: 300000, // 5 minutes - keep cached data even when query is disabled (wallet switching)
     refetchOnWindowFocus: false,
   });
 

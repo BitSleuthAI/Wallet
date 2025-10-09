@@ -203,6 +203,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('wallets');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity, // Wallets data is always fresh from AsyncStorage
+    gcTime: Infinity, // Keep wallets in cache indefinitely
   });
 
   // Load current wallet ID from storage
@@ -426,7 +428,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
+    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
   });
 
   // Transaction history query
@@ -470,7 +472,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
-    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
+    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
   });
 
   // Save wallets mutation
@@ -498,10 +500,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     onSuccess: (walletId) => {
       setCurrentWalletId(walletId);
       // Invalidate dependent queries after state updates
+      // Only invalidate the specific wallet's queries, not all wallets
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+        // Don't invalidate all wallet queries - let React Query handle cache based on enabled state
+        // The queries will automatically refetch when enabled for the new wallet
       }, 150);
     },
   });
@@ -926,15 +929,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
       
-      // Clear React Query cache completely to remove any cached mock/demo data
-      queryClient.clear();
+      // Don't clear entire cache - preserve transaction history for other wallets
+      // Only invalidate queries to trigger fresh fetches for current data
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
       
-      // Invalidate queries to trigger fresh fetches
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
-      
-      // console.log('✅ Wallet data refresh initiated and cache cleared');
+      // console.log('✅ Wallet data refresh initiated');
     } catch (error) {
       // console.warn('⚠️ Error during data refresh:', error);
     }
