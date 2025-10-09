@@ -232,18 +232,34 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
               await cacheTransactions(txsToCache);
             }
             
-            // Merge: Get all cached transactions for this address
-            // This ensures we return both fresh API data AND any cached transactions not in the API response
+            // Merge: Get cached transactions that belong to this address
+            // Filter by checking if the address appears in the transaction's inputs or outputs
+            const addressMatch = path.match(/^\/address\/([13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62}\/txs/);
+            const currentAddress = addressMatch ? addressMatch[0].split('/')[2] : null;
+            
             const allCachedTxs: any[] = [];
-            for (const txid of cachedTxIds) {
-              const cached = getCachedTransaction(txid);
-              if (cached && !data.find(tx => tx.txid === txid)) {
-                allCachedTxs.push(cached);
+            if (currentAddress) {
+              for (const txid of cachedTxIds) {
+                const cached = getCachedTransaction(txid);
+                // Only include cached transactions that:
+                // 1. Exist in cache
+                // 2. Are NOT in the fresh API response (to avoid duplicates)
+                // 3. Belong to the current address (check inputs and outputs)
+                if (cached && !data.find(tx => tx.txid === txid)) {
+                  // Check if this transaction belongs to the current address
+                  const belongsToAddress = 
+                    cached.vin?.some((input: any) => input.prevout?.scriptpubkey_address === currentAddress) ||
+                    cached.vout?.some((output: any) => output.scriptpubkey_address === currentAddress);
+                  
+                  if (belongsToAddress) {
+                    allCachedTxs.push(cached);
+                  }
+                }
               }
             }
             
             if (allCachedTxs.length > 0) {
-              console.log(`📦 Merged ${allCachedTxs.length} additional cached transactions`);
+              console.log(`📦 Merged ${allCachedTxs.length} additional cached transactions for address`);
               // Return merged data: fresh API data + cached transactions not in API response
               return [...data, ...allCachedTxs];
             }
