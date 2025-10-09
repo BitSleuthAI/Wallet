@@ -12,11 +12,12 @@ import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { WalletProvider, useWallet } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
-import { ArrowLeft } from 'lucide-react-native';
+import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 // Import Crashlytics service
@@ -29,11 +30,30 @@ const queryClient = new QueryClient();
 // Error Boundary to catch hook ordering issues
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { hasError: boolean; error?: Error }
+  { hasError: boolean; error?: Error; colorScheme: 'light' | 'dark' | null | undefined }
 > {
+  private appearanceSubscription: any;
+
   constructor(props: { children: ReactNode }) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { 
+      hasError: false,
+      colorScheme: Appearance.getColorScheme(),
+    };
+  }
+
+  componentDidMount() {
+    // Subscribe to color scheme changes
+    this.appearanceSubscription = Appearance.addChangeListener(({ colorScheme }) => {
+      this.setState({ colorScheme });
+    });
+  }
+
+  componentWillUnmount() {
+    // Clean up subscription
+    if (this.appearanceSubscription) {
+      this.appearanceSubscription.remove();
+    }
   }
 
   static getDerivedStateFromError(error: Error) {
@@ -44,7 +64,12 @@ class ErrorBoundary extends Component<
     
     // Report to Crashlytics if available
     crashlyticsService.recordError(error);
-    return { hasError: true, error };
+    
+    // Return minimal state update - colorScheme will be preserved from existing state
+    return { 
+      hasError: true, 
+      error,
+    };
   }
 
   componentDidCatch(error: Error, errorInfo: any) {
@@ -61,22 +86,58 @@ class ErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
+      // Use color scheme from state (reactive to changes)
+      const isDark = this.state.colorScheme === 'dark';
+      
+      // Theme-aware colors
+      const colors = {
+        background: isDark ? '#0A0A0F' : '#FEFEFE',
+        surface: isDark ? '#1F1F33' : '#FFFFFF',
+        text: isDark ? '#F7FAFC' : '#1A1A1A',
+        textSecondary: isDark ? '#A0AEC0' : '#6B7280',
+        border: isDark ? '#2D3748' : '#FFE5DB',
+        gradientStart: isDark ? '#26F5FE' : '#FF8A65',
+        gradientEnd: isDark ? '#00BCD4' : '#FF6B6B',
+        iconBg: isDark ? '#252538' : '#FFF5F2',
+        iconColor: isDark ? '#26F5FE' : '#FF8A65',
+      };
+      
       return (
-        <View style={errorStyles.container}>
-          <Text style={errorStyles.title}>Something went wrong</Text>
-          <Text style={errorStyles.message}>
-            The app encountered an error. Please restart the app.
-          </Text>
-          <TouchableOpacity
-            style={errorStyles.button}
-            onPress={() => {
-              this.setState({ hasError: false, error: undefined });
-              // Force a complete re-render
-              queryClient.clear();
-            }}
-          >
-            <Text style={errorStyles.buttonText}>Try Again</Text>
-          </TouchableOpacity>
+        <View style={[errorStyles.container, { backgroundColor: colors.background }]}>
+          <View style={[errorStyles.card, { 
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }]}>
+            <View style={[errorStyles.iconContainer, { backgroundColor: colors.iconBg }]}>
+              <AlertCircle color={colors.iconColor} size={48} strokeWidth={2} />
+            </View>
+            
+            <Text style={[errorStyles.title, { color: colors.text }]}>
+              Something went wrong
+            </Text>
+            
+            <Text style={[errorStyles.message, { color: colors.textSecondary }]}>
+              The app encountered an error. Please restart BitSleuth Wallet by force closing the app.
+            </Text>
+            
+            <TouchableOpacity
+              style={errorStyles.buttonContainer}
+              onPress={() => {
+                this.setState({ hasError: false, error: undefined });
+                // Force a complete re-render
+                queryClient.clear();
+              }}
+            >
+              <LinearGradient
+                colors={[colors.gradientStart, colors.gradientEnd]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={errorStyles.button}
+              >
+                <Text style={errorStyles.buttonText}>Try Again</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
         </View>
       );
     }
@@ -90,32 +151,61 @@ const errorStyles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
-    backgroundColor: '#fff',
+    padding: 24,
+  },
+  card: {
+    width: '100%',
+    maxWidth: 380,
+    padding: 40,
+    borderRadius: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 32,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 28,
+    fontWeight: '700',
     marginBottom: 16,
-    color: '#000',
+    textAlign: 'center',
+    letterSpacing: -0.5,
   },
   message: {
     fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 32,
-    color: '#666',
     lineHeight: 24,
+    textAlign: 'center',
+    marginBottom: 40,
+    paddingHorizontal: 8,
+  },
+  buttonContainer: {
+    width: '100%',
+    borderRadius: 16,
+    overflow: 'hidden',
   },
   button: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: 'white',
     fontSize: 16,
     fontWeight: '600',
+    color: '#1A1A1A',
   },
 });
 
