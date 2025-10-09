@@ -381,13 +381,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: cryptoReady,
-    refetchInterval: 300000, // Refetch every 5 minutes to match cache TTL
+    refetchInterval: false, // Disable automatic refetching - price doesn't change that rapidly
     retry: 1, // Reduced retries
-    retryDelay: 10000, // 10 second delay between retries
-    staleTime: 300000, // Consider data fresh for 5 minutes
+    retryDelay: 15000, // Longer delay between retries
+    staleTime: 5 * 60 * 1000, // 5 minutes - price data is fresh for this long
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: true, // Only refetch on mount
+    refetchOnMount: false, // Don't refetch on mount - price is not wallet-specific
   });
 
   // Wallet balance query using improved service
@@ -422,13 +423,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: 120000, // Refetch every 2 minutes
-    retry: 2, // Allow retries for network issues
-    retryDelay: 10000, // 10 second delay between retries
-    staleTime: 300000, // Consider data fresh for 5 minutes
+    refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
+    retry: 1, // Reduce retries to avoid hammering the API on iOS
+    retryDelay: 15000, // Longer delay between retries
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long (matches QueryClient default)
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer for smooth wallet switching
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
+    refetchOnMount: 'always', // Always refetch when explicitly mounting (e.g., navigating to wallet screen)
   });
 
   // Transaction history query
@@ -465,14 +467,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: 120000, // Refetch every 2 minutes
-    retry: 1, // Reduced retries
+    refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
+    retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
-    staleTime: 180000, // Consider data fresh for 3 minutes
+    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long (matches QueryClient default)
+    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer for smooth wallet switching
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: true, // Only refetch on mount
-    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
+    refetchOnMount: 'always', // Always refetch when explicitly mounting (e.g., navigating to wallet screen)
   });
 
   // Save wallets mutation
@@ -1014,9 +1016,22 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [currentWallet]);
 
+  // Debounce wallet switching to prevent rapid API calls on iOS
+  const switchWalletTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
   const switchWallet = useCallback((walletId: string) => {
     if (wallets.find(w => w.id === walletId)) {
-      saveCurrentWalletId(walletId);
+      // Clear any pending wallet switch
+      if (switchWalletTimeoutRef.current) {
+        clearTimeout(switchWalletTimeoutRef.current);
+      }
+      
+      // Debounce wallet switching by 300ms to prevent rapid successive calls
+      // This is especially important on iOS where state updates can trigger multiple re-renders
+      switchWalletTimeoutRef.current = setTimeout(() => {
+        saveCurrentWalletId(walletId);
+        switchWalletTimeoutRef.current = null;
+      }, 300);
     }
   }, [wallets, saveCurrentWalletId]);
 

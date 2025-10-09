@@ -25,7 +25,21 @@ import crashlyticsService from '@/services/crashlytics-service';
 
 ExpoSplashScreen.preventAutoHideAsync();
 
-const queryClient = new QueryClient();
+// Configure QueryClient with platform-optimized settings
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      // Prevent aggressive refetching on iOS
+      refetchOnMount: false, // Don't refetch on mount by default
+      refetchOnWindowFocus: false, // Don't refetch on focus
+      refetchOnReconnect: false, // Don't refetch on reconnect
+      staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long
+      gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache
+      retry: 1, // Only retry once on failure
+      retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff
+    },
+  },
+});
 
 // Error Boundary to catch hook ordering issues
 class ErrorBoundary extends Component<
