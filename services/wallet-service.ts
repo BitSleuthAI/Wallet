@@ -146,19 +146,25 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         const batch = await deriveAddressBatch(node, chain, index, index + GAP_LIMIT);
         console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
         
-        // Query the batch with controlled concurrency
-        const addressTxs = await Promise.all(
-          batch.map(async (addr, i) => {
-            try {
-              const result = await esploraGet(`/address/${addr}/txs`, 300000);
-              console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
-              return result;
-            } catch (error) {
-              console.warn(`⚠️ Failed to check address ${index + i}:`, error);
-              return [];
+        // Query the batch with controlled concurrency to avoid rate limiting
+        // Process addresses sequentially with small delays to avoid 429 errors
+        const addressTxs: any[] = [];
+        for (let i = 0; i < batch.length; i++) {
+          const addr = batch[i];
+          try {
+            const result = await esploraGet(`/address/${addr}/txs`, 300000);
+            console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
+            addressTxs.push(result);
+            
+            // Add small delay between requests to avoid rate limiting (especially on iOS)
+            if (i < batch.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 100));
             }
-          })
-        );
+          } catch (error) {
+            console.warn(`⚠️ Failed to check address ${index + i}:`, error);
+            addressTxs.push([]);
+          }
+        }
         
         // Process addresses in order and track gap correctly
         for (let i = 0; i < addressTxs.length; i++) {

@@ -232,6 +232,11 @@ export const getAddressUTXOs = async (address: string, addressIndex?: number): P
             console.warn('⚠️ UTXO endpoint failed, trying next...');
             urlIndex++;
             setTimeout(tryNextUrl, 1000);
+          } else if (xhr.status === 429) {
+            // Rate limiting - try next URL after delay (don't log as error to avoid red screen)
+            console.log('⚠️ Rate limited, switching to next endpoint...');
+            urlIndex++;
+            setTimeout(tryNextUrl, 2000);
           } else {
             // Client error (4xx), don't retry
             console.error('❌ UTXO fetch failed with status:', xhr.status);

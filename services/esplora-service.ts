@@ -182,6 +182,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
 
   const attemptsPerProvider = 2;
   let lastError: any = null;
+  let providerIndex = 0;
   
   for (const base of ESPLORA_BASES) {
     const url = `${base}${path}`;
@@ -189,6 +190,13 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
     
     for (let attempt = 0; attempt < attemptsPerProvider; attempt++) {
       try {
+        // Add delay before retry attempts to avoid rate limiting
+        if (attempt > 0) {
+          const backoffDelay = Math.min(1000 * Math.pow(2, attempt - 1), 3000);
+          console.log(`⏱️ Backing off ${backoffDelay}ms before retry attempt ${attempt + 1}`);
+          await sleep(backoffDelay);
+        }
+        
         const data = await fetchJson(url, {}, 15000);
         
         console.log(`✅ Success from ${base} for ${path}`);
@@ -284,8 +292,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
           break;
         }
         
+        // If rate limited (429), immediately switch to next provider instead of retrying
+        if (e?.message?.includes('Rate limited')) {
+          console.log(`⚠️ Rate limited by ${base}, switching to next provider immediately`);
+          break;
+        }
+        
         // Backoff for network/5xx/timeout
-        if (e?.message?.includes('timeout') || e?.message?.includes('Rate limited') || /5\d\d/.test(e?.message || '')) {
+        if (e?.message?.includes('timeout') || /5\d\d/.test(e?.message || '')) {
           const delay = 1000 * (attempt + 1);
           console.log(`⏱️ Backing off ${delay}ms before retry`);
           await sleep(delay);
