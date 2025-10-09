@@ -1017,7 +1017,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [currentWallet]);
 
   // Debounce wallet switching to prevent rapid API calls on iOS
-  const switchWalletTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const switchWalletTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   const switchWallet = useCallback((walletId: string) => {
     if (wallets.find(w => w.id === walletId)) {
@@ -1034,6 +1034,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }, 300);
     }
   }, [wallets, saveCurrentWalletId]);
+
+  // Cleanup timeout on unmount to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      if (switchWalletTimeoutRef.current) {
+        clearTimeout(switchWalletTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const editWallet = useCallback(async (walletId: string, name: string, color?: string) => {
     try {
