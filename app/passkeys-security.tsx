@@ -135,15 +135,76 @@ export default function PasskeysSecurityScreen() {
   };
 
   const handleSecuritySettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
-    // Validate biometric availability when enabling biometric-related settings
-    if (setting === 'requireBiometricForTransactions' && value) {
-      if (!biometricAvailable || !biometricEnabled) {
-        Alert.alert(
-          'Biometric Not Enabled',
-          'Please enable biometric authentication first before requiring it for transactions.',
-          [{ text: 'OK' }]
-        );
-        return;
+    // Validate prerequisites when enabling security settings
+    if (value) {
+      if (setting === 'requireBiometricForTransactions') {
+        // Only check if biometric is available, not if it's enabled
+        // This allows users to enable the setting before activating biometric
+        if (!biometricAvailable) {
+          Alert.alert(
+            'Biometric Not Available',
+            'Biometric authentication is not available on this device or not set up. Please enable biometric authentication in your device settings first.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        // If biometric is available but not enabled, prompt user to enable it
+        if (!biometricEnabled) {
+          Alert.alert(
+            'Enable Biometric First',
+            'Please enable biometric authentication above before requiring it for transactions.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+      } else if (setting === 'requireSecurityKeyForTransactions') {
+        // Check if any security keys are registered
+        try {
+          const securityKeysStr = await AsyncStorage.getItem('securityKeys');
+          const securityKeys = securityKeysStr ? JSON.parse(securityKeysStr) : [];
+          
+          if (!securityKeys || securityKeys.length === 0) {
+            Alert.alert(
+              'No Security Keys',
+              'You must register at least one security key (FIDO/passkey) before enabling this setting. Security keys are not currently available in this version.',
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking security keys:', error);
+          Alert.alert('Error', 'Failed to verify security key availability');
+          return;
+        }
+      } else if (setting === 'multiFactorEnabled') {
+        // Multi-factor requires both biometric AND security keys
+        if (!biometricAvailable || !biometricEnabled) {
+          Alert.alert(
+            'Biometric Required',
+            'Multi-factor authentication requires biometric authentication to be enabled. Please enable biometric authentication first.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
+        
+        try {
+          const securityKeysStr = await AsyncStorage.getItem('securityKeys');
+          const securityKeys = securityKeysStr ? JSON.parse(securityKeysStr) : [];
+          
+          if (!securityKeys || securityKeys.length === 0) {
+            Alert.alert(
+              'Security Keys Required',
+              'Multi-factor authentication requires at least one security key (FIDO/passkey) in addition to biometric authentication. Security keys are not currently available in this version.',
+              [{ text: 'OK' }]
+            );
+            return;
+          }
+        } catch (error) {
+          console.error('Error checking security keys:', error);
+          Alert.alert('Error', 'Failed to verify security key availability');
+          return;
+        }
       }
     }
 
