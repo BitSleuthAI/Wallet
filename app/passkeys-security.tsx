@@ -8,19 +8,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { router, Stack } from 'expo-router';
 import {
-    ArrowLeft,
-    Fingerprint,
-    Shield
+  ArrowLeft,
+  Fingerprint,
+  Shield
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function PasskeysSecurityScreen() {
@@ -135,9 +135,16 @@ export default function PasskeysSecurityScreen() {
   };
 
   const handleSecuritySettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
-    // Only handle requireBiometricForTransactions
-    if (setting !== 'requireBiometricForTransactions') {
-      return;
+    // Validate biometric availability when enabling biometric-related settings
+    if (setting === 'requireBiometricForTransactions' && value) {
+      if (!biometricAvailable || !biometricEnabled) {
+        Alert.alert(
+          'Biometric Not Enabled',
+          'Please enable biometric authentication first before requiring it for transactions.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
     }
 
     // SECURITY HARDENING: Require authentication before any security configuration changes
