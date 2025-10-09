@@ -2,23 +2,15 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
-import { secureAuthService, SecurityKey, SecuritySettings } from '@/services/secure-auth-service';
+import { secureAuthService, SecuritySettings } from '@/services/secure-auth-service';
 import { securityGuard } from '@/services/security-guard-service';
-import { securityTestService } from '@/services/security-test-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { router, Stack } from 'expo-router';
 import {
-    AlertTriangle,
     ArrowLeft,
-    CheckCircle,
     Fingerprint,
-    Key,
-    Lock,
-    Shield,
-    Smartphone,
-    TestTube,
-    Trash2
+    Shield
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
@@ -31,12 +23,9 @@ import {
     View,
 } from 'react-native';
 
-// SecurityKey and SecuritySettings interfaces are now imported from secure-auth-service
-
 export default function PasskeysSecurityScreen() {
   const { theme } = useWallet();
-  const { biometricEnabled, biometricType, enableBiometric, disableBiometric } = useAutoLock();
-  const [securityKeys, setSecurityKeys] = useState<SecurityKey[]>([]);
+  const { biometricEnabled, enableBiometric, disableBiometric } = useAutoLock();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
@@ -47,22 +36,9 @@ export default function PasskeysSecurityScreen() {
   });
 
   useEffect(() => {
-    loadSecurityKeys();
     loadSecuritySettings();
     checkBiometricAvailability();
   }, []);
-
-  const loadSecurityKeys = async () => {
-    try {
-      const stored = await AsyncStorage.getItem('securityKeys');
-      const keys = stored ? JSON.parse(stored) : [];
-      setSecurityKeys(keys);
-    } catch (error) {
-      console.error('Error loading security keys:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const loadSecuritySettings = async () => {
     try {
@@ -72,6 +48,8 @@ export default function PasskeysSecurityScreen() {
       }
     } catch (error) {
       console.error('Error loading security settings:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -92,101 +70,6 @@ export default function PasskeysSecurityScreen() {
     } catch (error) {
       console.error('Error checking biometric availability:', error);
       setBiometricAvailable(false);
-    }
-  };
-
-  const saveSecurityKeys = async (keys: SecurityKey[]) => {
-    try {
-      await AsyncStorage.setItem('securityKeys', JSON.stringify(keys));
-      setSecurityKeys(keys);
-    } catch (error) {
-      console.error('Error saving security keys:', error);
-      Alert.alert('Error', 'Failed to save security keys');
-    }
-  };
-
-  // Secure passkey registration with WebAuthn support
-  const handleAddPasskey = async () => {
-    try {
-      // Get key name from user
-      const keyName = await new Promise<string>((resolve) => {
-        Alert.prompt(
-          'Name Your Passkey',
-          'Give your passkey a name for easy identification:',
-          [
-            { text: 'Cancel', style: 'cancel', onPress: () => resolve('') },
-            { text: 'Add', onPress: (text) => resolve(text || 'Device Passkey') }
-          ],
-          'plain-text',
-          'Device Passkey'
-        );
-      });
-
-      if (!keyName) return;
-
-      // Register passkey using secure authentication service
-      const newKey = await secureAuthService.registerFIDOPasskey(keyName);
-      
-      if (newKey) {
-        const updatedKeys = [...securityKeys, newKey];
-        await saveSecurityKeys(updatedKeys);
-        Alert.alert('Success', 'Passkey registered successfully!');
-      } else {
-        Alert.alert('Error', 'Failed to register passkey. Please try again.');
-      }
-    } catch (error) {
-      console.error('Error registering passkey:', error);
-      Alert.alert('Error', 'Failed to register passkey. Please try again.');
-    }
-  };
-
-  // Secure FIDO key registration with hardware verification
-  const handleAddFIDOKey = async () => {
-    try {
-      // Request user to connect their FIDO key
-      Alert.alert(
-        'Connect FIDO Security Key',
-        'Please connect your FIDO security key (like YubiKey) to your device via USB or NFC, then tap Continue.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Continue', onPress: async () => {
-            try {
-              // Get key name from user
-              const keyName = await new Promise<string>((resolve) => {
-                Alert.prompt(
-                  'Name Your Security Key',
-                  'Give your security key a name for easy identification:',
-                  [
-                    { text: 'Cancel', style: 'cancel', onPress: () => resolve('') },
-                    { text: 'Add', onPress: (text) => resolve(text || 'Security Key') }
-                  ],
-                  'plain-text',
-                  'YubiKey'
-                );
-              });
-
-              if (!keyName) return;
-
-              // Register hardware FIDO key using secure authentication service
-              const newKey = await secureAuthService.registerHardwareFIDOKey(keyName);
-              
-              if (newKey) {
-                const updatedKeys = [...securityKeys, newKey];
-                await saveSecurityKeys(updatedKeys);
-                Alert.alert('Success', 'FIDO security key registered successfully!');
-              } else {
-                Alert.alert('Error', 'Failed to register FIDO security key. Please ensure your key is connected and try again.');
-              }
-            } catch (error) {
-              console.error('Error registering FIDO key:', error);
-              Alert.alert('Error', 'Failed to register FIDO security key. Please ensure your key is connected and try again.');
-            }
-          }}
-        ]
-      );
-    } catch (error) {
-      console.error('Error adding FIDO key:', error);
-      Alert.alert('Error', 'Failed to add FIDO security key');
     }
   };
 
@@ -222,11 +105,6 @@ export default function PasskeysSecurityScreen() {
               
               try {
                 await disableBiometric();
-                
-                // Remove biometric entry from security keys
-                const updatedKeys = securityKeys.filter(key => key.type !== 'biometric');
-                await saveSecurityKeys(updatedKeys);
-                
                 Alert.alert('Success', 'Biometric authentication disabled successfully!');
               } catch (error) {
                 console.error('❌ Error disabling biometric:', error);
@@ -244,13 +122,7 @@ export default function PasskeysSecurityScreen() {
         
         if (newKey) {
           const biometricTypeName = secureAuthService.getBiometricType();
-          
           await enableBiometric(biometricTypeName);
-          
-          // Add biometric entry to security keys
-          const updatedKeys = [...securityKeys.filter(key => key.type !== 'biometric'), newKey];
-          await saveSecurityKeys(updatedKeys);
-          
           Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
         } else {
           Alert.alert('Error', 'Failed to register biometric key');
@@ -262,45 +134,12 @@ export default function PasskeysSecurityScreen() {
     }
   };
 
-  const handleRemoveKey = (keyId: string, keyName: string) => {
-    Alert.alert(
-      'Remove Security Key',
-      `Are you sure you want to remove "${keyName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            // SECURITY HARDENING: Require authentication to remove security keys
-            const authSuccess = await securityGuard.requireAuthenticationForSecurityKeyOperation(
-              'remove security key'
-            );
-            
-            if (!authSuccess) {
-              return; // Authentication failed, security guard handles user notification
-            }
-            
-            try {
-              if (keyId === 'biometric') {
-                await disableBiometric();
-              }
-              
-              const updatedKeys = securityKeys.filter(key => key.id !== keyId);
-              await saveSecurityKeys(updatedKeys);
-              
-              Alert.alert('Success', `"${keyName}" has been removed successfully.`);
-            } catch (error) {
-              console.error('❌ Error removing security key:', error);
-              Alert.alert('Error', 'Failed to remove security key');
-            }
-          }
-        }
-      ]
-    );
-  };
-
   const handleSecuritySettingChange = async (setting: keyof SecuritySettings, value: boolean) => {
+    // Only handle requireBiometricForTransactions
+    if (setting !== 'requireBiometricForTransactions') {
+      return;
+    }
+
     // SECURITY HARDENING: Require authentication before any security configuration changes
     const authSuccess = await securityGuard.requireAuthenticationForSecurityOperation(
       'modify security settings'
@@ -311,96 +150,7 @@ export default function PasskeysSecurityScreen() {
     }
     
     const newSettings = { ...securitySettings, [setting]: value };
-    
-    // Validate multi-factor requirements
-    if (setting === 'requireSecurityKeyForTransactions' && value) {
-      const hasSecurityKeys = securityKeys.some(key => key.type === 'fido' || key.type === 'passkey');
-      if (!hasSecurityKeys) {
-        Alert.alert(
-          'Security Key Required',
-          'You must register a security key before requiring it for transactions.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-    }
-
-    if (setting === 'multiFactorEnabled' && value) {
-      const hasMultipleFactors = (biometricEnabled ? 1 : 0) + 
-                               (securityKeys.some(key => key.type === 'fido' || key.type === 'passkey') ? 1 : 0) >= 2;
-      if (!hasMultipleFactors) {
-        Alert.alert(
-          'Multiple Factors Required',
-          'You must have at least two authentication factors enabled before enabling multi-factor authentication.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-    }
-
     await saveSecuritySettings(newSettings);
-  };
-
-  const handleTestSecurity = async () => {
-    Alert.alert(
-      'Security Education & Assessment',
-      'This will check your current security setup and educate you about available enhancements. No sensitive data is accessed.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Learn About Security', onPress: () => securityTestService.runTestsAndDisplayResults() }
-      ]
-    );
-  };
-
-  const getKeyIcon = (type: SecurityKey['type']) => {
-    switch (type) {
-      case 'biometric':
-        return Fingerprint;
-      case 'fido':
-        return Shield;
-      case 'passkey':
-        return Smartphone;
-      default:
-        return Key;
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const SecurityKeyItem = ({ securityKey }: { securityKey: SecurityKey }) => {
-    const IconComponent = getKeyIcon(securityKey.type);
-    
-    return (
-      <View style={[styles.keyItem, { backgroundColor: theme.colors.surface }]}>
-        <View style={[styles.keyIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
-          <IconComponent color={theme.colors.primary} size={20} />
-        </View>
-        <View style={styles.keyContent}>
-          <Text style={[styles.keyName, { color: theme.colors.text }]}>
-            {securityKey.name}
-          </Text>
-          <Text style={[styles.keyDate, { color: theme.colors.textSecondary }]}>
-            Added {formatDate(securityKey.dateAdded)}
-          </Text>
-          {securityKey.isVerified && (
-            <View style={styles.verifiedBadge}>
-              <CheckCircle color={theme.colors.primary} size={14} />
-              <Text style={[styles.verifiedText, { color: theme.colors.primary }]}>
-                Verified
-              </Text>
-            </View>
-          )}
-        </View>
-        <TouchableOpacity
-          style={styles.removeButton}
-          onPress={() => handleRemoveKey(securityKey.id, securityKey.name)}
-        >
-          <Trash2 color={theme.colors.error} size={18} />
-        </TouchableOpacity>
-      </View>
-    );
   };
 
   const handleBack = () => {
@@ -426,10 +176,10 @@ export default function PasskeysSecurityScreen() {
             >
               <ArrowLeft size={24} color={theme.colors.text} />
             </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-              Passkeys & Security Keys
-            </Text>
-            <View style={styles.headerSpacer} />
+          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+            Biometric Authentication
+          </Text>
+          <View style={styles.headerSpacer} />
           </View>
           
           <View style={styles.loadingContainer}>
@@ -461,116 +211,34 @@ export default function PasskeysSecurityScreen() {
             <ArrowLeft size={24} color={theme.colors.text} />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Passkeys & Security Keys
+            Biometric Authentication
           </Text>
           <View style={styles.headerSpacer} />
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Security Status Card */}
-        <View style={[styles.statusCard, { backgroundColor: theme.colors.primary }]}>
-          <View style={styles.statusHeader}>
-            <Lock color="white" size={24} />
-            <Text style={styles.statusTitle}>Security Status</Text>
-          </View>
-          
-          <View style={styles.statusItems}>
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Biometric</Text>
-              <View style={[styles.statusIndicator, { backgroundColor: biometricEnabled ? '#10B981' : '#EF4444' }]}>
-                <Text style={styles.statusText}>{biometricEnabled ? 'ON' : 'OFF'}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Security Keys</Text>
-              <View style={[styles.statusIndicator, { backgroundColor: securityKeys.some(k => k.type !== 'biometric') ? '#10B981' : '#EF4444' }]}>
-                <Text style={styles.statusText}>{securityKeys.some(k => k.type !== 'biometric') ? 'ON' : 'OFF'}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.statusItem}>
-              <Text style={styles.statusLabel}>Multi-Factor</Text>
-              <View style={[styles.statusIndicator, { backgroundColor: securitySettings.multiFactorEnabled ? '#10B981' : '#EF4444' }]}>
-                <Text style={styles.statusText}>{securitySettings.multiFactorEnabled ? 'ON' : 'OFF'}</Text>
-              </View>
-            </View>
-          </View>
-        </View>
-
-        {/* Security Settings */}
-        <View style={styles.settingsSection}>
-          <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Transaction Security
-          </Text>
-          
-          <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
-                Require Biometric for Transactions
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                {Platform.OS === 'android' ? 'Biometric' : 'Face ID/Touch ID'} required before sending funds
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.toggle, { backgroundColor: securitySettings.requireBiometricForTransactions ? theme.colors.primary : theme.colors.textSecondary + '40' }]}
-              onPress={() => handleSecuritySettingChange('requireBiometricForTransactions', !securitySettings.requireBiometricForTransactions)}
-            >
-              <View style={[
-                styles.toggleThumb,
-                { transform: [{ translateX: securitySettings.requireBiometricForTransactions ? 20 : 2 }] }
-              ]} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
-                Require Security Key for Transactions
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Hardware key or passkey required for high-value transactions
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.toggle, { backgroundColor: securitySettings.requireSecurityKeyForTransactions ? theme.colors.primary : theme.colors.textSecondary + '40' }]}
-              onPress={() => handleSecuritySettingChange('requireSecurityKeyForTransactions', !securitySettings.requireSecurityKeyForTransactions)}
-            >
-              <View style={[
-                styles.toggleThumb,
-                { transform: [{ translateX: securitySettings.requireSecurityKeyForTransactions ? 20 : 2 }] }
-              ]} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.settingContent}>
-              <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
-                Multi-Factor Authentication
-              </Text>
-              <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
-                Require multiple authentication factors for sensitive operations
-              </Text>
-            </View>
-            <TouchableOpacity
-              style={[styles.toggle, { backgroundColor: securitySettings.multiFactorEnabled ? theme.colors.primary : theme.colors.textSecondary + '40' }]}
-              onPress={() => handleSecuritySettingChange('multiFactorEnabled', !securitySettings.multiFactorEnabled)}
-            >
-              <View style={[
-                styles.toggleThumb,
-                { transform: [{ translateX: securitySettings.multiFactorEnabled ? 20 : 2 }] }
-              ]} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         {/* Biometric Authentication Section */}
+        {!biometricAvailable && (
+          <View style={styles.biometricSection}>
+            <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
+              <Fingerprint color={theme.colors.textSecondary} size={32} />
+              <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
+                Biometric Authentication Not Available
+              </Text>
+              <Text style={[styles.emptyStateSubtitle, { color: theme.colors.textSecondary }]}>
+                Biometric authentication is not available on this device or has not been set up. Please enable {Platform.OS === 'android' ? 'fingerprint or face unlock' : 'Face ID or Touch ID'} in your device settings.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {biometricAvailable && (
           <View style={styles.biometricSection}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Biometric Authentication
+              Authentication Settings
             </Text>
+            
             <TouchableOpacity
               style={[styles.biometricItem, { backgroundColor: theme.colors.surface }]}
               onPress={handleToggleBiometric}
@@ -580,10 +248,10 @@ export default function PasskeysSecurityScreen() {
               </View>
               <View style={styles.keyContent}>
                 <Text style={[styles.keyName, { color: theme.colors.text }]}>
-                  {biometricEnabled && biometricType ? (Platform.OS === 'android' ? 'Biometric' : biometricType) : (Platform.OS === 'android' ? 'Biometric' : 'Face ID / Touch ID')}
+                  Enable Biometric Authentication
                 </Text>
                 <Text style={[styles.keyDate, { color: theme.colors.textSecondary }]}>
-                  {biometricEnabled ? 'Enabled for wallet unlock and transactions' : 'Tap to enable'}
+                  {biometricEnabled ? 'Enabled for wallet unlock' : 'Tap to enable'}
                 </Text>
               </View>
               <View style={[
@@ -596,88 +264,54 @@ export default function PasskeysSecurityScreen() {
                 ]} />
               </View>
             </TouchableOpacity>
+
+            <View style={[styles.settingItem, { backgroundColor: theme.colors.surface, marginTop: 12 }]}>
+              <View style={styles.settingContent}>
+                <Text style={[styles.settingLabel, { color: theme.colors.text }]}>
+                  Require Biometric for Transactions
+                </Text>
+                <Text style={[styles.settingDescription, { color: theme.colors.textSecondary }]}>
+                  {Platform.OS === 'android' ? 'Biometric' : 'Face ID/Touch ID'} required before sending funds
+                </Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.toggle, { backgroundColor: securitySettings.requireBiometricForTransactions ? theme.colors.primary : theme.colors.textSecondary + '40' }]}
+                onPress={() => handleSecuritySettingChange('requireBiometricForTransactions', !securitySettings.requireBiometricForTransactions)}
+              >
+                <View style={[
+                  styles.toggleThumb,
+                  { transform: [{ translateX: securitySettings.requireBiometricForTransactions ? 20 : 2 }] }
+                ]} />
+              </TouchableOpacity>
+            </View>
           </View>
         )}
-
-        {/* Security Keys List */}
-        <View style={styles.keysSection}>
-          <View style={styles.keysHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-              Security Keys
-            </Text>
-          </View>
-          
-          {securityKeys.filter(k => k.type !== 'biometric').length === 0 ? (
-            <View style={[styles.emptyState, { backgroundColor: theme.colors.surface }]}>
-              <Key color={theme.colors.textSecondary} size={32} />
-              <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
-                Hardware Security Keys Not Supported
-              </Text>
-              <Text style={[styles.emptyStateSubtitle, { color: theme.colors.textSecondary }]}>
-                Passkeys and FIDO hardware keys require WebAuthn API which is not available in React Native. Use biometric authentication for secure wallet protection.
-              </Text>
-            </View>
-          ) : (
-            securityKeys.filter(k => k.type !== 'biometric').map((key) => (
-              <SecurityKeyItem key={key.id} securityKey={key} />
-            ))
-          )}
-        </View>
 
         {/* Security Recommendations */}
         <View style={[styles.recommendationsCard, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.recommendationsHeader}>
-            <AlertTriangle color={theme.colors.primary} size={20} />
+            <Shield color={theme.colors.primary} size={20} />
             <Text style={[styles.recommendationsTitle, { color: theme.colors.text }]}>
-              Security Recommendations
+              Security Best Practices
             </Text>
           </View>
           
           <View style={styles.recommendationsList}>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Enable biometric authentication for quick and secure access
+              • Enable biometric authentication for quick and secure wallet access
+            </Text>
+            <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
+              • Require biometric verification before sending transactions
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
               • Set a strong PIN as a backup authentication method
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Keep your device physically secure
+              • Keep your device physically secure at all times
             </Text>
             <Text style={[styles.recommendationItem, { color: theme.colors.textSecondary }]}>
-              • Regularly review your security settings
+              • Regularly review your security settings and transaction history
             </Text>
-          </View>
-        </View>
-
-        {/* Security Testing */}
-        <View style={[styles.testCard, { backgroundColor: theme.colors.surface }]}>
-          <View style={styles.testHeader}>
-            <TestTube color={theme.colors.primary} size={20} />
-            <Text style={[styles.testTitle, { color: theme.colors.text }]}>
-              Security Education
-            </Text>
-          </View>
-          
-          <Text style={[styles.testDescription, { color: theme.colors.textSecondary }]}>
-            Learn about available security features and get personalized recommendations for your wallet protection.
-          </Text>
-          
-          <View style={styles.testButtons}>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: theme.colors.primary }]}
-              onPress={handleTestSecurity}
-            >
-              <TestTube color="white" size={16} />
-              <Text style={styles.testButtonText}>Security Education</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: theme.colors.primary, marginTop: 12 }]}
-              onPress={() => router.push('/mfa-test')}
-            >
-              <Shield color="white" size={16} />
-              <Text style={styles.testButtonText}>Test MFA Enforcement</Text>
-            </TouchableOpacity>
           </View>
         </View>
 
