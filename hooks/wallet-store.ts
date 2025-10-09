@@ -1047,7 +1047,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const newCurrentWallet = needsSwitchWallet && updatedWallets.length > 0 
         ? updatedWallets[0]
         : null;
-      const newCurrentWalletId = newCurrentWallet?.id || currentWalletId;
+      // Only fall back to currentWalletId if we're NOT deleting the current wallet
+      const newCurrentWalletId = needsSwitchWallet 
+        ? (newCurrentWallet?.id || null)
+        : currentWalletId;
       
       // Update all state and storage together
       await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
