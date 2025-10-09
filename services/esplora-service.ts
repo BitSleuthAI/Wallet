@@ -142,10 +142,26 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
   const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
   
   // Check if this is a bulk address transaction request
-  // Support all Bitcoin address formats: Legacy (1...), P2SH (3...), Bech32 (bc1...), Bech32m (bc1p...)
-  const addressTxMatch = path.match(/^\/address\/([13bc][a-zA-Z0-9]+)\/txs/);
+  // Support all Bitcoin address formats with proper validation:
+  // - Legacy P2PKH (1...): starts with 1, 26-35 chars, base58
+  // - P2SH (3...): starts with 3, 26-35 chars, base58
+  // - Bech32 (bc1q...): starts with bc1q, 42-62 chars, bech32
+  // - Bech32m (bc1p...): starts with bc1p, 62 chars, bech32m
+  const addressTxMatch = path.match(/^\/address\/((?:1[a-km-zA-HJ-NP-Z1-9]{25,34}|3[a-km-zA-HJ-NP-Z1-9]{25,34}|bc1[qp][ac-hj-np-z02-9]{38,58}))\/txs/);
   
   const cacheKey = getCacheKey(path);
+  
+  // Check transaction cache for individual transaction requests
+  if (txMatch) {
+    const txid = txMatch[1];
+    const { getCachedTransaction } = require('./transaction-cache-service');
+    const cachedTx = getCachedTransaction(txid);
+    if (cachedTx) {
+      console.log(`📦 Cache HIT for transaction: ${txid.substring(0, 8)}...`);
+      return cachedTx;
+    }
+    console.log(`📦 Cache MISS for transaction: ${txid.substring(0, 8)}...`);
+  }
   
   // Check general cache for non-transaction data
   if (!txMatch && !addressTxMatch) {
