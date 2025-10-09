@@ -8,14 +8,14 @@ import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  SafeAreaView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Animated,
+    SafeAreaView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -214,7 +214,12 @@ export default function ReceiveScreen() {
             <Text style={[styles.addressLabel, { color: theme.colors.textSecondary }]}>
               Your Bitcoin Address
             </Text>
-            <Text style={[styles.address, { color: theme.colors.text }]}>
+            <Text 
+              style={[styles.address, { color: theme.colors.text }]}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.5}
+            >
               {currentAddress || 'No address available'}
             </Text>
           </View>
