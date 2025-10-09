@@ -139,8 +139,10 @@ export function getCachedTransaction(txid: string): any | null {
  * Automatically determines if it's confirmed or unconfirmed based on the data
  */
 export async function cacheTransaction(txid: string, data: any): Promise<void> {
-  const isConfirmed = data.status?.confirmed || false;
+  // A transaction is confirmed if it has a block_height (included in a block)
+  // or if status.confirmed is explicitly true
   const blockHeight = data.status?.block_height;
+  const isConfirmed = (data.status?.confirmed === true) || (blockHeight !== undefined && blockHeight !== null);
   
   const cachedTx: CachedTransaction = {
     txid,
@@ -182,8 +184,10 @@ export async function cacheTransactions(transactions: any[]): Promise<void> {
   
   for (const tx of transactions) {
     const txid = tx.txid;
-    const isConfirmed = tx.status?.confirmed || false;
+    // A transaction is confirmed if it has a block_height (included in a block)
+    // or if status.confirmed is explicitly true
     const blockHeight = tx.status?.block_height;
+    const isConfirmed = (tx.status?.confirmed === true) || (blockHeight !== undefined && blockHeight !== null);
     
     const cachedTx: CachedTransaction = {
       txid,
