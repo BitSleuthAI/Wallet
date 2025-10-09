@@ -234,8 +234,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
             
             // Merge: Get cached transactions that belong to this address
             // Filter by checking if the address appears in the transaction's inputs or outputs
-            const addressMatch = path.match(/^\/address\/([13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62}\/txs/);
-            const currentAddress = addressMatch ? addressMatch[0].split('/')[2] : null;
+            const addressMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs/);
+            const currentAddress = addressMatch ? addressMatch[1] : null;
             
             const allCachedTxs: any[] = [];
             if (currentAddress) {
