@@ -1042,25 +1042,22 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const deletedWallet = wallets.find(w => w.id === walletId);
       const updatedWallets = wallets.filter(w => w.id !== walletId);
       
-      // Update state synchronously first to prevent race conditions
-      const needsSwitchWallet = currentWalletId === walletId;
-      const newCurrentWallet = needsSwitchWallet && updatedWallets.length > 0 
-        ? updatedWallets[0]
-        : null;
-      // Only fall back to currentWalletId if we're NOT deleting the current wallet
-      const newCurrentWalletId = needsSwitchWallet 
-        ? (newCurrentWallet?.id || null)
-        : currentWalletId;
+      // Determine if we need to switch the current wallet
+      const isDeletingCurrentWallet = currentWalletId === walletId;
       
       // Update all state and storage together
       await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
       setWallets(updatedWallets);
       
-      if (needsSwitchWallet) {
+      // Handle current wallet ID updates
+      if (isDeletingCurrentWallet) {
         if (updatedWallets.length > 0) {
-          await AsyncStorage.setItem('currentWalletId', newCurrentWalletId!);
+          // Switch to the first remaining wallet
+          const newCurrentWalletId = updatedWallets[0].id;
+          await AsyncStorage.setItem('currentWalletId', newCurrentWalletId);
           setCurrentWalletId(newCurrentWalletId);
         } else {
+          // No wallets left, clear current wallet ID
           await AsyncStorage.removeItem('currentWalletId');
           setCurrentWalletId(null);
         }
@@ -1084,7 +1081,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
       
       // Invalidate new current wallet queries with full key structure
-      if (newCurrentWallet) {
+      if (isDeletingCurrentWallet && updatedWallets.length > 0) {
+        const newCurrentWallet = updatedWallets[0];
         queryClient.invalidateQueries({ 
           queryKey: ['wallet-balance-improved', newCurrentWallet.id, newCurrentWallet.xpub] 
         });
