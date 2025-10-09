@@ -233,18 +233,18 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
     return labels;
   };
 
-  // Determine chart color based on balance trend
+  // Use consistent, beautiful color scheme regardless of balance direction
+  // Bitcoin orange gradient for a warm, positive feel
+  const bitcoinOrange = '#F7931A';
+  const bitcoinGold = '#FFB84D';
+  const chartColor = theme.isDark ? bitcoinGold : bitcoinOrange;
+  const gradientStartColor = chartColor;
+  const gradientEndColor = theme.isDark ? 'rgba(255, 184, 77, 0.1)' : 'rgba(247, 147, 26, 0.1)';
+  
+  // Calculate balance change for display (but don't use it for coloring)
   const firstBalance = balanceHistory[0]?.y || 0;
   const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
   const balanceChange = lastBalance - firstBalance;
-  const isPositive = balanceChange >= 0;
-  // Use theme primary color for positive trend, error color for negative
-  const positiveColor = theme.colors.primary;
-  const chartColor = isPositive ? positiveColor : theme.colors.error;
-  const gradientStartColor = isPositive ? positiveColor : theme.colors.error;
-  const gradientEndColor = isPositive ? 
-    `${positiveColor}1A` : // 1A = 10% opacity in hex
-    `${theme.colors.error}1A`;
   
   const { linePath, gradientPath } = createPath(balanceHistory);
   const timeLabels = getTimeRangeLabels(balanceHistory);
@@ -266,12 +266,14 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
     <View style={[styles.container, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.chartHeader}>
         <Text style={[styles.chartTitle, { color: theme.colors.text }]}>
-          Balance Overview ({selectedPeriod})
+          Balance History ({selectedPeriod})
         </Text>
         {balanceHistory.length > 1 && (
-          <Text style={[styles.chartChange, { color: chartColor }]}>
-            {balanceChange >= 0 ? '+' : ''}{balanceChange.toFixed(8)} BTC
-          </Text>
+          <View style={styles.changeContainer}>
+            <Text style={[styles.chartChange, { color: theme.colors.textSecondary }]}>
+              {balanceChange >= 0 ? '+' : ''}{balanceChange.toFixed(8)} BTC
+            </Text>
+          </View>
         )}
       </View>
       
@@ -408,6 +410,10 @@ const styles = StyleSheet.create({
   chartChange: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  changeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   chartContainer: {
     position: 'relative',
