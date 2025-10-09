@@ -168,53 +168,6 @@ export default function PasskeysSecurityScreen() {
           );
           return;
         }
-      } else if (setting === 'requireSecurityKeyForTransactions') {
-        // Check if any security keys are registered
-        try {
-          const securityKeysStr = await AsyncStorage.getItem('securityKeys');
-          const securityKeys = securityKeysStr ? JSON.parse(securityKeysStr) : [];
-          
-          if (!securityKeys || securityKeys.length === 0) {
-            Alert.alert(
-              'No Security Keys',
-              'You must register at least one security key (FIDO/passkey) before enabling this setting. Security keys are not currently available in this version.',
-              [{ text: 'OK' }]
-            );
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking security keys:', error);
-          Alert.alert('Error', 'Failed to verify security key availability');
-          return;
-        }
-      } else if (setting === 'multiFactorEnabled') {
-        // Multi-factor requires both biometric AND security keys
-        if (!biometricAvailable || !biometricEnabled) {
-          Alert.alert(
-            'Biometric Required',
-            'Multi-factor authentication requires biometric authentication to be enabled. Please enable biometric authentication first.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-        
-        try {
-          const securityKeysStr = await AsyncStorage.getItem('securityKeys');
-          const securityKeys = securityKeysStr ? JSON.parse(securityKeysStr) : [];
-          
-          if (!securityKeys || securityKeys.length === 0) {
-            Alert.alert(
-              'Security Keys Required',
-              'Multi-factor authentication requires at least one security key (FIDO/passkey) in addition to biometric authentication. Security keys are not currently available in this version.',
-              [{ text: 'OK' }]
-            );
-            return;
-          }
-        } catch (error) {
-          console.error('Error checking security keys:', error);
-          Alert.alert('Error', 'Failed to verify security key availability');
-          return;
-        }
       }
     }
     
