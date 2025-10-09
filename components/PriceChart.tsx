@@ -237,9 +237,10 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
   // Bitcoin orange gradient for a warm, positive feel
   const bitcoinOrange = '#F7931A';
   const bitcoinGold = '#FFB84D';
-  const chartColor = theme.isDark ? bitcoinGold : bitcoinOrange;
+  const isDarkMode = theme.isDark ?? false; // Fallback to false if undefined
+  const chartColor = isDarkMode ? bitcoinGold : bitcoinOrange;
   const gradientStartColor = chartColor;
-  const gradientEndColor = theme.isDark ? 'rgba(255, 184, 77, 0.1)' : 'rgba(247, 147, 26, 0.1)';
+  const gradientEndColor = isDarkMode ? 'rgba(255, 184, 77, 0.1)' : 'rgba(247, 147, 26, 0.1)';
   
   // Calculate balance change for display (but don't use it for coloring)
   const firstBalance = balanceHistory[0]?.y || 0;
