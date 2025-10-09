@@ -3,13 +3,14 @@
  * Based on the Esplora API specification for Bitcoin blockchain data
  */
 
+import { cacheTransaction, getCachedTransaction, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
-// Cache for API responses
+// Cache for API responses (for non-transaction data like block height, prices, etc.)
 const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
 
 function sleep(ms: number): Promise<void> {
@@ -126,15 +127,38 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
 /**
  * Fetch an Esplora endpoint with retry and provider fallback
  * Path must start with '/'
+ * 
+ * Special handling for transaction endpoints:
+ * - Checks transaction cache first for confirmed transactions
+ * - Caches confirmed transactions permanently
+ * - Caches unconfirmed transactions for 2 minutes
  */
 export async function esploraGet(path: string, cacheTtlMs: number = 300000): Promise<any> {
+  // Check if this is a transaction request
+  const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
+  
+  if (txMatch) {
+    const txid = txMatch[1];
+    
+    // Load transaction cache if not already loaded
+    await loadTransactionCache();
+    
+    // Check transaction cache first
+    const cachedTx = getCachedTransaction(txid);
+    if (cachedTx) {
+      return cachedTx;
+    }
+  }
+  
   const cacheKey = getCacheKey(path);
   
-  // Check cache first
-  const cached = getCachedData(cacheKey);
-  if (cached) {
-    console.log(`📦 Cache hit for: ${path}`);
-    return cached;
+  // Check general cache for non-transaction data
+  if (!txMatch) {
+    const cached = getCachedData(cacheKey);
+    if (cached) {
+      console.log(`📦 Cache hit for: ${path}`);
+      return cached;
+    }
   }
 
   const attemptsPerProvider = 2;
@@ -149,7 +173,15 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
         const data = await fetchJson(url, {}, 15000);
         
         // Cache successful response
-        setCachedData(cacheKey, data, cacheTtlMs);
+        if (txMatch) {
+          // Use transaction cache for transactions
+          const txid = txMatch[1];
+          await cacheTransaction(txid, data);
+        } else {
+          // Use general cache for other data
+          setCachedData(cacheKey, data, cacheTtlMs);
+        }
+        
         console.log(`✅ Success from ${base} for ${path}`);
         return data;
         
