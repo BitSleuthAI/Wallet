@@ -317,8 +317,8 @@ export default function SettingsScreen() {
 
           <SettingItem
             icon={Shield}
-            title="Passkeys & Security Keys"
-            subtitle="Secure with a FIDO key or passkey"
+            title="Biometric Authentication"
+            subtitle="Secure your wallet with biometrics"
             onPress={() => router.push('/passkeys-security')}
           />
 
