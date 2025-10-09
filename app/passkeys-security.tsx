@@ -36,9 +36,21 @@ export default function PasskeysSecurityScreen() {
   });
 
   useEffect(() => {
-    loadSecuritySettings();
-    checkBiometricAvailability();
+    initializeScreen();
   }, []);
+
+  const initializeScreen = async () => {
+    try {
+      await Promise.all([
+        loadSecuritySettings(),
+        checkBiometricAvailability()
+      ]);
+    } catch (error) {
+      console.error('Error initializing screen:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const loadSecuritySettings = async () => {
     try {
@@ -48,8 +60,6 @@ export default function PasskeysSecurityScreen() {
       }
     } catch (error) {
       console.error('Error loading security settings:', error);
-    } finally {
-      setLoading(false);
     }
   };
 
