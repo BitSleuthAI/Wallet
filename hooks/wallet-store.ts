@@ -500,11 +500,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     onSuccess: (walletId) => {
       setCurrentWalletId(walletId);
       // Invalidate dependent queries after state updates
-      // Only invalidate the specific wallet's queries, not all wallets
+      // Explicitly invalidate balance and transaction queries for the new wallet
+      // to force a fresh fetch and prevent stale data from being displayed
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-        // Don't invalidate all wallet queries - let React Query handle cache based on enabled state
-        // The queries will automatically refetch when enabled for the new wallet
+        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved', walletId] });
+        queryClient.invalidateQueries({ queryKey: ['transactions-improved', walletId] });
       }, 150);
     },
   });
