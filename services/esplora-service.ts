@@ -3,7 +3,7 @@
  * Based on the Esplora API specification for Bitcoin blockchain data
  */
 
-import { cacheTransaction, getCachedTransaction, loadTransactionCache } from './transaction-cache-service';
+import { cacheTransaction, cacheTransactions, getCachedTransaction, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
@@ -183,7 +183,6 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
           await cacheTransaction(txid, data);
         } else if (addressTxMatch && Array.isArray(data)) {
           // Bulk address transaction request - cache all transactions
-          const { cacheTransactions } = await import('./transaction-cache-service');
           await cacheTransactions(data);
           console.log(`💾 Cached ${data.length} transactions from address query`);
         } else {
