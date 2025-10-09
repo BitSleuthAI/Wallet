@@ -203,6 +203,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('wallets');
       return stored ? JSON.parse(stored) : [];
     },
+    staleTime: Infinity, // Wallets data is always fresh from AsyncStorage
+    gcTime: Infinity, // Keep wallets in cache indefinitely
   });
 
   // Load current wallet ID from storage
@@ -426,7 +428,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     staleTime: 300000, // Consider data fresh for 5 minutes
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
+    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
   });
 
   // Transaction history query
@@ -470,7 +472,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Only refetch on mount
-    gcTime: 0, // Don't cache data for disabled queries (when wallet changes)
+    gcTime: 300000, // Keep cached data for 5 minutes even when query is disabled (wallet switching)
   });
 
   // Save wallets mutation
@@ -495,13 +497,42 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       await AsyncStorage.setItem('currentWalletId', walletId);
       return walletId;
     },
-    onSuccess: (walletId) => {
+    onMutate: async (newWalletId: string) => {
+      // Capture the old wallet ID and wallet object BEFORE the mutation runs
+      const oldWalletId = currentWalletIdRef.current;
+      const oldWallet = oldWalletId ? wallets.find(w => w.id === oldWalletId) : null;
+      const newWallet = wallets.find(w => w.id === newWalletId);
+      
+      // Return context with old and new wallet info
+      return { oldWalletId, oldWallet, newWallet };
+    },
+    onSuccess: (walletId, _variables, context) => {
       setCurrentWalletId(walletId);
+      
       // Invalidate dependent queries after state updates
+      // Use proper query key structure that matches the actual query keys
       setTimeout(() => {
         queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+        
+        // Invalidate old wallet queries with full key structure
+        if (context?.oldWallet) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['wallet-balance-improved', context.oldWallet.id, context.oldWallet.xpub] 
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ['transactions-improved', context.oldWallet.id, context.oldWallet.xpub] 
+          });
+        }
+        
+        // Invalidate new wallet queries with full key structure to force fresh fetch
+        if (context?.newWallet) {
+          queryClient.invalidateQueries({ 
+            queryKey: ['wallet-balance-improved', context.newWallet.id, context.newWallet.xpub] 
+          });
+          queryClient.invalidateQueries({ 
+            queryKey: ['transactions-improved', context.newWallet.id, context.newWallet.xpub] 
+          });
+        }
       }, 150);
     },
   });
@@ -926,15 +957,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
       
-      // Clear React Query cache completely to remove any cached mock/demo data
-      queryClient.clear();
+      // Don't clear entire cache - preserve transaction history for other wallets
+      // Only invalidate queries to trigger fresh fetches for current data
+      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
       
-      // Invalidate queries to trigger fresh fetches
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      queryClient.invalidateQueries({ queryKey: ['bitcoin-price'] });
-      
-      // console.log('✅ Wallet data refresh initiated and cache cleared');
+      // console.log('✅ Wallet data refresh initiated');
     } catch (error) {
       // console.warn('⚠️ Error during data refresh:', error);
     }
@@ -1008,31 +1037,41 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const deleteWallet = useCallback(async (walletId: string) => {
     try {
       console.log('🗑️ Starting wallet deletion for ID:', walletId);
+      
+      // Get wallet references before filtering
+      const deletedWallet = wallets.find(w => w.id === walletId);
       const updatedWallets = wallets.filter(w => w.id !== walletId);
       
-      // Update state synchronously first to prevent race conditions
-      const needsSwitchWallet = currentWalletId === walletId;
-      const newCurrentWalletId = needsSwitchWallet && updatedWallets.length > 0 
-        ? updatedWallets[0].id 
-        : currentWalletId;
+      // Determine if we need to switch the current wallet
+      const isDeletingCurrentWallet = currentWalletId === walletId;
       
       // Update all state and storage together
       await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
       setWallets(updatedWallets);
       
-      if (needsSwitchWallet) {
+      // Handle current wallet ID updates
+      if (isDeletingCurrentWallet) {
         if (updatedWallets.length > 0) {
-          await AsyncStorage.setItem('currentWalletId', newCurrentWalletId!);
+          // Switch to the first remaining wallet
+          const newCurrentWalletId = updatedWallets[0].id;
+          await AsyncStorage.setItem('currentWalletId', newCurrentWalletId);
           setCurrentWalletId(newCurrentWalletId);
         } else {
+          // No wallets left, clear current wallet ID
           await AsyncStorage.removeItem('currentWalletId');
           setCurrentWalletId(null);
         }
       }
       
-      // Cancel any pending queries for the deleted wallet
-      queryClient.cancelQueries({ queryKey: ['wallet-balance-improved', walletId] });
-      queryClient.cancelQueries({ queryKey: ['transactions-improved', walletId] });
+      // Cancel any pending queries for the deleted wallet using full key structure
+      if (deletedWallet) {
+        queryClient.cancelQueries({ 
+          queryKey: ['wallet-balance-improved', deletedWallet.id, deletedWallet.xpub] 
+        });
+        queryClient.cancelQueries({ 
+          queryKey: ['transactions-improved', deletedWallet.id, deletedWallet.xpub] 
+        });
+      }
       
       // Wait for state to settle before invalidating queries
       await new Promise(resolve => setTimeout(resolve, 200));
@@ -1041,9 +1080,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['wallets'] });
       queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
       
-      if (newCurrentWalletId) {
-        queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved', newCurrentWalletId] });
-        queryClient.invalidateQueries({ queryKey: ['transactions-improved', newCurrentWalletId] });
+      // Invalidate new current wallet queries with full key structure
+      if (isDeletingCurrentWallet && updatedWallets.length > 0) {
+        const newCurrentWallet = updatedWallets[0];
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-balance-improved', newCurrentWallet.id, newCurrentWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['transactions-improved', newCurrentWallet.id, newCurrentWallet.xpub] 
+        });
       }
       
       console.log('✅ Wallet deletion completed successfully');
