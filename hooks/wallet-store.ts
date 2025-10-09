@@ -497,11 +497,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       await AsyncStorage.setItem('currentWalletId', walletId);
       return walletId;
     },
-    onSuccess: (walletId) => {
-      const oldWalletId = currentWalletId;
-      const oldWallet = wallets.find(w => w.id === oldWalletId);
-      const newWallet = wallets.find(w => w.id === walletId);
+    onMutate: async (newWalletId: string) => {
+      // Capture the old wallet ID and wallet object BEFORE the mutation runs
+      const oldWalletId = currentWalletIdRef.current;
+      const oldWallet = oldWalletId ? wallets.find(w => w.id === oldWalletId) : null;
+      const newWallet = wallets.find(w => w.id === newWalletId);
       
+      // Return context with old and new wallet info
+      return { oldWalletId, oldWallet, newWallet };
+    },
+    onSuccess: (walletId, _variables, context) => {
       setCurrentWalletId(walletId);
       
       // Invalidate dependent queries after state updates
@@ -510,22 +515,22 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
         
         // Invalidate old wallet queries with full key structure
-        if (oldWallet) {
+        if (context?.oldWallet) {
           queryClient.invalidateQueries({ 
-            queryKey: ['wallet-balance-improved', oldWallet.id, oldWallet.xpub] 
+            queryKey: ['wallet-balance-improved', context.oldWallet.id, context.oldWallet.xpub] 
           });
           queryClient.invalidateQueries({ 
-            queryKey: ['transactions-improved', oldWallet.id, oldWallet.xpub] 
+            queryKey: ['transactions-improved', context.oldWallet.id, context.oldWallet.xpub] 
           });
         }
         
         // Invalidate new wallet queries with full key structure to force fresh fetch
-        if (newWallet) {
+        if (context?.newWallet) {
           queryClient.invalidateQueries({ 
-            queryKey: ['wallet-balance-improved', newWallet.id, newWallet.xpub] 
+            queryKey: ['wallet-balance-improved', context.newWallet.id, context.newWallet.xpub] 
           });
           queryClient.invalidateQueries({ 
-            queryKey: ['transactions-improved', newWallet.id, newWallet.xpub] 
+            queryKey: ['transactions-improved', context.newWallet.id, context.newWallet.xpub] 
           });
         }
       }, 150);
