@@ -3,6 +3,14 @@
  * Based on the Esplora API specification for Bitcoin blockchain data
  */
 
+import {
+  getCachedAddressStats,
+  getCachedAddressTransactions,
+  getCachedAddressUTXOs,
+  setCachedAddressStats,
+  setCachedAddressTxIds,
+  setCachedAddressUTXOs
+} from './address-cache-service';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 import {
   getCachedAddressTransactions,
@@ -143,7 +151,7 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
  * - Caches confirmed transactions permanently
  * - Caches unconfirmed transactions for 2 minutes
  */
-export async function esploraGet(path: string, cacheTtlMs: number = 300000): Promise<any> {
+export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpubHint?: string): Promise<any> {
   // Load transaction cache if not already loaded
   await loadTransactionCache();
   
@@ -287,7 +295,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
             // Persist the txid list for this address for future cache hits
             if (currentAddress) {
               const txidsFromApi = Array.isArray(data) ? data.map((t: any) => t.txid) : [];
-              await setCachedAddressTxIds(currentAddress, txidsFromApi);
+              await setCachedAddressTxIds(currentAddress, txidsFromApi, xpubHint);
             }
 
             const allCachedTxs: any[] = [];
@@ -318,10 +326,10 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
             }
           } else if (addressStatsMatch) {
             const address = addressStatsMatch[1];
-            await setCachedAddressStats(address, data);
+            await setCachedAddressStats(address, data, xpubHint);
           } else if (addressUtxoMatch) {
             const address = addressUtxoMatch[1];
-            await setCachedAddressUTXOs(address, Array.isArray(data) ? data : []);
+            await setCachedAddressUTXOs(address, Array.isArray(data) ? data : [], xpubHint);
           } else {
             // Use general cache for other data
             setCachedData(cacheKey, data, cacheTtlMs);
@@ -372,15 +380,10 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
 /**
  * Get address statistics
  */
-export async function getAddressStats(address: string): Promise<{ data: any | null; error: string | null }> {
+export async function getAddressStats(address: string, xpubHint?: string): Promise<{ data: any | null; error: string | null }> {
   try {
     console.log(`📊 Getting address stats for: ${address.substring(0, 10)}...`);
-    const cached = await getCachedAddressStats(address);
-    if (cached) {
-      return { data: cached, error: null };
-    }
-    const stats = await esploraGet(`/address/${address}`, 300000); // First fetch then persist
-    await setCachedAddressStats(address, stats);
+    const stats = await esploraGet(`/address/${address}`, 300000, xpubHint);
     return { data: stats, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -395,13 +398,8 @@ export async function getAddressStats(address: string): Promise<{ data: any | nu
 export async function getAddressTransactions(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
   try {
     console.log(`📜 Getting transactions for: ${address.substring(0, 10)}...`);
-    const cachedTxs = await getCachedAddressTransactions(address);
-    if (cachedTxs !== null) {
-      return { data: cachedTxs, error: null };
-    }
-    const transactions = await esploraGet(`/address/${address}/txs`, 300000);
+    const transactions = await esploraGet(`/address/${address}/txs`, 300000, xpubHint);
     const txArray = Array.isArray(transactions) ? transactions : [];
-    await setCachedAddressTransactions(address, txArray, xpubHint);
     return { data: txArray, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -416,13 +414,8 @@ export async function getAddressTransactions(address: string, xpubHint?: string)
 export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
   try {
     console.log(`💰 Getting UTXOs for: ${address.substring(0, 10)}...`);
-    const cachedUtxos = await getCachedAddressUTXOs(address);
-    if (cachedUtxos) {
-      return { data: cachedUtxos, error: null };
-    }
-    const utxos = await esploraGet(`/address/${address}/utxo`, 300000);
+    const utxos = await esploraGet(`/address/${address}/utxo`, 300000, xpubHint);
     const arr = Array.isArray(utxos) ? utxos : [];
-    await setCachedAddressUTXOs(address, arr, xpubHint);
     return { data: arr, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';

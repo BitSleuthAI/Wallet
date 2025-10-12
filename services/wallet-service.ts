@@ -4,9 +4,9 @@
  */
 
 import type { Transaction, Wallet } from '../types/wallet';
+import { recordWalletAssociationsXpub } from './address-cache-service';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
-import { recordWalletAssociationsXpub } from './address-cache-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
@@ -279,7 +279,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           const [txsResult, utxosResult, statsResult] = await Promise.all([
             getAddressTransactions(address, xpub),
             getAddressUTXOs(address, xpub),
-            getAddressStats(address)
+            getAddressStats(address, xpub)
           ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
