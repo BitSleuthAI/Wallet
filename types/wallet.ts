@@ -204,3 +204,17 @@ export interface CPFPRecommendation {
   effectiveFeeRate: number;
   timeEstimate: string;
 }
+
+// UI/Store-managed fee settings used across the app
+export interface FeeSettings {
+  defaultPreset: 'economy' | 'standard' | 'priority' | 'custom';
+  customFeeRate: number;
+  enableRBF: boolean;
+  enableCPFP: boolean;
+  autoAdjustFees: boolean;
+  maxFeeRate: number;
+  dustThreshold: number;
+  // CPFP-specific options
+  cpfpMaxChildFee?: number; // in sats
+  cpfpIncludeUnconfirmed?: boolean;
+}

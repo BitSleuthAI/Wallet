@@ -27,18 +27,21 @@ type FeeOption = {
 };
 
 export default function FeeBumpScreen() {
-  const { txid } = useLocalSearchParams<{ txid: string }>();
+  const { txid, mode } = useLocalSearchParams<{ txid: string; mode?: 'rbf' | 'cpfp' }>();
   const { theme, transactions, currentWallet, feeSettings } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
   const [customFeeRate, setCustomFeeRate] = useState<string>('');
+  const [debouncedFeeRate, setDebouncedFeeRate] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isBumpingFee, setIsBumpingFee] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isValidating, setIsValidating] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [canReplace, setCanReplace] = useState<boolean>(false);
+  const isCPFPMode = (mode || 'rbf') === 'cpfp';
+  const [defaultFastRate, setDefaultFastRate] = useState<number>(25);
 
   useEffect(() => {
     if (txid && transactions) {
@@ -47,10 +50,27 @@ export default function FeeBumpScreen() {
     }
   }, [txid, transactions]);
 
-  // Validate RBF capability when transaction is loaded
+  // Debounce the fee rate used for CPFP validation to avoid re-validating on every keystroke
   useEffect(() => {
-    const validateRBF = async () => {
-      if (!transaction || !currentWallet) {
+    const currentRate = (() => {
+      if (selectedOption === 'Custom') {
+        return parseInt(customFeeRate || '0') || 0;
+      }
+      const opt = feeOptions.find(o => o.label === selectedOption);
+      return opt?.rate || 0;
+    })();
+
+    const handle = setTimeout(() => {
+      setDebouncedFeeRate(currentRate);
+    }, 400);
+
+    return () => clearTimeout(handle);
+  }, [selectedOption, customFeeRate, feeOptions]);
+
+  // Validate capability for RBF mode (does not depend on fee rate)
+  useEffect(() => {
+    const runRbfValidation = async () => {
+      if (!transaction || !currentWallet || isCPFPMode) {
         return;
       }
 
@@ -60,7 +80,6 @@ export default function FeeBumpScreen() {
 
       try {
         const validation = await validateRBFTransaction(transaction.txid, currentWallet.addresses);
-        
         if (!validation.isValid || !validation.canReplace) {
           setValidationError(validation.reason || 'Transaction cannot be replaced');
           setCanReplace(false);
@@ -68,7 +87,7 @@ export default function FeeBumpScreen() {
           setCanReplace(true);
         }
       } catch (error) {
-        console.error('RBF validation failed:', error);
+        console.error('Bump validation failed:', error);
         setValidationError(error instanceof Error ? error.message : 'Validation failed');
         setCanReplace(false);
       } finally {
@@ -76,30 +95,76 @@ export default function FeeBumpScreen() {
       }
     };
 
-    validateRBF();
-  }, [transaction, currentWallet]);
+    runRbfValidation();
+  }, [transaction, currentWallet, isCPFPMode]);
+
+  // Validate capability for CPFP mode (depends on debounced fee rate)
+  useEffect(() => {
+    const runCpfpValidation = async () => {
+      if (!transaction || !currentWallet || !isCPFPMode) {
+        return;
+      }
+
+      setIsValidating(true);
+      setValidationError(null);
+      setCanReplace(false);
+
+      try {
+        // Gate by CPFP toggle
+        if (!feeSettings?.enableCPFP) {
+          setValidationError('CPFP is disabled in settings');
+          setCanReplace(false);
+        } else {
+          const { validateCPFPTransaction } = await import('@/services/cpfp-service');
+          const effectiveRate = debouncedFeeRate > 0 ? debouncedFeeRate : defaultFastRate;
+          const validation = await validateCPFPTransaction(transaction.txid, currentWallet.addresses, {
+            targetFeeRate: effectiveRate,
+            maxChildFee: feeSettings?.cpfpMaxChildFee,
+            includeUnconfirmed: feeSettings?.cpfpIncludeUnconfirmed,
+          });
+          if (!validation.isValid || !validation.canCPFP) {
+            setValidationError(validation.reason || 'Transaction cannot be bumped with CPFP');
+            setCanReplace(false);
+          } else {
+            setCanReplace(true);
+          }
+        }
+      } catch (error) {
+        console.error('Bump validation failed:', error);
+        setValidationError(error instanceof Error ? error.message : 'Validation failed');
+        setCanReplace(false);
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    runCpfpValidation();
+  }, [transaction, currentWallet, isCPFPMode, debouncedFeeRate, feeSettings, defaultFastRate]);
 
   useEffect(() => {
     const loadFeeEstimates = async () => {
       setIsLoading(true);
       try {
-        const fees = await feeEstimationService.getFeeEstimates();
+        // Use stable API to avoid runtime shape mismatches
+        const estimates = await feeEstimationService.getFeeEstimates();
         const options: FeeOption[] = [
-          { label: 'Fast', rate: fees.fastestFee, time: '~10 min' },
-          { label: 'Medium', rate: fees.halfHourFee, time: '~30 min' },
-          { label: 'Slow', rate: fees.hourFee, time: '~1 hour' },
+          { label: 'Fast', rate: estimates.fastestFee, time: '~5-15 min' },
+          { label: 'Medium', rate: estimates.halfHourFee, time: '~20-45 min' },
+          { label: 'Slow', rate: estimates.hourFee, time: '~45-90 min' },
         ];
         setFeeOptions(options);
-        setCustomFeeRate(fees.fastestFee.toString());
+        setCustomFeeRate(String(estimates.fastestFee));
+        setDefaultFastRate(estimates.fastestFee);
       } catch (error) {
         console.error('Failed to load fee estimates:', error);
         const fallbackOptions: FeeOption[] = [
-          { label: 'Fast', rate: 165, time: '~10 min' },
-          { label: 'Medium', rate: 150, time: '~30 min' },
-          { label: 'Slow', rate: 150, time: '~1 hour' },
+          { label: 'Fast', rate: 25, time: '~5-15 min' },
+          { label: 'Medium', rate: 15, time: '~20-45 min' },
+          { label: 'Slow', rate: 10, time: '~45-90 min' },
         ];
         setFeeOptions(fallbackOptions);
-        setCustomFeeRate('165');
+        setCustomFeeRate('25');
+        setDefaultFastRate(25);
       } finally {
         setIsLoading(false);
       }
@@ -143,28 +208,29 @@ export default function FeeBumpScreen() {
   };
 
   const getMinimumFeeRate = () => {
-    return (transaction.feeRate || 1) + 1; // Must be higher than current fee rate
+    if (isCPFPMode) return 1; // CPFP does not require beating original rate
+    return (transaction.feeRate || 1) + 1; // RBF requires higher than current fee rate
   };
 
   const isValidFeeRate = () => {
     const currentRate = getCurrentFeeRate();
     const minRate = getMinimumFeeRate();
     
-    // Check minimum fee rate (RBF requirement)
-    if (currentRate < minRate) {
+    // RBF requires minimum higher than original fee rate
+    if (!isCPFPMode && currentRate < minRate) {
       return false;
     }
-    
+
+    // General positive check
+    if (currentRate <= 0) return false;
+
     // Only apply maxFeeRate validation to custom fee inputs, not preset options
-    // This prevents preset fee options from being blocked by user settings
     if (selectedOption === 'Custom') {
       const maxRate = feeSettings?.maxFeeRate;
-      // Only validate if maxFeeRate is set and greater than 0
       if (maxRate !== undefined && maxRate !== null && maxRate > 0 && currentRate > maxRate) {
         return false;
       }
     }
-    
     return true;
   };
 
@@ -174,7 +240,7 @@ export default function FeeBumpScreen() {
       const minRate = getMinimumFeeRate();
       
       let errorMessage = '';
-      if (currentRate < minRate) {
+      if (!isCPFPMode && currentRate < minRate) {
         errorMessage = `The fee rate must be higher than ${minRate} sat/vB for RBF`;
       } else if (selectedOption === 'Custom') {
         const maxRate = feeSettings?.maxFeeRate;
@@ -189,8 +255,8 @@ export default function FeeBumpScreen() {
 
     if (!canReplace) {
       Alert.alert(
-        'Cannot Replace Transaction',
-        validationError || 'This transaction cannot be replaced'
+        isCPFPMode ? 'Cannot Bump with CPFP' : 'Cannot Replace Transaction',
+        validationError || (isCPFPMode ? 'This transaction cannot be bumped with CPFP' : 'This transaction cannot be replaced')
       );
       return;
     }
@@ -203,41 +269,61 @@ export default function FeeBumpScreen() {
     setIsBumpingFee(true);
     try {
       const newFeeRate = getCurrentFeeRate();
-      
-      console.log('Starting RBF process...');
+      console.log('Starting bump process...', isCPFPMode ? 'CPFP' : 'RBF');
       console.log('Original TXID:', transaction?.txid);
       console.log('New fee rate:', newFeeRate, 'sat/vB');
-      
-      const result = await performRBF(
-        transaction!.txid,
-        newFeeRate,
-        currentWallet.mnemonic,
-        currentWallet.addresses
-      );
-      
-      if (result.success) {
-        Alert.alert(
-          'RBF Transaction Created',
-          `The replacement transaction has been created and broadcast to the network.\n\nReplacement TXID: ${result.replacementTxid}`,
-          [
-            {
-              text: 'OK',
-              onPress: () => router.back(),
-            },
-          ]
+
+      if (isCPFPMode) {
+        const { performCPFP } = await import('@/services/cpfp-service');
+        const result = await performCPFP(
+          transaction!.txid,
+          currentWallet.mnemonic,
+          currentWallet.addresses,
+          {
+            targetFeeRate: newFeeRate,
+            maxChildFee: feeSettings?.cpfpMaxChildFee,
+            includeUnconfirmed: feeSettings?.cpfpIncludeUnconfirmed,
+          }
         );
+        if (result.success) {
+          Alert.alert(
+            'CPFP Transaction Created',
+            `The child transaction has been created and broadcast to the network.\n\nChild TXID: ${result.childTxid}`,
+            [
+              {
+                text: 'OK',
+                onPress: () => router.back(),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('CPFP Failed', result.error || 'Failed to create CPFP transaction. Please try again.');
+        }
       } else {
-        Alert.alert(
-          'RBF Failed',
-          result.error || 'Failed to create replacement transaction. Please try again.'
+        const result = await performRBF(
+          transaction!.txid,
+          newFeeRate,
+          currentWallet.mnemonic,
+          currentWallet.addresses
         );
+        if (result.success) {
+          Alert.alert(
+            'RBF Transaction Created',
+            `The replacement transaction has been created and broadcast to the network.\n\nReplacement TXID: ${result.replacementTxid}`,
+            [
+              {
+                text: 'OK',
+                onPress: () => router.back(),
+              },
+            ]
+          );
+        } else {
+          Alert.alert('RBF Failed', result.error || 'Failed to create replacement transaction. Please try again.');
+        }
       }
     } catch (error) {
-      console.error('RBF failed:', error);
-      Alert.alert(
-        'Error', 
-        `Failed to create replacement transaction: ${error instanceof Error ? error.message : 'Unknown error'}`
-      );
+      console.error('Bump failed:', error);
+      Alert.alert('Error', `Failed to bump transaction: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setIsBumpingFee(false);
     }
@@ -313,7 +399,7 @@ export default function FeeBumpScreen() {
     <GradientBackground theme={theme} variant="primary" direction="vertical">
       <Stack.Screen 
         options={{ 
-          title: 'Bump Fee (RBF)',
+          title: isCPFPMode ? 'Bump Fee (CPFP)' : 'Bump Fee (RBF)',
           headerBackTitle: '',
           headerStyle: {
             backgroundColor: 'transparent',
@@ -359,38 +445,26 @@ export default function FeeBumpScreen() {
           </View>
         </View>
 
-        {/* RBF Educational Section */}
+        {/* Educational Section (RBF vs CPFP) */}
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
           <View style={styles.rbfEducationHeader}>
             <View style={[styles.rbfEducationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
               <Text style={[styles.rbfEducationEmoji, { color: theme.colors.primary }]}>🔄</Text>
             </View>
             <Text style={[styles.rbfEducationTitle, { color: theme.colors.text }]}>
-              How Replace-by-Fee (RBF) Works
+              {isCPFPMode ? 'How Child-Pays-for-Parent (CPFP) Works' : 'How Replace-by-Fee (RBF) Works'}
             </Text>
           </View>
           <Text style={[styles.rbfEducationDescription, { color: theme.colors.textSecondary }]}>
-            RBF allows you to replace an unconfirmed transaction with a new one paying a higher fee. This helps when your transaction is taking longer than expected to confirm.
+            {isCPFPMode
+              ? 'CPFP creates a new child transaction that spends the unconfirmed parent outputs with a higher fee, increasing the combined (parent + child) effective fee rate.'
+              : 'RBF replaces your unconfirmed transaction with a new one paying a higher fee. This helps when your transaction is taking longer than expected to confirm.'}
           </Text>
-          <View style={styles.rbfEducationSteps}>
-            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
-              <Text style={{ fontWeight: '600' }}>Step 1:</Text> Original transaction sent with lower fee
-            </Text>
-            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
-              <Text style={{ fontWeight: '600' }}>Step 2:</Text> Notice transaction is stuck or moving slowly
-            </Text>
-            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
-              <Text style={{ fontWeight: '600' }}>Step 3:</Text> Create replacement with higher fee rate
-            </Text>
-            <Text style={[styles.rbfEducationStep, { color: theme.colors.textSecondary }]}>
-              <Text style={{ fontWeight: '600' }}>Step 4:</Text> Network prioritizes the new transaction
-            </Text>
-          </View>
-          <View style={styles.rbfEducationNote}>
-            <Text style={[styles.rbfEducationNoteText, { color: theme.colors.textSecondary }]}>
-              💡 <Text style={{ fontWeight: '600' }}>Tip:</Text> You can also cancel a transaction by sending the money back to yourself
-            </Text>
-          </View>
+          {!isCPFPMode && (
+            <View style={styles.rbfEducationNote}>
+              <Text style={[styles.rbfEducationNoteText, { color: theme.colors.textSecondary }]}>💡 <Text style={{ fontWeight: '600' }}>Tip:</Text> You can also cancel a transaction by sending the money back to yourself</Text>
+            </View>
+          )}
         </View>
           
         {/* RBF Validation Status */}
@@ -398,7 +472,7 @@ export default function FeeBumpScreen() {
           <View style={styles.validationStatus}>
             <ActivityIndicator color={theme.colors.primary} size="small" />
             <Text style={[styles.validationText, { color: theme.colors.textSecondary }]}>
-              Validating RBF capability...
+              {isCPFPMode ? 'Validating CPFP capability...' : 'Validating RBF capability...'}
             </Text>
           </View>
         )}
@@ -523,7 +597,7 @@ export default function FeeBumpScreen() {
                       Please enter a valid fee rate
                     </Text>
                   );
-                } else if (rate < minRate) {
+                } else if (!isCPFPMode && rate < minRate) {
                   return (
                     <Text style={[styles.validationText, { color: theme.colors.error }]}>
                       Must be higher than {minRate} sat/vB for RBF
@@ -547,7 +621,9 @@ export default function FeeBumpScreen() {
           )}
           
           <Text style={[styles.feeHint, { color: theme.colors.textSecondary }]}>
-            The total fee rate (satoshi per byte) you want to pay should be higher than {getMinimumFeeRate()} sat/byte
+            {isCPFPMode
+              ? 'Choose a higher fee rate to speed up confirmation of the parent transaction.'
+              : `The total fee rate (satoshi per byte) you want to pay should be higher than ${getMinimumFeeRate()} sat/byte`}
           </Text>
         </View>
         </ScrollView>
@@ -571,22 +647,22 @@ export default function FeeBumpScreen() {
           )}
         </TouchableOpacity>
         
-        <TouchableOpacity
-          style={[
-            styles.cancelButton,
-            (!canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
-          ]}
-          onPress={handleCancelTransaction}
-          disabled={!canReplace || isValidating || isBumpingFee || isCancelling}
-        >
-          {isCancelling ? (
-            <ActivityIndicator color={theme.colors.error} size="small" />
-          ) : (
-            <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>
-              Cancel Transaction
-            </Text>
-          )}
-        </TouchableOpacity>
+        {!isCPFPMode && (
+          <TouchableOpacity
+            style={[
+              styles.cancelButton,
+              (!canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
+            ]}
+            onPress={handleCancelTransaction}
+            disabled={!canReplace || isValidating || isBumpingFee || isCancelling}
+          >
+            {isCancelling ? (
+              <ActivityIndicator color={theme.colors.error} size="small" />
+            ) : (
+              <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>Cancel Transaction</Text>
+            )}
+          </TouchableOpacity>
+        )}
         
         <TouchableOpacity style={styles.detailsButton}>
           <Text style={[styles.detailsButtonText, { color: theme.colors.textSecondary }]}>

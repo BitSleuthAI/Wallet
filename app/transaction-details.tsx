@@ -6,33 +6,33 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-  AlertTriangle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  CheckCircle,
-  Clock,
-  Copy,
-  DollarSign,
-  ExternalLink,
-  Share as ShareIcon,
-  XCircle,
-  Zap,
+    AlertTriangle,
+    ArrowDownLeft,
+    ArrowUpRight,
+    CheckCircle,
+    Clock,
+    Copy,
+    DollarSign,
+    ExternalLink,
+    Share as ShareIcon,
+    XCircle,
+    Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function TransactionDetailsScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, formatCurrency, bitcoinPrice } = useWallet();
+  const { theme, transactions, formatCurrency, bitcoinPrice, feeSettings } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
 
 
@@ -157,7 +157,7 @@ export default function TransactionDetailsScreen() {
       return;
     }
 
-    router.push(`/fee-bump?txid=${transaction.txid}`);
+    router.push(`/fee-bump?txid=${transaction.txid}&mode=rbf`);
   };
 
   const handleCPFP = () => {
@@ -169,7 +169,15 @@ export default function TransactionDetailsScreen() {
       return;
     }
 
-    router.push(`/cpfp-bump?txid=${transaction.txid}`);
+    if (!feeSettings?.enableCPFP) {
+      Alert.alert(
+        'CPFP Disabled',
+        'Enable CPFP in Fee Settings to bump fees on pending transactions you received or sent.'
+      );
+      return;
+    }
+
+    router.push(`/fee-bump?txid=${transaction.txid}&mode=cpfp`);
   };
 
 
@@ -377,8 +385,8 @@ export default function TransactionDetailsScreen() {
             </TouchableOpacity>
           )}
 
-          {/* CPFP Button for received transactions */}
-          {isReceived && transaction.status === 'pending' && (
+          {/* CPFP Button for pending transactions when enabled */}
+          {transaction.status === 'pending' && (
             <TouchableOpacity style={styles.actionButton} onPress={handleCPFP}>
               <Zap color={theme.colors.success} size={20} />
               <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>

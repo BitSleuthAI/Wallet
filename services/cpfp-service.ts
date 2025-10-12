@@ -3,38 +3,11 @@
  * Implements CPFP functionality for fee bumping received transactions
  */
 
-import { Transaction, UTXO } from '@/types/wallet';
+import { CPFPOptions, CPFPTransaction, CPFPValidationResult, UTXO } from '@/types/wallet';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
 
-export interface CPFPTransaction {
-  parentTxid: string;
-  childTxid?: string;
-  parentTx: Transaction;
-  childTx?: string; // hex transaction
-  targetFeeRate: number;
-  childFee: number;
-  effectiveFeeRate: number; // Combined fee rate of parent + child
-  status: 'pending' | 'broadcasted' | 'confirmed' | 'failed';
-  error?: string;
-}
-
-export interface CPFPValidationResult {
-  isValid: boolean;
-  canCPFP: boolean;
-  reason?: string;
-  parentTx?: any;
-  utxos?: UTXO[];
-  estimatedChildFee?: number;
-  effectiveFeeRate?: number;
-}
-
-export interface CPFPOptions {
-  targetFeeRate: number;
-  maxChildFee?: number;
-  includeUnconfirmed?: boolean;
-  customOutputs?: Array<{ address: string; amount: number }>;
-}
+// Types are imported from '@/types/wallet'
 
 /**
  * Fetch transaction details from Blockstream API
