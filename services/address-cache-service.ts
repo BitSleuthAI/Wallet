@@ -203,4 +203,3 @@ export async function clearCacheForWalletXpub(xpub: string): Promise<void> {
     console.warn('Failed to clear cache for wallet:', error);
   }
 }
-
