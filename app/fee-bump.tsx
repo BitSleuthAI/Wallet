@@ -119,9 +119,9 @@ export default function FeeBumpScreen() {
           const effectiveRate = debouncedFeeRate > 0 ? debouncedFeeRate : defaultFastRate;
           const validation = await validateCPFPTransaction(transaction.txid, currentWallet.addresses, {
             targetFeeRate: effectiveRate,
-            maxChildFee: 10000,
-            includeUnconfirmed: true,
-          } as any);
+            maxChildFee: feeSettings?.cpfpMaxChildFee,
+            includeUnconfirmed: feeSettings?.cpfpIncludeUnconfirmed,
+          });
           if (!validation.isValid || !validation.canCPFP) {
             setValidationError(validation.reason || 'Transaction cannot be bumped with CPFP');
             setCanReplace(false);
@@ -284,9 +284,9 @@ export default function FeeBumpScreen() {
           currentWallet.addresses,
           {
             targetFeeRate: newFeeRate,
-            maxChildFee: 10000,
-            includeUnconfirmed: true,
-          } as any
+            maxChildFee: feeSettings?.cpfpMaxChildFee,
+            includeUnconfirmed: feeSettings?.cpfpIncludeUnconfirmed,
+          }
         );
         if (result.success) {
           Alert.alert(

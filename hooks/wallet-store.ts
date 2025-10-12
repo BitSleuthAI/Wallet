@@ -1,8 +1,8 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
-import { getBTCPrice } from '@/services/esplora-service';
 import { clearCacheForWalletXpub } from '@/services/address-cache-service';
+import { getBTCPrice } from '@/services/esplora-service';
 import { getWalletData } from '@/services/wallet-service';
-import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
+import { FeeSettings, FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -91,14 +91,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
   const [cryptoReady, setCryptoReady] = useState(false);
   const cryptoReadyRef = useRef(false);
-  const [feeSettings, setFeeSettingsState] = useState({
-    defaultPreset: 'economy' as 'economy' | 'standard' | 'priority' | 'custom',
+  const [feeSettings, setFeeSettingsState] = useState<FeeSettings>({
+    defaultPreset: 'economy',
     customFeeRate: 10,
     enableRBF: true,
-    enableCPFP: false,
+    enableCPFP: true,
     autoAdjustFees: true,
     maxFeeRate: 100,
     dustThreshold: 546,
+    cpfpMaxChildFee: 10000,
+    cpfpIncludeUnconfirmed: true,
   });
 
   // Computed current wallet
@@ -292,15 +294,28 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryKey: ['feeSettings'],
     queryFn: async () => {
       const stored = await AsyncStorage.getItem('feeSettings');
-      return stored ? JSON.parse(stored) : {
+      const fallback: FeeSettings = {
         defaultPreset: 'economy',
         customFeeRate: 10,
         enableRBF: true,
-        enableCPFP: false,
+        enableCPFP: true,
         autoAdjustFees: true,
         maxFeeRate: 100,
         dustThreshold: 546,
+        cpfpMaxChildFee: 10000,
+        cpfpIncludeUnconfirmed: true,
       };
+      if (!stored) return fallback;
+      const parsed = JSON.parse(stored);
+      // Merge any missing new fields to maintain backward compatibility
+      return {
+        ...fallback,
+        ...parsed,
+        // Ensure booleans are coerced correctly if missing
+        enableCPFP: typeof parsed.enableCPFP === 'boolean' ? parsed.enableCPFP : fallback.enableCPFP,
+        cpfpMaxChildFee: typeof parsed.cpfpMaxChildFee === 'number' ? parsed.cpfpMaxChildFee : fallback.cpfpMaxChildFee,
+        cpfpIncludeUnconfirmed: typeof parsed.cpfpIncludeUnconfirmed === 'boolean' ? parsed.cpfpIncludeUnconfirmed : fallback.cpfpIncludeUnconfirmed,
+      } as FeeSettings;
     },
   });
 
@@ -623,7 +638,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   // Save fee settings mutation
   const saveFeeSettingsMutation = useMutation({
-    mutationFn: async (settings: typeof feeSettings) => {
+    mutationFn: async (settings: FeeSettings) => {
       await AsyncStorage.setItem('feeSettings', JSON.stringify(settings));
       return settings;
     },
@@ -890,7 +905,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     saveAutoLock(timeout);
   }, [saveAutoLock]);
 
-  const setFeeSettings = useCallback((settings: typeof feeSettings) => {
+  const setFeeSettings = useCallback((settings: FeeSettings) => {
     saveFeeSettings(settings);
   }, [saveFeeSettings]);
 
