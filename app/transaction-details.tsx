@@ -298,7 +298,7 @@ export default function TransactionDetailsScreen() {
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
               <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                {transaction.fee.toFixed(8)} BTC
+                {(transaction.fee / 100000000).toFixed(8)} BTC
                 {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
               </Text>
             </View>
