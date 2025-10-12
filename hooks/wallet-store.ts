@@ -1,5 +1,6 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
 import { getBTCPrice } from '@/services/esplora-service';
+import { clearCacheForWalletXpub } from '@/services/address-cache-service';
 import { getWalletData } from '@/services/wallet-service';
 import { FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
@@ -1008,7 +1009,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     for (const address of currentWallet.addresses) {
       console.log(`🔧 Testing address: ${address}`);
       try {
-        const result = await getAddressTransactions(address);
+        const result = await getAddressTransactions(address, currentWallet.xpub);
         console.log(`🔧 Address ${address}:`, result.data ? `✅ Found ${result.data.length} transactions` : '❌ Failed', result.error || '');
       } catch (error) {
         console.log(`🔧 Address ${address} test failed:`, error);
@@ -1095,6 +1096,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         queryClient.cancelQueries({ 
           queryKey: ['transactions-improved', deletedWallet.id, deletedWallet.xpub] 
         });
+
+        // Clear address-level and tx caches associated with this wallet
+        try {
+          console.log('🧹 Clearing cached blockchain data for deleted wallet');
+          await clearCacheForWalletXpub(deletedWallet.xpub);
+        } catch (e) {
+          console.warn('Failed to clear cache for deleted wallet:', e);
+        }
       }
       
       // Wait for state to settle before invalidating queries

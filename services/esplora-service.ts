@@ -4,6 +4,15 @@
  */
 
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
+import {
+  getCachedAddressTransactions,
+  setCachedAddressTransactions,
+  getCachedAddressStats,
+  setCachedAddressStats,
+  getCachedAddressUTXOs,
+  setCachedAddressUTXOs,
+  setCachedAddressTxIds,
+} from './address-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
@@ -147,7 +156,9 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
   // - P2SH (3...): starts with 3, 26-35 chars, base58
   // - Bech32 (bc1q...): starts with bc1q, 42-62 chars, bech32
   // - Bech32m (bc1p...): starts with bc1p, 62 chars, bech32m
-  const addressTxMatch = path.match(/^\/address\/([13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62}\/txs/);
+  const addressTxMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs$/);
+  const addressStatsMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})$/);
+  const addressUtxoMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/utxo$/);
   
   const cacheKey = getCacheKey(path);
   
@@ -165,9 +176,37 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
   
   // For bulk address requests, check cache and filter out what we already have
   if (addressTxMatch) {
+    // If we already have cached transactions for this address, return them immediately
+    const address = addressTxMatch[1];
+    const cachedAddressTxs = await getCachedAddressTransactions(address);
+    if (cachedAddressTxs !== null) {
+      console.log(`📦 Address txs cache hit for ${address}: ${cachedAddressTxs.length} txs`);
+      return cachedAddressTxs;
+    }
+
     const cachedTxIds = getCachedTransactionIds();
     if (cachedTxIds.size > 0) {
       console.log(`📦 Found ${cachedTxIds.size} cached transactions, will merge with fresh data`);
+    }
+  }
+  
+  // Address stats cache
+  if (addressStatsMatch) {
+    const address = addressStatsMatch[1];
+    const cachedStats = await getCachedAddressStats(address);
+    if (cachedStats) {
+      console.log(`📦 Address stats cache hit for ${address}`);
+      return cachedStats;
+    }
+  }
+
+  // Address UTXO cache
+  if (addressUtxoMatch) {
+    const address = addressUtxoMatch[1];
+    const cachedUtxos = await getCachedAddressUTXOs(address);
+    if (cachedUtxos) {
+      console.log(`📦 Address UTXOs cache hit for ${address} (${cachedUtxos.length})`);
+      return cachedUtxos;
     }
   }
   
@@ -245,6 +284,12 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
             const addressMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs/);
             const currentAddress = addressMatch ? addressMatch[1] : null;
             
+            // Persist the txid list for this address for future cache hits
+            if (currentAddress) {
+              const txidsFromApi = Array.isArray(data) ? data.map((t: any) => t.txid) : [];
+              await setCachedAddressTxIds(currentAddress, txidsFromApi);
+            }
+
             const allCachedTxs: any[] = [];
             if (currentAddress) {
               for (const txid of cachedTxIds) {
@@ -271,6 +316,12 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
               // Return merged data: fresh API data + cached transactions not in API response
               return [...data, ...allCachedTxs];
             }
+          } else if (addressStatsMatch) {
+            const address = addressStatsMatch[1];
+            await setCachedAddressStats(address, data);
+          } else if (addressUtxoMatch) {
+            const address = addressUtxoMatch[1];
+            await setCachedAddressUTXOs(address, Array.isArray(data) ? data : []);
           } else {
             // Use general cache for other data
             setCachedData(cacheKey, data, cacheTtlMs);
@@ -324,7 +375,12 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000): Pro
 export async function getAddressStats(address: string): Promise<{ data: any | null; error: string | null }> {
   try {
     console.log(`📊 Getting address stats for: ${address.substring(0, 10)}...`);
-    const stats = await esploraGet(`/address/${address}`, 300000); // Cache for 5 minutes
+    const cached = await getCachedAddressStats(address);
+    if (cached) {
+      return { data: cached, error: null };
+    }
+    const stats = await esploraGet(`/address/${address}`, 300000); // First fetch then persist
+    await setCachedAddressStats(address, stats);
     return { data: stats, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -336,11 +392,17 @@ export async function getAddressStats(address: string): Promise<{ data: any | nu
 /**
  * Get transactions for an address
  */
-export async function getAddressTransactions(address: string): Promise<{ data: any[] | null; error: string | null }> {
+export async function getAddressTransactions(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
   try {
     console.log(`📜 Getting transactions for: ${address.substring(0, 10)}...`);
-    const transactions = await esploraGet(`/address/${address}/txs`, 300000); // Cache for 5 minutes
-    return { data: Array.isArray(transactions) ? transactions : [], error: null };
+    const cachedTxs = await getCachedAddressTransactions(address);
+    if (cachedTxs !== null) {
+      return { data: cachedTxs, error: null };
+    }
+    const transactions = await esploraGet(`/address/${address}/txs`, 300000);
+    const txArray = Array.isArray(transactions) ? transactions : [];
+    await setCachedAddressTransactions(address, txArray, xpubHint);
+    return { data: txArray, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error(`❌ Failed to get address transactions:`, message);
@@ -351,11 +413,17 @@ export async function getAddressTransactions(address: string): Promise<{ data: a
 /**
  * Get UTXOs for an address
  */
-export async function getAddressUTXOs(address: string): Promise<{ data: any[] | null; error: string | null }> {
+export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
   try {
     console.log(`💰 Getting UTXOs for: ${address.substring(0, 10)}...`);
-    const utxos = await esploraGet(`/address/${address}/utxo`, 300000); // Cache for 5 minutes
-    return { data: Array.isArray(utxos) ? utxos : [], error: null };
+    const cachedUtxos = await getCachedAddressUTXOs(address);
+    if (cachedUtxos) {
+      return { data: cachedUtxos, error: null };
+    }
+    const utxos = await esploraGet(`/address/${address}/utxo`, 300000);
+    const arr = Array.isArray(utxos) ? utxos : [];
+    await setCachedAddressUTXOs(address, arr, xpubHint);
+    return { data: arr, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error(`❌ Failed to get address UTXOs:`, message);

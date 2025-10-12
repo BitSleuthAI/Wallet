@@ -4,6 +4,7 @@
  */
 
 import { BitcoinPrice, UTXO } from '@/types/wallet';
+import { getAddressUTXOs as esploraGetAddressUTXOs } from './esplora-service';
 
 // Don't initialize ECC at module load time - do it lazily when needed
 let eccInitialized = false;
@@ -128,125 +129,28 @@ export const isValidBitcoinAddress = (address: string): boolean => {
  */
 export const getAddressUTXOs = async (address: string, addressIndex?: number): Promise<UTXO[]> => {
   try {
-    console.log('🔍 Fetching UTXOs for address:', address.substring(0, 10) + '...');
-    
-    // Use XMLHttpRequest to avoid polyfill issues
-    const xhr = new XMLHttpRequest();
-    
-    return new Promise((resolve, reject) => {
-      xhr.timeout = 15000;
-      
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              console.log('✅ UTXOs fetched:', data.length);
-              
-              const utxos: UTXO[] = data.map((utxo: any) => ({
-                txid: utxo.txid,
-                vout: utxo.vout,
-                value: utxo.value,
-                scriptPubKey: utxo.scriptpubkey,
-                address: utxo.status?.confirmed ? address : undefined,
-                addressIndex: addressIndex, // Include the address index
-                status: {
-                  confirmed: utxo.status?.confirmed || false,
-                  block_height: utxo.status?.block_height,
-                  block_hash: utxo.status?.block_hash,
-                  block_time: utxo.status?.block_time,
-                },
-              }));
-              
-              resolve(utxos);
-            } catch (parseError) {
-              console.error('❌ Failed to parse UTXO response:', parseError);
-              reject(new Error('Failed to parse UTXO data'));
-            }
-          } else {
-            console.error('❌ UTXO fetch failed with status:', xhr.status);
-            reject(new Error(`UTXO fetch failed: ${xhr.status}`));
-          }
-        }
-      };
-      
-      xhr.onerror = () => {
-        console.error('❌ UTXO fetch network error');
-        reject(new Error('Network error'));
-      };
-      
-      xhr.ontimeout = () => {
-        console.error('❌ UTXO fetch timeout');
-        reject(new Error('Request timeout'));
-      };
-      
-      // Try Blockstream first, then Mempool.space
-      const urls = [
-        `https://blockstream.info/api/address/${address}/utxo`,
-        `https://mempool.space/api/address/${address}/utxo`
-      ];
-      
-      let urlIndex = 0;
-      
-      const tryNextUrl = () => {
-        if (urlIndex >= urls.length) {
-          reject(new Error('All UTXO endpoints failed'));
-          return;
-        }
-        
-        console.log('🔍 Trying UTXO URL:', urls[urlIndex]);
-        xhr.open('GET', urls[urlIndex], true);
-        xhr.setRequestHeader('Accept', 'application/json');
-        xhr.send();
-      };
-      
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              console.log('✅ UTXOs fetched:', data.length);
-              
-              const utxos: UTXO[] = data.map((utxo: any) => ({
-                txid: utxo.txid,
-                vout: utxo.vout,
-                value: utxo.value,
-                scriptPubKey: utxo.scriptpubkey,
-                address: utxo.status?.confirmed ? address : undefined,
-                addressIndex: addressIndex, // Include the address index
-                status: {
-                  confirmed: utxo.status?.confirmed || false,
-                  block_height: utxo.status?.block_height,
-                  block_hash: utxo.status?.block_hash,
-                  block_time: utxo.status?.block_time,
-                },
-              }));
-              
-              resolve(utxos);
-            } catch (parseError) {
-              console.error('❌ Failed to parse UTXO response:', parseError);
-              reject(new Error('Failed to parse UTXO data'));
-            }
-          } else if (xhr.status >= 500 || xhr.status === 0) {
-            // Server error or network issue, try next URL
-            console.warn('⚠️ UTXO endpoint failed, trying next...');
-            urlIndex++;
-            setTimeout(tryNextUrl, 1000);
-          } else if (xhr.status === 429) {
-            // Rate limiting - try next URL after delay (don't log as error to avoid red screen)
-            console.log('⚠️ Rate limited, switching to next endpoint...');
-            urlIndex++;
-            setTimeout(tryNextUrl, 2000);
-          } else {
-            // Client error (4xx), don't retry
-            console.error('❌ UTXO fetch failed with status:', xhr.status);
-            reject(new Error(`UTXO fetch failed: ${xhr.status}`));
-          }
-        }
-      };
-      
-      tryNextUrl();
-    });
+    console.log('🔍 Fetching UTXOs (cached) for address:', address.substring(0, 10) + '...');
+    const result = await esploraGetAddressUTXOs(address);
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    const data = result.data || [];
+    const utxos: UTXO[] = data.map((utxo: any) => ({
+      txid: utxo.txid,
+      vout: utxo.vout,
+      value: utxo.value,
+      scriptPubKey: utxo.scriptpubkey,
+      address: utxo.status?.confirmed ? address : undefined,
+      addressIndex: addressIndex,
+      status: {
+        confirmed: utxo.status?.confirmed || false,
+        block_height: utxo.status?.block_height,
+        block_hash: utxo.status?.block_hash,
+        block_time: utxo.status?.block_time,
+      },
+    }));
+    console.log('✅ UTXOs fetched from esplora-service cache-aware layer:', utxos.length);
+    return utxos;
   } catch (error) {
     console.error('❌ getAddressUTXOs failed:', error);
     throw error;
