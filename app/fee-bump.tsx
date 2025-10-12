@@ -475,7 +475,7 @@ export default function FeeBumpScreen() {
           <View style={styles.validationStatus}>
             <ActivityIndicator color={theme.colors.primary} size="small" />
             <Text style={[styles.validationText, { color: theme.colors.textSecondary }]}>
-              Validating RBF capability...
+              {isCPFPMode ? 'Validating CPFP capability...' : 'Validating RBF capability...'}
             </Text>
           </View>
         )}
