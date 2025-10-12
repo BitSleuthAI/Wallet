@@ -4,6 +4,7 @@
  */
 
 import type { Transaction, Wallet } from '../types/wallet';
+import { recordWalletAssociationsXpub } from './address-cache-service';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
@@ -276,9 +277,9 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           console.log(`📊 Processing address ${idx}/${usedAddresses.length}: ${address.substring(0, 10)}...`);
           
           const [txsResult, utxosResult, statsResult] = await Promise.all([
-            getAddressTransactions(address),
-            getAddressUTXOs(address),
-            getAddressStats(address)
+            getAddressTransactions(address, xpub),
+            getAddressUTXOs(address, xpub),
+            getAddressStats(address, xpub)
           ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
@@ -287,6 +288,14 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
             for (const tx of txsResult.data) {
               allTxs.set(tx.txid, tx);
             }
+          }
+
+          // Record associations for this wallet for later deletion and reuse
+          try {
+            const txids = (txsResult.data || []).map((t: any) => t.txid);
+            await recordWalletAssociationsXpub(xpub, [address], txids);
+          } catch (e) {
+            console.warn('Failed to record wallet associations:', e);
           }
 
           if (utxosResult.data && Array.isArray(utxosResult.data)) {

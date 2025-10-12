@@ -374,3 +374,34 @@ export async function pruneExpiredTransactions(): Promise<number> {
   return prunedCount;
 }
 
+/**
+ * Remove specific transactions from cache by txid
+ * Used when deleting a wallet to free cache space associated with it
+ */
+export async function removeTransactionsByIds(txids: string[]): Promise<void> {
+  try {
+    if (!Array.isArray(txids) || txids.length === 0) return;
+
+    let removedConfirmed = 0;
+    let removedUnconfirmed = 0;
+
+    for (const txid of txids) {
+      if (cache.confirmed.delete(txid)) {
+        removedConfirmed++;
+      }
+      if (cache.unconfirmed.delete(txid)) {
+        removedUnconfirmed++;
+      }
+    }
+
+    if (removedConfirmed > 0 || removedUnconfirmed > 0) {
+      await saveTransactionCache();
+      console.log(
+        `🗑️ Removed ${removedConfirmed} confirmed and ${removedUnconfirmed} unconfirmed transactions from cache`
+      );
+    }
+  } catch (error) {
+    console.warn('Failed to remove transactions from cache:', error);
+  }
+}
+

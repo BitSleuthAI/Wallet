@@ -48,7 +48,7 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme } = useWallet();
+  const { theme, currentWallet } = useWallet();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
@@ -83,7 +83,7 @@ export default function AddressDetailsScreen() {
       if (!address) return [];
       
       console.log('📜 Fetching address transactions using Esplora service...');
-      const result = await getAddressTransactions(address);
+      const result = await getAddressTransactions(address, currentWallet?.xpub);
       
       if (result.error || !result.data) {
         console.warn('❌ Address transactions fetch failed:', result.error);
