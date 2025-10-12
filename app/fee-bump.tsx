@@ -145,19 +145,16 @@ export default function FeeBumpScreen() {
     const loadFeeEstimates = async () => {
       setIsLoading(true);
       try {
-        const [fast, med, slow] = await Promise.all([
-          feeEstimationService.getFeeWithConfidence('fast'),
-          feeEstimationService.getFeeWithConfidence('medium'),
-          feeEstimationService.getFeeWithConfidence('slow'),
-        ]);
+        // Use stable API to avoid runtime shape mismatches
+        const estimates = await feeEstimationService.getFeeEstimates();
         const options: FeeOption[] = [
-          { label: 'Fast', rate: fast.fee, time: `~${fast.timeEstimate}` },
-          { label: 'Medium', rate: med.fee, time: `~${med.timeEstimate}` },
-          { label: 'Slow', rate: slow.fee, time: `~${slow.timeEstimate}` },
+          { label: 'Fast', rate: estimates.fastestFee, time: '~5-15 min' },
+          { label: 'Medium', rate: estimates.halfHourFee, time: '~20-45 min' },
+          { label: 'Slow', rate: estimates.hourFee, time: '~45-90 min' },
         ];
         setFeeOptions(options);
-        setCustomFeeRate(fast.fee.toString());
-        setDefaultFastRate(fast.fee);
+        setCustomFeeRate(String(estimates.fastestFee));
+        setDefaultFastRate(estimates.fastestFee);
       } catch (error) {
         console.error('Failed to load fee estimates:', error);
         const fallbackOptions: FeeOption[] = [
