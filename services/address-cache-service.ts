@@ -157,6 +157,10 @@ export async function getCachedAddressTransactions(address: string): Promise<any
     const tx = getCachedTransaction(txid);
     if (tx) {
       results.push(tx);
+    } else {
+      // If any transaction is missing/expired, return null to indicate incomplete cache
+      // This allows esploraGet to fetch fresh data and merge properly
+      return null;
     }
   }
   return results;
