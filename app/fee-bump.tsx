@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -33,6 +33,7 @@ export default function FeeBumpScreen() {
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
   const [customFeeRate, setCustomFeeRate] = useState<string>('');
+  const [debouncedFeeRate, setDebouncedFeeRate] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isBumpingFee, setIsBumpingFee] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
@@ -40,6 +41,7 @@ export default function FeeBumpScreen() {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [canReplace, setCanReplace] = useState<boolean>(false);
   const isCPFPMode = (mode || 'rbf') === 'cpfp';
+  const [defaultFastRate, setDefaultFastRate] = useState<number>(25);
 
   useEffect(() => {
     if (txid && transactions) {
@@ -48,10 +50,27 @@ export default function FeeBumpScreen() {
     }
   }, [txid, transactions]);
 
-  // Validate capability based on mode when transaction is loaded
+  // Debounce the fee rate used for CPFP validation to avoid re-validating on every keystroke
   useEffect(() => {
-    const runValidation = async () => {
-      if (!transaction || !currentWallet) {
+    const currentRate = (() => {
+      if (selectedOption === 'Custom') {
+        return parseInt(customFeeRate || '0') || 0;
+      }
+      const opt = feeOptions.find(o => o.label === selectedOption);
+      return opt?.rate || 0;
+    })();
+
+    const handle = setTimeout(() => {
+      setDebouncedFeeRate(currentRate);
+    }, 400);
+
+    return () => clearTimeout(handle);
+  }, [selectedOption, customFeeRate, feeOptions]);
+
+  // Validate capability for RBF mode (does not depend on fee rate)
+  useEffect(() => {
+    const runRbfValidation = async () => {
+      if (!transaction || !currentWallet || isCPFPMode) {
         return;
       }
 
@@ -60,30 +79,51 @@ export default function FeeBumpScreen() {
       setCanReplace(false);
 
       try {
-        if (isCPFPMode) {
-          // Gate by CPFP toggle
-          if (!feeSettings?.enableCPFP) {
-            setValidationError('CPFP is disabled in settings');
-            setCanReplace(false);
-          } else {
-            const { validateCPFPTransaction } = await import('@/services/cpfp-service');
-            const feeRate = parseInt(customFeeRate || '0') || 0;
-            const validation = await validateCPFPTransaction(transaction.txid, currentWallet.addresses, {
-              targetFeeRate: feeRate > 0 ? feeRate : (feeOptions[0]?.rate || 10),
-              maxChildFee: 10000,
-              includeUnconfirmed: true,
-            } as any);
-            if (!validation.isValid || !validation.canCPFP) {
-              setValidationError(validation.reason || 'Transaction cannot be bumped with CPFP');
-              setCanReplace(false);
-            } else {
-              setCanReplace(true);
-            }
-          }
+        const validation = await validateRBFTransaction(transaction.txid, currentWallet.addresses);
+        if (!validation.isValid || !validation.canReplace) {
+          setValidationError(validation.reason || 'Transaction cannot be replaced');
+          setCanReplace(false);
         } else {
-          const validation = await validateRBFTransaction(transaction.txid, currentWallet.addresses);
-          if (!validation.isValid || !validation.canReplace) {
-            setValidationError(validation.reason || 'Transaction cannot be replaced');
+          setCanReplace(true);
+        }
+      } catch (error) {
+        console.error('Bump validation failed:', error);
+        setValidationError(error instanceof Error ? error.message : 'Validation failed');
+        setCanReplace(false);
+      } finally {
+        setIsValidating(false);
+      }
+    };
+
+    runRbfValidation();
+  }, [transaction, currentWallet, isCPFPMode]);
+
+  // Validate capability for CPFP mode (depends on debounced fee rate)
+  useEffect(() => {
+    const runCpfpValidation = async () => {
+      if (!transaction || !currentWallet || !isCPFPMode) {
+        return;
+      }
+
+      setIsValidating(true);
+      setValidationError(null);
+      setCanReplace(false);
+
+      try {
+        // Gate by CPFP toggle
+        if (!feeSettings?.enableCPFP) {
+          setValidationError('CPFP is disabled in settings');
+          setCanReplace(false);
+        } else {
+          const { validateCPFPTransaction } = await import('@/services/cpfp-service');
+          const effectiveRate = debouncedFeeRate > 0 ? debouncedFeeRate : defaultFastRate;
+          const validation = await validateCPFPTransaction(transaction.txid, currentWallet.addresses, {
+            targetFeeRate: effectiveRate,
+            maxChildFee: 10000,
+            includeUnconfirmed: true,
+          } as any);
+          if (!validation.isValid || !validation.canCPFP) {
+            setValidationError(validation.reason || 'Transaction cannot be bumped with CPFP');
             setCanReplace(false);
           } else {
             setCanReplace(true);
@@ -98,8 +138,8 @@ export default function FeeBumpScreen() {
       }
     };
 
-    runValidation();
-  }, [transaction, currentWallet, isCPFPMode, customFeeRate, feeOptions]);
+    runCpfpValidation();
+  }, [transaction, currentWallet, isCPFPMode, debouncedFeeRate, feeSettings, defaultFastRate]);
 
   useEffect(() => {
     const loadFeeEstimates = async () => {
@@ -117,6 +157,7 @@ export default function FeeBumpScreen() {
         ];
         setFeeOptions(options);
         setCustomFeeRate(fast.fee.toString());
+        setDefaultFastRate(fast.fee);
       } catch (error) {
         console.error('Failed to load fee estimates:', error);
         const fallbackOptions: FeeOption[] = [
@@ -126,6 +167,7 @@ export default function FeeBumpScreen() {
         ];
         setFeeOptions(fallbackOptions);
         setCustomFeeRate('25');
+        setDefaultFastRate(25);
       } finally {
         setIsLoading(false);
       }
