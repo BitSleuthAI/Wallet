@@ -6,28 +6,28 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    AlertTriangle,
-    ArrowDownLeft,
-    ArrowUpRight,
-    CheckCircle,
-    Clock,
-    Copy,
-    DollarSign,
-    ExternalLink,
-    Share as ShareIcon,
-    XCircle,
-    Zap,
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle,
+  Clock,
+  Copy,
+  DollarSign,
+  ExternalLink,
+  Share as ShareIcon,
+  XCircle,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function TransactionDetailsScreen() {
@@ -298,8 +298,8 @@ export default function TransactionDetailsScreen() {
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
               <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                {(transaction.fee / 100000000).toFixed(8)} BTC
-                {transaction.feeRate && ` (${transaction.feeRate} sat/vB)`}
+                {transaction.fee.toFixed(8)} BTC
+                {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
               </Text>
             </View>
           )}
