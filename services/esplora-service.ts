@@ -4,23 +4,14 @@
  */
 
 import {
-  getCachedAddressStats,
-  getCachedAddressTransactions,
-  getCachedAddressUTXOs,
-  setCachedAddressStats,
-  setCachedAddressTxIds,
-  setCachedAddressUTXOs
+    getCachedAddressStats,
+    getCachedAddressTransactions,
+    getCachedAddressUTXOs,
+    setCachedAddressStats,
+    setCachedAddressTxIds,
+    setCachedAddressUTXOs
 } from './address-cache-service';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
-import {
-  getCachedAddressTransactions,
-  setCachedAddressTransactions,
-  getCachedAddressStats,
-  setCachedAddressStats,
-  getCachedAddressUTXOs,
-  setCachedAddressUTXOs,
-  setCachedAddressTxIds,
-} from './address-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
