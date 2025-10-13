@@ -38,5 +38,5 @@ yarn-error.*
 .vercel
 
 # native build files
-/ios
-/android
+# /ios
+# /android
