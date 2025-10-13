@@ -36,3 +36,7 @@ yarn-error.*
 # typescript
 *.tsbuildinfo
 .vercel
+
+# native build files
+/ios
+/android
