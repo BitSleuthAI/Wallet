@@ -29,6 +29,10 @@
   },
   "submit": {
     "production": {
+      "android": {
+        "serviceAccountKeyPath": "./ServiceAccountBitSleuthWallet.json",
+        "track": "internal"
+      },
       "ios": {
         "companyName": "BitSleuth"
       }
