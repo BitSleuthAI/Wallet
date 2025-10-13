@@ -40,3 +40,5 @@ yarn-error.*
 # native build files
 # /ios
 # /android
+
+ServiceAccountBitSleuthWallet.json
