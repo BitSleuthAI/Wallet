@@ -6,29 +6,29 @@ import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
-    ArrowLeft,
-    CheckCircle,
-    ChevronDown,
-    ChevronUp,
-    Circle,
-    Coins,
-    Filter,
-    Info,
-    Snowflake,
-    Zap,
+  ArrowLeft,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Coins,
+  Filter,
+  Info,
+  Snowflake,
+  Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
@@ -251,7 +251,7 @@ export default function CoinControlScreen() {
     const isSelected = selectedUtxos.has(utxoId);
     
     return (
-      <TouchableOpacity
+      <View
         style={[
           styles.utxoItem,
           {
@@ -260,7 +260,6 @@ export default function CoinControlScreen() {
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
-        onPress={() => toggleUtxoSelection(utxoId)}
         testID={`utxo-item-${utxoId}`}
       >
         <View style={styles.utxoHeader}>
@@ -340,7 +339,7 @@ export default function CoinControlScreen() {
             </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
