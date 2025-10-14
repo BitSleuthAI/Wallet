@@ -305,10 +305,17 @@ export default function TransactionDetailsScreen() {
           {transaction.fee && (
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
-              <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                {(transaction.fee / 100000000).toFixed(8)} BTC
-                {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
-              </Text>
+              <View style={styles.feeContainer}>
+                <Text style={[styles.detailValue, { color: theme.colors.text }]}>
+                  {(transaction.fee / 100000000).toFixed(8)} BTC
+                  {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
+                </Text>
+                {bitcoinPrice?.usd && (
+                  <Text style={[styles.detailValueSecondary, { color: theme.colors.textSecondary }]}>
+                    {formatCurrency((transaction.fee / 100000000) * bitcoinPrice.usd, true)}
+                  </Text>
+                )}
+              </View>
             </View>
           )}
           
@@ -542,5 +549,13 @@ const styles = StyleSheet.create({
     ...platformStyles.typography.caption,
     fontWeight: '600',
     fontSize: 12,
+  },
+  feeContainer: {
+    alignItems: 'flex-end',
+  },
+  detailValueSecondary: {
+    ...platformStyles.typography.body,
+    fontSize: 13,
+    marginTop: 2,
   },
 });
