@@ -221,7 +221,7 @@ export default function TransactionExplorerScreen() {
     return () => {
       isMounted = false;
     };
-  }, [txid, transactions, bitcoinPrice?.usd]);
+  }, [txid, transactions, bitcoinPrice?.usd, currentWallet]);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
