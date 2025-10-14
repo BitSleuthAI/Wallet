@@ -2,6 +2,7 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs } from '@/services/bitcoin-service';
+import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -54,10 +55,27 @@ export default function CoinControlScreen() {
         return;
       }
       const all: UTXO[] = [];
-      for (let i = 0; i < currentWallet.addresses.length; i++) {
-        const addr = currentWallet.addresses[i];
+
+      // Prefer discovered used addresses (covers both receiving and change chains)
+      let addressEntries: Array<{ address: string; index: number }> = [];
+      try {
+        if (currentWallet.xpub) {
+          const metadata = await discoverUsedAddresses(currentWallet.xpub, true) as Array<{ address: string; index: number; chain: number; isUsed: boolean }>;
+          const used = metadata.filter(m => m.isUsed);
+          addressEntries = used.map(m => ({ address: m.address, index: m.index }));
+        }
+      } catch (e) {
+        console.warn('Failed to discover used addresses, falling back to local wallet addresses', e);
+      }
+
+      // Fallback to wallet's known addresses if discovery returned nothing
+      if (!addressEntries.length) {
+        addressEntries = (currentWallet.addresses || []).map((a, i) => ({ address: a, index: i }));
+      }
+
+      for (const { address: addr, index } of addressEntries) {
         try {
-          const list = await getAddressUTXOs(addr, i);
+          const list = await getAddressUTXOs(addr, index);
           for (const u of list) {
             all.push({ ...u, address: addr, frozen: coinControl.isFrozen(`${u.txid}:${u.vout}`) });
           }
@@ -158,6 +176,13 @@ export default function CoinControlScreen() {
   };
 
   const freezeSelectedUtxos = () => {
+    // Persist freeze state
+    selectedUtxos.forEach((utxoId) => {
+      if (!coinControl.isFrozen(utxoId)) {
+        coinControl.toggleFreeze(utxoId);
+      }
+    });
+    // Reflect in local UI state
     setUtxos(prev => prev.map(utxo => {
       const utxoId = `${utxo.txid}:${utxo.vout}`;
       if (selectedUtxos.has(utxoId)) {
@@ -169,6 +194,13 @@ export default function CoinControlScreen() {
   };
 
   const unfreezeSelectedUtxos = () => {
+    // Persist unfreeze state
+    selectedUtxos.forEach((utxoId) => {
+      if (coinControl.isFrozen(utxoId)) {
+        coinControl.toggleFreeze(utxoId);
+      }
+    });
+    // Reflect in local UI state
     setUtxos(prev => prev.map(utxo => {
       const utxoId = `${utxo.txid}:${utxo.vout}`;
       if (selectedUtxos.has(utxoId)) {
