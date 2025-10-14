@@ -400,6 +400,52 @@ export async function getAddressTransactions(address: string, xpubHint?: string)
 }
 
 /**
+ * Get detailed information about a transaction
+ */
+export async function getTransactionDetails(txid: string): Promise<{ data: any | null; error: string | null }> {
+  try {
+    console.log(`🔍 Getting transaction details for: ${txid}`);
+    const transaction = await esploraGet(`/tx/${txid}`, 300000);
+    return { data: transaction, error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error(`❌ Failed to get transaction details:`, message);
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Get transaction status (confirmations, block info)
+ */
+export async function getTransactionStatus(txid: string): Promise<{ data: any | null; error: string | null }> {
+  try {
+    console.log(`📊 Getting transaction status for: ${txid}`);
+    const status = await esploraGet(`/tx/${txid}/status`, 60000);
+    return { data: status, error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error(`❌ Failed to get transaction status:`, message);
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Get transaction outspends (spent status for each output)
+ */
+export async function getTransactionOutspends(txid: string): Promise<{ data: any[] | null; error: string | null }> {
+  try {
+    console.log(`🔗 Getting transaction outspends for: ${txid}`);
+    const outspends = await esploraGet(`/tx/${txid}/outspends`, 60000);
+    const outArray = Array.isArray(outspends) ? outspends : [];
+    return { data: outArray, error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error(`❌ Failed to get transaction outspends:`, message);
+    return { data: null, error: message };
+  }
+}
+
+/**
  * Get UTXOs for an address
  */
 export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {

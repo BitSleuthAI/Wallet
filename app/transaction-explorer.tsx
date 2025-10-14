@@ -2,24 +2,25 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
+import { getTransactionDetails } from '@/services/esplora-service';
 import { Transaction } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
-    ArrowDownLeft,
-    ArrowLeft,
-    ArrowUpRight,
-    CheckCircle
+  ArrowDownLeft,
+  ArrowLeft,
+  ArrowUpRight,
+  CheckCircle,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface TransactionExplorerData {
@@ -55,54 +56,136 @@ export default function TransactionExplorerScreen() {
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (txid && transactions) {
-      const tx = transactions.find(t => t.txid === txid);
-      setTransaction(tx || null);
-      
-      // Simulate fetching enhanced data
-      // In production, this would fetch from BitSleuth API
-      if (tx) {
-        const mockExplorerData: TransactionExplorerData = {
-          txid: tx.txid,
-          timestamp: tx.timestamp,
-          netAmount: tx.amount,
-          fee: tx.fee || 0.00000147, // Default to 147 sats converted to BTC
-          feeUSD: bitcoinPrice?.usd ? (tx.fee || 0.00000147) * bitcoinPrice.usd : 0.12,
-          confirmations: tx.confirmations || 6790,
-          blockHeight: tx.blockHeight || 907167,
-          status: tx.status,
-          inputValue: tx.amount + (tx.fee || 0.00000147),
-          outputValue: tx.amount,
-          feePerVB: tx.feeRate || 0.66,
-          size: 223,
-          weight: 562,
-          version: 2,
-          locktime: 0,
-          rbf: tx.rbf || false,
-          inputs: [
-            {
-              address: 'bc1qa0098g1tyy4dc42dq0c09vmjpaahy2ea1uaxnw',
-              value: tx.amount + (tx.fee || 0.00000147),
-            }
-          ],
-          outputs: [
-            {
-              address: 'bc1qr353yp9xlhpw02z94hrjw3ufazeq0yz5nt6j4d',
-              value: 0.00008610,
-            },
-            {
-              address: 'bc1qa0098g1tyy4dc42dq0c09vmjpaahy2ea1uaxnw',
-              value: tx.amount - 0.00008610,
-            }
-          ],
-        };
-        setExplorerData(mockExplorerData);
+    let isMounted = true;
+
+    const fetchExplorerData = async () => {
+      if (!txid) {
+        if (isMounted) {
+          setTransaction(null);
+          setExplorerData(null);
+          setError('Transaction ID not provided');
+          setLoading(false);
+        }
+        return;
       }
-      setLoading(false);
-    }
-  }, [txid, transactions, bitcoinPrice]);
+
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+      }
+
+      const localTx = transactions?.find(t => t.txid === txid) || null;
+      if (isMounted) {
+        setTransaction(localTx);
+      }
+
+      try {
+        const { data: txDetails, error: txDetailsError } = await getTransactionDetails(txid);
+
+        if (!txDetails || txDetailsError) {
+          throw new Error(txDetailsError ?? 'Transaction details unavailable');
+        }
+
+        const statusInfo = txDetails.status || {};
+        const vinList = Array.isArray(txDetails.vin) ? txDetails.vin : [];
+        const voutList = Array.isArray(txDetails.vout) ? txDetails.vout : [];
+
+        const inputValueSats = vinList.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
+        const outputValueSats = voutList.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
+        const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : 0;
+        const feeBtc = feeSats / 1e8;
+
+        const virtualSize = typeof txDetails.vsize === 'number'
+          ? txDetails.vsize
+          : typeof txDetails.weight === 'number'
+            ? txDetails.weight / 4
+            : txDetails.size ?? 0;
+
+        const feePerVB = virtualSize > 0 ? feeSats / virtualSize : 0;
+
+        const rbfEnabled = vinList.some(vin => {
+          const sequence = vin.sequence;
+          const sequenceNumber = typeof sequence === 'number' ? sequence : Number(sequence);
+          return Number.isFinite(sequenceNumber) && sequenceNumber < 0xfffffffe;
+        });
+
+        const blockHeight = localTx?.blockHeight ?? statusInfo.block_height ?? 0;
+        const confirmations = typeof localTx?.confirmations === 'number'
+          ? localTx.confirmations
+          : statusInfo.confirmed
+            ? 1
+            : 0;
+
+        const status: 'confirmed' | 'pending' | 'failed' = localTx?.status === 'failed'
+          ? 'failed'
+          : localTx?.status === 'confirmed' || statusInfo.confirmed
+            ? 'confirmed'
+            : 'pending';
+
+        const timestamp = localTx?.timestamp ?? (statusInfo.block_time ? statusInfo.block_time * 1000 : Date.now());
+
+        const explorerDetails: TransactionExplorerData = {
+          txid,
+          timestamp,
+          netAmount: typeof localTx?.amount === 'number' ? localTx.amount : Math.abs((outputValueSats - inputValueSats) / 1e8),
+          fee: feeBtc,
+          feeUSD: feeBtc * (bitcoinPrice?.usd ?? 0),
+          confirmations,
+          blockHeight,
+          status,
+          inputValue: inputValueSats / 1e8,
+          outputValue: outputValueSats / 1e8,
+          feePerVB,
+          size: txDetails.size ?? Math.round(virtualSize),
+          weight: txDetails.weight ?? (virtualSize ? Math.round(virtualSize * 4) : 0),
+          version: txDetails.version ?? 0,
+          locktime: txDetails.locktime ?? 0,
+          rbf: typeof localTx?.rbf === 'boolean' ? localTx.rbf : rbfEnabled,
+          inputs: vinList.map(vin => {
+            const valueSats = vin.prevout?.value ?? 0;
+            const address = vin.prevout?.scriptpubkey_address || (vin.is_coinbase ? 'Coinbase Input' : 'Unknown');
+            return {
+              address,
+              value: valueSats / 1e8,
+            };
+          }),
+          outputs: voutList.map(output => ({
+            address: output.scriptpubkey_address || 'Unknown',
+            value: (output.value ?? 0) / 1e8,
+          })),
+        };
+
+        if (isMounted) {
+          setExplorerData(explorerDetails);
+        }
+      } catch (fetchError) {
+        if (!isMounted) return;
+
+        console.error('❌ Failed to load transaction explorer data:', fetchError);
+
+        const rawMessage = fetchError instanceof Error ? fetchError.message : 'Failed to load transaction data';
+        const friendlyMessage = rawMessage.toLowerCase().includes('not found')
+          ? 'Transaction not found'
+          : 'Failed to load transaction data';
+
+        setExplorerData(null);
+        setError(friendlyMessage);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchExplorerData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [txid, transactions, bitcoinPrice?.usd]);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -164,7 +247,7 @@ export default function TransactionExplorerScreen() {
     );
   }
 
-  if (!transaction || !explorerData) {
+  if (error || !explorerData) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
         <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
@@ -191,7 +274,7 @@ export default function TransactionExplorerScreen() {
           
           <View style={styles.errorContainer}>
             <Text style={[styles.errorText, { color: theme.colors.error }]}>
-              Transaction not found
+              {error ?? 'Transaction not found'}
             </Text>
           </View>
         </AndroidSafeContainer>
