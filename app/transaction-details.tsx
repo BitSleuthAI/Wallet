@@ -6,28 +6,28 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    AlertTriangle,
-    ArrowDownLeft,
-    ArrowUpRight,
-    CheckCircle,
-    Clock,
-    Copy,
-    DollarSign,
-    ExternalLink,
-    Share as ShareIcon,
-    XCircle,
-    Zap,
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle,
+  Clock,
+  Copy,
+  DollarSign,
+  ExternalLink,
+  Share as ShareIcon,
+  XCircle,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function TransactionDetailsScreen() {
@@ -302,17 +302,17 @@ export default function TransactionDetailsScreen() {
             </TouchableOpacity>
           </View>
           
-          {transaction.fee && (
+          {typeof transaction.fee === 'number' && transaction.fee > 0 && (
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
               <View style={styles.feeContainer}>
                 <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                  {(transaction.fee / 100000000).toFixed(8)} BTC
+                  {(transaction.fee / 1e8).toFixed(8)} BTC
                   {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
                 </Text>
                 {bitcoinPrice?.usd && (
                   <Text style={[styles.detailValueSecondary, { color: theme.colors.textSecondary }]}>
-                    {formatCurrency((transaction.fee / 100000000) * bitcoinPrice.usd, true)}
+                    {formatCurrency((transaction.fee / 1e8) * bitcoinPrice.usd, true)}
                   </Text>
                 )}
               </View>
