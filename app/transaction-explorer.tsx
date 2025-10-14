@@ -52,7 +52,7 @@ interface TransactionExplorerData {
 
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, bitcoinPrice, formatCurrency } = useWallet();
+  const { theme, transactions, bitcoinPrice, currentWallet, formatCurrency } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -98,6 +98,42 @@ export default function TransactionExplorerScreen() {
         const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : 0;
         const feeBtc = feeSats / 1e8;
 
+        const fallbackNetAmountBtc = (() => {
+          if (typeof localTx?.amount === 'number') {
+            return localTx.amount;
+          }
+
+          const addressSet = new Set(currentWallet?.addresses ?? []);
+
+          if (addressSet.size > 0) {
+            const received = voutList.reduce((sum, output) => {
+              const address = output.scriptpubkey_address;
+              return address && addressSet.has(address) ? sum + (output.value ?? 0) : sum;
+            }, 0);
+
+            const sent = vinList.reduce((sum, input) => {
+              const address = input.prevout?.scriptpubkey_address;
+              return address && addressSet.has(address) ? sum + (input.prevout?.value ?? 0) : sum;
+            }, 0);
+
+            const netSats = received - sent;
+
+            if (netSats !== 0) {
+              return Math.abs(netSats) / 1e8;
+            }
+          }
+
+          if (outputValueSats > 0) {
+            return outputValueSats / 1e8;
+          }
+
+          if (inputValueSats > 0) {
+            return inputValueSats / 1e8;
+          }
+
+          return 0;
+        })();
+
         const virtualSize = typeof txDetails.vsize === 'number'
           ? txDetails.vsize
           : typeof txDetails.weight === 'number'
@@ -130,7 +166,7 @@ export default function TransactionExplorerScreen() {
         const explorerDetails: TransactionExplorerData = {
           txid,
           timestamp,
-          netAmount: typeof localTx?.amount === 'number' ? localTx.amount : Math.abs((outputValueSats - inputValueSats) / 1e8),
+          netAmount: fallbackNetAmountBtc,
           fee: feeBtc,
           feeUSD: feeBtc * (bitcoinPrice?.usd ?? 0),
           confirmations,
