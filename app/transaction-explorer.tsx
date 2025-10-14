@@ -68,12 +68,12 @@ export default function TransactionExplorerScreen() {
           txid: tx.txid,
           timestamp: tx.timestamp,
           netAmount: tx.amount,
-          fee: tx.fee || 147,
-          feeUSD: bitcoinPrice?.usd ? (tx.fee || 147) * 0.00000001 * bitcoinPrice.usd : 0.12,
+          fee: tx.fee || 0.00000147, // Default to 147 sats converted to BTC
+          feeUSD: bitcoinPrice?.usd ? (tx.fee || 0.00000147) * bitcoinPrice.usd : 0.12,
           confirmations: tx.confirmations || 6790,
           blockHeight: tx.blockHeight || 907167,
           status: tx.status,
-          inputValue: tx.amount + (tx.fee || 147) * 0.00000001,
+          inputValue: tx.amount + (tx.fee || 0.00000147),
           outputValue: tx.amount,
           feePerVB: tx.feeRate || 0.66,
           size: 223,
@@ -84,7 +84,7 @@ export default function TransactionExplorerScreen() {
           inputs: [
             {
               address: 'bc1qa0098g1tyy4dc42dq0c09vmjpaahy2ea1uaxnw',
-              value: tx.amount + (tx.fee || 147) * 0.00000001,
+              value: tx.amount + (tx.fee || 0.00000147),
             }
           ],
           outputs: [
@@ -277,7 +277,7 @@ export default function TransactionExplorerScreen() {
             </Text>
             <View style={styles.valueContainer}>
               <Text style={[styles.btcValue, { color: theme.colors.text }]}>
-                {(explorerData.fee / 100000000).toFixed(8)} BTC
+                {explorerData.fee.toFixed(8)} BTC
               </Text>
               <Text style={[styles.usdValue, { color: theme.colors.textSecondary }]}>
                 {formatCurrency(explorerData.feeUSD, true)}

@@ -307,12 +307,12 @@ export default function TransactionDetailsScreen() {
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Network Fee</Text>
               <View style={styles.feeContainer}>
                 <Text style={[styles.detailValue, { color: theme.colors.text }]}>
-                  {(transaction.fee / 100000000).toFixed(8)} BTC
+                  {transaction.fee.toFixed(8)} BTC
                   {transaction.feeRate && ` (${Math.round(transaction.feeRate)} sat/vB)`}
                 </Text>
                 {bitcoinPrice?.usd && (
                   <Text style={[styles.detailValueSecondary, { color: theme.colors.textSecondary }]}>
-                    {formatCurrency((transaction.fee / 100000000) * bitcoinPrice.usd, true)}
+                    {formatCurrency(transaction.fee * bitcoinPrice.usd, true)}
                   </Text>
                 )}
               </View>
