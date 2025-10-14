@@ -6,29 +6,29 @@ import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
-    ArrowLeft,
-    CheckCircle,
-    ChevronDown,
-    ChevronUp,
-    Circle,
-    Coins,
-    Filter,
-    Info,
-    Snowflake,
-    Zap,
+  ArrowLeft,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Coins,
+  Filter,
+  Info,
+  Snowflake,
+  Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
@@ -251,7 +251,7 @@ export default function CoinControlScreen() {
     const isSelected = selectedUtxos.has(utxoId);
     
     return (
-      <TouchableOpacity
+      <View
         style={[
           styles.utxoItem,
           {
@@ -260,7 +260,6 @@ export default function CoinControlScreen() {
             borderWidth: isSelected ? 2 : 1,
           },
         ]}
-        onPress={() => toggleUtxoSelection(utxoId)}
         testID={`utxo-item-${utxoId}`}
       >
         <View style={styles.utxoHeader}>
@@ -292,27 +291,55 @@ export default function CoinControlScreen() {
           </View>
           
           <View style={styles.utxoActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: theme.colors.border }]}
-              onPress={() => toggleUtxoFreeze(utxoId)}
-            >
-              {utxo.frozen ? (
-                <Snowflake color={theme.colors.secondary} size={16} />
-              ) : (
-                <Circle color={theme.colors.textSecondary} size={16} />
-              )}
-            </TouchableOpacity>
+            {/* Freeze Button */}
+            <View style={styles.actionGroup}>
+              <TouchableOpacity
+                style={[
+                  styles.freezeButton, 
+                  { 
+                    backgroundColor: utxo.frozen ? theme.colors.secondary + '20' : theme.colors.border,
+                    borderColor: utxo.frozen ? theme.colors.secondary : theme.colors.border,
+                    borderWidth: 1,
+                  }
+                ]}
+                onPress={() => toggleUtxoFreeze(utxoId)}
+              >
+                <Snowflake 
+                  color={utxo.frozen ? theme.colors.secondary : theme.colors.textSecondary} 
+                  size={16} 
+                />
+              </TouchableOpacity>
+              <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
+                {utxo.frozen ? 'Frozen' : 'Freeze'}
+              </Text>
+            </View>
             
-            <View style={styles.selectionIndicator}>
-              {isSelected ? (
-                <CheckCircle color={theme.colors.primary} size={20} />
-              ) : (
-                <Circle color={theme.colors.textSecondary} size={20} />
-              )}
+            {/* Select Button */}
+            <View style={styles.actionGroup}>
+              <TouchableOpacity
+                style={[
+                  styles.selectButton,
+                  {
+                    backgroundColor: isSelected ? theme.colors.primary + '20' : 'transparent',
+                    borderColor: isSelected ? theme.colors.primary : theme.colors.border,
+                    borderWidth: 2,
+                  }
+                ]}
+                onPress={() => toggleUtxoSelection(utxoId)}
+              >
+                {isSelected ? (
+                  <CheckCircle color={theme.colors.primary} size={20} />
+                ) : (
+                  <Circle color={theme.colors.textSecondary} size={20} />
+                )}
+              </TouchableOpacity>
+              <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
+                {isSelected ? 'Selected' : 'Select'}
+              </Text>
             </View>
           </View>
         </View>
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -833,20 +860,32 @@ const styles = StyleSheet.create({
   },
   utxoActions: {
     alignItems: 'center',
+    gap: 12,
   },
-  actionButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  actionGroup: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  freezeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 8,
+    borderWidth: 1,
   },
-  selectionIndicator: {
-    width: 24,
-    height: 24,
+  selectButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 2,
+  },
+  actionLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    textAlign: 'center',
   },
   infoFooter: {
     flexDirection: 'row',
