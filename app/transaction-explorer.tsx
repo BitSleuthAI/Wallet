@@ -1,26 +1,25 @@
-import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
-    ArrowLeft,
     ArrowDownLeft,
+    ArrowLeft,
     ArrowUpRight,
-    Copy,
-    CheckCircle,
+    CheckCircle
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
     View,
-    ActivityIndicator,
 } from 'react-native';
 
 interface TransactionExplorerData {
@@ -52,7 +51,7 @@ interface TransactionExplorerData {
 
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, bitcoinPrice } = useWallet();
+  const { theme, transactions, bitcoinPrice, formatCurrency } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -267,7 +266,7 @@ export default function TransactionExplorerScreen() {
                 {explorerData.netAmount.toFixed(8)} BTC
               </Text>
               <Text style={[styles.usdValue, { color: theme.colors.textSecondary }]}>
-                £{(explorerData.netAmount * (bitcoinPrice?.usd || 0)).toFixed(2)}
+                {formatCurrency(explorerData.netAmount * (bitcoinPrice?.usd || 0), true)}
               </Text>
             </View>
           </View>
@@ -278,10 +277,10 @@ export default function TransactionExplorerScreen() {
             </Text>
             <View style={styles.valueContainer}>
               <Text style={[styles.btcValue, { color: theme.colors.text }]}>
-                {explorerData.fee} SATS
+                {(explorerData.fee / 100000000).toFixed(8)} BTC
               </Text>
               <Text style={[styles.usdValue, { color: theme.colors.textSecondary }]}>
-                £{explorerData.feeUSD.toFixed(2)}
+                {formatCurrency(explorerData.feeUSD, true)}
               </Text>
             </View>
           </View>
