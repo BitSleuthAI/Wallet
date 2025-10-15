@@ -137,7 +137,7 @@ export default function SendScreen() {
     };
     
     loadFeeEstimates();
-  }, [currentWallet, coinControl]);
+  }, [currentWallet]);
 
   // Periodic fee refresh for auto-adjustment
   useEffect(() => {
