@@ -927,12 +927,27 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const toggleFreezeUtxo = useCallback((utxoId: string) => {
     if (!currentWallet) return;
-    const map = { ...(coinControlFrozen || {}) } as Record<string, string[]>;
-    const list = new Set(map[currentWallet.id] || []);
-    if (list.has(utxoId)) list.delete(utxoId); else list.add(utxoId);
-    map[currentWallet.id] = Array.from(list);
-    saveCoinControlFrozen(map);
-  }, [currentWallet, coinControlFrozen, saveCoinControlFrozen]);
+    const frozenMap = { ...(coinControlFrozen || {}) } as Record<string, string[]>;
+    const frozenSet = new Set(frozenMap[currentWallet.id] || []);
+    let isNowFrozen = false;
+    if (frozenSet.has(utxoId)) {
+      frozenSet.delete(utxoId);
+    } else {
+      frozenSet.add(utxoId);
+      isNowFrozen = true;
+    }
+    frozenMap[currentWallet.id] = Array.from(frozenSet);
+    saveCoinControlFrozen(frozenMap);
+
+    if (isNowFrozen) {
+      const selectedMap = { ...(coinControlSelected || {}) } as Record<string, string[]>;
+      const selectedSet = new Set(selectedMap[currentWallet.id] || []);
+      if (selectedSet.delete(utxoId)) {
+        selectedMap[currentWallet.id] = Array.from(selectedSet);
+        saveCoinControlSelected(selectedMap);
+      }
+    }
+  }, [currentWallet, coinControlFrozen, coinControlSelected, saveCoinControlFrozen, saveCoinControlSelected]);
 
   const isUtxoFrozen = useCallback((utxoId: string) => {
     if (!currentWallet) return false;
@@ -944,6 +959,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     if (!currentWallet) return [] as string[];
     return coinControlSelected[currentWallet.id] || [];
   }, [currentWallet, coinControlSelected]);
+
+  const getFrozenUtxoIds = useCallback(() => {
+    if (!currentWallet) return [] as string[];
+    return coinControlFrozen[currentWallet.id] || [];
+  }, [currentWallet, coinControlFrozen]);
 
   const filterSelectedUtxos = useCallback((all: UTXO[]) => {
     const ids = new Set(getSelectedUtxoIds());
@@ -1330,6 +1350,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     toggleFreeze: toggleFreezeUtxo,
     isFrozen: isUtxoFrozen,
     filterSelectedUtxos,
+    getFrozenUtxoIds,
   }), [
     getSelectedUtxoIds,
     setCoinControlSelected,
@@ -1337,6 +1358,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     toggleFreezeUtxo,
     isUtxoFrozen,
     filterSelectedUtxos,
+    getFrozenUtxoIds,
   ]);
 
   const feedbackData = useMemo(() => ({

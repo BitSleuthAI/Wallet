@@ -7,6 +7,7 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
+import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -62,7 +63,7 @@ export default function SendScreen() {
     slow: { fee: number; confidence: string; timeEstimate: string };
   } | null>(null);
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
-  const [availableUtxos, setAvailableUtxos] = useState<any[]>([]);
+  const [availableUtxos, setAvailableUtxos] = useState<UTXO[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
   const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
   const [lastFeeEstimates, setLastFeeEstimates] = useState<any>(null);
@@ -330,11 +331,15 @@ export default function SendScreen() {
     const fetchUtxos = async () => {
       try {
         if (!currentWallet) return;
-        const all: any[] = [];
+        const frozenIds = new Set(coinControl.getFrozenUtxoIds());
+        const all: UTXO[] = [];
         for (let i = 0; i < currentWallet.addresses.length; i++) {
           const addr = currentWallet.addresses[i];
           const list = await getAddressUTXOs(addr, i);
-          list.forEach((u: any) => all.push({ ...u, address: addr }));
+          list.forEach((u) => {
+            const id = `${u.txid}:${u.vout}`;
+            all.push({ ...u, address: addr, frozen: frozenIds.has(id) });
+          });
         }
         setAvailableUtxos(all);
       } catch (e) {
@@ -345,7 +350,8 @@ export default function SendScreen() {
   }, [currentWallet]);
 
   useEffect(() => {
-    const ids = coinControl.getSelectedUtxoIds();
+    const frozenIds = new Set(coinControl.getFrozenUtxoIds());
+    const ids = coinControl.getSelectedUtxoIds().filter(id => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
   }, [coinControl]);
 

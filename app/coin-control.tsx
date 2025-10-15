@@ -6,29 +6,29 @@ import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
-  ArrowLeft,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Circle,
-  Coins,
-  Filter,
-  Info,
-  Snowflake,
-  Zap,
+    ArrowLeft,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
+    Circle,
+    Coins,
+    Filter,
+    Info,
+    Snowflake,
+    Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
@@ -77,14 +77,21 @@ export default function CoinControlScreen() {
         try {
           const list = await getAddressUTXOs(addr, index);
           for (const u of list) {
-            all.push({ ...u, address: addr, frozen: coinControl.isFrozen(`${u.txid}:${u.vout}`) });
+            all.push({ ...u, address: addr });
           }
         } catch (e) {
           console.warn('Failed to load UTXOs for address', addr, e);
         }
       }
-      setUtxos(all);
-      const preSelected = new Set(coinControl.getSelectedUtxoIds());
+      const frozenSet = new Set(coinControl.getFrozenUtxoIds());
+      setUtxos(all.map(utxo => {
+        const id = `${utxo.txid}:${utxo.vout}`;
+        return {
+          ...utxo,
+          frozen: frozenSet.has(id) || utxo.frozen,
+        };
+      }));
+      const preSelected = new Set(coinControl.getSelectedUtxoIds().filter(id => !frozenSet.has(id)));
       setSelectedUtxos(preSelected);
     } catch (error) {
       console.error('Error loading UTXOs:', error);
@@ -147,6 +154,10 @@ export default function CoinControlScreen() {
   }, [utxos, sortBy, sortAscending, filterBy, hideSmallUtxos]);
 
   const toggleUtxoSelection = (utxoId: string) => {
+    const utxo = utxos.find(item => `${item.txid}:${item.vout}` === utxoId);
+    if (utxo?.frozen && !selectedUtxos.has(utxoId)) {
+      return;
+    }
     const newSelected = new Set(selectedUtxos);
     if (newSelected.has(utxoId)) {
       newSelected.delete(utxoId);
@@ -157,6 +168,8 @@ export default function CoinControlScreen() {
   };
 
   const toggleUtxoFreeze = (utxoId: string) => {
+    const target = utxos.find(utxo => `${utxo.txid}:${utxo.vout}` === utxoId);
+    const wasFrozen = target?.frozen ?? false;
     coinControl.toggleFreeze(utxoId);
     setUtxos(prev => prev.map(utxo => {
       if (`${utxo.txid}:${utxo.vout}` === utxoId) {
@@ -164,10 +177,20 @@ export default function CoinControlScreen() {
       }
       return utxo;
     }));
+    if (!wasFrozen) {
+      setSelectedUtxos(prev => {
+        if (!prev.has(utxoId)) return prev;
+        const next = new Set(prev);
+        next.delete(utxoId);
+        return next;
+      });
+    }
   };
 
   const selectAllUtxos = () => {
-    const allIds = filteredAndSortedUtxos.map(utxo => `${utxo.txid}:${utxo.vout}`);
+    const allIds = filteredAndSortedUtxos
+      .filter(utxo => !utxo.frozen)
+      .map(utxo => `${utxo.txid}:${utxo.vout}`);
     setSelectedUtxos(new Set(allIds));
   };
 
@@ -190,7 +213,11 @@ export default function CoinControlScreen() {
       }
       return utxo;
     }));
-    setSelectedUtxos(new Set());
+    setSelectedUtxos(prev => {
+      const next = new Set(prev);
+      selectedUtxos.forEach(id => next.delete(id));
+      return next;
+    });
   };
 
   const unfreezeSelectedUtxos = () => {
@@ -208,7 +235,11 @@ export default function CoinControlScreen() {
       }
       return utxo;
     }));
-    setSelectedUtxos(new Set());
+    setSelectedUtxos(prev => {
+      const next = new Set(prev);
+      selectedUtxos.forEach(id => next.delete(id));
+      return next;
+    });
   };
 
   const formatBTC = (satoshis: number): string => {
