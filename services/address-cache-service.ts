@@ -23,16 +23,51 @@ const KEY_WALLET_ADDRS = (xpub: string) => `${KEY_PREFIX}wallet_addrs_${xpub}`;
 const KEY_WALLET_TXIDS = (xpub: string) => `${KEY_PREFIX}wallet_txids_${xpub}`;
 const KEY_ADDR_WALLET = (address: string) => `${KEY_PREFIX}addr_wallet_${address}`;
 
+const TXIDS_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const STATS_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const UTXOS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
+}
+
+type PersistedEntry<T> = {
+  data: T;
+  timestamp?: number;
+};
+
+function hydrateCacheEntry<T>(raw: string | null, ttlMs: number): { data: T | null; expired: boolean } {
+  if (!raw) {
+    return { data: null, expired: false };
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as PersistedEntry<T> | T;
+
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed) && 'data' in parsed) {
+      const entry = parsed as PersistedEntry<T>;
+      if (typeof entry.timestamp === 'number' && ttlMs > 0) {
+        const age = Date.now() - entry.timestamp;
+        if (age > ttlMs) {
+          return { data: null, expired: true };
+        }
+      }
+      return { data: entry.data, expired: false };
+    }
+
+    return { data: parsed as T, expired: false };
+  } catch (error) {
+    console.warn('Failed to hydrate cached entry:', error);
+    return { data: null, expired: false };
+  }
 }
 
 export async function getCachedAddressTxIds(address: string): Promise<string[] | null> {
   try {
     const raw = await AsyncStorage.getItem(KEY_TXIDS(address));
-    if (!raw) return null; // Not cached yet
-    const txids = JSON.parse(raw);
-    return Array.isArray(txids) ? txids : null;
+    const { data } = hydrateCacheEntry<string[]>(raw, TXIDS_TTL_MS);
+    if (!data) return null; // Not cached yet or expired
+    return Array.isArray(data) ? data : null;
   } catch (error) {
     console.warn('Failed to read cached address txids:', error);
     return null;
@@ -42,7 +77,11 @@ export async function getCachedAddressTxIds(address: string): Promise<string[] |
 export async function setCachedAddressTxIds(address: string, txids: string[], xpubHint?: string): Promise<void> {
   try {
     const uniqueTxids = unique(txids);
-    await AsyncStorage.setItem(KEY_TXIDS(address), JSON.stringify(uniqueTxids));
+    const entry: PersistedEntry<string[]> = {
+      data: uniqueTxids,
+      timestamp: Date.now(),
+    };
+    await AsyncStorage.setItem(KEY_TXIDS(address), JSON.stringify(entry));
     if (xpubHint) {
       await AsyncStorage.setItem(KEY_ADDR_WALLET(address), xpubHint);
       // Also add address to wallet's address list
@@ -52,7 +91,11 @@ export async function setCachedAddressTxIds(address: string, txids: string[], xp
       // Track wallet txids set as well (append-only)
       const existingTxids = await getWalletTxIds(xpubHint);
       const mergedTxids = unique([...(existingTxids || []), ...uniqueTxids]);
-      await AsyncStorage.setItem(KEY_WALLET_TXIDS(xpubHint), JSON.stringify(mergedTxids));
+      const walletEntry: PersistedEntry<string[]> = {
+        data: mergedTxids,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(KEY_WALLET_TXIDS(xpubHint), JSON.stringify(walletEntry));
     }
   } catch (error) {
     console.warn('Failed to write cached address txids:', error);
@@ -62,7 +105,12 @@ export async function setCachedAddressTxIds(address: string, txids: string[], xp
 export async function getCachedAddressStats(address: string): Promise<any | null> {
   try {
     const raw = await AsyncStorage.getItem(KEY_STATS(address));
-    return raw ? JSON.parse(raw) : null;
+    const { data, expired } = hydrateCacheEntry<any>(raw, STATS_TTL_MS);
+    if (expired) {
+      await AsyncStorage.removeItem(KEY_STATS(address));
+      return null;
+    }
+    return data ?? null;
   } catch (error) {
     console.warn('Failed to read cached address stats:', error);
     return null;
@@ -71,7 +119,11 @@ export async function getCachedAddressStats(address: string): Promise<any | null
 
 export async function setCachedAddressStats(address: string, stats: any, xpubHint?: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(KEY_STATS(address), JSON.stringify(stats));
+    const entry: PersistedEntry<any> = {
+      data: stats,
+      timestamp: Date.now(),
+    };
+    await AsyncStorage.setItem(KEY_STATS(address), JSON.stringify(entry));
     if (xpubHint) {
       await AsyncStorage.setItem(KEY_ADDR_WALLET(address), xpubHint);
       const existing = await getWalletAddresses(xpubHint);
@@ -86,8 +138,12 @@ export async function setCachedAddressStats(address: string, stats: any, xpubHin
 export async function getCachedAddressUTXOs(address: string): Promise<any[] | null> {
   try {
     const raw = await AsyncStorage.getItem(KEY_UTXOS(address));
-    const utxos = raw ? JSON.parse(raw) : null;
-    return Array.isArray(utxos) ? utxos : null;
+    const { data, expired } = hydrateCacheEntry<any[]>(raw, UTXOS_TTL_MS);
+    if (expired) {
+      await AsyncStorage.removeItem(KEY_UTXOS(address));
+      return null;
+    }
+    return Array.isArray(data) ? data : null;
   } catch (error) {
     console.warn('Failed to read cached address UTXOs:', error);
     return null;
@@ -96,7 +152,11 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
 
 export async function setCachedAddressUTXOs(address: string, utxos: any[], xpubHint?: string): Promise<void> {
   try {
-    await AsyncStorage.setItem(KEY_UTXOS(address), JSON.stringify(utxos || []));
+    const entry: PersistedEntry<any[]> = {
+      data: utxos || [],
+      timestamp: Date.now(),
+    };
+    await AsyncStorage.setItem(KEY_UTXOS(address), JSON.stringify(entry));
     if (xpubHint) {
       await AsyncStorage.setItem(KEY_ADDR_WALLET(address), xpubHint);
       const existing = await getWalletAddresses(xpubHint);
@@ -122,8 +182,8 @@ export async function getWalletAddresses(xpub: string): Promise<string[] | null>
 export async function getWalletTxIds(xpub: string): Promise<string[] | null> {
   try {
     const raw = await AsyncStorage.getItem(KEY_WALLET_TXIDS(xpub));
-    const txids = raw ? JSON.parse(raw) : null;
-    return Array.isArray(txids) ? txids : null;
+    const { data } = hydrateCacheEntry<string[]>(raw, TXIDS_TTL_MS);
+    return Array.isArray(data) ? data : null;
   } catch (error) {
     console.warn('Failed to read wallet txids cache:', error);
     return null;
@@ -143,7 +203,11 @@ export async function recordWalletAssociationsXpub(xpub: string, addresses: stri
     // Txids
     const existingTxids = await getWalletTxIds(xpub);
     const mergedTxids = unique([...(existingTxids || []), ...txids]);
-    await AsyncStorage.setItem(KEY_WALLET_TXIDS(xpub), JSON.stringify(mergedTxids));
+    const entry: PersistedEntry<string[]> = {
+      data: mergedTxids,
+      timestamp: Date.now(),
+    };
+    await AsyncStorage.setItem(KEY_WALLET_TXIDS(xpub), JSON.stringify(entry));
   } catch (error) {
     console.warn('Failed to record wallet associations:', error);
   }

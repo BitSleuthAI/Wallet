@@ -7,20 +7,20 @@ import { Transaction } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
-  ArrowDownLeft,
-  ArrowLeft,
-  ArrowUpRight,
-  CheckCircle,
+    ArrowDownLeft,
+    ArrowLeft,
+    ArrowUpRight,
+    CheckCircle,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface TransactionExplorerData {
@@ -53,6 +53,7 @@ interface TransactionExplorerData {
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
   const { theme, transactions, bitcoinPrice, currentWallet, formatCurrency } = useWallet();
+  const lastDetailsRef = useRef<Record<string, Transaction>>({});
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -77,7 +78,10 @@ export default function TransactionExplorerScreen() {
         setError(null);
       }
 
-      const localTx = transactions?.find(t => t.txid === txid) || null;
+      const localTx = transactions?.find(t => t.txid === txid) || lastDetailsRef.current[txid] || null;
+      if (localTx) {
+        lastDetailsRef.current[txid] = localTx;
+      }
       if (isMounted) {
         setTransaction(localTx);
       }
@@ -89,126 +93,29 @@ export default function TransactionExplorerScreen() {
           throw new Error(txDetailsError ?? 'Transaction details unavailable');
         }
 
-        const statusInfo = txDetails.status || {};
-        const vinList = Array.isArray(txDetails.vin) ? txDetails.vin : [];
-        const voutList = Array.isArray(txDetails.vout) ? txDetails.vout : [];
+        const summaryTransaction: Transaction = {
+          ...(localTx || {}),
+          ...txDetails,
+        } as Transaction;
+        lastDetailsRef.current[txid] = summaryTransaction;
 
-        const inputValueSats = vinList.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
-        const outputValueSats = voutList.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
-        const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : 0;
-        const feeBtc = feeSats / 1e8;
-
-        const fallbackNetAmountBtc = (() => {
-          if (typeof localTx?.amount === 'number') {
-            return localTx.amount;
-          }
-
-          const addressSet = new Set(currentWallet?.addresses ?? []);
-
-          if (addressSet.size > 0) {
-            const received = voutList.reduce((sum, output) => {
-              const address = output.scriptpubkey_address;
-              return address && addressSet.has(address) ? sum + (output.value ?? 0) : sum;
-            }, 0);
-
-            const sent = vinList.reduce((sum, input) => {
-              const address = input.prevout?.scriptpubkey_address;
-              return address && addressSet.has(address) ? sum + (input.prevout?.value ?? 0) : sum;
-            }, 0);
-
-            const netSats = received - sent;
-
-            if (netSats !== 0) {
-              return Math.abs(netSats) / 1e8;
-            }
-          }
-
-          if (outputValueSats > 0) {
-            return outputValueSats / 1e8;
-          }
-
-          if (inputValueSats > 0) {
-            return inputValueSats / 1e8;
-          }
-
-          return 0;
-        })();
-
-        const virtualSize = typeof txDetails.vsize === 'number'
-          ? txDetails.vsize
-          : typeof txDetails.weight === 'number'
-            ? txDetails.weight / 4
-            : txDetails.size ?? 0;
-
-        const feePerVB = virtualSize > 0 ? feeSats / virtualSize : 0;
-
-        const rbfEnabled = vinList.some(vin => {
-          const sequence = vin.sequence;
-          const sequenceNumber = typeof sequence === 'number' ? sequence : Number(sequence);
-          return Number.isFinite(sequenceNumber) && sequenceNumber < 0xfffffffe;
-        });
-
-        const blockHeight = localTx?.blockHeight ?? statusInfo.block_height ?? 0;
-        const confirmations = typeof localTx?.confirmations === 'number'
-          ? localTx.confirmations
-          : statusInfo.confirmed
-            ? 1
-            : 0;
-
-        const status: 'confirmed' | 'pending' | 'failed' = localTx?.status === 'failed'
-          ? 'failed'
-          : localTx?.status === 'confirmed' || statusInfo.confirmed
-            ? 'confirmed'
-            : 'pending';
-
-        const timestamp = localTx?.timestamp ?? (statusInfo.block_time ? statusInfo.block_time * 1000 : Date.now());
-
-        const explorerDetails: TransactionExplorerData = {
-          txid,
-          timestamp,
-          netAmount: fallbackNetAmountBtc,
-          fee: feeBtc,
-          feeUSD: feeBtc * (bitcoinPrice?.usd ?? 0),
-          confirmations,
-          blockHeight,
-          status,
-          inputValue: inputValueSats / 1e8,
-          outputValue: outputValueSats / 1e8,
-          feePerVB,
-          size: txDetails.size ?? Math.round(virtualSize),
-          weight: txDetails.weight ?? (virtualSize ? Math.round(virtualSize * 4) : 0),
-          version: txDetails.version ?? 0,
-          locktime: txDetails.locktime ?? 0,
-          rbf: typeof localTx?.rbf === 'boolean' ? localTx.rbf : rbfEnabled,
-          inputs: vinList.map(vin => {
-            const valueSats = vin.prevout?.value ?? 0;
-            const address = vin.prevout?.scriptpubkey_address || (vin.is_coinbase ? 'Coinbase Input' : 'Unknown');
-            return {
-              address,
-              value: valueSats / 1e8,
-            };
-          }),
-          outputs: voutList.map(output => ({
-            address: output.scriptpubkey_address || 'Unknown',
-            value: (output.value ?? 0) / 1e8,
-          })),
-        };
+        const explorerSummary = buildExplorerData(summaryTransaction, bitcoinPrice, currentWallet);
 
         if (isMounted) {
-          setExplorerData(explorerDetails);
+          setTransaction(summaryTransaction);
+          setExplorerData(explorerSummary);
         }
-      } catch (fetchError) {
-        if (!isMounted) return;
-
-        console.error('❌ Failed to load transaction explorer data:', fetchError);
-
-        const rawMessage = fetchError instanceof Error ? fetchError.message : 'Failed to load transaction data';
-        const friendlyMessage = rawMessage.toLowerCase().includes('not found')
-          ? 'Transaction not found'
-          : 'Failed to load transaction data';
-
-        setExplorerData(null);
-        setError(friendlyMessage);
+      } catch (error: any) {
+        if (isMounted) {
+          const cached = lastDetailsRef.current[txid];
+          if (cached) {
+            setTransaction(cached);
+            setExplorerData(buildExplorerData(cached, bitcoinPrice, currentWallet));
+          } else {
+            setExplorerData(null);
+            setError(error.message || 'Failed to fetch transaction details');
+          }
+        }
       } finally {
         if (isMounted) {
           setLoading(false);
@@ -738,3 +645,90 @@ const styles = StyleSheet.create({
     fontWeight: '600' as const,
   },
 });
+
+const buildExplorerData = (
+  txDetails: Transaction,
+  bitcoinPrice: { usd?: number } | null,
+  currentWallet: Wallet | null,
+): TransactionExplorerData => {
+  const statusInfo = txDetails.status || {};
+  const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : txDetails.vin || [];
+  const voutList = Array.isArray(txDetails.outputs) ? txDetails.outputs : txDetails.vout || [];
+
+  const normalizeVin = vinList.map((vin: any) => ({
+    prevout: vin.prevout || {
+      value: vin.value ? Math.round(vin.value * 1e8) : 0,
+      scriptpubkey_address: vin.address,
+    },
+  }));
+  const normalizeVout = voutList.map((vout: any) => ({
+    value: typeof vout.value === 'number' ? vout.value : Math.round((vout.amount ?? 0) * 1e8),
+    scriptpubkey_address: vout.address ?? vout.scriptpubkey_address,
+  }));
+
+  const inputValueSats = normalizeVin.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
+  const outputValueSats = normalizeVout.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
+  const feeSats = typeof txDetails.fee === 'number' ? Math.round(txDetails.fee * 1e8) : (txDetails.fee ?? 0);
+  const feeBtc = feeSats / 1e8;
+
+  const addressSet = new Set(currentWallet?.addresses ?? []);
+  const fallbackNetAmountSats = (() => {
+    if (typeof txDetails.amount === 'number') {
+      return Math.round(txDetails.amount * 1e8);
+    }
+
+    if (addressSet.size > 0) {
+      const received = normalizeVout.reduce((sum, output) =>
+        output.scriptpubkey_address && addressSet.has(output.scriptpubkey_address)
+          ? sum + (output.value ?? 0)
+          : sum,
+      0);
+
+      const sent = normalizeVin.reduce((sum, input) =>
+        input.prevout?.scriptpubkey_address && addressSet.has(input.prevout.scriptpubkey_address)
+          ? sum + (input.prevout?.value ?? 0)
+          : sum,
+      0);
+
+      return received - sent;
+    }
+
+    return 0;
+  })();
+
+  const netAmountBtc = typeof (txDetails as any).net_amount === 'number'
+    ? (txDetails as any).net_amount / 1e8
+    : fallbackNetAmountSats / 1e8;
+
+  const feeUsd = bitcoinPrice?.usd ? feeBtc * bitcoinPrice.usd : 0;
+  const feePerVB = (txDetails as any).vsize ? feeSats / (txDetails as any).vsize : 0;
+
+  return {
+    txid: txDetails.txid,
+    timestamp: ((statusInfo.block_time ?? (txDetails as any).time ?? Math.floor(Date.now() / 1000)) * 1000),
+    netAmount: netAmountBtc,
+    fee: feeBtc,
+    feeUSD: feeUsd,
+    confirmations: typeof (txDetails as any).confirmations === 'number'
+      ? (txDetails as any).confirmations
+      : (statusInfo.confirmed ? 1 : 0),
+    blockHeight: statusInfo.block_height ?? 0,
+    status: statusInfo.confirmed ? 'confirmed' : 'pending',
+    inputValue: inputValueSats / 1e8,
+    outputValue: outputValueSats / 1e8,
+    feePerVB,
+    size: (txDetails as any).size ?? 0,
+    weight: (txDetails as any).weight ?? 0,
+    version: (txDetails as any).version ?? 0,
+    locktime: (txDetails as any).locktime ?? 0,
+    rbf: (txDetails as any).rbf ?? false,
+    inputs: normalizeVin.map(vin => ({
+      address: vin.prevout?.scriptpubkey_address ?? 'Unknown',
+      value: (vin.prevout?.value ?? 0) / 1e8,
+    })),
+    outputs: normalizeVout.map(vout => ({
+      address: vout.scriptpubkey_address ?? 'Unknown',
+      value: (vout.value ?? 0) / 1e8,
+    })),
+  };
+};

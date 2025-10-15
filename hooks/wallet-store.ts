@@ -2,7 +2,7 @@ import { darkTheme, lightTheme } from '@/constants/themes';
 import { clearCacheForWalletXpub } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { getWalletData } from '@/services/wallet-service';
-import { FeeSettings, FiatCurrency, Theme, UTXO, Wallet } from '@/types/wallet';
+import { AddressInfo, FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -442,11 +442,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
-    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long (matches QueryClient default)
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer for smooth wallet switching
+    staleTime: 15 * 60 * 1000, // 15 minutes - keep data fresh longer to avoid redundant refreshes
+    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: 'always', // Always refetch when explicitly mounting (e.g., navigating to wallet screen)
+    refetchOnMount: false, // Use cached data when returning to the screen to prevent duplicate requests
+    refetchOnReconnect: false, // Avoid immediate refetches when network state changes
   });
 
   // Transaction history query
@@ -486,11 +487,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
-    staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for this long (matches QueryClient default)
-    gcTime: 10 * 60 * 1000, // 10 minutes - keep in cache longer for smooth wallet switching
+    staleTime: 15 * 60 * 1000, // 15 minutes - keep data fresh longer to avoid redundant refreshes
+    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: 'always', // Always refetch when explicitly mounting (e.g., navigating to wallet screen)
+    refetchOnMount: false, // Use cached data when returning to the screen to prevent duplicate requests
+    refetchOnReconnect: false, // Avoid immediate refetches when network state changes
   });
 
   // Save wallets mutation
@@ -1212,24 +1214,69 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isLoading: walletsQuery.isLoading || currentWalletQuery.isLoading,
   }), [wallets, currentWallet, currentWalletId, walletsQuery.isLoading, currentWalletQuery.isLoading]);
 
-  const balanceData = useMemo(() => ({
-    balance: balanceQuery.data || 0,
-    balanceUSD: (balanceQuery.data || 0) * (priceQuery.data?.usd || 0),
-    bitcoinPrice: priceQuery.data,
-    isLoadingBalance: balanceQuery.isLoading,
-    isLoadingPrice: priceQuery.isLoading,
-    hasBalanceError: !!balanceQuery.error && (balanceQuery.data === undefined || balanceQuery.data === null),
-    hasPriceError: !!priceQuery.error && !priceQuery.data,
-    balanceError: balanceQuery.error,
-    priceError: priceQuery.error,
-  }), [balanceQuery.data, balanceQuery.isLoading, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
+  const lastBalanceRef = useRef<number | null>(null);
+  const lastTransactionsRef = useRef<Transaction[]>([]);
+  const lastAddressesRef = useRef<AddressInfo[]>([]);
+  useEffect(() => {
+    if (balanceQuery.data !== undefined && balanceQuery.data !== null) {
+      lastBalanceRef.current = balanceQuery.data;
+    }
+  }, [balanceQuery.data]);
+
+  const lastAddressStatsRef = useRef<Map<string, { balance: number }>>(new Map());
+  const setAddressStatsCache = useCallback((key: string, stats: { balance: number }) => {
+    lastAddressStatsRef.current.set(key, stats);
+  }, []);
+  const getAddressStatsCacheValue = useCallback((key: string) => {
+    return lastAddressStatsRef.current.get(key);
+  }, []);
+
+  const balanceData = useMemo(() => {
+    const balance = balanceQuery.data ?? lastBalanceRef.current ?? 0;
+
+    return {
+      balance,
+      balanceUSD: balance * (priceQuery.data?.usd || 0),
+      bitcoinPrice: priceQuery.data,
+      isLoadingBalance: balanceQuery.isLoading && lastBalanceRef.current === null,
+      isRefreshingBalance: balanceQuery.isFetching && lastBalanceRef.current !== null,
+      isLoadingPrice: priceQuery.isLoading,
+      hasBalanceError: !!balanceQuery.error && lastBalanceRef.current === null,
+      hasPriceError: !!priceQuery.error && !priceQuery.data,
+      balanceError: balanceQuery.error,
+      priceError: priceQuery.error,
+    };
+  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
+
+  const stableTransactions = transactionsQuery.data ?? lastTransactionsRef.current;
+  useEffect(() => {
+    if (transactionsQuery.data) {
+      lastTransactionsRef.current = transactionsQuery.data;
+    }
+  }, [transactionsQuery.data]);
 
   const transactionData = useMemo(() => ({
-    transactions: transactionsQuery.data || [],
-    isLoadingTransactions: transactionsQuery.isLoading,
-    hasTransactionsError: !!transactionsQuery.error && (!transactionsQuery.data || transactionsQuery.data.length === 0),
+    transactions: stableTransactions,
+    isLoadingTransactions: transactionsQuery.isLoading && lastTransactionsRef.current.length === 0,
+    isRefreshingTransactions: transactionsQuery.isFetching && lastTransactionsRef.current.length > 0,
+    hasTransactionsError: !!transactionsQuery.error && lastTransactionsRef.current.length === 0,
     transactionsError: transactionsQuery.error,
-  }), [transactionsQuery.data, transactionsQuery.isLoading, transactionsQuery.error]);
+  }), [stableTransactions, transactionsQuery.isLoading, transactionsQuery.isFetching, transactionsQuery.error]);
+
+  const stableAddresses = addressesQuery.data ?? lastAddressesRef.current;
+  useEffect(() => {
+    if (addressesQuery.data) {
+      lastAddressesRef.current = addressesQuery.data;
+    }
+  }, [addressesQuery.data]);
+
+  const addressesData = useMemo(() => ({
+    addresses: stableAddresses,
+    isLoadingAddresses: addressesQuery.isLoading && lastAddressesRef.current.length === 0,
+    isRefreshingAddresses: addressesQuery.isFetching && lastAddressesRef.current.length > 0,
+    hasAddressesError: !!addressesQuery.error && lastAddressesRef.current.length === 0,
+    addressesError: addressesQuery.error,
+  }), [stableAddresses, addressesQuery.isLoading, addressesQuery.isFetching, addressesQuery.error]);
 
   const settingsData = useMemo(() => ({
     theme,
@@ -1303,20 +1350,26 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     ...walletData,
     ...balanceData,
     ...transactionData,
+    ...addressesData,
     ...settingsData,
     ...actionsData,
     coinControl: coinControlData,
     ...feedbackData,
     isCreatingWallet: saveWalletsMutation.isPending,
+    setAddressStatsCache,
+    getAddressStatsCacheValue,
   }), [
     walletData,
     balanceData,
     transactionData,
+    addressesData,
     settingsData,
     actionsData,
     coinControlData,
     feedbackData,
     saveWalletsMutation.isPending,
+    setAddressStatsCache,
+    getAddressStatsCacheValue,
   ]);
 
   return walletStoreData;
