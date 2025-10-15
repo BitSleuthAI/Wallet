@@ -10,7 +10,7 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -66,7 +66,7 @@ export default function SendScreen() {
   const [availableUtxos, setAvailableUtxos] = useState<UTXO[]>([]);
   const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
   const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
-  const [lastFeeEstimates, setLastFeeEstimates] = useState<any>(null);
+  const lastFeeEstimatesRef = useRef<any>(null);
   const [customFeeValidation, setCustomFeeValidation] = useState<{
     isValid: boolean;
     message: string | null;
@@ -379,7 +379,7 @@ export default function SendScreen() {
       return;
     }
 
-    const previous = lastFeeEstimates;
+    const previous = lastFeeEstimatesRef.current;
     const estimatesChanged = previous
       ? Math.abs(feeEstimates.fastestFee - previous.fastestFee) >= 1 ||
         Math.abs(feeEstimates.halfHourFee - previous.halfHourFee) >= 1 ||
@@ -390,8 +390,8 @@ export default function SendScreen() {
       void performAutoAdjustment();
     }
 
-    setLastFeeEstimates(feeEstimates);
-  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate, lastFeeEstimates]);
+    lastFeeEstimatesRef.current = feeEstimates;
+  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
