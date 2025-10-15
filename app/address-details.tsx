@@ -6,7 +6,7 @@ import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Copy } from 'lucide-react-native';
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ActivityIndicator,
     Modal,
@@ -48,10 +48,12 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme, currentWallet } = useWallet();
+  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache } = useWallet();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
+  const lastBalanceRef = useRef<number | null>(null);
+  const lastTransactionsRef = useRef<Transaction[]>([]);
   
   // Fetch address balance using Esplora service
   const balanceQuery = useQuery({
@@ -64,13 +66,15 @@ export default function AddressDetailsScreen() {
       
       if (result.error || !result.data) {
         console.warn('❌ Address balance fetch failed:', result.error);
-        return 0;
+        const cached = getAddressStatsCacheValue(address);
+        return cached?.balance ?? 0;
       }
       
       const balance = result.data.chain_stats ? 
         (result.data.chain_stats.funded_txo_sum - result.data.chain_stats.spent_txo_sum) / 1e8 : 0;
       
       console.log('✅ Address balance fetched:', balance, 'BTC');
+      setAddressStatsCache(address, { balance });
       return balance;
     },
     enabled: !!address,
@@ -97,10 +101,30 @@ export default function AddressDetailsScreen() {
   });
 
   // Process transactions to determine type and amount for this address
+  useEffect(() => {
+    if (balanceQuery.data !== undefined && balanceQuery.data !== null) {
+      lastBalanceRef.current = balanceQuery.data;
+    }
+  }, [balanceQuery.data]);
+
+  useEffect(() => {
+    if (transactionsQuery.data && Array.isArray(transactionsQuery.data) && transactionsQuery.data.length > 0) {
+      lastTransactionsRef.current = transactionsQuery.data as Transaction[];
+    }
+  }, [transactionsQuery.data]);
+
+  const balance = balanceQuery.data ?? lastBalanceRef.current ?? 0;
+  const isInitialBalanceLoading = balanceQuery.isLoading && lastBalanceRef.current === null;
+  const isBalanceRefreshing = balanceQuery.isFetching && lastBalanceRef.current !== null;
+
+  const transactions = (transactionsQuery.data as Transaction[] | undefined) ?? lastTransactionsRef.current;
+  const isInitialTransactionsLoading = transactionsQuery.isLoading && lastTransactionsRef.current.length === 0;
+  const isTransactionsRefreshing = transactionsQuery.isFetching && lastTransactionsRef.current.length > 0;
+
   const processedTransactions = useMemo(() => {
-    if (!transactionsQuery.data || !address) return [];
+    if (!transactions || !address) return [];
     
-    return transactionsQuery.data.map((tx: Transaction) => {
+    return transactions.map((tx: Transaction) => {
       let type: 'sent' | 'received' = 'received';
       let amount = 0;
       
@@ -134,7 +158,7 @@ export default function AddressDetailsScreen() {
         timestamp: tx.status.block_time || Date.now() / 1000,
       };
     }).sort((a, b) => b.timestamp - a.timestamp);
-  }, [transactionsQuery.data, address]);
+  }, [transactions, address]);
 
   const formatBTC = (satoshis: number) => {
     return (satoshis / 100000000).toFixed(8);
@@ -220,8 +244,8 @@ export default function AddressDetailsScreen() {
               </Text>
               <Copy size={16} color={theme.colors.textSecondary} style={styles.copyIcon} />
             </TouchableOpacity>
-            <Text style={[styles.addressSubtitle, { color: theme.colors.textSecondary }]}>
-              Bitcoin Address ({processedTransactions.length} transactions)
+            <Text style={[styles.addressSubtitle, { color: theme.colors.textSecondary }]}> 
+              {summaryText}
             </Text>
           </View>
 
@@ -230,16 +254,22 @@ export default function AddressDetailsScreen() {
             <Text style={[styles.balanceLabel, { color: theme.colors.text }]}>
               Address Balance
             </Text>
-            {balanceQuery.isLoading ? (
+            {isInitialBalanceLoading ? (
               <ActivityIndicator size="large" color={theme.colors.primary} style={styles.balanceLoader} />
             ) : (
               <>
                 <Text style={[styles.balanceGBP, { color: theme.colors.text }]}>
-                  £{formatGBP(balanceQuery.data || 0)}
+                  £{formatGBP(balance)}
                 </Text>
                 <Text style={[styles.balanceBTC, { color: theme.colors.textSecondary }]}>
-                  {formatBTC(balanceQuery.data || 0)} BTC
+                  {formatBTC(balance)} BTC
                 </Text>
+                {isBalanceRefreshing && (
+                  <View style={styles.refreshRow}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text style={[styles.refreshText, { color: theme.colors.textSecondary }]}>Refreshing…</Text>
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -261,7 +291,7 @@ export default function AddressDetailsScreen() {
             </View>
 
             {/* Transaction List */}
-            {transactionsQuery.isLoading ? (
+            {isInitialTransactionsLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={theme.colors.primary} />
                 <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
@@ -269,7 +299,14 @@ export default function AddressDetailsScreen() {
                 </Text>
               </View>
             ) : processedTransactions.length > 0 ? (
-              processedTransactions.map((tx, index) => (
+              <>
+                {isTransactionsRefreshing && (
+                  <View style={styles.refreshRow}>
+                    <ActivityIndicator size="small" color={theme.colors.primary} />
+                    <Text style={[styles.refreshText, { color: theme.colors.textSecondary }]}>Refreshing…</Text>
+                  </View>
+                )}
+                {processedTransactions.map((tx, index) => (
                 <View key={tx.txid} style={[styles.transactionItem, index < processedTransactions.length - 1 && styles.transactionBorder]}>
                   <View style={styles.transactionDetails}>
                     <View style={[styles.transactionIcon, { 
@@ -308,7 +345,8 @@ export default function AddressDetailsScreen() {
                     </View>
                   </View>
                 </View>
-              ))
+              ))}
+              </>
             ) : (
               <View style={styles.emptyState}>
                 <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
@@ -505,11 +543,11 @@ const styles = StyleSheet.create({
   },
   loadingContainer: {
     alignItems: 'center',
-    paddingVertical: 40,
+    marginTop: 40,
   },
   loadingText: {
     marginTop: 12,
-    fontSize: 14,
+    fontSize: 16,
   },
   emptyState: {
     alignItems: 'center',
@@ -562,5 +600,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontWeight: '500',
     textAlign: 'center',
+  },
+  refreshRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+  },
+  refreshText: {
+    fontSize: 14,
   },
 });

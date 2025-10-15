@@ -68,7 +68,13 @@ interface AddressInfo {
 }
 
 export default function WalletAddressesScreen() {
-  const { theme, currentWallet } = useWallet();
+  const {
+    theme,
+    currentWallet,
+    addresses,
+    isLoadingAddresses,
+    isRefreshingAddresses,
+  } = useWallet();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
@@ -134,8 +140,8 @@ export default function WalletAddressesScreen() {
 
   // Get address data for current tab (filtered from query data)
   const addressData = useMemo((): AddressInfo[] => {
-    // Use query data directly - it contains both receiving and change addresses
-    const sourceData = addressesQuery.data || [];
+    // Use cached addresses from the store to avoid empty states while refreshing
+    const sourceData = addresses || [];
     
     return sourceData
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
@@ -151,7 +157,7 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [addressesQuery.data, selectedTab]);
+  }, [addresses, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -359,7 +365,7 @@ export default function WalletAddressesScreen() {
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {addressesQuery.isLoading ? (
+        {(isLoadingAddresses && !addresses?.length) ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>

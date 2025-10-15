@@ -153,13 +153,13 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         for (let i = 0; i < batch.length; i++) {
           const addr = batch[i];
           try {
-            const result = await esploraGet(`/address/${addr}/txs`, 300000);
+            const result = await esploraGet(`/address/${addr}/txs`, 900000);
             console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
             addressTxs.push(result);
             
             // Add small delay between requests to avoid rate limiting (especially on iOS)
             if (i < batch.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 100));
+              await new Promise(resolve => setTimeout(resolve, 250));
             }
           } catch (error) {
             console.warn(`⚠️ Failed to check address ${index + i}:`, error);
@@ -198,6 +198,10 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         }
 
         index += GAP_LIMIT;
+
+        // Slow down between batches to avoid hitting provider rate limits during
+        // large wallet discovery sweeps.
+        await new Promise(resolve => setTimeout(resolve, 1000));
       }
     }
     
@@ -265,6 +269,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
 
     // Fetch data for all used addresses with controlled concurrency
     const concurrency = 1; // Very low concurrency to avoid rate limiting
+    const perAddressDelayMs = 1500; // Additional delay between addresses
     let idx = 0;
     const allTxs = new Map<string, any>();
     const utxos: any[] = [];
@@ -312,8 +317,8 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
             });
           }
 
-          // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 1000));
+          // Small delay to avoid rate limiting (increased for heavy loops)
+          await new Promise(resolve => setTimeout(resolve, perAddressDelayMs));
           
         } catch (error) {
           console.warn(`⚠️ Failed to process address ${address}:`, error);
@@ -881,7 +886,7 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
         
         // Small delay to avoid rate limiting (only for used addresses)
         if (addrMeta.isUsed) {
-          await new Promise(resolve => setTimeout(resolve, 50));
+          await new Promise(resolve => setTimeout(resolve, 150));
         }
       } catch (error) {
         console.warn(`⚠️ Failed to get stats for ${chainType} address ${addrMeta.index}:`, error);

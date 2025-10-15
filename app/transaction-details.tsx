@@ -1,48 +1,81 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
+import { getTransactionDetails } from '@/services/esplora-service';
 import { Transaction } from '@/types/wallet';
+import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-  AlertTriangle,
-  ArrowDownLeft,
-  ArrowUpRight,
-  CheckCircle,
-  Clock,
-  Copy,
-  DollarSign,
-  ExternalLink,
-  Share as ShareIcon,
-  XCircle,
-  Zap,
+    AlertTriangle,
+    ArrowDownLeft,
+    ArrowUpRight,
+    CheckCircle,
+    Clock,
+    Copy,
+    DollarSign,
+    ExternalLink,
+    Share as ShareIcon,
+    XCircle,
+    Zap,
 } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function TransactionDetailsScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
   const { theme, transactions, formatCurrency, bitcoinPrice, feeSettings } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
+  const lastTxRef = useRef<Transaction | null>(null);
 
 
 
   useEffect(() => {
     if (txid && transactions) {
       const tx = transactions.find(t => t.txid === txid);
-      setTransaction(tx || null);
+      if (tx) {
+        setTransaction(tx);
+        lastTxRef.current = tx;
+      }
     }
   }, [txid, transactions]);
+
+  const txDetailsQuery = useQuery({
+    queryKey: ['transaction-details', txid],
+    enabled: !!txid,
+    queryFn: async () => {
+      if (!txid) {
+        return null;
+      }
+      const result = await getTransactionDetails(txid);
+      if (result.error || !result.data) {
+        return lastTxRef.current || null;
+      }
+      return {
+        ...(lastTxRef.current || {}),
+        ...result.data,
+      } as Transaction;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (txDetailsQuery.data) {
+      setTransaction(txDetailsQuery.data);
+      lastTxRef.current = txDetailsQuery.data;
+    }
+  }, [txDetailsQuery.data]);
 
 
 
@@ -68,6 +101,7 @@ export default function TransactionDetailsScreen() {
 
   const isReceived = transaction.type === 'received';
   const amountUSD = bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
+  const isRefreshing = txDetailsQuery.isFetching && lastTxRef.current !== null;
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -232,6 +266,12 @@ export default function TransactionDetailsScreen() {
                 <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
                   {isReceived ? '+' : '-'}{formatCurrency(amountUSD, false)}
                 </Text>
+              )}
+              {isRefreshing && (
+                <View style={styles.refreshRow}>
+                  <ActivityIndicator size="small" color={theme.colors.primary} />
+                  <Text style={[styles.refreshText, { color: theme.colors.textSecondary }]}>Refreshing…</Text>
+                </View>
               )}
             </View>
           </View>
@@ -557,5 +597,13 @@ const styles = StyleSheet.create({
     ...platformStyles.typography.body,
     fontSize: 13,
     marginTop: 2,
+  },
+  refreshRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: platformStyles.spacing.sm,
+  },
+  refreshText: {
+    marginLeft: platformStyles.spacing.sm,
   },
 });

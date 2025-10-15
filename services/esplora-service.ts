@@ -18,8 +18,10 @@ const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
+type CacheEntry = { data: any; timestamp: number; ttl: number };
+
 // Cache for API responses (for non-transaction data like block height, prices, etc.)
-const cache = new Map<string, { data: any; timestamp: number; ttl: number }>();
+const cache = new Map<string, CacheEntry>();
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -29,12 +31,15 @@ function getCacheKey(url: string): string {
   return url;
 }
 
-function getCachedData(key: string): any | null {
+type CacheEntry = { data: any; timestamp: number; ttl: number };
+
+function getCachedData(key: string): CacheEntry | null {
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.timestamp < cached.ttl) {
-    return cached.data;
+  if (!cached) {
+    return null;
   }
-  return null;
+
+  return cached;
 }
 
 function setCachedData(key: string, data: any, ttl: number): void {
@@ -142,10 +147,12 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
  * - Caches confirmed transactions permanently
  * - Caches unconfirmed transactions for 2 minutes
  */
-export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpubHint?: string): Promise<any> {
+export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpubHint?: string): Promise<any> {
   // Load transaction cache if not already loaded
   await loadTransactionCache();
   
+  const cacheKey = getCacheKey(path);
+
   // Check if this is an individual transaction request
   const txMatch = path.match(/^\/tx\/([a-f0-9]{64})$/);
   
@@ -158,8 +165,6 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpub
   const addressTxMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs$/);
   const addressStatsMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})$/);
   const addressUtxoMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/utxo$/);
-  
-  const cacheKey = getCacheKey(path);
   
   // For individual transaction requests, check cache first
   if (txMatch) {
@@ -213,8 +218,13 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpub
   if (!txMatch && !addressTxMatch) {
     const cached = getCachedData(cacheKey);
     if (cached) {
-      console.log(`📦 Cache hit for: ${path}`);
-      return cached;
+      const age = Date.now() - cached.timestamp;
+      if (age < cached.ttl) {
+        console.log(`📦 Cache hit for: ${path}`);
+        return cached.data;
+      }
+
+      console.log(`📦 Stale cache hit for: ${path} (age ${age}ms)`);
     }
   }
 
@@ -235,7 +245,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpub
           await sleep(backoffDelay);
         }
         
-        const data = await fetchJson(url, {}, 15000);
+        const data = await fetchJson(url, {}, 20000);
         
         console.log(`✅ Success from ${base} for ${path}`);
         
@@ -335,30 +345,39 @@ export async function esploraGet(path: string, cacheTtlMs: number = 300000, xpub
       } catch (e: any) {
         lastError = e;
         console.log(`❌ Attempt ${attempt + 1} failed for ${base}:`, e.message);
+
+        // If capped by rate limit, break out quickly and, if we have stale data,
+        // prefer to surface that instead of hammering the provider.
+        if (e?.message?.includes('Rate limited')) {
+          console.log(`⚠️ Rate limited by ${base}, switching to next provider immediately`);
+
+          const cached = getCachedData(cacheKey);
+          if (cached) {
+            const age = Date.now() - cached.timestamp;
+            console.log(`📦 Returning cached data for ${path} despite rate limit (age ${age}ms)`);
+            return cached.data;
+          }
+
+          break;
+        }
         
         // If Blockstream served a notice, immediately break to try next provider
         if (e?.code === 'ESPLORA_PROVIDER_NOTICE') {
           console.log(`⚠️ Provider notice detected, switching to next provider`);
           break;
         }
-        
-        // If rate limited (429), immediately switch to next provider instead of retrying
-        if (e?.message?.includes('Rate limited')) {
-          console.log(`⚠️ Rate limited by ${base}, switching to next provider immediately`);
-          break;
-        }
-        
+
         // Backoff for network/5xx/timeout
         if (e?.message?.includes('timeout') || /5\d\d/.test(e?.message || '')) {
-          const delay = 1000 * (attempt + 1);
+          const delay = Math.min(4000, 1500 * (attempt + 1));
           console.log(`⏱️ Backing off ${delay}ms before retry`);
           await sleep(delay);
           continue;
         }
-        
+
         // For other errors, retry once, then move on
         if (attempt < attemptsPerProvider - 1) {
-          await sleep(500);
+          await sleep(750);
         }
       }
     }
