@@ -356,6 +356,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       const isConfirmed = tx.status?.confirmed || false;
       const confirmations = isConfirmed && latestBlockHeight ? latestBlockHeight - tx.status.block_height + 1 : 0;
       const txDate = isConfirmed ? new Date(tx.status.block_time * 1000) : new Date();
+      const isPending = !isConfirmed;
 
       const fromAddress = tx.vin?.map((i: any) => i.prevout?.scriptpubkey_address).filter(Boolean) ?? [];
       const toAddress = tx.vout?.map((o: any) => o.scriptpubkey_address).filter(Boolean) ?? [];
@@ -377,11 +378,31 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
 
       // Check if this transaction has child transactions (CPFP parent)
       // Only consider it a CPFP parent if this transaction is unconfirmed
-      const childTxids = isConfirmed ? [] : Array.from(allTxs.values())
-        .filter((childTx: any) => 
-          childTx.vin?.some((input: any) => input.txid === tx.txid)
-        )
-        .map((childTx: any) => childTx.txid);
+      const walletOwnsInputs = tx.vin?.some((input: any) =>
+        input.prevout?.scriptpubkey_address && ourAddressesSet.has(input.prevout.scriptpubkey_address)
+      ) || false;
+
+      const walletOwnsOutputs = tx.vout?.some((output: any) =>
+        output.scriptpubkey_address && ourAddressesSet.has(output.scriptpubkey_address)
+      ) || false;
+
+      const rbfEligible = isPending && hasRBF && walletOwnsInputs;
+      const cpfpEligible = isPending && walletOwnsOutputs;
+
+      const parentTxid = isCPFPChild
+        ? (tx.vin?.find((input: any) => {
+            const parentTx = allTxs.get(input.txid);
+            return parentTx && !parentTx.status?.confirmed;
+          })?.txid)
+        : undefined;
+
+      const cpfpChildTxids = isPending
+        ? Array.from(allTxs.values())
+            .filter((childTx: any) =>
+              childTx.vin?.some((input: any) => input.txid === tx.txid)
+            )
+            .map((childTx: any) => childTx.txid)
+        : [];
 
       return {
         txid: tx.txid,
@@ -395,8 +416,11 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
         confirmations,
         status: isConfirmed ? 'confirmed' : 'pending',
         rbf: hasRBF,
+        rbfEligible,
         cpfp: isCPFPChild,
-        childTxids: childTxids.length > 0 ? childTxids : undefined,
+        cpfpEligible,
+        parentTxid,
+        childTxids: cpfpChildTxids.length > 0 ? cpfpChildTxids : undefined,
         fee: tx.fee ? tx.fee / 1e8 : undefined, // Convert satoshis to BTC
         feeRate: tx.fee && tx.vsize ? (tx.fee / tx.vsize) : undefined,
         size: tx.size,
