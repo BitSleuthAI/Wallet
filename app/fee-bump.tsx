@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeeOption = {
@@ -78,7 +78,7 @@ export default function FeeBumpScreen() {
       setValidationError(null);
       setCanReplace(false);
 
-    if (!transaction.rbfEligible) {
+    if (transaction.rbfEligible === false) {
         setValidationError('This transaction is not eligible for RBF fee bumping from this wallet.');
         setIsValidating(false);
         return;
@@ -115,7 +115,7 @@ export default function FeeBumpScreen() {
       setValidationError(null);
       setCanReplace(false);
 
-    if (!transaction.cpfpEligible) {
+    if (transaction.cpfpEligible === false) {
         setValidationError('This transaction is not eligible for CPFP fee bumping from this wallet.');
         setIsValidating(false);
         return;
