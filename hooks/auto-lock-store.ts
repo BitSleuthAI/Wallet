@@ -296,12 +296,12 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   }, [biometricEnabled, biometricType]);
 
   // Enhanced transaction authentication with multi-factor support using secure auth service
-  const authenticateForTransactionEnhanced = useCallback(async (amount?: number, requireSecurityKey?: boolean): Promise<boolean> => {
+  const authenticateForTransactionEnhanced = useCallback(async (forceBiometric?: boolean): Promise<boolean> => {
     try {
       console.log('🔐 Enhanced transaction authentication started...');
       
       // Use the secure authentication service for enhanced transaction authentication
-      const result = await secureAuthService.authenticateForTransaction(amount, requireSecurityKey);
+      const result = await secureAuthService.authenticateForTransaction(forceBiometric);
       
       if (result) {
         console.log('✅ Enhanced transaction authentication completed successfully');
@@ -316,33 +316,13 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     }
   }, []);
 
-  // Verify that a security key is actually present and accessible using secure auth service
-  const verifySecurityKeyPresence = useCallback(async (securityKeys: any[]): Promise<boolean> => {
-    try {
-      if (securityKeys.length === 0) {
-        return false;
-      }
-      
-      // Use the first available security key for verification
-      const keyToVerify = securityKeys[0];
-      return await secureAuthService.verifySecurityKeyPresence(keyToVerify);
-    } catch (error) {
-      console.error('Error verifying security key presence:', error);
-      return false;
-    }
-  }, []);
-
   // Check if enhanced security is required for a transaction
   const isEnhancedSecurityRequired = useCallback(async (amount?: number): Promise<boolean> => {
     try {
       const securitySettingsStr = await AsyncStorage.getItem('securitySettings');
       const securitySettings = securitySettingsStr ? JSON.parse(securitySettingsStr) : {};
-      
-      const isHighValue = amount && amount > 0.01; // 0.01 BTC threshold
-      
-      return securitySettings.requireSecurityKeyForTransactions || 
-             securitySettings.multiFactorEnabled ||
-             isHighValue;
+
+      return securitySettings.requireBiometricForTransactions === true;
     } catch (error) {
       console.error('Error checking enhanced security requirements:', error);
       return false;
@@ -365,7 +345,6 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     disableBiometric,
     authenticateForTransaction,
     authenticateForTransactionEnhanced,
-    verifySecurityKeyPresence,
     isEnhancedSecurityRequired,
   }), [
     shouldShowLockScreen,
@@ -383,7 +362,6 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
     disableBiometric,
     authenticateForTransaction,
     authenticateForTransactionEnhanced,
-    verifySecurityKeyPresence,
     isEnhancedSecurityRequired,
   ]);
 });

@@ -11,17 +11,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -503,19 +503,19 @@ export default function SendScreen() {
         amountInBTC = parseFloat(amount) / bitcoinPrice;
       }
 
-      // Always use enhanced security service to ensure MFA enforcement
-      console.log('🔐 Requesting transaction authentication with MFA enforcement...');
-      
-      // Use the enhanced authentication service which properly enforces MFA settings
-      const authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
+      const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
 
-      if (!authResult) {
-        Alert.alert(
-          'Authentication Required',
-          'Transaction authentication failed. This may be due to:\n\n• Multi-factor authentication requirements\n• Security key verification needed\n• Biometric authentication requirements\n\nPlease ensure all required authentication factors are available and try again.',
-          [{ text: 'OK' }]
-        );
-        return;
+      if (requireBiometricAuth) {
+        const biometricSuccess = await authenticateForTransactionEnhanced(true);
+
+        if (!biometricSuccess) {
+          Alert.alert(
+          'Biometric Required',
+          'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
+            [{ text: 'OK' }]
+          );
+          return;
+        }
       }
       
       // Comprehensive validation
@@ -823,18 +823,21 @@ export default function SendScreen() {
             const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
             
             // Always use enhanced security service to ensure MFA enforcement
-            console.log('🔐 Requesting review transaction authentication with MFA enforcement...');
-            
-            // Use the enhanced authentication service which properly enforces MFA settings
-            const authResult = await authenticateForTransactionEnhanced(amountInBTC, true);
+            console.log('🔐 Checking if biometric authentication is required before final confirmation...');
 
-            if (!authResult) {
-              Alert.alert(
-                'Authentication Required',
-                'Transaction review authentication failed. This may be due to:\n\n• Multi-factor authentication requirements\n• Security key verification needed\n• Biometric authentication requirements\n\nPlease ensure all required authentication factors are available and try again.',
-                [{ text: 'OK' }]
-              );
-              return;
+            const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
+
+            if (requireBiometricAuth) {
+              const biometricSuccess = await authenticateForTransactionEnhanced(true);
+
+              if (!biometricSuccess) {
+                Alert.alert(
+                'Biometric Required',
+                'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
+                  [{ text: 'OK' }]
+                );
+                return;
+              }
             }
             
             handleSendTransaction();

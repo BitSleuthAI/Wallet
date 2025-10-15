@@ -8,19 +8,19 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { router, Stack } from 'expo-router';
 import {
-  ArrowLeft,
-  Fingerprint,
-  Shield
+    ArrowLeft,
+    Fingerprint,
+    Shield
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function PasskeysSecurityScreen() {
@@ -30,9 +30,6 @@ export default function PasskeysSecurityScreen() {
   const [loading, setLoading] = useState(true);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
     requireBiometricForTransactions: true,
-    requireSecurityKeyForTransactions: false,
-    allowPINFallback: true,
-    multiFactorEnabled: false,
   });
 
   useEffect(() => {
@@ -127,17 +124,11 @@ export default function PasskeysSecurityScreen() {
     } else {
       // Enable biometric with secure registration
       try {
-        // Register a new biometric key with cryptographic verification
-        const newKey = await secureAuthService.registerBiometricKey();
-        
-        if (newKey) {
-          // Get the biometric type directly from the service for accuracy
-          const biometricTypeName = secureAuthService.getBiometricType();
-          await enableBiometric(biometricTypeName);
-          Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
-        } else {
-          Alert.alert('Error', 'Failed to register biometric key');
-        }
+        await secureAuthService.registerBiometricKey();
+
+        const biometricTypeName = secureAuthService.getBiometricType();
+        await enableBiometric(biometricTypeName);
+        Alert.alert('Success', `${biometricTypeName} enabled for wallet unlock and transactions!`);
       } catch (error) {
         console.error('Error enabling biometric:', error);
         Alert.alert('Error', 'Failed to enable biometric authentication');
@@ -157,28 +148,23 @@ export default function PasskeysSecurityScreen() {
     }
 
     // Validate prerequisites when enabling security settings (after authentication)
-    if (value) {
-      if (setting === 'requireBiometricForTransactions') {
-        // Only check if biometric is available, not if it's enabled
-        // This allows users to enable the setting before activating biometric
-        if (!biometricAvailable) {
-          Alert.alert(
-            'Biometric Not Available',
-            'Biometric authentication is not available on this device or not set up. Please enable biometric authentication in your device settings first.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
-        
-        // If biometric is available but not enabled, prompt user to enable it
-        if (!biometricEnabled) {
-          Alert.alert(
-            'Enable Biometric First',
-            'Please enable biometric authentication above before requiring it for transactions.',
-            [{ text: 'OK' }]
-          );
-          return;
-        }
+    if (value && setting === 'requireBiometricForTransactions') {
+      if (!biometricAvailable) {
+        Alert.alert(
+          'Biometric Not Available',
+          'Biometric authentication is not available on this device or not set up. Please enable biometric authentication in your device settings first.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (!biometricEnabled) {
+        Alert.alert(
+          'Enable Biometric First',
+          'Please enable biometric authentication above before requiring it for transactions.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
     }
     
