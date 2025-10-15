@@ -103,7 +103,7 @@ export default function TransactionDetailsScreen() {
   const amountUSD = bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
   const isRefreshing = txDetailsQuery.isFetching && lastTxRef.current !== null;
   const isRBFToggleEnabled = feeSettings?.enableRBF !== false;
-  const isCPFPToggleEnabled = feeSettings?.enableCPFP !== false;
+  const isCPFPToggleEnabled = feeSettings?.enableCPFP === true;
   const isRBFEligible = transaction.rbfEligible === true;
   const isCPFPEligible = transaction.cpfpEligible === true;
 
@@ -207,7 +207,7 @@ export default function TransactionDetailsScreen() {
       return;
     }
 
-    if (feeSettings?.enableCPFP === false) {
+    if (feeSettings?.enableCPFP !== true) {
       Alert.alert(
         'CPFP Disabled',
         'Enable CPFP in Fee Settings to bump fees on pending transactions you received or sent.'
