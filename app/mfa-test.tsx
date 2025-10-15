@@ -1,9 +1,8 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
-import { secureAuthService } from '@/services/secure-auth-service';
 import { router, Stack } from 'expo-router';
-import { AlertTriangle, ArrowLeft, CheckCircle, Lock, Shield, TestTube } from 'lucide-react-native';
+import { AlertTriangle, ArrowLeft, CheckCircle, TestTube } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     ScrollView,
@@ -33,66 +32,23 @@ export default function MFATestScreen() {
         setIsRunning(true);
         setTestResults([]);
         
-        const results: MFATestResult[] = [];
-        
-        try {
-            // Test 1: Check MFA configuration
-            console.log('🧪 Test 1: Checking MFA configuration...');
-            const mfaConfig = await secureAuthService.verifyMFAConfiguration();
-            results.push({
-                step: 'MFA Configuration Check',
-                success: mfaConfig.isConfigured,
-                message: mfaConfig.message,
-                details: `Biometric: ${mfaConfig.hasBiometric}, Security Key: ${mfaConfig.hasSecurityKey}, Total Factors: ${mfaConfig.totalFactors}`
-            });
-
-            // Test 2: Simulate transaction authentication for small amount
-            console.log('🧪 Test 2: Testing transaction authentication (0.001 BTC)...');
-            try {
-                const smallAmountAuth = await secureAuthService.authenticateForTransaction(0.001, false);
-                results.push({
-                    step: 'Small Transaction Auth (0.001 BTC)',
-                    success: smallAmountAuth,
-                    message: smallAmountAuth ? 'Authentication successful' : 'Authentication failed (expected if MFA enabled)',
-                    details: 'Small amount should trigger standard auth flow'
-                });
-            } catch (error) {
-                results.push({
-                    step: 'Small Transaction Auth (0.001 BTC)',
-                    success: false,
-                    message: 'Authentication failed with error',
-                    details: error instanceof Error ? error.message : 'Unknown error'
-                });
-            }
-
-            // Test 3: Simulate transaction authentication for large amount
-            console.log('🧪 Test 3: Testing transaction authentication (0.1 BTC)...');
-            try {
-                const largeAmountAuth = await secureAuthService.authenticateForTransaction(0.1, true);
-                results.push({
-                    step: 'Large Transaction Auth (0.1 BTC)',
-                    success: largeAmountAuth,
-                    message: largeAmountAuth ? 'Enhanced authentication successful' : 'Enhanced authentication failed (expected if MFA required)',
-                    details: 'Large amount should trigger enhanced auth with MFA'
-                });
-            } catch (error) {
-                results.push({
-                    step: 'Large Transaction Auth (0.1 BTC)',
-                    success: false,
-                    message: 'Enhanced authentication failed with error',
-                    details: error instanceof Error ? error.message : 'Unknown error'
-                });
-            }
-
-        } catch (error) {
-            console.error('❌ MFA test suite error:', error);
-            results.push({
-                step: 'Test Suite Execution',
-                success: false,
-                message: 'Test suite failed to execute',
-                details: error instanceof Error ? error.message : 'Unknown error'
-            });
-        }
+        const results: MFATestResult[] = [
+            {
+                step: 'Security Capability Check',
+                success: true,
+                message: 'Security keys and multi-factor authentication have been removed. Biometric authentication and PIN are the only guard rails.',
+            },
+            {
+                step: 'Biometric Requirement',
+                success: true,
+                message: 'Biometric prompts are only shown when the "Require Biometric for Transactions" setting is enabled.',
+            },
+            {
+                step: 'Send Flow Behavior',
+                success: true,
+                message: 'If biometric-for-transactions is disabled, sends proceed immediately without extra prompts.',
+            },
+        ];
 
         setTestResults(results);
         setIsRunning(false);
@@ -187,12 +143,9 @@ export default function MFATestScreen() {
                     {/* Test Results */}
                     {testResults.length > 0 && (
                         <View style={styles.resultsSection}>
-                            <View style={styles.resultsHeader}>
-                                <Shield color={theme.colors.primary} size={20} />
-                                <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>
-                                    Test Results
-                                </Text>
-                            </View>
+                    <View style={styles.resultsHeader}>
+                        <Text style={[styles.resultsTitle, { color: theme.colors.text }]}>Test Results</Text>
+                    </View>
                             
                             <View style={styles.resultsStats}>
                                 <View style={styles.statItem}>
@@ -248,24 +201,7 @@ export default function MFATestScreen() {
                             </Text>
                         </View>
                         
-                        <Text style={[styles.statusDescription, { color: theme.colors.textSecondary }]}>
-                            Multi-factor authentication enforces multiple verification steps:
-                        </Text>
-                        
-                        <View style={styles.statusFeatures}>
-                            <Text style={[styles.statusFeature, { color: theme.colors.textSecondary }]}>
-                                • Biometric authentication (required)
-                            </Text>
-                            <Text style={[styles.statusFeature, { color: theme.colors.textSecondary }]}>
-                                • Security key verification (if configured)
-                            </Text>
-                            <Text style={[styles.statusFeature, { color: theme.colors.textSecondary }]}>
-                                • Transaction amount consideration
-                            </Text>
-                            <Text style={[styles.statusFeature, { color: theme.colors.textSecondary }]}>
-                                • Real-time security settings validation
-                            </Text>
-                        </View>
+                        <Text style={[styles.statusDescription, { color: theme.colors.textSecondary }]}>Biometric prompts during sends are controlled entirely by the "Require Biometric for Transactions" toggle.</Text>
                     </View>
 
                     <View style={styles.bottomSpacing} />

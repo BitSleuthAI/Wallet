@@ -25,7 +25,7 @@ export class SecurityGuardService {
       if (!authResult.success) {
         Alert.alert(
           'Authentication Required',
-          'You must authenticate with biometric or security key to ' + operationDescription.toLowerCase() + '. This prevents unauthorized changes to your security configuration.',
+          'Biometric authentication is required to ' + operationDescription.toLowerCase() + '. This prevents unauthorized changes to your security configuration.',
           [{ text: 'OK' }]
         );
         console.log('[ERROR] Authentication failed for ' + operationDescription);
@@ -83,44 +83,6 @@ export class SecurityGuardService {
   }
 
   /**
-   * Verify authentication for security key operations
-   * Enhanced security check for FIDO/passkey operations
-   */
-  static async requireAuthenticationForSecurityKeyOperation(
-    operationDescription: string
-  ): Promise<boolean> {
-    try {
-      console.log('[AUTH] Security Key Guard: Requiring authentication for ' + operationDescription + '...');
-      
-      // For security key operations, try biometric first, then fallback to FIDO
-      let authResult = await secureAuthService.authenticateWithBiometric(
-        'Security verification required for ' + operationDescription
-      );
-      
-      if (!authResult.success) {
-        Alert.alert(
-          'Security Verification Required',
-          'For ' + operationDescription.toLowerCase() + ', you must verify your identity. This prevents unauthorized modification of security keys and authentication methods.',
-          [{ text: 'OK' }]
-        );
-        console.log('[ERROR] Security authentication failed for ' + operationDescription);
-        return false;
-      }
-      
-      console.log('[SUCCESS] Security authentication successful for ' + operationDescription);
-      return true;
-    } catch (error) {
-      console.error('[ERROR] Security authentication error during ' + operationDescription + ':', error);
-      Alert.alert(
-        'Security Verification Failed',
-        'Unable to verify your identity. This security operation requires proper authentication to prevent unauthorized changes.',
-        [{ text: 'OK' }]
-      );
-      return false;
-    }
-  }
-
-  /**
    * Confirm that security operations are properly guarded
    * Used for security audit and verification
    */
@@ -135,8 +97,6 @@ export class SecurityGuardService {
     return [
       'Security Settings Change',
       'Biometric Enable/Disable',
-      'Security Key Registration/Removal',
-      'MFA Configuration Changes',
       'Transaction Authentication',
     ];
   }
