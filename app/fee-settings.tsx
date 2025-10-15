@@ -523,7 +523,7 @@ export default function FeeSettingsScreen() {
                 • <Text style={{ fontWeight: '600' }}>Must be enabled:</Text> The original transaction must support RBF
               </Text>
               <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
-                • <Text style={{ fontWeight: '600' }}>Replace, don't duplicate:</Text> Cancels the old transaction
+                • <Text style={{ fontWeight: '600' }}>Replace, don&apos;t duplicate:</Text> Cancels the old transaction
               </Text>
               <Text style={[styles.rbfInfoFeature, { color: theme.colors.textSecondary }]}>
                 • <Text style={{ fontWeight: '600' }}>Higher fee required:</Text> New fee rate must be higher

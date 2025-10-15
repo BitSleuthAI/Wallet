@@ -548,10 +548,11 @@ export default function SendScreen() {
       }
 
       // Check minimum amount (dust limit)
-      const dustLimit = 0.00000546; // 546 satoshis
+      const dustThreshold = (feeSettings && feeSettings.dustThreshold) ? feeSettings.dustThreshold : 546;
+      const dustLimit = dustThreshold / 100000000; // Convert satoshis to BTC
       if (amountInBTC < dustLimit) {
         const dustLimitText = dustLimit.toString();
-        const errorMessage = `Amount too small. Minimum amount is ${dustLimitText} BTC`;
+        const errorMessage = `Amount too small. Minimum amount is ${dustLimitText} BTC (${dustThreshold} sats)`;
         Alert.alert('Error', errorMessage);
         return;
       }
