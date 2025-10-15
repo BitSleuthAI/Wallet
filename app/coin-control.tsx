@@ -6,29 +6,29 @@ import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
-    ArrowLeft,
-    CheckCircle,
-    ChevronDown,
-    ChevronUp,
-    Circle,
-    Coins,
-    Filter,
-    Info,
-    Snowflake,
-    Zap,
+  ArrowLeft,
+  CheckCircle,
+  ChevronDown,
+  ChevronUp,
+  Circle,
+  Coins,
+  Filter,
+  Info,
+  Snowflake,
+  Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    Platform,
-    Pressable,
-    RefreshControl,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
@@ -88,7 +88,7 @@ export default function CoinControlScreen() {
         const id = `${utxo.txid}:${utxo.vout}`;
         return {
           ...utxo,
-          frozen: frozenSet.has(id) || utxo.frozen,
+          frozen: frozenSet.has(id),
         };
       }));
       const preSelected = new Set(coinControl.getSelectedUtxoIds().filter(id => !frozenSet.has(id)));
