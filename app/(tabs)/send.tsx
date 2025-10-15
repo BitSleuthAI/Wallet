@@ -347,7 +347,7 @@ export default function SendScreen() {
       }
     };
     fetchUtxos();
-  }, [currentWallet]);
+  }, [currentWallet, coinControl]);
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
