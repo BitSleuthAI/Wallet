@@ -183,10 +183,10 @@ export default function TransactionDetailsScreen() {
   };
 
   const handleRBF = () => {
-    if (!transaction.rbf || transaction.status !== 'pending') {
+    if (!transaction.rbfEligible) {
       Alert.alert(
         'RBF Not Available',
-        'Replace-by-Fee is only available for pending transactions that were created with RBF enabled.'
+        'Replace-by-Fee is only available for pending transactions that were created with RBF enabled and spend your wallet inputs.'
       );
       return;
     }
@@ -195,10 +195,10 @@ export default function TransactionDetailsScreen() {
   };
 
   const handleCPFP = () => {
-    if (transaction.status !== 'pending') {
+    if (!transaction.cpfpEligible) {
       Alert.alert(
         'CPFP Not Available',
-        'Child-Pays-for-Parent is only available for pending transactions.'
+        'Child-Pays-for-Parent is only available for pending transactions that pay to your wallet.'
       );
       return;
     }
@@ -382,7 +382,7 @@ export default function TransactionDetailsScreen() {
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Features</Text>
               <View style={styles.featureTags}>
-                {transaction.rbf && (
+                {transaction.rbfEligible && (
                   <View style={[styles.featureTag, { backgroundColor: theme.colors.warning + '20' }]}>
                     <Zap color={theme.colors.warning} size={12} />
                     <Text style={[styles.featureTagText, { color: theme.colors.warning }]}>
@@ -390,7 +390,7 @@ export default function TransactionDetailsScreen() {
                     </Text>
                   </View>
                 )}
-                {transaction.cpfp && (
+                {transaction.cpfpEligible && (
                   <View style={[styles.featureTag, { backgroundColor: theme.colors.success + '20' }]}>
                     <DollarSign color={theme.colors.success} size={12} />
                     <Text style={[styles.featureTagText, { color: theme.colors.success }]}>
@@ -423,20 +423,32 @@ export default function TransactionDetailsScreen() {
           </TouchableOpacity>
 
           {/* RBF Button for sent transactions */}
-          {!isReceived && transaction.status === 'pending' && (
-            <TouchableOpacity style={styles.actionButton} onPress={handleRBF}>
-              <Zap color={theme.colors.warning} size={20} />
-              <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+          {!isReceived && transaction.status === 'pending' && feeSettings?.enableRBF !== false && (
+            <TouchableOpacity
+              style={[styles.actionButton, (!transaction.rbfEligible) && styles.disabledActionButton]}
+              onPress={handleRBF}
+              disabled={!transaction.rbfEligible}
+            >
+              <Zap color={transaction.rbfEligible ? theme.colors.warning : theme.colors.textSecondary} size={20} />
+              <Text
+                style={[styles.actionButtonText, { color: transaction.rbfEligible ? theme.colors.text : theme.colors.textSecondary }]}
+              >
                 Replace-by-Fee (RBF)
               </Text>
             </TouchableOpacity>
           )}
 
           {/* CPFP Button for pending transactions when enabled */}
-          {transaction.status === 'pending' && (
-            <TouchableOpacity style={styles.actionButton} onPress={handleCPFP}>
-              <Zap color={theme.colors.success} size={20} />
-              <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
+          {transaction.status === 'pending' && feeSettings?.enableCPFP !== false && (
+            <TouchableOpacity
+              style={[styles.actionButton, (!transaction.cpfpEligible || !feeSettings?.enableCPFP) && styles.disabledActionButton]}
+              onPress={handleCPFP}
+              disabled={!transaction.cpfpEligible || !feeSettings?.enableCPFP}
+            >
+              <Zap color={transaction.cpfpEligible && feeSettings?.enableCPFP ? theme.colors.success : theme.colors.textSecondary} size={20} />
+              <Text
+                style={[styles.actionButtonText, { color: transaction.cpfpEligible && feeSettings?.enableCPFP ? theme.colors.text : theme.colors.textSecondary }]}
+              >
                 Child-Pays-for-Parent (CPFP)
               </Text>
             </TouchableOpacity>

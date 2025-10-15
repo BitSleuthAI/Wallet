@@ -9,15 +9,15 @@ import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { Check } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type FeeOption = {
@@ -70,13 +70,19 @@ export default function FeeBumpScreen() {
   // Validate capability for RBF mode (does not depend on fee rate)
   useEffect(() => {
     const runRbfValidation = async () => {
-      if (!transaction || !currentWallet || isCPFPMode) {
+    if (!transaction || !currentWallet || isCPFPMode) {
         return;
       }
 
       setIsValidating(true);
       setValidationError(null);
       setCanReplace(false);
+
+    if (!transaction.rbfEligible) {
+        setValidationError('This transaction is not eligible for RBF fee bumping from this wallet.');
+        setIsValidating(false);
+        return;
+      }
 
       try {
         const validation = await validateRBFTransaction(transaction.txid, currentWallet.addresses);
@@ -101,13 +107,19 @@ export default function FeeBumpScreen() {
   // Validate capability for CPFP mode (depends on debounced fee rate)
   useEffect(() => {
     const runCpfpValidation = async () => {
-      if (!transaction || !currentWallet || !isCPFPMode) {
+    if (!transaction || !currentWallet || !isCPFPMode) {
         return;
       }
 
       setIsValidating(true);
       setValidationError(null);
       setCanReplace(false);
+
+    if (!transaction.cpfpEligible) {
+        setValidationError('This transaction is not eligible for CPFP fee bumping from this wallet.');
+        setIsValidating(false);
+        return;
+      }
 
       try {
         // Gate by CPFP toggle
@@ -172,7 +184,7 @@ export default function FeeBumpScreen() {
     loadFeeEstimates();
   }, []);
 
-  if (!transaction) {
+    if (!transaction) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
         <Stack.Screen 
@@ -622,7 +634,7 @@ export default function FeeBumpScreen() {
           
           <Text style={[styles.feeHint, { color: theme.colors.textSecondary }]}>
             {isCPFPMode
-              ? 'Choose a higher fee rate to speed up confirmation of the parent transaction.'
+              ? 'Choose a fee rate that keeps the combined parent + child fee competitive. Higher rates increase the chance of confirming both transactions together.'
               : `The total fee rate (satoshi per byte) you want to pay should be higher than ${getMinimumFeeRate()} sat/byte`}
           </Text>
         </View>

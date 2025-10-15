@@ -48,7 +48,9 @@ export interface Transaction {
   size?: number; // transaction size in bytes
   vsize?: number; // virtual size
   rbf?: boolean; // Replace-by-fee enabled
+  rbfEligible?: boolean; // Wallet can bump via RBF
   cpfp?: boolean; // Child-pays-for-parent enabled
+  cpfpEligible?: boolean; // Wallet can bump via CPFP
   parentTxid?: string; // For CPFP child transactions
   childTxids?: string[]; // For CPFP parent transactions
   inputs?: TransactionInput[];
