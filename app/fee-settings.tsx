@@ -450,7 +450,7 @@ export default function FeeSettingsScreen() {
               onChangeText={(text) => {
                 setCustomFeeRate(text);
                 updateSetting('customFeeRate', parseInt(text) || 0);
-                if (selectedPreset === 'custom') {
+                if (selectedPreset !== 'custom') {
                   // Auto-select custom when user types
                   setSelectedPreset('custom');
                   updateSetting('defaultPreset', 'custom');
