@@ -2,7 +2,7 @@ import { darkTheme, lightTheme } from '@/constants/themes';
 import { clearCacheForWalletXpub } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { getWalletData } from '@/services/wallet-service';
-import { AddressInfo, FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
+import { FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -76,6 +76,102 @@ const CURRENCY_NAMES: Record<FiatCurrency, string> = {
   GBP: 'British Pound Sterling',
 };
 
+const FEE_SETTINGS_STORAGE_KEY = 'feeSettingsByWallet';
+const LEGACY_FEE_SETTINGS_STORAGE_KEY = 'feeSettings';
+const FALLBACK_WALLET_ID = '__global';
+
+const defaultFeeSettings: FeeSettings = {
+  defaultPreset: 'economy',
+  customFeeRate: 10,
+  enableRBF: true,
+  enableCPFP: true,
+  autoAdjustFees: true,
+  maxFeeRate: 100,
+  dustThreshold: 546,
+  cpfpMaxChildFee: 10000,
+  cpfpIncludeUnconfirmed: true,
+};
+
+const FEE_PRESETS: FeeSettings['defaultPreset'][] = ['economy', 'standard', 'priority', 'custom'];
+
+const isValidFeePreset = (value: unknown): value is FeeSettings['defaultPreset'] => {
+  return typeof value === 'string' && FEE_PRESETS.includes(value as FeeSettings['defaultPreset']);
+};
+
+const ensurePositiveInteger = (value: unknown, fallback: number, min: number = 1): number => {
+  const numeric = typeof value === 'number' ? value : parseInt(String(value), 10);
+  if (Number.isFinite(numeric) && numeric >= min) {
+    return Math.floor(numeric);
+  }
+  return fallback;
+};
+
+const ensureBoolean = (value: unknown, fallback: boolean): boolean => {
+  return typeof value === 'boolean' ? value : fallback;
+};
+
+const normalizeFeeSettings = (settings?: Partial<FeeSettings>): FeeSettings => {
+  const source = settings || {};
+
+  return {
+    defaultPreset: isValidFeePreset(source.defaultPreset) ? source.defaultPreset : defaultFeeSettings.defaultPreset,
+    customFeeRate: ensurePositiveInteger(source.customFeeRate, defaultFeeSettings.customFeeRate),
+    enableRBF: ensureBoolean(source.enableRBF, defaultFeeSettings.enableRBF),
+    enableCPFP: ensureBoolean(source.enableCPFP, defaultFeeSettings.enableCPFP),
+    autoAdjustFees: ensureBoolean(source.autoAdjustFees, defaultFeeSettings.autoAdjustFees),
+    maxFeeRate: ensurePositiveInteger(source.maxFeeRate, defaultFeeSettings.maxFeeRate),
+    dustThreshold: ensurePositiveInteger(source.dustThreshold, defaultFeeSettings.dustThreshold),
+    cpfpMaxChildFee: ensurePositiveInteger(source.cpfpMaxChildFee, defaultFeeSettings.cpfpMaxChildFee),
+    cpfpIncludeUnconfirmed: ensureBoolean(source.cpfpIncludeUnconfirmed, defaultFeeSettings.cpfpIncludeUnconfirmed),
+  };
+};
+
+const normalizeFeeSettingsMap = (map: unknown): Record<string, FeeSettings> => {
+  if (!map || typeof map !== 'object' || Array.isArray(map)) {
+    return {};
+  }
+
+  return Object.entries(map as Record<string, unknown>).reduce<Record<string, FeeSettings>>((acc, [key, value]) => {
+    if (value && typeof value === 'object') {
+      acc[key] = normalizeFeeSettings(value as Partial<FeeSettings>);
+    }
+    return acc;
+  }, {});
+};
+
+const areFeeSettingsEqual = (a: FeeSettings, b: FeeSettings): boolean => {
+  return (
+    a.defaultPreset === b.defaultPreset &&
+    a.customFeeRate === b.customFeeRate &&
+    a.enableRBF === b.enableRBF &&
+    a.enableCPFP === b.enableCPFP &&
+    a.autoAdjustFees === b.autoAdjustFees &&
+    a.maxFeeRate === b.maxFeeRate &&
+    a.dustThreshold === b.dustThreshold &&
+    a.cpfpMaxChildFee === b.cpfpMaxChildFee &&
+    a.cpfpIncludeUnconfirmed === b.cpfpIncludeUnconfirmed
+  );
+};
+
+const feeSettingsMapsEqual = (a: Record<string, FeeSettings>, b: Record<string, FeeSettings>): boolean => {
+  const aKeys = Object.keys(a);
+  const bKeys = Object.keys(b);
+
+  if (aKeys.length !== bKeys.length) {
+    return false;
+  }
+
+  for (const key of aKeys) {
+    const first = a[key];
+    const second = b[key];
+    if (!second || !areFeeSettingsEqual(first, second)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export const [WalletProvider, useWallet] = createContextHook(() => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
@@ -86,22 +182,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const queryClient = useQueryClient();
   const [coinControlSelected, setCoinControlSelectedState] = useState<Record<string, string[]>>({});
   const [coinControlFrozen, setCoinControlFrozenState] = useState<Record<string, string[]>>({});
-  const hasSetInitialWallet = useRef(false);
   const currentWalletIdRef = useRef<string | null>(null);
-  const [feedbackPromptShown, setFeedbackPromptShown] = useState<boolean>(false);
   const [cryptoReady, setCryptoReady] = useState(false);
   const cryptoReadyRef = useRef(false);
-  const [feeSettings, setFeeSettingsState] = useState<FeeSettings>({
-    defaultPreset: 'economy',
-    customFeeRate: 10,
-    enableRBF: true,
-    enableCPFP: true,
-    autoAdjustFees: true,
-    maxFeeRate: 100,
-    dustThreshold: 546,
-    cpfpMaxChildFee: 10000,
-    cpfpIncludeUnconfirmed: true,
-  });
+  const [feeSettingsMap, setFeeSettingsMap] = useState<Record<string, FeeSettings>>({});
+  const [feeSettings, setFeeSettingsState] = useState<FeeSettings>(() => ({ ...defaultFeeSettings }));
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -206,8 +291,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('wallets');
       return stored ? JSON.parse(stored) : [];
     },
-    staleTime: Infinity, // Wallets data is always fresh from AsyncStorage
-    gcTime: Infinity, // Keep wallets in cache indefinitely
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   // Load current wallet ID from storage
@@ -219,105 +304,33 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
 
-  // Load theme from storage
-  const themeQuery = useQuery({
-    queryKey: ['theme'],
+  const feeSettingsByWalletQuery = useQuery({
+    queryKey: ['feeSettingsByWallet'],
     queryFn: async () => {
-      const stored = await AsyncStorage.getItem('theme');
-      return stored === 'dark' ? darkTheme : lightTheme;
+      try {
+        const storedMap = await AsyncStorage.getItem(FEE_SETTINGS_STORAGE_KEY);
+        const data = storedMap ? JSON.parse(storedMap) : {};
+        return normalizeFeeSettingsMap(data);
+      } catch (err) {
+        console.warn('Failed to load fee settings map, using defaults.', err);
+        return {};
+      }
     },
   });
 
-  // Load coin control selections
-  const coinControlSelectedQuery = useQuery({
-    queryKey: ['coinControlSelected'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('coinControlSelected');
-      return stored ? JSON.parse(stored) as Record<string, string[]> : {};
-    },
-  });
+  useEffect(() => {
+    if (walletsQuery.data) {
+      setWallets(walletsQuery.data);
+    }
+  }, [walletsQuery.data]);
 
-  // Load coin control frozen list
-  const coinControlFrozenQuery = useQuery({
-    queryKey: ['coinControlFrozen'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('coinControlFrozen');
-      return stored ? JSON.parse(stored) as Record<string, string[]> : {};
-    },
-  });
+  useEffect(() => {
+    if (currentWalletQuery.data) {
+      setCurrentWalletId(currentWalletQuery.data);
+    }
+  }, [currentWalletQuery.data]);
 
-  // Load currency from storage
-  const currencyQuery = useQuery({
-    queryKey: ['currency'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('currency');
-      return (stored as FiatCurrency) || 'USD';
-    },
-  });
-
-  // Load hide balance setting from storage
-  const hideBalanceQuery = useQuery({
-    queryKey: ['hideBalance'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('hideBalance');
-      return stored === 'true';
-    },
-  });
-
-  // Load auto-lock timeout from storage
-  const autoLockQuery = useQuery({
-    queryKey: ['autoLockTimeout'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('autoLockTimeout');
-      return stored ? parseInt(stored, 10) : 15;
-    },
-  });
-
-  // Load feedback tracking data
-  const feedbackTrackingQuery = useQuery({
-    queryKey: ['feedbackTracking'],
-    queryFn: async () => {
-      const firstUsed = await AsyncStorage.getItem('appFirstUsed');
-      const feedbackShown = await AsyncStorage.getItem('feedbackPromptShown');
-      const feedbackDismissed = await AsyncStorage.getItem('feedbackPromptDismissed');
-      
-      return {
-        firstUsed: firstUsed ? parseInt(firstUsed, 10) : null,
-        feedbackShown: feedbackShown === 'true',
-        feedbackDismissed: feedbackDismissed === 'true',
-      };
-    },
-  });
-
-  // Load fee settings from storage
-  const feeSettingsQuery = useQuery({
-    queryKey: ['feeSettings'],
-    queryFn: async () => {
-      const stored = await AsyncStorage.getItem('feeSettings');
-      const fallback: FeeSettings = {
-        defaultPreset: 'economy',
-        customFeeRate: 10,
-        enableRBF: true,
-        enableCPFP: true,
-        autoAdjustFees: true,
-        maxFeeRate: 100,
-        dustThreshold: 546,
-        cpfpMaxChildFee: 10000,
-        cpfpIncludeUnconfirmed: true,
-      };
-      if (!stored) return fallback;
-      const parsed = JSON.parse(stored);
-      // Merge any missing new fields to maintain backward compatibility
-      return {
-        ...fallback,
-        ...parsed,
-        // Ensure booleans are coerced correctly if missing
-        enableCPFP: typeof parsed.enableCPFP === 'boolean' ? parsed.enableCPFP : fallback.enableCPFP,
-        cpfpMaxChildFee: typeof parsed.cpfpMaxChildFee === 'number' ? parsed.cpfpMaxChildFee : fallback.cpfpMaxChildFee,
-        cpfpIncludeUnconfirmed: typeof parsed.cpfpIncludeUnconfirmed === 'boolean' ? parsed.cpfpIncludeUnconfirmed : fallback.cpfpIncludeUnconfirmed,
-      } as FeeSettings;
-    },
-  });
+  const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
   // Bitcoin price query using Esplora service
   const priceQuery = useQuery({
@@ -638,278 +651,74 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
   const { mutate: saveAutoLock } = saveAutoLockMutation;
 
-  // Save fee settings mutation
-  const saveFeeSettingsMutation = useMutation({
-    mutationFn: async (settings: FeeSettings) => {
-      await AsyncStorage.setItem('feeSettings', JSON.stringify(settings));
-      return settings;
-    },
-    onSuccess: (settings) => {
-      setFeeSettingsState(settings);
-      queryClient.invalidateQueries({ queryKey: ['feeSettings'] });
-    },
-  });
-  const { mutate: saveFeeSettings } = saveFeeSettingsMutation;
+  const upsertFeeSettings = useCallback(async (walletId: string, settings: FeeSettings) => {
+    const normalized = normalizeFeeSettings(settings);
 
-  // Track first app usage and feedback prompt
+    const updatedMap = { ...feeSettingsMap, [walletId]: normalized };
+
+    if (!feeSettingsMapsEqual(updatedMap, feeSettingsMap)) {
+      setFeeSettingsMap(updatedMap);
+    }
+
+    if (walletId === currentWalletId && !areFeeSettingsEqual(normalized, feeSettings)) {
+      setFeeSettingsState(normalized);
+    }
+
+    try {
+      await AsyncStorage.setItem(FEE_SETTINGS_STORAGE_KEY, JSON.stringify(updatedMap));
+    } catch (err) {
+      console.warn('Failed to persist fee settings map', err);
+    }
+  }, [currentWalletId, feeSettingsMap, feeSettings]);
+
+  const migrateLegacyFeeSettings = useCallback(async (map: Record<string, FeeSettings>) => {
+    const result = { ...map };
+
+    try {
+      const legacy = await AsyncStorage.getItem(LEGACY_FEE_SETTINGS_STORAGE_KEY);
+      if (!legacy) {
+        return result;
+      }
+
+      const parsed = normalizeFeeSettings(JSON.parse(legacy));
+      result[FALLBACK_WALLET_ID] = parsed;
+
+      await AsyncStorage.removeItem(LEGACY_FEE_SETTINGS_STORAGE_KEY);
+      await AsyncStorage.setItem(FEE_SETTINGS_STORAGE_KEY, JSON.stringify(result));
+    } catch (err) {
+      console.warn('Failed to migrate legacy fee settings', err);
+    }
+
+    return result;
+  }, []);
+
   useEffect(() => {
-    const trackFirstUsage = async () => {
-      const firstUsed = await AsyncStorage.getItem('appFirstUsed');
-      if (!firstUsed) {
-        const now = Date.now();
-        await AsyncStorage.setItem('appFirstUsed', now.toString());
-        queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
+    const applySettingsMap = async () => {
+      if (!feeSettingsByWalletQuery.data || feeSettingsByWalletQuery.isLoading) {
+        return;
+      }
+
+      const normalizedMap = await migrateLegacyFeeSettings(feeSettingsByWalletQuery.data);
+
+      if (!feeSettingsMapsEqual(normalizedMap, feeSettingsMap)) {
+        setFeeSettingsMap(normalizedMap);
       }
     };
-    trackFirstUsage();
-  }, [queryClient]);
 
-  // Mark feedback prompt as shown
-  const markFeedbackPromptShown = useCallback(async () => {
-    await AsyncStorage.setItem('feedbackPromptShown', 'true');
-    setFeedbackPromptShown(true);
-    queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
-  }, [queryClient]);
-
-  // Mark feedback prompt as dismissed
-  const markFeedbackPromptDismissed = useCallback(async () => {
-    await AsyncStorage.setItem('feedbackPromptDismissed', 'true');
-    queryClient.invalidateQueries({ queryKey: ['feedbackTracking'] });
-  }, [queryClient]);
-
-  // Check if feedback prompt should be shown (after 3 weeks of usage)
-  const shouldShowFeedbackPrompt = useMemo(() => {
-    if (!feedbackTrackingQuery.data) return false;
-    
-    const { firstUsed, feedbackShown, feedbackDismissed } = feedbackTrackingQuery.data;
-    
-    // Don't show if already shown or dismissed
-    if (feedbackShown || feedbackDismissed) return false;
-    
-    // Don't show if first usage not tracked
-    if (!firstUsed) return false;
-    
-    // Show after 3 weeks (21 days) of usage
-    const threeWeeksInMs = 21 * 24 * 60 * 60 * 1000;
-    const now = Date.now();
-    
-    return (now - firstUsed) >= threeWeeksInMs;
-  }, [feedbackTrackingQuery.data]);
+    applySettingsMap();
+  }, [feeSettingsByWalletQuery.data, feeSettingsByWalletQuery.isLoading, migrateLegacyFeeSettings, feeSettingsMap]);
 
   useEffect(() => {
-    if (walletsQuery.data) {
-      setWallets(walletsQuery.data);
+    if (!feeSettingsLoading) {
+      const settings = getCurrentFeeSettings();
+      setFeeSettingsState(settings);
     }
-  }, [walletsQuery.data]);
-
-  // Update ref when currentWalletId changes
-  useEffect(() => {
-    currentWalletIdRef.current = currentWalletId;
-  }, [currentWalletId]);
-
-  // Separate effect to handle setting initial wallet ID
-  useEffect(() => {
-    if (walletsQuery.data && walletsQuery.data.length > 0 && !currentWalletIdRef.current && !currentWalletQuery.isLoading && !hasSetInitialWallet.current) {
-      hasSetInitialWallet.current = true;
-      // Use direct AsyncStorage call to avoid mutation cycle
-      AsyncStorage.setItem('currentWalletId', walletsQuery.data[0].id).then(() => {
-        setCurrentWalletId(walletsQuery.data[0].id);
-      });
-    }
-  }, [walletsQuery.data, currentWalletQuery.isLoading]);
-
-  useEffect(() => {
-    if (currentWalletQuery.data) {
-      setCurrentWalletId(currentWalletQuery.data);
-    }
-  }, [currentWalletQuery.data]);
-
-  useEffect(() => {
-    if (themeQuery.data) {
-      setTheme(themeQuery.data);
-    }
-  }, [themeQuery.data]);
-
-  useEffect(() => {
-    if (coinControlSelectedQuery.data) {
-      setCoinControlSelectedState(coinControlSelectedQuery.data);
-    }
-  }, [coinControlSelectedQuery.data]);
-
-  useEffect(() => {
-    if (coinControlFrozenQuery.data) {
-      setCoinControlFrozenState(coinControlFrozenQuery.data);
-    }
-  }, [coinControlFrozenQuery.data]);
-
-  useEffect(() => {
-    if (currencyQuery.data) {
-      setSelectedCurrency(currencyQuery.data);
-    }
-  }, [currencyQuery.data]);
-
-  useEffect(() => {
-    if (hideBalanceQuery.data !== undefined) {
-      setHideBalance(hideBalanceQuery.data);
-    }
-  }, [hideBalanceQuery.data]);
-
-  useEffect(() => {
-    if (autoLockQuery.data !== undefined) {
-      setAutoLockTimeout(autoLockQuery.data);
-    }
-  }, [autoLockQuery.data]);
-
-  useEffect(() => {
-    if (feeSettingsQuery.data) {
-      setFeeSettingsState(feeSettingsQuery.data);
-    }
-  }, [feeSettingsQuery.data]);
-
-  const createWallet = useCallback(async (name: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
-    try {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        return { success: false, error: 'Wallet name cannot be empty or contain only whitespace.' };
-      }
-      if (trimmedName.length > 50) {
-        return { success: false, error: 'Wallet name cannot exceed 50 characters.' };
-      }
-      // Check if a wallet with the same name already exists (case-insensitive)
-      const existingWalletWithName = wallets.find(wallet =>
-        wallet.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      if (existingWalletWithName) {
-        return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
-      }
-      
-      console.log('💼 Creating new wallet:', trimmedName);
-      const wallet = await walletService.createWallet(trimmedName, color);
-      const updatedWallets = [...wallets, wallet];
-      
-      // Update state and storage synchronously
-      await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
-      await AsyncStorage.setItem('currentWalletId', wallet.id);
-      
-      setWallets(updatedWallets);
-      setCurrentWalletId(wallet.id);
-      
-      // Wait for state to settle
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
-      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
-      
-      console.log('✅ Wallet created successfully');
-      return { success: true, wallet };
-    } catch (error) {
-      console.error('❌ Error creating wallet:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
-    }
-  }, [wallets, queryClient]);
-
-  const importWallet = useCallback(async (name: string, mnemonic: string, color?: string): Promise<{ success: boolean; wallet?: any; error?: string }> => {
-    try {
-      const trimmedName = name.trim();
-      if (!trimmedName) {
-        return { success: false, error: 'Wallet name cannot be empty or contain only whitespace.' };
-      }
-      if (trimmedName.length > 50) {
-        return { success: false, error: 'Wallet name cannot exceed 50 characters.' };
-      }
-      const trimmedMnemonic = mnemonic.trim();
-      if (!trimmedMnemonic) {
-        return { success: false, error: 'Recovery phrase cannot be empty or contain only whitespace.' };
-      }
-      // Check if a wallet with the same mnemonic already exists
-      const existingWallet = wallets.find(wallet => wallet.mnemonic === trimmedMnemonic);
-      if (existingWallet) {
-        return { success: false, error: `Wallet "${existingWallet.name}" has already been imported with this recovery phrase.` };
-      }
-      // Check if a wallet with the same name already exists (case-insensitive)
-      const existingWalletWithName = wallets.find(wallet =>
-        wallet.name.toLowerCase() === trimmedName.toLowerCase()
-      );
-      if (existingWalletWithName) {
-        return { success: false, error: `A wallet with the name "${trimmedName}" already exists. Please choose a different name.` };
-      }
-      
-      console.log('📥 Importing wallet:', trimmedName);
-      const wallet = await walletService.importWallet(trimmedName, trimmedMnemonic, color);
-      const updatedWallets = [...wallets, wallet];
-      
-      // Update state and storage synchronously
-      await AsyncStorage.setItem('wallets', JSON.stringify(updatedWallets));
-      await AsyncStorage.setItem('currentWalletId', wallet.id);
-      
-      setWallets(updatedWallets);
-      setCurrentWalletId(wallet.id);
-      
-      // Wait for state to settle
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // Invalidate queries
-      queryClient.invalidateQueries({ queryKey: ['wallets'] });
-      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
-      
-      console.log('✅ Wallet imported successfully');
-      return { success: true, wallet };
-    } catch (error) {
-      console.error('❌ Error importing wallet:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
-    }
-  }, [wallets, queryClient]);
-
-  const generateNewAddress = useCallback(async (): Promise<{ success: boolean; address?: string; error?: string }> => {
-    if (!currentWallet) return { success: false, error: 'No wallet selected' };
-    try {
-      console.log('🚀 Fast address generation starting...');
-      const startTime = Date.now();
-      
-      const updatedWallet = await walletService.generateNewAddress(currentWallet);
-      const updatedWallets = wallets.map(w => w.id === updatedWallet.id ? updatedWallet : w);
-      saveWallets(updatedWallets);
-      
-      // Validate that the wallet has addresses before accessing
-      if (!updatedWallet.addresses || updatedWallet.addresses.length === 0) {
-        return { success: false, error: 'No addresses available in updated wallet' };
-      }
-      
-      const newAddress = updatedWallet.addresses[updatedWallet.addresses.length - 1];
-      const endTime = Date.now();
-      console.log(`✅ Fast address generation completed in ${endTime - startTime}ms`);
-      
-      return { success: true, address: newAddress };
-    } catch (error) {
-      console.error('Error generating new address:', error);
-      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate new address' };
-    }
-  }, [currentWallet, wallets, saveWallets]);
-
-  const toggleTheme = useCallback(() => {
-    saveTheme(!theme.isDark);
-  }, [theme.isDark, saveTheme]);
-
-  const setCurrency = useCallback((currency: FiatCurrency) => {
-    saveCurrency(currency);
-  }, [saveCurrency]);
-
-  const setHideBalanceSetting = useCallback((hide: boolean) => {
-    saveHideBalance(hide);
-  }, [saveHideBalance]);
-
-  const setAutoLockTimeoutSetting = useCallback((timeout: number) => {
-    saveAutoLock(timeout);
-  }, [saveAutoLock]);
+  }, [currentWalletId, feeSettingsLoading, getCurrentFeeSettings]);
 
   const setFeeSettings = useCallback((settings: FeeSettings) => {
-    saveFeeSettings(settings);
-  }, [saveFeeSettings]);
+    const walletId = currentWalletId || FALLBACK_WALLET_ID;
+    void upsertFeeSettings(walletId, settings);
+  }, [currentWalletId, upsertFeeSettings]);
 
   const setCoinControlSelected = useCallback((ids: string[]) => {
     if (!currentWallet) return;
@@ -988,24 +797,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [selectedCurrency]);
 
   const refreshData = useCallback(async () => {
-    // console.log('Refreshing wallet data...');
     try {
-      // Clear any potential cached mock/demo data
       await AsyncStorage.multiRemove([
         'mock_data', 'test_data', 'sample_data', 'dummy_data',
         'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
-      
-      // Don't clear entire cache - preserve transaction history for other wallets
-      // Only invalidate queries to trigger fresh fetches for current data
+
       queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
       queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
-      
-      // console.log('✅ Wallet data refresh initiated');
-    } catch (error) {
-      // console.warn('⚠️ Error during data refresh:', error);
+    } catch (err) {
+      console.warn('⚠️ Error during data refresh:', err);
     }
   }, [queryClient]);
 
@@ -1014,42 +817,39 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.log('🚫 No current wallet or addresses available for debugging');
       return;
     }
-    
+
     console.log('🔧 Starting debug transaction fetching...');
     const { esploraGet, getAddressTransactions, testProviderConnectivity } = await import('@/services/esplora-service');
-    
-    // First test provider connectivity
+
     console.log('🧪 Testing provider connectivity...');
     const connectivityResult = await testProviderConnectivity();
     console.log('🔧 Provider connectivity:', connectivityResult.data ? '✅ Connected' : '❌ Failed', connectivityResult.error || '');
-    
-    // Test with a known address that has transactions (Bitcoin Genesis block address)
+
     console.log('🧪 Testing with known address (Genesis block)...');
     try {
       const genesisAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
       const genesisResult = await getAddressTransactions(genesisAddress);
       console.log('🔧 Genesis address test:', genesisResult.data ? `✅ Found ${genesisResult.data.length} transactions` : '❌ Failed', genesisResult.error || '');
-    } catch (error) {
-      console.log('🔧 Genesis address test failed:', error);
+    } catch (err) {
+      console.log('🔧 Genesis address test failed:', err);
     }
-    
-    // Test raw esploraGet with a simple endpoint
+
     console.log('🧪 Testing raw esploraGet...');
     try {
       const blockHeight = await esploraGet('/blocks/tip/height');
       console.log('🔧 Raw esploraGet test:', `✅ Block height: ${blockHeight}`);
-    } catch (error) {
-      console.log('🔧 Raw esploraGet test failed:', error);
+    } catch (err) {
+      console.log('🔧 Raw esploraGet test failed:', err);
     }
-    
+
     console.log('🔧 Now testing your wallet addresses...');
     for (const address of currentWallet.addresses) {
       console.log(`🔧 Testing address: ${address}`);
       try {
         const result = await getAddressTransactions(address, currentWallet.xpub);
         console.log(`🔧 Address ${address}:`, result.data ? `✅ Found ${result.data.length} transactions` : '❌ Failed', result.error || '');
-      } catch (error) {
-        console.log(`🔧 Address ${address} test failed:`, error);
+      } catch (err) {
+        console.log(`🔧 Address ${address} test failed:`, err);
       }
     }
   }, [currentWallet]);
@@ -1170,58 +970,40 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const logoutAndEraseWallet = useCallback(async () => {
     try {
-      // console.log('🔄 Starting wallet logout and erase process...');
-      
-      // First, get all AsyncStorage keys to ensure we clear everything
       const allKeys = await AsyncStorage.getAllKeys();
-      // console.log('📋 Found AsyncStorage keys:', allKeys);
-      
-      // Clear all AsyncStorage data completely
-      // console.log('🗑️ Clearing all AsyncStorage data...');
+      console.log('📋 Found AsyncStorage keys:', allKeys);
+
       await AsyncStorage.clear();
-      
-      // Reset local state immediately
-      // console.log('🔄 Resetting local state...');
+
       setWallets([]);
       setCurrentWalletId(null);
-      setTheme(lightTheme); // Reset to light theme
-      setSelectedCurrency('USD'); // Reset to USD
-      setHideBalance(false); // Reset hide balance setting
-      setAutoLockTimeout(15); // Reset auto-lock timeout to default
-      
-      // Clear all cached queries and reset query client
-      // console.log('🔄 Clearing query cache...');
+      setTheme(lightTheme);
+      setSelectedCurrency('USD');
+      setHideBalance(false);
+      setAutoLockTimeout(15);
+
       queryClient.clear();
       queryClient.resetQueries();
       queryClient.invalidateQueries();
-      
-      // Clear any global state that might persist
+
       if (typeof global !== 'undefined') {
         if ((global as any).ecc) {
-          // console.log('🔄 Clearing global ECC state...');
           delete (global as any).ecc;
         }
-        
+
         if ((global as any).__cryptoInitialized) {
-          // console.log('🔄 Resetting crypto initialization flag...');
           (global as any).__cryptoInitialized = false;
         }
-        
-        // Clear any other global wallet state
+
         if ((global as any).__walletState) {
-          // console.log('🔄 Clearing global wallet state...');
           delete (global as any).__walletState;
         }
       }
-      
-      // console.log('✅ Wallet data cleared successfully');
-      // console.log('🔄 App state has been completely reset');
-      
-      // Force a small delay to ensure all async operations complete
+
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-    } catch (error) {
-      // console.error('❌ Error clearing wallet data:', error);
+
+    } catch (err) {
+      console.error('❌ Error clearing wallet data:', err);
       throw new Error('Failed to clear wallet data. Please try again.');
     }
   }, [queryClient]);
@@ -1236,7 +1018,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const lastBalanceRef = useRef<number | null>(null);
   const lastTransactionsRef = useRef<Transaction[]>([]);
-  const lastAddressesRef = useRef<AddressInfo[]>([]);
   useEffect(() => {
     if (balanceQuery.data !== undefined && balanceQuery.data !== null) {
       lastBalanceRef.current = balanceQuery.data;
@@ -1283,29 +1064,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     transactionsError: transactionsQuery.error,
   }), [stableTransactions, transactionsQuery.isLoading, transactionsQuery.isFetching, transactionsQuery.error]);
 
-  const stableAddresses = addressesQuery.data ?? lastAddressesRef.current;
-  useEffect(() => {
-    if (addressesQuery.data) {
-      lastAddressesRef.current = addressesQuery.data;
-    }
-  }, [addressesQuery.data]);
-
-  const addressesData = useMemo(() => ({
-    addresses: stableAddresses,
-    isLoadingAddresses: addressesQuery.isLoading && lastAddressesRef.current.length === 0,
-    isRefreshingAddresses: addressesQuery.isFetching && lastAddressesRef.current.length > 0,
-    hasAddressesError: !!addressesQuery.error && lastAddressesRef.current.length === 0,
-    addressesError: addressesQuery.error,
-  }), [stableAddresses, addressesQuery.isLoading, addressesQuery.isFetching, addressesQuery.error]);
-
   const settingsData = useMemo(() => ({
     theme,
     selectedCurrency,
     hideBalance,
     autoLockTimeout,
     feeSettings,
-    feeSettingsLoading: feeSettingsQuery.isLoading,
-  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsQuery.isLoading]);
+    feeSettingsLoading,
+  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsLoading]);
 
   const actionsData = useMemo(() => ({
     createWallet,
@@ -1372,7 +1138,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     ...walletData,
     ...balanceData,
     ...transactionData,
-    ...addressesData,
     ...settingsData,
     ...actionsData,
     coinControl: coinControlData,
@@ -1384,7 +1149,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     walletData,
     balanceData,
     transactionData,
-    addressesData,
     settingsData,
     actionsData,
     coinControlData,
