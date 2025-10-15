@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.bitsleuthwallet"
+    namespace "ai.bitsleuth.wallet"
     defaultConfig {
-        applicationId "com.bitsleuthwallet"
+        applicationId "ai.bitsleuth.wallet"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
