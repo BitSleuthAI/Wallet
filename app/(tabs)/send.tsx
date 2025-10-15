@@ -77,6 +77,7 @@ export default function SendScreen() {
     oldRate: number;
     newRate: number;
     reason: string;
+    congestion: 'low' | 'medium' | 'high';
   } | null>(null);
 
   // Reset user interaction state only when component mounts
@@ -225,17 +226,21 @@ export default function SendScreen() {
         // Determine target fee rate based on congestion and user's preset preference
         let targetRate: number;
         let reason: string;
+        let desiredTier: 'slow' | 'normal' | 'fast';
         
         if (feeSettings.defaultPreset === 'economy') {
           // Economy preset - use economy fee but adjust for congestion
           targetRate = feeEstimates.economyFee;
+          desiredTier = 'slow';
           if (congestion === 'high') {
             // In high congestion, bump economy fee slightly
-            targetRate = Math.min(feeEstimates.halfHourFee, feeEstimates.economyFee * 1.5);
+            targetRate = Math.min(feeEstimates.halfHourFee, Math.ceil(feeEstimates.economyFee * 1.35));
+            desiredTier = 'normal';
             reason = 'High network congestion - increased economy fee';
           } else if (congestion === 'low') {
             // In low congestion, can use minimum fee
-            targetRate = Math.max(feeEstimates.minimumFee, feeEstimates.economyFee * 0.8);
+            targetRate = Math.max(feeEstimates.minimumFee, Math.ceil(feeEstimates.economyFee * 0.85));
+            desiredTier = 'slow';
             reason = 'Low network congestion - optimized economy fee';
           } else {
             reason = 'Normal network conditions - standard economy fee';
@@ -243,13 +248,16 @@ export default function SendScreen() {
         } else if (feeSettings.defaultPreset === 'standard') {
           // Standard preset - use half-hour fee but adjust for congestion
           targetRate = feeEstimates.halfHourFee;
+          desiredTier = 'normal';
           if (congestion === 'high') {
             // In high congestion, bump to fastest fee
             targetRate = feeEstimates.fastestFee;
+            desiredTier = 'fast';
             reason = 'High network congestion - upgraded to priority fee';
           } else if (congestion === 'low') {
             // In low congestion, can use economy fee
             targetRate = feeEstimates.economyFee;
+            desiredTier = 'slow';
             reason = 'Low network congestion - downgraded to economy fee';
           } else {
             reason = 'Normal network conditions - standard fee';
@@ -257,13 +265,19 @@ export default function SendScreen() {
         } else if (feeSettings.defaultPreset === 'priority') {
           // Priority preset - use fastest fee but adjust for congestion
           targetRate = feeEstimates.fastestFee;
+          desiredTier = 'fast';
           if (congestion === 'high') {
             // In high congestion, add premium
-            targetRate = Math.ceil(feeEstimates.fastestFee * 1.2);
+            targetRate = Math.min(
+              Math.ceil(feeEstimates.fastestFee * 1.15),
+              Math.ceil(feeSettings.maxFeeRate * 0.95)
+            );
+            desiredTier = 'fast';
             reason = 'High network congestion - premium priority fee';
           } else if (congestion === 'low') {
             // In low congestion, can use standard fee
             targetRate = feeEstimates.halfHourFee;
+            desiredTier = 'normal';
             reason = 'Low network congestion - downgraded to standard fee';
           } else {
             reason = 'Normal network conditions - priority fee';
@@ -271,39 +285,58 @@ export default function SendScreen() {
         } else {
           // Unknown preset, use standard
           targetRate = feeEstimates.halfHourFee;
+          desiredTier = 'normal';
           reason = 'Using standard fee rate';
         }
 
-        // Only adjust if the new rate is significantly different (>10% change)
-        const currentRate = feeRate;
-        const rateChangePercent = Math.abs(targetRate - currentRate) / currentRate;
-        
-        if (rateChangePercent > 0.1) { // 10% threshold
-          const oldRate = currentRate;
-          setFeeRate(targetRate);
-          setAutoAdjustmentActive(true);
-          
-          // Update the selected fee type to match the adjusted rate
-          if (targetRate <= feeEstimates.economyFee * 1.1) {
-            setSelectedFeeType('slow');
-          } else if (targetRate <= feeEstimates.halfHourFee * 1.1) {
-            setSelectedFeeType('normal');
-          } else {
-            setSelectedFeeType('fast');
-          }
-          
-          // Record the adjustment
-          setLastAutoAdjustment({
-            timestamp: Date.now(),
-            oldRate,
-            newRate: targetRate,
-            reason
-          });
-          
-          console.log(`🔄 Auto-adjusted fee: ${oldRate} → ${targetRate} sat/vB (${reason})`);
-        } else {
-          setAutoAdjustmentActive(false);
+        // Apply global caps and wallet-specific limits
+        const safeFeeCap = Math.max(1, feeSettings.maxFeeRate || 1);
+        const boundedTargetRate = Math.max(1, Math.min(targetRate, safeFeeCap));
+
+        const isCapped = boundedTargetRate !== targetRate;
+        if (isCapped) {
+          reason = `${reason} (capped at ${safeFeeCap} sat/vB)`;
         }
+
+        // Avoid tiny fluctuations that do not materially improve confirmation time
+        const currentRate = Math.max(1, feeRate);
+        const delta = Math.abs(boundedTargetRate - currentRate);
+        const rateChangePercent = delta / currentRate;
+
+        // Only adjust if difference is meaningful or we exceed cap
+        if (delta < 1 && rateChangePercent < 0.05) {
+          setAutoAdjustmentActive(false);
+          setLastAutoAdjustment((prev) =>
+            prev && prev.congestion === congestion ? prev : null
+          );
+          return;
+        }
+
+        const oldRate = currentRate;
+        const newRate = boundedTargetRate;
+        const appliedTier = desiredTier;
+
+        if (newRate === oldRate) {
+          setAutoAdjustmentActive(false);
+          return;
+        }
+
+        setFeeRate(newRate);
+        setAutoAdjustmentActive(true);
+
+        // Update tier using explicit intent from congestion logic
+        setSelectedFeeType(appliedTier);
+
+        setLastAutoAdjustment({
+          timestamp: Date.now(),
+          oldRate,
+          newRate,
+          reason,
+          congestion,
+        });
+        console.log(
+          `🔄 Auto-adjusted fee: ${oldRate} → ${newRate} sat/vB (${reason}, congestion: ${congestion})`
+        );
       } catch (error) {
         console.warn('Failed to perform auto-adjustment:', error);
         setAutoAdjustmentActive(false);
@@ -311,21 +344,34 @@ export default function SendScreen() {
     };
 
     // Perform auto-adjustment when fee estimates change
-    if (feeEstimates && lastFeeEstimates) {
-      // Check if estimates have changed significantly
-      const estimatesChanged = 
-        Math.abs(feeEstimates.fastestFee - lastFeeEstimates.fastestFee) > 1 ||
-        Math.abs(feeEstimates.halfHourFee - lastFeeEstimates.halfHourFee) > 1 ||
-        Math.abs(feeEstimates.economyFee - lastFeeEstimates.economyFee) > 1;
-      
-      if (estimatesChanged) {
-        performAutoAdjustment();
-      }
+    if (!feeEstimates) {
+      return;
     }
-    
-    // Update last estimates
+
+    // Skip auto adjustment when network estimates are stale or missing
+    const hasValidEstimates =
+      typeof feeEstimates.fastestFee === 'number' &&
+      typeof feeEstimates.halfHourFee === 'number' &&
+      typeof feeEstimates.economyFee === 'number';
+
+    if (!hasValidEstimates) {
+      setAutoAdjustmentActive(false);
+      return;
+    }
+
+    const previous = lastFeeEstimates;
+    const estimatesChanged = previous
+      ? Math.abs(feeEstimates.fastestFee - previous.fastestFee) >= 1 ||
+        Math.abs(feeEstimates.halfHourFee - previous.halfHourFee) >= 1 ||
+        Math.abs(feeEstimates.economyFee - previous.economyFee) >= 1
+      : true;
+
+    if (estimatesChanged) {
+      void performAutoAdjustment();
+    }
+
     setLastFeeEstimates(feeEstimates);
-  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate]);
+  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate, lastFeeEstimates]);
 
   useEffect(() => {
     const fetchUtxos = async () => {

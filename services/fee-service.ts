@@ -1,5 +1,5 @@
 // Fee estimation and transaction utilities
-import { FeeEstimate, UTXO, SendTransactionParams } from '@/types/wallet';
+import { FeeEstimate, UTXO } from '@/types/wallet';
 import { Platform } from 'react-native';
 
 // API endpoints for fee estimation
@@ -139,8 +139,18 @@ export class FeeEstimationService {
       const fastestFee = Math.ceil(nextBlockFee * 1.1); // 10% premium for fastest
       const halfHourFee = Math.ceil((nextBlockFee + secondBlockFee) / 2);
       const hourFee = Math.ceil((nextBlockFee + secondBlockFee + thirdBlockFee) / 3);
-      const economyFee = Math.ceil(Math.min(hourFee * 0.7, 5)); // 30% less than hour fee
-      const minimumFee = Math.max(1, Math.ceil(economyFee * 0.5)); // 50% of economy fee
+
+      // Keep economy fees responsive to congestion without hard-capping
+      const adjustedHourFee = Math.max(hourFee, thirdBlockFee);
+      const economyTarget = Math.max(thirdBlockFee, adjustedHourFee * 0.75);
+      const economyFee = Math.max(
+        1,
+        Math.min(Math.ceil(economyTarget), halfHourFee)
+      );
+      const minimumFee = Math.max(
+        1,
+        Math.min(Math.ceil(economyFee * 0.5), economyFee)
+      );
 
       const feeEstimate: FeeEstimate = {
         fastestFee,
