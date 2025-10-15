@@ -269,9 +269,13 @@ export default function SendScreen() {
           if (congestion === 'high') {
             // In high congestion, add premium
             const priorityPremiumRate = Math.ceil(feeEstimates.fastestFee * 1.15);
-            const configuredPremiumCap =
+            const maxFeeRate =
               typeof feeSettings.maxFeeRate === 'number' && feeSettings.maxFeeRate > 0
-                ? Math.ceil(feeSettings.maxFeeRate * 0.95)
+                ? feeSettings.maxFeeRate
+                : null;
+            const configuredPremiumCap =
+              maxFeeRate !== null
+                ? Math.ceil(maxFeeRate * 0.95)
                 : null;
             targetRate = Math.min(
               priorityPremiumRate,
