@@ -290,12 +290,27 @@ export default function SendScreen() {
         }
 
         // Apply global caps and wallet-specific limits
-        const safeFeeCap = Math.max(1, feeSettings.maxFeeRate || 1);
+        const configuredMaxFeeRate =
+          typeof feeSettings.maxFeeRate === 'number' && feeSettings.maxFeeRate > 0
+            ? feeSettings.maxFeeRate
+            : null;
+        const dynamicFallbackMaxFee = (() => {
+          const candidates = [
+            feeEstimates.fastestFee,
+            feeEstimates.halfHourFee,
+            feeEstimates.economyFee,
+            feeSettings.customFeeRate,
+            100,
+          ].filter((value): value is number => typeof value === 'number' && value > 0);
+          return candidates.length ? Math.max(...candidates) : 100;
+        })();
+        const safeFeeCap = Math.max(1, configuredMaxFeeRate ?? dynamicFallbackMaxFee);
         const boundedTargetRate = Math.max(1, Math.min(targetRate, safeFeeCap));
 
         const isCapped = boundedTargetRate !== targetRate;
         if (isCapped) {
-          reason = `${reason} (capped at ${safeFeeCap} sat/vB)`;
+          const capValue = configuredMaxFeeRate ?? safeFeeCap;
+          reason = `${reason} (capped at ${capValue} sat/vB)`;
         }
 
         // Avoid tiny fluctuations that do not materially improve confirmation time
