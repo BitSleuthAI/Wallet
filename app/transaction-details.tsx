@@ -8,29 +8,29 @@ import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    AlertTriangle,
-    ArrowDownLeft,
-    ArrowUpRight,
-    CheckCircle,
-    Clock,
-    Copy,
-    DollarSign,
-    ExternalLink,
-    Share as ShareIcon,
-    XCircle,
-    Zap,
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  CheckCircle,
+  Clock,
+  Copy,
+  DollarSign,
+  ExternalLink,
+  Share as ShareIcon,
+  XCircle,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    ScrollView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  ScrollView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function TransactionDetailsScreen() {
@@ -382,16 +382,16 @@ export default function TransactionDetailsScreen() {
             <View style={styles.detailRow}>
               <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Features</Text>
               <View style={styles.featureTags}>
-                {transaction.rbfEligible && (
-                  <View style={[styles.featureTag, { backgroundColor: theme.colors.warning + '20' }]}>
+                {transaction.rbf && (
+                  <View style={[styles.featureTag, { backgroundColor: theme.colors.warning + '20' }]}> 
                     <Zap color={theme.colors.warning} size={12} />
                     <Text style={[styles.featureTagText, { color: theme.colors.warning }]}>
                       RBF Enabled
                     </Text>
                   </View>
                 )}
-                {transaction.cpfpEligible && (
-                  <View style={[styles.featureTag, { backgroundColor: theme.colors.success + '20' }]}>
+                {transaction.cpfp && (
+                  <View style={[styles.featureTag, { backgroundColor: theme.colors.success + '20' }]}> 
                     <DollarSign color={theme.colors.success} size={12} />
                     <Text style={[styles.featureTagText, { color: theme.colors.success }]}>
                       CPFP Child

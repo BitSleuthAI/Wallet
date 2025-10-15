@@ -164,7 +164,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
           
           {/* RBF and CPFP Indicators */}
           <View style={styles.featureIndicators}>
-            {transaction.rbfEligible && (
+            {transaction.rbf && (
               <View style={[styles.featureBadge, { backgroundColor: theme.colors.warning + '20' }]}>
                 <Zap color={theme.colors.warning} size={12} />
                 <Text style={[styles.featureText, { color: theme.colors.warning }]}>
@@ -172,7 +172,7 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
                 </Text>
               </View>
             )}
-            {transaction.cpfpEligible && (
+            {transaction.cpfp && (
               <View style={[styles.featureBadge, { backgroundColor: theme.colors.success + '20' }]}>
                 <DollarSign color={theme.colors.success} size={12} />
                 <Text style={[styles.featureText, { color: theme.colors.success }]}>
