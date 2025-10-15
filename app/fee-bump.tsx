@@ -78,7 +78,7 @@ export default function FeeBumpScreen() {
       setValidationError(null);
       setCanReplace(false);
 
-    if (transaction.rbfEligible === false) {
+    if (transaction.rbfEligible !== true) {
         setValidationError('This transaction is not eligible for RBF fee bumping from this wallet.');
         setIsValidating(false);
         return;
@@ -115,7 +115,7 @@ export default function FeeBumpScreen() {
       setValidationError(null);
       setCanReplace(false);
 
-    if (transaction.cpfpEligible === false) {
+    if (transaction.cpfpEligible !== true) {
         setValidationError('This transaction is not eligible for CPFP fee bumping from this wallet.');
         setIsValidating(false);
         return;
