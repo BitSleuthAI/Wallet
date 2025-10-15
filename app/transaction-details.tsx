@@ -102,6 +102,8 @@ export default function TransactionDetailsScreen() {
   const isReceived = transaction.type === 'received';
   const amountUSD = bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
   const isRefreshing = txDetailsQuery.isFetching && lastTxRef.current !== null;
+  const isRBFToggleEnabled = feeSettings?.enableRBF !== false;
+  const isCPFPToggleEnabled = feeSettings?.enableCPFP !== false;
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -203,7 +205,7 @@ export default function TransactionDetailsScreen() {
       return;
     }
 
-    if (!feeSettings?.enableCPFP) {
+    if (feeSettings?.enableCPFP === false) {
       Alert.alert(
         'CPFP Disabled',
         'Enable CPFP in Fee Settings to bump fees on pending transactions you received or sent.'
@@ -423,7 +425,7 @@ export default function TransactionDetailsScreen() {
           </TouchableOpacity>
 
           {/* RBF Button for sent transactions */}
-          {!isReceived && transaction.status === 'pending' && feeSettings?.enableRBF !== false && (
+          {!isReceived && transaction.status === 'pending' && isRBFToggleEnabled && (
             <TouchableOpacity
               style={[styles.actionButton, (!transaction.rbfEligible) && styles.disabledActionButton]}
               onPress={handleRBF}
@@ -439,15 +441,15 @@ export default function TransactionDetailsScreen() {
           )}
 
           {/* CPFP Button for pending transactions when enabled */}
-          {transaction.status === 'pending' && feeSettings?.enableCPFP !== false && (
+          {transaction.status === 'pending' && isCPFPToggleEnabled && (
             <TouchableOpacity
-              style={[styles.actionButton, (!transaction.cpfpEligible || !feeSettings?.enableCPFP) && styles.disabledActionButton]}
+              style={[styles.actionButton, (!transaction.cpfpEligible) && styles.disabledActionButton]}
               onPress={handleCPFP}
-              disabled={!transaction.cpfpEligible || !feeSettings?.enableCPFP}
+              disabled={!transaction.cpfpEligible}
             >
-              <Zap color={transaction.cpfpEligible && feeSettings?.enableCPFP ? theme.colors.success : theme.colors.textSecondary} size={20} />
+              <Zap color={transaction.cpfpEligible ? theme.colors.success : theme.colors.textSecondary} size={20} />
               <Text
-                style={[styles.actionButtonText, { color: transaction.cpfpEligible && feeSettings?.enableCPFP ? theme.colors.text : theme.colors.textSecondary }]}
+                style={[styles.actionButtonText, { color: transaction.cpfpEligible ? theme.colors.text : theme.colors.textSecondary }]}
               >
                 Child-Pays-for-Parent (CPFP)
               </Text>
