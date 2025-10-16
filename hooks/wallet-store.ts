@@ -121,8 +121,8 @@ const normalizeFeeSettings = (settings?: Partial<FeeSettings>): FeeSettings => {
     autoAdjustFees: ensureBoolean(source.autoAdjustFees, defaultFeeSettings.autoAdjustFees),
     maxFeeRate: ensurePositiveInteger(source.maxFeeRate, defaultFeeSettings.maxFeeRate),
     dustThreshold: ensurePositiveInteger(source.dustThreshold, defaultFeeSettings.dustThreshold),
-    cpfpMaxChildFee: ensurePositiveInteger(source.cpfpMaxChildFee, defaultFeeSettings.cpfpMaxChildFee),
-    cpfpIncludeUnconfirmed: ensureBoolean(source.cpfpIncludeUnconfirmed, defaultFeeSettings.cpfpIncludeUnconfirmed),
+    cpfpMaxChildFee: ensurePositiveInteger(source.cpfpMaxChildFee, defaultFeeSettings.cpfpMaxChildFee ?? 10000),
+    cpfpIncludeUnconfirmed: ensureBoolean(source.cpfpIncludeUnconfirmed, defaultFeeSettings.cpfpIncludeUnconfirmed ?? true),
   };
 };
 
@@ -692,6 +692,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     return result;
   }, []);
 
+  const getCurrentFeeSettings = useCallback((): FeeSettings => {
+    const walletId = currentWalletId || FALLBACK_WALLET_ID;
+    return feeSettingsMap[walletId] || defaultFeeSettings;
+  }, [currentWalletId, feeSettingsMap]);
+
   useEffect(() => {
     const applySettingsMap = async () => {
       if (!feeSettingsByWalletQuery.data || feeSettingsByWalletQuery.isLoading) {
@@ -1008,6 +1013,50 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient]);
 
+  // Create wallet function
+  const createWallet = useCallback(async (name: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('🔧 Creating new wallet:', name);
+      const wallet = await walletService.createWallet(name, color);
+      const updatedWallets = [...wallets, wallet];
+      saveWallets(updatedWallets);
+      saveCurrentWalletId(wallet.id);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Failed to create wallet:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
+    }
+  }, [wallets, saveWallets, saveCurrentWalletId]);
+
+  // Import wallet function
+  const importWallet = useCallback(async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('🔧 Importing wallet:', name);
+      const wallet = await walletService.importWallet(name, mnemonic, color);
+      const updatedWallets = [...wallets, wallet];
+      saveWallets(updatedWallets);
+      saveCurrentWalletId(wallet.id);
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Failed to import wallet:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
+    }
+  }, [wallets, saveWallets, saveCurrentWalletId]);
+
+  // Generate new address function
+  const generateNewAddress = useCallback(async (wallet: Wallet): Promise<{ success: boolean; wallet?: Wallet; error?: string }> => {
+    try {
+      console.log('🔧 Generating new address for wallet:', wallet.name);
+      const updatedWallet = await walletService.generateNewAddress(wallet);
+      const updatedWallets = wallets.map(w => w.id === wallet.id ? updatedWallet : w);
+      saveWallets(updatedWallets);
+      return { success: true, wallet: updatedWallet };
+    } catch (error) {
+      console.error('❌ Failed to generate new address:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate new address' };
+    }
+  }, [wallets, saveWallets]);
+
   // Split the large useMemo into smaller, more focused ones to reduce re-renders
   const walletData = useMemo(() => ({
     wallets,
@@ -1071,7 +1120,46 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     autoLockTimeout,
     feeSettings,
     feeSettingsLoading,
-  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsLoading]);
+    getCurrentFeeSettings,
+  }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsLoading, getCurrentFeeSettings]);
+
+  // Theme toggle function
+  const toggleTheme = useCallback(() => {
+    const newTheme = theme === lightTheme ? darkTheme : lightTheme;
+    setTheme(newTheme);
+    AsyncStorage.setItem('theme', theme === lightTheme ? 'dark' : 'light');
+  }, [theme]);
+
+  // Set currency function
+  const setCurrency = useCallback((currency: FiatCurrency) => {
+    saveCurrency(currency);
+  }, [saveCurrency]);
+
+  // Set hide balance setting function
+  const setHideBalanceSetting = useCallback((hide: boolean) => {
+    saveHideBalance(hide);
+  }, [saveHideBalance]);
+
+  // Set auto lock timeout setting function
+  const setAutoLockTimeoutSetting = useCallback((timeout: number) => {
+    saveAutoLock(timeout);
+  }, [saveAutoLock]);
+
+  // Feedback prompt state and functions
+  const [feedbackPromptDismissed, setFeedbackPromptDismissed] = useState(false);
+  const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
+
+  const shouldShowFeedbackPrompt = useMemo(() => {
+    return !feedbackPromptDismissed && !feedbackPromptShown && wallets.length > 0;
+  }, [feedbackPromptDismissed, feedbackPromptShown, wallets]);
+
+  const markFeedbackPromptShown = useCallback(() => {
+    setFeedbackPromptShown(true);
+  }, []);
+
+  const markFeedbackPromptDismissed = useCallback(() => {
+    setFeedbackPromptDismissed(true);
+  }, []);
 
   const actionsData = useMemo(() => ({
     createWallet,

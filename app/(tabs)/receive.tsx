@@ -71,13 +71,19 @@ export default function ReceiveScreen() {
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
+    if (!currentWallet) {
+      console.error('❌ No current wallet available');
+      Alert.alert('Error', 'No wallet selected');
+      return;
+    }
+    
     try {
       setIsGeneratingAddress(true);
       console.log('🔄 Generating new address...');
-      const result = await generateNewAddress();
-      if (result.success && result.address) {
-        console.log('✅ New address generated:', result.address);
-        setCurrentAddress(result.address);
+      const result = await generateNewAddress(currentWallet);
+      if (result.success && result.wallet) {
+        console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
+        setCurrentAddress(result.wallet.addresses[result.wallet.addresses.length - 1]);
         // Remove the success alert for faster UX
         // Alert.alert('Success', 'New address generated successfully');
       } else {

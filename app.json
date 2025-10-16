@@ -31,7 +31,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "ai.bitsleuth.wallet",
-      "googleServicesFile": "./android/app/google-services.json",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
@@ -56,15 +56,6 @@
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID."
         }
       ],
-      [
-        "@react-native-firebase/app",
-        {
-          "ios": {
-            "useFrameworks": "static"
-          }
-        }
-      ],
-      "@react-native-firebase/crashlytics"
     ],
     "experiments": {
       "typedRoutes": true
