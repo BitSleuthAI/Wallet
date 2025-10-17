@@ -5,13 +5,13 @@
 
 import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
+import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
-// Import bip39 and bip32 with better error handling
+// Import bip39 with better error handling
 let bip39: any;
-let bip32: any;
 
 try {
   bip39 = require('bip39');
@@ -19,130 +19,6 @@ try {
 } catch (error) {
   console.warn('⚠️ Failed to load bip39 at module level:', error);
   bip39 = null;
-}
-
-// Try to load bip32 with React Native compatible alternative
-let bip32LoadPromise: Promise<any> | null = null;
-
-try {
-  bip32 = require('@scure/bip32');
-  console.log('✅ @scure/bip32 loaded at module level:', typeof bip32, Object.keys(bip32));
-  
-    // Create BIP32Factory wrapper for compatibility
-    const HDKey = bip32.HDKey;
-    if (HDKey) {
-      console.log('🔧 Creating BIP32Factory wrapper for module-level loaded @scure/bip32');
-      const bip32Factory = (ecc: any) => ({
-        fromSeed: (seed: Uint8Array) => {
-          const hdkey = HDKey.fromMasterSeed(seed);
-          // Add derive method for numeric derivation using deriveChild
-          const originalDerive = hdkey.derive;
-          hdkey.derive = (pathOrIndex: string | number) => {
-            if (typeof pathOrIndex === 'number') {
-              console.log('🔧 Custom derive called with index:', pathOrIndex);
-              return hdkey.deriveChild(pathOrIndex);
-            } else {
-              console.log('🔧 Custom derive called with path:', pathOrIndex);
-              return originalDerive.call(hdkey, pathOrIndex);
-            }
-          };
-          return hdkey;
-        },
-        fromBase58: (base58: string) => {
-          const hdkey = HDKey.fromExtendedKey(base58);
-          // Add derive method for numeric derivation using deriveChild
-          const originalDerive = hdkey.derive;
-          hdkey.derive = (pathOrIndex: string | number) => {
-            if (typeof pathOrIndex === 'number') {
-              console.log('🔧 Custom derive called with index:', pathOrIndex);
-              return hdkey.deriveChild(pathOrIndex);
-            } else {
-              console.log('🔧 Custom derive called with path:', pathOrIndex);
-              return originalDerive.call(hdkey, pathOrIndex);
-            }
-          };
-          return hdkey;
-        },
-      });
-      
-      // Add BIP32Factory to the module
-      bip32.BIP32Factory = bip32Factory;
-      console.log('✅ BIP32Factory added to module:', typeof bip32.BIP32Factory);
-    } else {
-      console.error('❌ HDKey not found in @scure/bip32 module');
-      bip32 = null;
-    }
-} catch (error) {
-  console.warn('⚠️ Failed to load @scure/bip32 at module level:', error);
-  bip32 = null;
-}
-
-// If module-level loading failed, set up dynamic import as fallback
-if (!bip32) {
-  console.log('🔧 Setting up @scure/bip32 dynamic import fallback...');
-  bip32LoadPromise = import('@scure/bip32').then(module => {
-    console.log('✅ @scure/bip32 loaded via dynamic import:', typeof module);
-    console.log('🔧 @scure/bip32 module keys:', Object.keys(module));
-    
-    // @scure/bip32 exports HDKey directly, not BIP32Factory
-    const HDKey = module.HDKey;
-    console.log('🔧 HDKey exists:', typeof HDKey);
-    
-    if (!HDKey) {
-      console.error('❌ HDKey not found in @scure/bip32 module');
-      return null;
-    }
-    
-    // Create a BIP32Factory-like interface for compatibility
-    const bip32Factory = (ecc: any) => ({
-      fromSeed: (seed: Uint8Array) => {
-        const hdkey = HDKey.fromMasterSeed(seed);
-        // Add derive method for numeric derivation using deriveChild
-        const originalDerive = hdkey.derive;
-        hdkey.derive = (pathOrIndex: string | number) => {
-          if (typeof pathOrIndex === 'number') {
-            console.log('🔧 Custom derive called with index:', pathOrIndex);
-            return hdkey.deriveChild(pathOrIndex);
-          } else {
-            console.log('🔧 Custom derive called with path:', pathOrIndex);
-            return originalDerive.call(hdkey, pathOrIndex);
-          }
-        };
-        return hdkey;
-      },
-      fromBase58: (base58: string) => {
-        const hdkey = HDKey.fromExtendedKey(base58);
-        // Add derive method for numeric derivation using deriveChild
-        const originalDerive = hdkey.derive;
-        hdkey.derive = (pathOrIndex: string | number) => {
-          if (typeof pathOrIndex === 'number') {
-            console.log('🔧 Custom derive called with index:', pathOrIndex);
-            return hdkey.deriveChild(pathOrIndex);
-          } else {
-            console.log('🔧 Custom derive called with path:', pathOrIndex);
-            return originalDerive.call(hdkey, pathOrIndex);
-          }
-        };
-        return hdkey;
-      },
-    });
-    
-    console.log('🔧 Created BIP32Factory wrapper:', typeof bip32Factory);
-    
-    const result = {
-      BIP32Factory: bip32Factory,
-      ...module
-    };
-    
-    console.log('🔧 Returning bip32 module:', typeof result, Object.keys(result));
-    return result;
-  }).catch(dynamicError => {
-    console.error('❌ Failed to load @scure/bip32 via dynamic import:', dynamicError);
-    console.error('❌ Error details:', dynamicError.message, dynamicError.stack);
-    return null;
-  });
-  
-  console.log('🔧 bip32LoadPromise created:', typeof bip32LoadPromise);
 }
 
 const GAP_LIMIT = 20; // Standard gap limit for address discovery
@@ -248,24 +124,8 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   try {
     await ensureECC();
     
-    // Use pre-loaded bip32 module or load dynamically
-    let bip32Module = bip32;
-    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
-    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
-    
-    if (!bip32Module && bip32LoadPromise) {
-      console.log('🔧 Loading bip32 dynamically...');
-      try {
-        bip32Module = await bip32LoadPromise;
-        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-      } catch (error) {
-        console.error('❌ Error during dynamic load:', error);
-        bip32Module = null;
-      }
-    }
-    
-    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
     if (!bip32Module) {
       throw new Error('BIP32 module not available');
@@ -631,24 +491,8 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
   try {
     await ensureECC();
     
-    // Use pre-loaded bip32 module or load dynamically
-    let bip32Module = bip32;
-    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
-    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
-    
-    if (!bip32Module && bip32LoadPromise) {
-      console.log('🔧 Loading bip32 dynamically...');
-      try {
-        bip32Module = await bip32LoadPromise;
-        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-      } catch (error) {
-        console.error('❌ Error during dynamic load:', error);
-        bip32Module = null;
-      }
-    }
-    
-    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
     if (!bip32Module) {
       throw new Error('BIP32 module not available');
@@ -798,24 +642,8 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       throw new Error('BIP39 library not available');
     }
     
-    // Use pre-loaded bip32 module or load dynamically
-    let bip32Module = bip32;
-    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
-    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
-    
-    if (!bip32Module && bip32LoadPromise) {
-      console.log('🔧 Loading bip32 dynamically...');
-      try {
-        bip32Module = await bip32LoadPromise;
-        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-      } catch (error) {
-        console.error('❌ Error during dynamic load:', error);
-        bip32Module = null;
-      }
-    }
-    
-    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
     if (!bip32Module) {
       throw new Error('BIP32 module not available');
@@ -1156,12 +984,8 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
   try {
     await ensureECC();
     
-    // Use pre-loaded bip32 module or load dynamically
-    let bip32Module = bip32;
-    if (!bip32Module && bip32LoadPromise) {
-      console.log('🔧 Loading bip32 dynamically...');
-      bip32Module = await bip32LoadPromise;
-    }
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
     if (!bip32Module) {
       throw new Error('BIP32 module not available');
@@ -1241,24 +1065,8 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       throw new Error('BIP39 library not available');
     }
     
-    // Use pre-loaded bip32 module or load dynamically
-    let bip32Module = bip32;
-    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
-    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
-    
-    if (!bip32Module && bip32LoadPromise) {
-      console.log('🔧 Loading bip32 dynamically...');
-      try {
-        bip32Module = await bip32LoadPromise;
-        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-      } catch (error) {
-        console.error('❌ Error during dynamic load:', error);
-        bip32Module = null;
-      }
-    }
-    
-    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
-    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
     if (!bip32Module) {
       throw new Error('BIP32 module not available');

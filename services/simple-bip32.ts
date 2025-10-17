@@ -50,7 +50,8 @@ export class SimpleBIP32Node {
   }
   
   derive(index: number) {
-    return this.deriveChild(this.seed, index);
+    const childSeed = this.deriveChild(this.seed, index);
+    return new SimpleBIP32Node(this.ecc, childSeed);
   }
   
   private deriveChild(parent: Uint8Array, index: number) {

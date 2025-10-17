@@ -28,6 +28,7 @@ try {
       },
     });
     bip32.BIP32Factory = bip32Factory;
+    console.log('✅ BIP32 module loaded successfully with BIP32Factory');
   } else {
     // HDKey not available, set bip32 to null to indicate failure
     console.warn('HDKey missing from @scure/bip32 module, bip32 not available');
