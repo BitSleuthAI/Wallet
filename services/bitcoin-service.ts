@@ -484,8 +484,8 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
     console.log('🔧 Generating change address for index:', changeIndex);
     
     // Use pre-loaded bip32 module
-    if (!bip32) {
-      throw new Error('BIP32 module not available');
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
     }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
@@ -580,8 +580,8 @@ async function createTransaction(
     console.log('🔐 Signing transaction with private keys...');
     
     // Use pre-loaded bip32 module
-    if (!bip32) {
-      throw new Error('BIP32 module not available');
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
     }
     const bip39 = require('bip39');
     const bip32Instance = bip32.BIP32Factory(ecc);

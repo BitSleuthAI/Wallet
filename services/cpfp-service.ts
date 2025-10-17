@@ -228,8 +228,8 @@ export async function createCPFPTransaction(
     const bitcoin = require('bitcoinjs-lib');
     const ecc = (global as any).ecc;
     
-    if (!bip32) {
-      throw new Error('BIP32 module not available');
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
     }
     const bip39 = require('bip39');
     
@@ -557,8 +557,8 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
     console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
     
     // Use pre-loaded bip32 module
-    if (!bip32) {
-      throw new Error('BIP32 module not available');
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
     }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
@@ -632,8 +632,8 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
     console.log(`🔧 Generating change address for index: ${changeIndex}`);
     
     // Use pre-loaded bip32 module
-    if (!bip32) {
-      throw new Error('BIP32 module not available');
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
     }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
