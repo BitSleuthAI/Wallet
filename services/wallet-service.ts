@@ -5,15 +5,19 @@
 
 import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
+import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
 let bip39: any;
+
 try {
   bip39 = require('bip39');
+  console.log('✅ bip39 loaded at module level:', typeof bip39, bip39 ? Object.keys(bip39).slice(0, 5) : 'null');
 } catch (error) {
+  console.warn('⚠️ Failed to load bip39 at module level:', error);
   bip39 = null;
 }
 
@@ -120,12 +124,22 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   try {
     await ensureECC();
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     let allUsedAddresses: string[] = [];
     let allAddressMetadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }> = [];
 
@@ -477,11 +491,22 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
   try {
     await ensureECC();
     
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     // Fix: Include change level (chain 0 for external addresses) in BIP84 derivation path
     const child = node.derive(0).derive(index);
     
@@ -613,15 +638,30 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     }
     
     // Generate xpub from mnemonic
-    const bip32Module = await import('bip32');
-    const bip32 = bip32Module.BIP32Factory(eccFinal);
+    if (!bip39) {
+      throw new Error('BIP39 library not available');
+    }
+    
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const bip32Instance = bip32Module.BIP32Factory(eccFinal);
     
     console.log('🔧 BIP32 factory created');
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
     console.log('🔧 Seed generated, length:', seed.length);
     
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     console.log('🔧 Root node created');
     
     // Derive xpub for P2WPKH (BIP84) first, then convert to zpub
@@ -944,12 +984,17 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
   try {
     await ensureECC();
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     const batch = await deriveAddressBatch(node, 0, startIndex, startIndex + batchSize);
     
     const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}> = [];
@@ -1016,12 +1061,27 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     await ensureECC();
     
-    const bip32Module = await import('bip32');
+    if (!bip39) {
+      throw new Error('BIP39 library not available');
+    }
+    
+    // Use centralized bip32 loader
+    const bip32Module = await loadBip32Module();
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
     const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     
     // Derive private key for P2WPKH (BIP84)
     const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);

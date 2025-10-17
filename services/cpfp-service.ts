@@ -4,8 +4,12 @@
  */
 
 import { CPFPOptions, CPFPTransaction, CPFPValidationResult, UTXO } from '@/types/wallet';
+import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
+
+// Use centralized bip32 loader
+let bip32: any = null;
 
 // Types are imported from '@/types/wallet'
 
@@ -196,7 +200,15 @@ export async function createCPFPTransaction(
     // Import required libraries
     const bitcoin = require('bitcoinjs-lib');
     const ecc = (global as any).ecc;
-    const bip32Module = await import('bip32');
+    
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
+    }
     const bip39 = require('bip39');
     
     if (!ecc) {
@@ -205,7 +217,7 @@ export async function createCPFPTransaction(
     
     // Initialize bitcoinjs-lib with ECC
     bitcoin.initEccLib(ecc);
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create PSBT (Partially Signed Bitcoin Transaction) for proper SegWit support
     const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
@@ -281,7 +293,7 @@ export async function createCPFPTransaction(
     console.log(`🔐 Signing CPFP transaction...`);
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     
     // Sign each input using PSBT
     let inputIndex = 0;
@@ -522,17 +534,23 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
     
     console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
     
-    // Import required libraries once
-    const bip32Module = await import('bip32');
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
+    }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     const bech32 = await import('bech32');
     const { sha256 } = await import('@noble/hashes/sha256');
     const { ripemd160 } = await import('@noble/hashes/ripemd160');
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     const externalChain = root.derivePath(`m/84'/0'/0'/0`);
     
     // Use optimized linear search with batching to prevent UI blocking
@@ -595,15 +613,21 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
   try {
     console.log(`🔧 Generating change address for index: ${changeIndex}`);
     
-    // Import required libraries
-    const bip32Module = await import('bip32');
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
+    }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Derive private key for change address (chain 1)
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
     
     if (!child.publicKey) {
