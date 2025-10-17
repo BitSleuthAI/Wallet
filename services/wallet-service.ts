@@ -697,7 +697,7 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
 /**
  * Validate a mnemonic phrase
  */
-export const validateMnemonic = async (mnemonic: string): Promise<boolean> => {
+export const validateMnemonic = (mnemonic: string): boolean => {
   if (!bip39) {
     console.warn('BIP39 library not available for validation');
     return false;
@@ -738,7 +738,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
   try {
     console.log('🔧 Importing wallet:', name);
     
-    if (!(await validateMnemonic(mnemonic))) {
+    if (!validateMnemonic(mnemonic)) {
       throw new Error('Invalid mnemonic phrase');
     }
     
