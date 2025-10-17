@@ -9,12 +9,117 @@ import { ensureECC } from './bitcoin-service';
 import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
-// Import bip39 with better error handling
+// Import bip39 and bip32 with better error handling
 let bip39: any;
+let bip32: any;
+
 try {
   bip39 = require('bip39');
+  console.log('✅ bip39 loaded at module level:', typeof bip39, bip39 ? Object.keys(bip39).slice(0, 5) : 'null');
 } catch (error) {
+  console.warn('⚠️ Failed to load bip39 at module level:', error);
   bip39 = null;
+}
+
+// Try to load bip32 with React Native compatible alternative
+let bip32LoadPromise: Promise<any> | null = null;
+
+try {
+  bip32 = require('@scure/bip32');
+  console.log('✅ @scure/bip32 loaded at module level:', typeof bip32, Object.keys(bip32));
+  
+    // Create BIP32Factory wrapper for compatibility
+    const HDKey = bip32.HDKey;
+    if (HDKey) {
+      console.log('🔧 Creating BIP32Factory wrapper for module-level loaded @scure/bip32');
+      const bip32Factory = (ecc: any) => ({
+        fromSeed: (seed: Uint8Array) => {
+          const hdkey = HDKey.fromMasterSeed(seed);
+          // Add derive method for numeric derivation using deriveChild
+          hdkey.derive = (index: number) => {
+            console.log('🔧 Custom derive called with index:', index);
+            return hdkey.deriveChild(index);
+          };
+          return hdkey;
+        },
+        fromBase58: (base58: string) => {
+          const hdkey = HDKey.fromExtendedKey(base58);
+          // Add derive method for numeric derivation using deriveChild
+          hdkey.derive = (index: number) => {
+            console.log('🔧 Custom derive called with index:', index);
+            return hdkey.deriveChild(index);
+          };
+          return hdkey;
+        },
+      });
+      
+      // Add BIP32Factory to the module
+      bip32.BIP32Factory = bip32Factory;
+      console.log('✅ BIP32Factory added to module:', typeof bip32.BIP32Factory);
+    } else {
+      console.error('❌ HDKey not found in @scure/bip32 module');
+      bip32 = null;
+    }
+} catch (error) {
+  console.warn('⚠️ Failed to load @scure/bip32 at module level:', error);
+  bip32 = null;
+}
+
+// If module-level loading failed, set up dynamic import as fallback
+if (!bip32) {
+  console.log('🔧 Setting up @scure/bip32 dynamic import fallback...');
+  bip32LoadPromise = import('@scure/bip32').then(module => {
+    console.log('✅ @scure/bip32 loaded via dynamic import:', typeof module);
+    console.log('🔧 @scure/bip32 module keys:', Object.keys(module));
+    
+    // @scure/bip32 exports HDKey directly, not BIP32Factory
+    const HDKey = module.HDKey;
+    console.log('🔧 HDKey exists:', typeof HDKey);
+    
+    if (!HDKey) {
+      console.error('❌ HDKey not found in @scure/bip32 module');
+      return null;
+    }
+    
+    // Create a BIP32Factory-like interface for compatibility
+    const bip32Factory = (ecc: any) => ({
+      fromSeed: (seed: Uint8Array) => {
+        const hdkey = HDKey.fromMasterSeed(seed);
+        // Add derive method for numeric derivation using deriveChild
+        hdkey.derive = (index: number) => {
+          console.log('🔧 Custom derive called with index:', index);
+          return hdkey.deriveChild(index);
+        };
+        return hdkey;
+      },
+      fromBase58: (base58: string) => {
+        const hdkey = HDKey.fromExtendedKey(base58);
+        // Add derive method for numeric derivation using deriveChild
+        hdkey.derive = (index: number) => {
+          console.log('🔧 Custom derive called with index:', index);
+          return hdkey.deriveChild(index);
+        };
+        return hdkey;
+      },
+    });
+    
+    console.log('🔧 Created BIP32Factory wrapper:', typeof bip32Factory);
+    
+    const result = {
+      BIP32Factory: bip32Factory,
+      HDKey: HDKey,
+      ...module
+    };
+    
+    console.log('🔧 Returning bip32 module:', typeof result, Object.keys(result));
+    return result;
+  }).catch(dynamicError => {
+    console.error('❌ Failed to load @scure/bip32 via dynamic import:', dynamicError);
+    console.error('❌ Error details:', dynamicError.message, dynamicError.stack);
+    return null;
+  });
+  
+  console.log('🔧 bip32LoadPromise created:', typeof bip32LoadPromise);
 }
 
 const GAP_LIMIT = 20; // Standard gap limit for address discovery
@@ -120,12 +225,38 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   try {
     await ensureECC();
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use pre-loaded bip32 module or load dynamically
+    let bip32Module = bip32;
+    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
+    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module && bip32LoadPromise) {
+      console.log('🔧 Loading bip32 dynamically...');
+      try {
+        bip32Module = await bip32LoadPromise;
+        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+      } catch (error) {
+        console.error('❌ Error during dynamic load:', error);
+        bip32Module = null;
+      }
+    }
+    
+    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     let allUsedAddresses: string[] = [];
     let allAddressMetadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }> = [];
 
@@ -477,7 +608,7 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
   try {
     await ensureECC();
     
-    const bip32Module = await import('bip32');
+    const bip32Module = bip32;
     const ecc = (global as any).ecc;
     const bip32 = bip32Module.BIP32Factory(ecc);
     
@@ -528,7 +659,7 @@ export const generateMnemonic = async (strength: number = 128): Promise<string> 
 /**
  * Validate a mnemonic phrase
  */
-export const validateMnemonic = (mnemonic: string): boolean => {
+export const validateMnemonic = async (mnemonic: string): Promise<boolean> => {
   if (!bip39) {
     console.warn('BIP39 library not available for validation');
     return false;
@@ -569,7 +700,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
   try {
     console.log('🔧 Importing wallet:', name);
     
-    if (!validateMnemonic(mnemonic)) {
+    if (!(await validateMnemonic(mnemonic))) {
       throw new Error('Invalid mnemonic phrase');
     }
     
@@ -613,7 +744,11 @@ export const importWallet = async (name: string, mnemonic: string, color: string
     }
     
     // Generate xpub from mnemonic
-    const bip32Module = await import('bip32');
+    if (!bip39) {
+      throw new Error('BIP39 library not available');
+    }
+    
+    const bip32Module = bip32;
     const bip32 = bip32Module.BIP32Factory(eccFinal);
     
     console.log('🔧 BIP32 factory created');
@@ -944,12 +1079,21 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
   try {
     await ensureECC();
     
-    // Import bip32 dynamically
-    const bip32Module = await import('bip32');
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use pre-loaded bip32 module or load dynamically
+    let bip32Module = bip32;
+    if (!bip32Module && bip32LoadPromise) {
+      console.log('🔧 Loading bip32 dynamically...');
+      bip32Module = await bip32LoadPromise;
+    }
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     const batch = await deriveAddressBatch(node, 0, startIndex, startIndex + batchSize);
     
     const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}> = [];
@@ -1016,7 +1160,11 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
     
     await ensureECC();
     
-    const bip32Module = await import('bip32');
+    if (!bip39) {
+      throw new Error('BIP39 library not available');
+    }
+    
+    const bip32Module = bip32;
     const ecc = (global as any).ecc;
     const bip32 = bip32Module.BIP32Factory(ecc);
     

@@ -6,6 +6,33 @@
 import { BitcoinPrice, UTXO } from '@/types/wallet';
 import { getAddressUTXOs as esploraGetAddressUTXOs } from './esplora-service';
 
+// Import bip32 with error handling
+let bip32: any;
+try {
+  bip32 = require('@scure/bip32');
+  
+  // Create BIP32Factory wrapper for compatibility
+  const HDKey = bip32.HDKey;
+  if (HDKey) {
+    const bip32Factory = (ecc: any) => ({
+      fromSeed: (seed: Uint8Array) => {
+        const hdkey = HDKey.fromMasterSeed(seed);
+        hdkey.derive = (index: number) => hdkey.deriveChild(index);
+        return hdkey;
+      },
+      fromBase58: (base58: string) => {
+        const hdkey = HDKey.fromExtendedKey(base58);
+        hdkey.derive = (index: number) => hdkey.deriveChild(index);
+        return hdkey;
+      },
+    });
+    bip32.BIP32Factory = bip32Factory;
+  }
+} catch (error) {
+  console.warn('Failed to load bip32 module:', error);
+  bip32 = null;
+}
+
 // Don't initialize ECC at module load time - do it lazily when needed
 let eccInitialized = false;
 
@@ -452,15 +479,17 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
   try {
     console.log('🔧 Generating change address for index:', changeIndex);
     
-    // Import required libraries
-    const bip32Module = await import('bip32');
+    // Use pre-loaded bip32 module
+    if (!bip32) {
+      throw new Error('BIP32 module not available');
+    }
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Derive private key for change address (chain 1)
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
     
     if (!child.publicKey) {
@@ -546,14 +575,16 @@ async function createTransaction(
     // Sign inputs
     console.log('🔐 Signing transaction with private keys...');
     
-    // Import bip32 and bip39
-    const bip32Module = await import('bip32');
+    // Use pre-loaded bip32 module
+    if (!bip32) {
+      throw new Error('BIP32 module not available');
+    }
     const bip39 = require('bip39');
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Derive root key
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     
     // Sign each input with its corresponding private key
     for (let i = 0; i < utxos.length; i++) {
