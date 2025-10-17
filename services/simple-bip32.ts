@@ -26,15 +26,20 @@ export class SimpleBIP32 {
 export class SimpleBIP32Node {
   private ecc: any;
   private seed: Uint8Array;
-  private privateKey?: Uint8Array;
+  private _privateKey?: Uint8Array;
   private _publicKeyBytes?: Uint8Array;
+  private isNeutered: boolean;
   
-  constructor(ecc: any, seed: Uint8Array) {
+  constructor(ecc: any, seed: Uint8Array, isNeutered: boolean = false) {
     this.ecc = ecc;
     this.seed = seed;
+    this.isNeutered = isNeutered;
   }
   
   derivePath(path: string) {
+    if (this.isNeutered) {
+      throw new Error('Cannot derive from neutered node');
+    }
     // Simple path derivation - this is a basic implementation
     // For production, you'd want a full BIP32 implementation
     const parts = path.split('/');
@@ -46,12 +51,15 @@ export class SimpleBIP32Node {
       current = this.deriveChild(current, index);
     }
     
-    return new SimpleBIP32Node(this.ecc, current);
+    return new SimpleBIP32Node(this.ecc, current, this.isNeutered);
   }
   
   derive(index: number) {
+    if (this.isNeutered) {
+      throw new Error('Cannot derive from neutered node');
+    }
     const childSeed = this.deriveChild(this.seed, index);
-    return new SimpleBIP32Node(this.ecc, childSeed);
+    return new SimpleBIP32Node(this.ecc, childSeed, this.isNeutered);
   }
   
   private deriveChild(parent: Uint8Array, index: number) {
@@ -72,30 +80,40 @@ export class SimpleBIP32Node {
   }
   
   get privateKeyBytes() {
-    if (!this.privateKey) {
-      this.privateKey = this.seed.slice(0, 32);
+    if (this.isNeutered) {
+      throw new Error('Cannot access private key from neutered node');
     }
-    return this.privateKey;
+    if (!this._privateKey) {
+      this._privateKey = this.seed.slice(0, 32);
+    }
+    return this._privateKey;
   }
   
   get publicKeyBytes() {
     if (!this._publicKeyBytes) {
+      if (this.isNeutered) {
+        throw new Error('Cannot derive public key from neutered node without pre-computed public key');
+      }
       this._publicKeyBytes = this.ecc.pointFromScalar(this.privateKeyBytes, true);
     }
     return this._publicKeyBytes;
   }
   
   get publicKey() {
-    return Buffer.from(this.publicKeyBytes);
+    return Buffer.from(this.publicKeyBytes || new Uint8Array(33));
   }
   
   get privateKey() {
+    if (this.isNeutered) {
+      throw new Error('Cannot access private key from neutered node');
+    }
     return Buffer.from(this.privateKeyBytes);
   }
   
   neutered() {
-    // Return a version without private key
-    const neutered = new SimpleBIP32Node(this.ecc, this.seed);
+    // Return a version without private key access
+    // Create a neutered node with empty seed to prevent private key derivation
+    const neutered = new SimpleBIP32Node(this.ecc, new Uint8Array(0), true);
     neutered._publicKeyBytes = this.publicKeyBytes;
     return neutered;
   }

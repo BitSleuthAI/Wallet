@@ -471,7 +471,7 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
     // Derive private key for change address (chain 1)
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32Instance.fromSeed(seed);
-    const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
+    const child = root.derive(`m/84'/0'/0'/1/${changeIndex}`);
     
     if (!child.publicKey) {
       throw new Error('Failed to derive public key for change address');
@@ -587,7 +587,7 @@ async function createTransaction(
       }
       
       // Derive private key for this specific address index
-      const child = root.derivePath(`m/84'/0'/0'/0/${utxoAddressIndex}`);
+      const child = root.derive(`m/84'/0'/0'/0/${utxoAddressIndex}`);
       
       if (!child.privateKey) {
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
