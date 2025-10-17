@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "android": {
+        "image": "ubuntu-22.04-jdk-17-ndk-26b"
+      },
       "ios": {
         "simulator": true,
         "buildConfiguration": "Debug"
@@ -14,6 +17,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "android": {
+        "image": "ubuntu-22.04-jdk-17-ndk-26b"
+      },
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release"
@@ -21,6 +27,9 @@
     },
     "production": {
       "autoIncrement": true,
+      "android": {
+        "image": "ubuntu-22.04-jdk-17-ndk-26b"
+      },
       "ios": {
         "simulator": false,
         "buildConfiguration": "Release"
