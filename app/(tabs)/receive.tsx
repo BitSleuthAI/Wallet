@@ -21,7 +21,7 @@ import QRCode from 'react-native-qrcode-svg';
 
 export default function ReceiveScreen() {
   const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
-  const { currentWallet, generateNewAddress, theme } = useWallet();
+  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet();
   const [currentAddress, setCurrentAddress] = useState<string>(
     currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
   );
@@ -71,13 +71,19 @@ export default function ReceiveScreen() {
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
+    if (!currentWallet) {
+      console.error('❌ No current wallet available');
+      Alert.alert('Error', 'No wallet selected');
+      return;
+    }
+    
     try {
       setIsGeneratingAddress(true);
       console.log('🔄 Generating new address...');
-      const result = await generateNewAddress();
-      if (result.success && result.address) {
-        console.log('✅ New address generated:', result.address);
-        setCurrentAddress(result.address);
+      const result = await generateNewAddress(currentWallet);
+      if (result.success && result.wallet) {
+        console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
+        setCurrentAddress(result.wallet.addresses[result.wallet.addresses.length - 1]);
         // Remove the success alert for faster UX
         // Alert.alert('Success', 'New address generated successfully');
       } else {
@@ -234,7 +240,10 @@ export default function ReceiveScreen() {
                 opacity: isGeneratingAddress ? 0.7 : 1
               }
             ]}
-            onPress={handleNewAddress}
+            onPress={() => {
+              handleNewAddress();
+              incrementUsageCount('receive_interaction');
+            }}
             disabled={isGeneratingAddress}
           >
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
@@ -256,7 +265,10 @@ export default function ReceiveScreen() {
                 opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
               }
             ]}
-            onPress={handleCopy}
+            onPress={() => {
+              handleCopy();
+              incrementUsageCount('receive_interaction');
+            }}
             disabled={!currentAddress || currentAddress.length === 0}
           >
             <Copy color={theme.colors.text} size={20} />
@@ -273,7 +285,10 @@ export default function ReceiveScreen() {
                 opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
               }
             ]}
-            onPress={handleShare}
+            onPress={() => {
+              handleShare();
+              incrementUsageCount('receive_interaction');
+            }}
             disabled={!currentAddress || currentAddress.length === 0}
           >
             <ShareIcon color={theme.colors.text} size={20} />

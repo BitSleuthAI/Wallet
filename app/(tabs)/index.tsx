@@ -13,18 +13,18 @@ import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  FlatList,
-  Modal,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    FlatList,
+    Modal,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -62,6 +62,8 @@ export default function WalletScreen() {
     shouldShowFeedbackPrompt,
     markFeedbackPromptShown,
     markFeedbackPromptDismissed,
+    markFeedbackSubmitted,
+    incrementUsageCount,
   } = useWallet();
 
   const [refreshing, setRefreshing] = useState(false);
@@ -76,7 +78,9 @@ export default function WalletScreen() {
     setRefreshing(true);
     await refreshData();
     setRefreshing(false);
-  }, [refreshData]);
+    // Track usage when user refreshes data
+    incrementUsageCount('data_refresh');
+  }, [refreshData, incrementUsageCount]);
 
   const handleEditWallet = useCallback((wallet: Wallet) => {
     setEditingWallet(wallet);
@@ -116,11 +120,11 @@ export default function WalletScreen() {
   // Handle feedback prompt display
   useEffect(() => {
     if (shouldShowFeedbackPrompt && !showFeedbackPopup) {
-      // Show feedback popup after a short delay to avoid interrupting user flow
+      // Show feedback popup after a longer delay to ensure user has had time to use the app
       const timer = setTimeout(() => {
         setShowFeedbackPopup(true);
         markFeedbackPromptShown();
-      }, 2000);
+      }, 5000); // Increased delay to 5 seconds
       
       return () => clearTimeout(timer);
     }
@@ -130,6 +134,11 @@ export default function WalletScreen() {
     setShowFeedbackPopup(false);
     markFeedbackPromptDismissed();
   }, [markFeedbackPromptDismissed]);
+
+  const handleFeedbackSubmit = useCallback(() => {
+    setShowFeedbackPopup(false);
+    markFeedbackSubmitted();
+  }, [markFeedbackSubmitted]);
 
   // Auto-scroll to active wallet when it changes
   useEffect(() => {
@@ -190,6 +199,8 @@ export default function WalletScreen() {
           onPress={() => {
             if (item.wallet.id !== currentWalletId) {
               switchWallet(item.wallet.id);
+              // Track usage when user switches wallets
+              incrementUsageCount('wallet_switch');
               // Scroll will be handled automatically by useEffect
             }
           }}
@@ -197,7 +208,7 @@ export default function WalletScreen() {
         />
       </View>
     );
-  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet]);
+  }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet, incrementUsageCount]);
 
   // Show loading state while wallet is being loaded
   if (isLoading) {
@@ -370,7 +381,10 @@ export default function WalletScreen() {
               <View style={styles.balanceContainer}>
                 <TouchableOpacity 
                   style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
-                  onPress={() => setHideBalanceSetting(!hideBalance)}
+                  onPress={() => {
+                    setHideBalanceSetting(!hideBalance);
+                    incrementUsageCount('settings_interaction');
+                  }}
                 >
                   {hideBalance ? (
                     <EyeOff color={theme.colors.textSecondary} size={20} />
@@ -409,7 +423,10 @@ export default function WalletScreen() {
                   transform: [{ scale: 1.05 }],
                 },
               ]}
-              onPress={() => setSelectedPeriod(period)}
+                      onPress={() => {
+                        setSelectedPeriod(period);
+                        incrementUsageCount('settings_interaction');
+                      }}
             >
               <Text style={[
                 styles.periodText,
@@ -582,7 +599,8 @@ export default function WalletScreen() {
       {/* Feedback Popup */}
       <FeedbackPopup 
         visible={showFeedbackPopup} 
-        onDismiss={handleFeedbackDismiss} 
+        onDismiss={handleFeedbackDismiss}
+        onSubmitFeedback={handleFeedbackSubmit}
       />
     </SafeAreaView>
     </GradientBackground>

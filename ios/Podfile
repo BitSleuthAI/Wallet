@@ -11,10 +11,19 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 install! 'cocoapods',
   :deterministic_uuids => false
 
+
 prepare_react_native_project!
 
 target 'BitSleuthWallet' do
   use_expo_modules!
+  
+  # Enable modular headers for Firebase dependencies
+  pod 'GoogleUtilities', :modular_headers => true
+  pod 'GoogleDataTransport', :modular_headers => true
+  pod 'nanopb', :modular_headers => true
+  pod 'FirebaseCore', :modular_headers => true
+  pod 'FirebaseInstallations', :modular_headers => true
+  pod 'FirebaseCoreExtension', :modular_headers => true
 
   if ENV['EXPO_USE_COMMUNITY_AUTOLINKING'] == '1'
     config_command = ['node', '-e', "process.argv=['', '', 'config'];require('@react-native-community/cli').run()"];
@@ -50,6 +59,15 @@ target 'BitSleuthWallet' do
       :ccache_enabled => podfile_properties['apple.ccacheEnabled'] == 'true',
     )
 
+    # Enable modular headers for Firebase pods only
+    installer.pods_project.targets.each do |target|
+      if target.name.start_with?('Firebase') || target.name.start_with?('Google') || target.name == 'nanopb'
+        target.build_configurations.each do |config|
+          config.build_settings['DEFINES_MODULE'] = 'YES'
+        end
+      end
+    end
+
     # This is necessary for Xcode 14, because it signs resource bundles by default
     # when building for devices.
     installer.target_installation_results.pod_target_installation_results
@@ -60,5 +78,6 @@ target 'BitSleuthWallet' do
         end
       end
     end
+
   end
 end

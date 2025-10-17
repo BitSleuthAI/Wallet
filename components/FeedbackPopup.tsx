@@ -1,14 +1,15 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal, Linking, Platform } from 'react-native';
-import { X, Mail } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
+import { Mail, X } from 'lucide-react-native';
+import React from 'react';
+import { Linking, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
 
 interface FeedbackPopupProps {
   visible: boolean;
   onDismiss: () => void;
+  onSubmitFeedback?: () => void;
 }
 
-export default function FeedbackPopup({ visible, onDismiss }: FeedbackPopupProps) {
+export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: FeedbackPopupProps) {
   const { theme } = useWallet();
 
   const handleSubmitFeedback = async () => {
@@ -22,10 +23,13 @@ export default function FeedbackPopup({ visible, onDismiss }: FeedbackPopupProps
       const supported = await Linking.canOpenURL(mailtoUrl);
       if (supported) {
         await Linking.openURL(mailtoUrl);
+        // Call the callback to mark feedback as submitted
+        onSubmitFeedback?.();
       } else {
         // Fallback for web or if no email client is available
         if (Platform.OS === 'web') {
           window.open(mailtoUrl, '_blank');
+          onSubmitFeedback?.();
         }
       }
     } catch (error) {

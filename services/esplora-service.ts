@@ -31,8 +31,6 @@ function getCacheKey(url: string): string {
   return url;
 }
 
-type CacheEntry = { data: any; timestamp: number; ttl: number };
-
 function getCachedData(key: string): CacheEntry | null {
   const cached = cache.get(key);
   if (!cached) {
