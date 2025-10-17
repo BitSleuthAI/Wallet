@@ -27,7 +27,7 @@ export class SimpleBIP32Node {
   private ecc: any;
   private seed: Uint8Array;
   private privateKey?: Uint8Array;
-  private publicKey?: Uint8Array;
+  private _publicKeyBytes?: Uint8Array;
   
   constructor(ecc: any, seed: Uint8Array) {
     this.ecc = ecc;
@@ -78,10 +78,10 @@ export class SimpleBIP32Node {
   }
   
   get publicKeyBytes() {
-    if (!this.publicKey) {
-      this.publicKey = this.ecc.pointFromScalar(this.privateKeyBytes, true);
+    if (!this._publicKeyBytes) {
+      this._publicKeyBytes = this.ecc.pointFromScalar(this.privateKeyBytes, true);
     }
-    return this.publicKey;
+    return this._publicKeyBytes;
   }
   
   get publicKey() {
@@ -95,7 +95,7 @@ export class SimpleBIP32Node {
   neutered() {
     // Return a version without private key
     const neutered = new SimpleBIP32Node(this.ecc, this.seed);
-    neutered.publicKey = this.publicKeyBytes;
+    neutered._publicKeyBytes = this.publicKeyBytes;
     return neutered;
   }
   
