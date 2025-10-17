@@ -86,18 +86,30 @@ if (!bip32) {
       fromSeed: (seed: Uint8Array) => {
         const hdkey = HDKey.fromMasterSeed(seed);
         // Add derive method for numeric derivation using deriveChild
-        hdkey.derive = (index: number) => {
-          console.log('🔧 Custom derive called with index:', index);
-          return hdkey.deriveChild(index);
+        const originalDerive = hdkey.derive;
+        hdkey.derive = (pathOrIndex: string | number) => {
+          if (typeof pathOrIndex === 'number') {
+            console.log('🔧 Custom derive called with index:', pathOrIndex);
+            return hdkey.deriveChild(pathOrIndex);
+          } else {
+            console.log('🔧 Custom derive called with path:', pathOrIndex);
+            return originalDerive.call(hdkey, pathOrIndex);
+          }
         };
         return hdkey;
       },
       fromBase58: (base58: string) => {
         const hdkey = HDKey.fromExtendedKey(base58);
         // Add derive method for numeric derivation using deriveChild
-        hdkey.derive = (index: number) => {
-          console.log('🔧 Custom derive called with index:', index);
-          return hdkey.deriveChild(index);
+        const originalDerive = hdkey.derive;
+        hdkey.derive = (pathOrIndex: string | number) => {
+          if (typeof pathOrIndex === 'number') {
+            console.log('🔧 Custom derive called with index:', pathOrIndex);
+            return hdkey.deriveChild(pathOrIndex);
+          } else {
+            console.log('🔧 Custom derive called with path:', pathOrIndex);
+            return originalDerive.call(hdkey, pathOrIndex);
+          }
         };
         return hdkey;
       },
@@ -107,7 +119,6 @@ if (!bip32) {
     
     const result = {
       BIP32Factory: bip32Factory,
-      HDKey: HDKey,
       ...module
     };
     
@@ -608,11 +619,38 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
   try {
     await ensureECC();
     
-    const bip32Module = bip32;
-    const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    // Use pre-loaded bip32 module or load dynamically
+    let bip32Module = bip32;
+    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
+    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
     
-    const node = bip32.fromBase58(xpub);
+    if (!bip32Module && bip32LoadPromise) {
+      console.log('🔧 Loading bip32 dynamically...');
+      try {
+        bip32Module = await bip32LoadPromise;
+        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+      } catch (error) {
+        console.error('❌ Error during dynamic load:', error);
+        bip32Module = null;
+      }
+    }
+    
+    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
+    
+    const node = bip32Instance.fromBase58(xpub);
     // Fix: Include change level (chain 0 for external addresses) in BIP84 derivation path
     const child = node.derive(0).derive(index);
     
@@ -748,15 +786,42 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       throw new Error('BIP39 library not available');
     }
     
-    const bip32Module = bip32;
-    const bip32 = bip32Module.BIP32Factory(eccFinal);
+    // Use pre-loaded bip32 module or load dynamically
+    let bip32Module = bip32;
+    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
+    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
+    
+    if (!bip32Module && bip32LoadPromise) {
+      console.log('🔧 Loading bip32 dynamically...');
+      try {
+        bip32Module = await bip32LoadPromise;
+        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+      } catch (error) {
+        console.error('❌ Error during dynamic load:', error);
+        bip32Module = null;
+      }
+    }
+    
+    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
+    const bip32Instance = bip32Module.BIP32Factory(eccFinal);
     
     console.log('🔧 BIP32 factory created');
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
     console.log('🔧 Seed generated, length:', seed.length);
     
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     console.log('🔧 Root node created');
     
     // Derive xpub for P2WPKH (BIP84) first, then convert to zpub
@@ -1164,12 +1229,39 @@ export const getPrivateKey = async (mnemonic: string, addressIndex: number): Pro
       throw new Error('BIP39 library not available');
     }
     
-    const bip32Module = bip32;
+    // Use pre-loaded bip32 module or load dynamically
+    let bip32Module = bip32;
+    console.log('🔧 Initial bip32Module:', typeof bip32Module, bip32Module ? 'exists' : 'null');
+    console.log('🔧 bip32LoadPromise exists:', bip32LoadPromise ? 'yes' : 'no');
+    
+    if (!bip32Module && bip32LoadPromise) {
+      console.log('🔧 Loading bip32 dynamically...');
+      try {
+        bip32Module = await bip32LoadPromise;
+        console.log('🔧 Dynamic load result:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+      } catch (error) {
+        console.error('❌ Error during dynamic load:', error);
+        bip32Module = null;
+      }
+    }
+    
+    console.log('🔧 bip32Module after loading:', typeof bip32Module, bip32Module ? Object.keys(bip32Module) : 'null');
+    console.log('🔧 BIP32Factory check:', bip32Module ? typeof bip32Module.BIP32Factory : 'N/A');
+    
+    if (!bip32Module) {
+      throw new Error('BIP32 module not available');
+    }
+    
+    if (!bip32Module.BIP32Factory) {
+      console.error('❌ BIP32Factory not found in module:', bip32Module);
+      throw new Error('BIP32Factory not available in bip32 module');
+    }
+    
     const ecc = (global as any).ecc;
-    const bip32 = bip32Module.BIP32Factory(ecc);
+    const bip32Instance = bip32Module.BIP32Factory(ecc);
     
     const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32.fromSeed(seed);
+    const root = bip32Instance.fromSeed(seed);
     
     // Derive private key for P2WPKH (BIP84)
     const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
