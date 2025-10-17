@@ -4,39 +4,11 @@
  */
 
 import { BitcoinPrice, UTXO } from '@/types/wallet';
+import { loadBip32Module } from './bip32-loader';
 import { getAddressUTXOs as esploraGetAddressUTXOs } from './esplora-service';
 
-// Import bip32 with error handling
-let bip32: any;
-try {
-  bip32 = require('@scure/bip32');
-  
-  // Create BIP32Factory wrapper for compatibility
-  const HDKey = bip32.HDKey;
-  if (HDKey) {
-    const bip32Factory = (ecc: any) => ({
-      fromSeed: (seed: Uint8Array) => {
-        const hdkey = HDKey.fromMasterSeed(seed);
-        hdkey.derive = (index: number) => hdkey.deriveChild(index);
-        return hdkey;
-      },
-      fromBase58: (base58: string) => {
-        const hdkey = HDKey.fromExtendedKey(base58);
-        hdkey.derive = (index: number) => hdkey.deriveChild(index);
-        return hdkey;
-      },
-    });
-    bip32.BIP32Factory = bip32Factory;
-    console.log('✅ BIP32 module loaded successfully with BIP32Factory');
-  } else {
-    // HDKey not available, set bip32 to null to indicate failure
-    console.warn('HDKey missing from @scure/bip32 module, bip32 not available');
-    bip32 = null;
-  }
-} catch (error) {
-  console.warn('Failed to load bip32 module:', error);
-  bip32 = null;
-}
+// Use centralized bip32 loader
+let bip32: any = null;
 
 // Don't initialize ECC at module load time - do it lazily when needed
 let eccInitialized = false;
@@ -484,7 +456,11 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
   try {
     console.log('🔧 Generating change address for index:', changeIndex);
     
-    // Use pre-loaded bip32 module
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
     if (!bip32 || !bip32.BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
@@ -580,7 +556,11 @@ async function createTransaction(
     // Sign inputs
     console.log('🔐 Signing transaction with private keys...');
     
-    // Use pre-loaded bip32 module
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
     if (!bip32 || !bip32.BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }

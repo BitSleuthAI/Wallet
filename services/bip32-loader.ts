@@ -14,33 +14,57 @@ function createBIP32Factory(HDKey: any) {
   return (ecc: any) => ({
     fromSeed: (seed: Uint8Array) => {
       const hdkey = HDKey.fromMasterSeed(seed);
-      // Add derive method for numeric derivation using deriveChild
-      const originalDerive = hdkey.derive;
-      hdkey.derive = (pathOrIndex: string | number) => {
-        if (typeof pathOrIndex === 'number') {
-          console.log('🔧 Custom derive called with index:', pathOrIndex);
-          return hdkey.deriveChild(pathOrIndex);
-        } else {
-          console.log('🔧 Custom derive called with path:', pathOrIndex);
-          return originalDerive.call(hdkey, pathOrIndex);
+      
+      // Create a wrapper that adds derivePath method and enhances derive method
+      const wrappedHdkey = {
+        ...hdkey,
+        derive: (pathOrIndex: string | number) => {
+          if (typeof pathOrIndex === 'number') {
+            console.log('🔧 Custom derive called with index:', pathOrIndex);
+            return hdkey.deriveChild(pathOrIndex);
+          } else {
+            console.log('🔧 Custom derive called with path:', pathOrIndex);
+            return hdkey.derive(pathOrIndex);
+          }
+        },
+        derivePath: (path: string) => {
+          console.log('🔧 derivePath called with path:', path);
+          return hdkey.derive(path);
+        },
+        deriveChild: (index: number) => {
+          console.log('🔧 deriveChild called with index:', index);
+          return hdkey.deriveChild(index);
         }
       };
-      return hdkey;
+      
+      return wrappedHdkey;
     },
     fromBase58: (base58: string) => {
       const hdkey = HDKey.fromExtendedKey(base58);
-      // Add derive method for numeric derivation using deriveChild
-      const originalDerive = hdkey.derive;
-      hdkey.derive = (pathOrIndex: string | number) => {
-        if (typeof pathOrIndex === 'number') {
-          console.log('🔧 Custom derive called with index:', pathOrIndex);
-          return hdkey.deriveChild(pathOrIndex);
-        } else {
-          console.log('🔧 Custom derive called with path:', pathOrIndex);
-          return originalDerive.call(hdkey, pathOrIndex);
+      
+      // Create a wrapper that adds derivePath method and enhances derive method
+      const wrappedHdkey = {
+        ...hdkey,
+        derive: (pathOrIndex: string | number) => {
+          if (typeof pathOrIndex === 'number') {
+            console.log('🔧 Custom derive called with index:', pathOrIndex);
+            return hdkey.deriveChild(pathOrIndex);
+          } else {
+            console.log('🔧 Custom derive called with path:', pathOrIndex);
+            return hdkey.derive(pathOrIndex);
+          }
+        },
+        derivePath: (path: string) => {
+          console.log('🔧 derivePath called with path:', path);
+          return hdkey.derive(path);
+        },
+        deriveChild: (index: number) => {
+          console.log('🔧 deriveChild called with index:', index);
+          return hdkey.deriveChild(index);
         }
       };
-      return hdkey;
+      
+      return wrappedHdkey;
     },
   });
 }
