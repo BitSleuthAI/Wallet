@@ -20,7 +20,13 @@ function createBIP32Factory(HDKey: any) {
         ...hdkey,
         derive: (pathOrIndex: string | number) => {
           console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
-          return hdkey.derive(pathOrIndex);
+          if (typeof pathOrIndex === 'string') {
+            // Use derive for BIP32 path strings
+            return hdkey.derive(pathOrIndex);
+          } else {
+            // Use deriveChild for numeric indices
+            return hdkey.deriveChild(pathOrIndex);
+          }
         },
         derivePath: (path: string) => {
           console.log('🔧 derivePath called with path:', path);
@@ -28,7 +34,7 @@ function createBIP32Factory(HDKey: any) {
         },
         deriveChild: (index: number) => {
           console.log('🔧 deriveChild called with index:', index);
-          return hdkey.derive(index);
+          return hdkey.deriveChild(index);
         }
       };
       
@@ -42,7 +48,13 @@ function createBIP32Factory(HDKey: any) {
         ...hdkey,
         derive: (pathOrIndex: string | number) => {
           console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
-          return hdkey.derive(pathOrIndex);
+          if (typeof pathOrIndex === 'string') {
+            // Use derive for BIP32 path strings
+            return hdkey.derive(pathOrIndex);
+          } else {
+            // Use deriveChild for numeric indices
+            return hdkey.deriveChild(pathOrIndex);
+          }
         },
         derivePath: (path: string) => {
           console.log('🔧 derivePath called with path:', path);
@@ -50,7 +62,7 @@ function createBIP32Factory(HDKey: any) {
         },
         deriveChild: (index: number) => {
           console.log('🔧 deriveChild called with index:', index);
-          return hdkey.derive(index);
+          return hdkey.deriveChild(index);
         }
       };
       
@@ -89,20 +101,20 @@ export async function loadBip32Module(): Promise<any> {
     if (HDKey) {
       console.log('🔧 Creating BIP32Factory wrapper for module-level loaded @scure/bip32');
       const bip32Factory = createBIP32Factory(HDKey);
-      module.BIP32Factory = bip32Factory;
-      console.log('✅ BIP32Factory added to module:', typeof module.BIP32Factory);
-      bip32 = module;
-      return module;
+      // Create a new object instead of modifying the original module
+      const result = {
+        BIP32Factory: bip32Factory,
+        ...module
+      };
+      console.log('✅ BIP32Factory added to module:', typeof result.BIP32Factory);
+      bip32 = result;
+      return result;
     } else {
       console.error('❌ HDKey not found in @scure/bip32 module');
-      // Create a stub object with BIP32Factory that throws proper error
-      const stubModule = {
-        BIP32Factory: () => {
-          throw new Error('BIP32 module or BIP32Factory not available - HDKey missing from @scure/bip32');
-        }
-      };
-      bip32 = stubModule;
-      return stubModule;
+      // Set BIP32Factory to undefined so services can properly detect the issue
+      (module as any).BIP32Factory = undefined;
+      bip32 = module;
+      return module;
     }
   } catch (error) {
     console.warn('⚠️ Failed to load @scure/bip32 at module level:', error);
@@ -119,13 +131,9 @@ export async function loadBip32Module(): Promise<any> {
     
     if (!HDKey) {
       console.error('❌ HDKey not found in @scure/bip32 module');
-      // Create a stub object with BIP32Factory that throws proper error
-      const stubModule = {
-        BIP32Factory: () => {
-          throw new Error('BIP32 module or BIP32Factory not available - HDKey missing from @scure/bip32');
-        }
-      };
-      return stubModule;
+      // Set BIP32Factory to undefined so services can properly detect the issue
+      (module as any).BIP32Factory = undefined;
+      return module;
     }
     
     const bip32Factory = createBIP32Factory(HDKey);
@@ -181,14 +189,18 @@ export function clearBip32Cache(): void {
 
 // Try initial module-level loading
 try {
-  bip32 = require('@scure/bip32');
-  console.log('✅ @scure/bip32 loaded at module level:', typeof bip32, Object.keys(bip32));
+  const module = require('@scure/bip32');
+  console.log('✅ @scure/bip32 loaded at module level:', typeof module, Object.keys(module));
   
-  const HDKey = bip32.HDKey;
+  const HDKey = module.HDKey;
   if (HDKey) {
     console.log('🔧 Creating BIP32Factory wrapper for module-level loaded @scure/bip32');
     const bip32Factory = createBIP32Factory(HDKey);
-    bip32.BIP32Factory = bip32Factory;
+    // Create a new object instead of modifying the original module
+    bip32 = {
+      BIP32Factory: bip32Factory,
+      ...module
+    };
     console.log('✅ BIP32Factory added to module:', typeof bip32.BIP32Factory);
   } else {
     console.error('❌ HDKey not found in @scure/bip32 module');

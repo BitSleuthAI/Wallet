@@ -113,8 +113,18 @@ export class SimpleBIP32Node {
   neutered() {
     // Return a version without private key access
     // Create a neutered node with empty seed to prevent private key derivation
+    // Compute public key directly from private key to avoid accessing privateKeyBytes getter
+    let publicKeyBytes: Uint8Array;
+    if (this._publicKeyBytes) {
+      publicKeyBytes = this._publicKeyBytes;
+    } else {
+      // Compute public key directly from seed without using the getter
+      const privateKeyBytes = this.seed.slice(0, 32);
+      publicKeyBytes = this.ecc.pointFromScalar(privateKeyBytes, true);
+    }
+    
     const neutered = new SimpleBIP32Node(this.ecc, new Uint8Array(0), true);
-    neutered._publicKeyBytes = this.publicKeyBytes;
+    neutered._publicKeyBytes = publicKeyBytes;
     return neutered;
   }
   
