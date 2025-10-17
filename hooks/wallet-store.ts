@@ -94,6 +94,13 @@ const defaultFeeSettings: FeeSettings = {
 
 const FEE_PRESETS: FeeSettings['defaultPreset'][] = ['economy', 'standard', 'priority', 'custom'];
 
+// Feedback storage keys
+const FEEDBACK_SUBMITTED_KEY = 'feedbackSubmitted';
+const FEEDBACK_DISMISSED_TIMESTAMP_KEY = 'feedbackDismissedTimestamp';
+const FEEDBACK_FIRST_LAUNCH_KEY = 'feedbackFirstLaunch';
+const FEEDBACK_USAGE_COUNT_KEY = 'feedbackUsageCount';
+const FEEDBACK_USAGE_TYPES_KEY = 'feedbackUsageTypes';
+
 const isValidFeePreset = (value: unknown): value is FeeSettings['defaultPreset'] => {
   return typeof value === 'string' && FEE_PRESETS.includes(value as FeeSettings['defaultPreset']);
 };
@@ -1146,19 +1153,144 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [saveAutoLock]);
 
   // Feedback prompt state and functions
-  const [feedbackPromptDismissed, setFeedbackPromptDismissed] = useState(false);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [feedbackDismissedTimestamp, setFeedbackDismissedTimestamp] = useState<number | null>(null);
   const [feedbackPromptShown, setFeedbackPromptShown] = useState(false);
+  const [usageCount, setUsageCount] = useState(0);
+  const [usageTypes, setUsageTypes] = useState<Set<string>>(new Set());
 
-  const shouldShowFeedbackPrompt = useMemo(() => {
-    return !feedbackPromptDismissed && !feedbackPromptShown && wallets.length > 0;
-  }, [feedbackPromptDismissed, feedbackPromptShown, wallets]);
+  // Load feedback state from storage on mount
+  useEffect(() => {
+    const loadFeedbackState = async () => {
+      try {
+        const [submitted, dismissedTs, shown, count, types] = await Promise.all([
+          AsyncStorage.getItem(FEEDBACK_SUBMITTED_KEY),
+          AsyncStorage.getItem(FEEDBACK_DISMISSED_TIMESTAMP_KEY),
+          AsyncStorage.getItem(FEEDBACK_FIRST_LAUNCH_KEY),
+          AsyncStorage.getItem(FEEDBACK_USAGE_COUNT_KEY),
+          AsyncStorage.getItem(FEEDBACK_USAGE_TYPES_KEY),
+        ]);
 
-  const markFeedbackPromptShown = useCallback(() => {
-    setFeedbackPromptShown(true);
+        if (submitted === 'true') {
+          setFeedbackSubmitted(true);
+        }
+
+        if (dismissedTs) {
+          setFeedbackDismissedTimestamp(parseInt(dismissedTs, 10));
+        }
+
+        if (shown === 'true') {
+          setFeedbackPromptShown(true);
+        }
+
+        if (count) {
+          setUsageCount(parseInt(count, 10));
+        }
+
+        if (types) {
+          try {
+            const parsedTypes = JSON.parse(types);
+            setUsageTypes(new Set(parsedTypes));
+          } catch (error) {
+            console.warn('Failed to parse usage types:', error);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to load feedback state:', error);
+      }
+    };
+
+    loadFeedbackState();
   }, []);
 
-  const markFeedbackPromptDismissed = useCallback(() => {
-    setFeedbackPromptDismissed(true);
+  // Increment usage count when user interacts with the app
+  const incrementUsageCount = useCallback(async (interactionType?: string) => {
+    const newCount = usageCount + 1;
+    setUsageCount(newCount);
+    
+    // Track different types of interactions
+    if (interactionType) {
+      const newTypes = new Set(usageTypes);
+      newTypes.add(interactionType);
+      setUsageTypes(newTypes);
+      
+      try {
+        await AsyncStorage.setItem(FEEDBACK_USAGE_TYPES_KEY, JSON.stringify(Array.from(newTypes)));
+      } catch (error) {
+        console.warn('Failed to save usage types:', error);
+      }
+    }
+    
+    try {
+      await AsyncStorage.setItem(FEEDBACK_USAGE_COUNT_KEY, newCount.toString());
+    } catch (error) {
+      console.warn('Failed to save usage count:', error);
+    }
+  }, [usageCount, usageTypes]);
+
+  const shouldShowFeedbackPrompt = useMemo(() => {
+    // Don't show if already submitted
+    if (feedbackSubmitted) return false;
+    
+    // Don't show if already shown in this session
+    if (feedbackPromptShown) return false;
+    
+    // Don't show if user has no wallets yet
+    if (wallets.length === 0) return false;
+    
+    // Require at least 5 different types of interactions AND 10+ total interactions
+    // This ensures user has thoroughly explored different parts of the app
+    const requiredInteractionTypes = [
+      'wallet_switch',      // User has switched between wallets
+      'data_refresh',       // User has refreshed data
+      'send_interaction',   // User has interacted with send screen
+      'receive_interaction', // User has interacted with receive screen
+      'settings_interaction', // User has used settings/features
+    ];
+    
+    // Need BOTH: at least 5 different interaction types AND 10+ total interactions
+    const hasDiverseInteractions = usageTypes.size >= 5;
+    const hasEnoughInteractions = usageCount >= 10;
+    
+    if (!hasDiverseInteractions || !hasEnoughInteractions) {
+      return false;
+    }
+    
+    // If user dismissed, wait at least 7 days before asking again
+    if (feedbackDismissedTimestamp) {
+      const daysSinceDismissed = (Date.now() - feedbackDismissedTimestamp) / (1000 * 60 * 60 * 24);
+      if (daysSinceDismissed < 7) return false;
+    }
+    
+    return true;
+  }, [feedbackSubmitted, feedbackPromptShown, wallets.length, usageCount, usageTypes.size, feedbackDismissedTimestamp]);
+
+  const markFeedbackPromptShown = useCallback(async () => {
+    setFeedbackPromptShown(true);
+    try {
+      await AsyncStorage.setItem(FEEDBACK_FIRST_LAUNCH_KEY, 'true');
+    } catch (error) {
+      console.warn('Failed to save feedback shown state:', error);
+    }
+  }, []);
+
+  const markFeedbackPromptDismissed = useCallback(async () => {
+    const timestamp = Date.now();
+    setFeedbackDismissedTimestamp(timestamp);
+    try {
+      await AsyncStorage.setItem(FEEDBACK_DISMISSED_TIMESTAMP_KEY, timestamp.toString());
+    } catch (error) {
+      console.warn('Failed to save feedback dismissed timestamp:', error);
+    }
+  }, []);
+
+  const markFeedbackSubmitted = useCallback(async () => {
+    setFeedbackSubmitted(true);
+    try {
+      await AsyncStorage.setItem(FEEDBACK_SUBMITTED_KEY, 'true');
+    } catch (error) {
+      console.warn('Failed to save feedback submitted state:', error);
+    }
   }, []);
 
   const actionsData = useMemo(() => ({
@@ -1219,7 +1351,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     shouldShowFeedbackPrompt,
     markFeedbackPromptShown,
     markFeedbackPromptDismissed,
-  }), [shouldShowFeedbackPrompt, markFeedbackPromptShown, markFeedbackPromptDismissed]);
+    markFeedbackSubmitted,
+    incrementUsageCount,
+  }), [shouldShowFeedbackPrompt, markFeedbackPromptShown, markFeedbackPromptDismissed, markFeedbackSubmitted, incrementUsageCount]);
 
   // Memoize the final returned object to prevent unnecessary re-renders
   const walletStoreData = useMemo(() => ({

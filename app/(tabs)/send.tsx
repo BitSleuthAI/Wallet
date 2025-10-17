@@ -12,17 +12,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -38,6 +38,7 @@ export default function SendScreen() {
     feeSettings,
     setFeeSettings,
     feeSettingsLoading,
+    incrementUsageCount,
   } = useWallet();
   const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -1034,7 +1035,10 @@ export default function SendScreen() {
                 />
                 <TouchableOpacity 
                   style={styles.qrCodeButton}
-                  onPress={() => setShowQRScanner(true)}
+                  onPress={() => {
+                    setShowQRScanner(true);
+                    incrementUsageCount('send_interaction');
+                  }}
                 >
                   <QrCode color={theme.colors.primary} size={24} />
                 </TouchableOpacity>
