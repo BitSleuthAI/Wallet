@@ -60,8 +60,8 @@
         "expo-build-properties",
         {
           "android": {
-            "gradleVersion": "8.13",
-            "androidGradlePluginVersion": "8.8.2",
+            "gradleVersion": "8.10.2",
+            "androidGradlePluginVersion": "8.6.1",
             "compileSdkVersion": 35,
             "targetSdkVersion": 35,
             "minSdkVersion": 24,
