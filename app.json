@@ -56,6 +56,17 @@
           "faceIDPermission": "Allow $(PRODUCT_NAME) to use Face ID."
         }
       ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 35,
+            "targetSdkVersion": 35,
+            "minSdkVersion": 24,
+            "javaVersion": "17"
+          }
+        }
+      ],
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics"
     ],

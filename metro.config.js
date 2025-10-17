@@ -23,6 +23,8 @@ config.resolver.extraNodeModules = {
 config.resolver.alias = {
   '@noble/hashes/crypto.js': '@noble/hashes/crypto',
   'web-streams-polyfill/ponyfill/es6': 'web-streams-polyfill/dist/ponyfill.js',
+  // Fix for Metro source map generation
+  '@babel/traverse--for-generate-function-map': '@babel/traverse',
 };
 
 // Ensure polyfills are resolved correctly
