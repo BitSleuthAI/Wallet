@@ -1,6 +1,8 @@
 import Expo
 import React
 import ReactAppDependencyProvider
+import Firebase
+import FirebaseCrashlytics
 
 @UIApplicationMain
 public class AppDelegate: ExpoAppDelegate {
@@ -13,6 +15,12 @@ public class AppDelegate: ExpoAppDelegate {
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
   ) -> Bool {
+    // Initialize Firebase
+    FirebaseApp.configure()
+    
+    // Enable Crashlytics collection
+    Crashlytics.crashlytics().setCrashlyticsCollectionEnabled(true)
+    
     let delegate = ReactNativeDelegate()
     let factory = ExpoReactNativeFactory(delegate: delegate)
     delegate.dependencyProvider = RCTAppDependencyProvider()

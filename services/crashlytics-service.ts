@@ -21,8 +21,11 @@ try {
   if (!isExpoGo) {
     // Try to initialize Firebase App first
     try {
-      firebaseApp = require('@react-native-firebase/app').default;
-      crashlytics = require('@react-native-firebase/crashlytics').default;
+      const firebase = require('@react-native-firebase/app');
+      const crashlyticsModule = require('@react-native-firebase/crashlytics');
+      
+      firebaseApp = firebase.default;
+      crashlytics = crashlyticsModule.default;
       
       // Check if Firebase is properly configured
       if (firebaseApp.apps.length === 0) {
