@@ -27,6 +27,11 @@ try {
       },
     });
     bip32.BIP32Factory = bip32Factory;
+  } else {
+    // HDKey not available, create a fallback factory that throws an error
+    bip32.BIP32Factory = (ecc: any) => {
+      throw new Error('BIP32Factory not available: HDKey missing from @scure/bip32 module');
+    };
   }
 } catch (error) {
   console.warn('Failed to load bip32 module:', error);
