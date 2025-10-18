@@ -37,9 +37,15 @@ function wrapHdkeyNode(hdkey: any, HDKey: any) {
     toBase58: () => {
       console.log('🔧 toBase58() called');
       // @scure/bip32 returns privateExtendedKey for regular nodes, publicExtendedKey for neutered nodes
-      // Use try-catch to safely check if privateExtendedKey exists
+      // Check both for errors and falsy values to handle neutered nodes properly
       try {
-        return hdkey.privateExtendedKey;
+        const privateKey = hdkey.privateExtendedKey;
+        // If privateExtendedKey exists and is truthy, use it
+        if (privateKey) {
+          return privateKey;
+        }
+        // If privateExtendedKey is falsy (undefined/null), this is likely a neutered node
+        return hdkey.publicExtendedKey;
       } catch (error) {
         // If privateExtendedKey throws an error, this is a neutered node
         return hdkey.publicExtendedKey;
