@@ -4,26 +4,25 @@
  */
 
 import {
-    getCachedAddressStats,
-    getCachedAddressTransactions,
-    getCachedAddressUTXOs,
-    setCachedAddressStats,
-    setCachedAddressTxIds,
-    setCachedAddressUTXOs
+  getCachedAddressStats,
+  getCachedAddressTransactions,
+  getCachedAddressUTXOs,
+  setCachedAddressStats,
+  setCachedAddressTxIds,
+  setCachedAddressUTXOs
 } from './address-cache-service';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
-const BLOCKCHAIR_API_BASE = 'https://api.blockchair.com/bitcoin';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
 // Additional fallback providers for better reliability
+// Note: Only includes Esplora-compatible providers (Blockchair uses different API format)
 const FALLBACK_PROVIDERS = [
   'https://blockstream.info/api',
-  'https://mempool.space/api',
-  'https://api.blockchair.com/bitcoin'
+  'https://mempool.space/api'
 ];
 
 type CacheEntry = { data: any; timestamp: number; ttl: number };
@@ -404,13 +403,16 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
 }
 
 /**
- * Test network connectivity to API providers
+ * Test network connectivity to Esplora-compatible API providers
  */
 export async function testNetworkConnectivity(): Promise<{ connected: boolean; workingProviders: string[]; errors: string[] }> {
   const workingProviders: string[] = [];
   const errors: string[] = [];
   
-  for (const provider of FALLBACK_PROVIDERS) {
+  // Test all Esplora-compatible providers
+  const allEsploraProviders = [...ESPLORA_BASES, ...FALLBACK_PROVIDERS];
+  
+  for (const provider of allEsploraProviders) {
     try {
       await fetchJson(`${provider}/blocks/tip/height`, undefined, 5000);
       workingProviders.push(provider);
@@ -545,7 +547,7 @@ export async function getBTCPrice(): Promise<{ data: { price: number; change24h:
   const cached = getCachedData(cacheKey);
   if (cached) {
     console.log(`📦 Cache hit for BTC price`);
-    return { data: cached, error: null };
+    return { data: cached.data, error: null };
   }
   
   try {
