@@ -8,65 +8,64 @@ let bip32: any;
 let bip32LoadPromise: Promise<any> | null = null;
 
 /**
+ * Create a wrapper for HDKey nodes to ensure all derived nodes have the same interface
+ */
+function wrapHdkeyNode(hdkey: any, HDKey: any) {
+  return {
+    ...hdkey,
+    derive: (pathOrIndex: string | number) => {
+      console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
+      const derivedHdkey = typeof pathOrIndex === 'string' ? hdkey.derive(pathOrIndex) : hdkey.deriveChild(pathOrIndex);
+      return wrapHdkeyNode(derivedHdkey, HDKey);
+    },
+    derivePath: (path: string) => {
+      console.log('🔧 derivePath called with path:', path);
+      const derivedHdkey = hdkey.derive(path);
+      return wrapHdkeyNode(derivedHdkey, HDKey);
+    },
+    deriveChild: (index: number) => {
+      console.log('🔧 deriveChild called with index:', index);
+      const derivedHdkey = hdkey.deriveChild(index);
+      return wrapHdkeyNode(derivedHdkey, HDKey);
+    },
+    neutered: () => {
+      console.log('🔧 neutered() called');
+      // @scure/bip32 doesn't have neutered() method, use publicExtendedKey instead
+      const neuteredHdkey = HDKey.fromExtendedKey(hdkey.publicExtendedKey);
+      return wrapHdkeyNode(neuteredHdkey, HDKey);
+    },
+    toBase58: () => {
+      console.log('🔧 toBase58() called');
+      // @scure/bip32 returns privateExtendedKey for regular nodes, publicExtendedKey for neutered nodes
+      // Check both for errors and falsy values to handle neutered nodes properly
+      try {
+        const privateKey = hdkey.privateExtendedKey;
+        // If privateExtendedKey exists and is truthy, use it
+        if (privateKey) {
+          return privateKey;
+        }
+        // If privateExtendedKey is falsy (undefined/null), this is likely a neutered node
+        return hdkey.publicExtendedKey;
+      } catch (error) {
+        // If privateExtendedKey throws an error, this is a neutered node
+        return hdkey.publicExtendedKey;
+      }
+    }
+  };
+}
+
+/**
  * Create BIP32Factory wrapper for @scure/bip32 compatibility
  */
 function createBIP32Factory(HDKey: any) {
   return (ecc: any) => ({
     fromSeed: (seed: Uint8Array) => {
       const hdkey = HDKey.fromMasterSeed(seed);
-      
-      // Create a wrapper that provides consistent interface for @scure/bip32 HDKey
-      const wrappedHdkey = {
-        ...hdkey,
-        derive: (pathOrIndex: string | number) => {
-          console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
-          if (typeof pathOrIndex === 'string') {
-            // Use derive for BIP32 path strings
-            return hdkey.derive(pathOrIndex);
-          } else {
-            // Use deriveChild for numeric indices
-            return hdkey.deriveChild(pathOrIndex);
-          }
-        },
-        derivePath: (path: string) => {
-          console.log('🔧 derivePath called with path:', path);
-          return hdkey.derive(path);
-        },
-        deriveChild: (index: number) => {
-          console.log('🔧 deriveChild called with index:', index);
-          return hdkey.deriveChild(index);
-        }
-      };
-      
-      return wrappedHdkey;
+      return wrapHdkeyNode(hdkey, HDKey);
     },
     fromBase58: (base58: string) => {
       const hdkey = HDKey.fromExtendedKey(base58);
-      
-      // Create a wrapper that provides consistent interface for @scure/bip32 HDKey
-      const wrappedHdkey = {
-        ...hdkey,
-        derive: (pathOrIndex: string | number) => {
-          console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
-          if (typeof pathOrIndex === 'string') {
-            // Use derive for BIP32 path strings
-            return hdkey.derive(pathOrIndex);
-          } else {
-            // Use deriveChild for numeric indices
-            return hdkey.deriveChild(pathOrIndex);
-          }
-        },
-        derivePath: (path: string) => {
-          console.log('🔧 derivePath called with path:', path);
-          return hdkey.derive(path);
-        },
-        deriveChild: (index: number) => {
-          console.log('🔧 deriveChild called with index:', index);
-          return hdkey.deriveChild(index);
-        }
-      };
-      
-      return wrappedHdkey;
+      return wrapHdkeyNode(hdkey, HDKey);
     },
   });
 }
