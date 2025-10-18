@@ -4,12 +4,12 @@
  */
 
 import {
-    getCachedAddressStats,
-    getCachedAddressTransactions,
-    getCachedAddressUTXOs,
-    setCachedAddressStats,
-    setCachedAddressTxIds,
-    setCachedAddressUTXOs
+  getCachedAddressStats,
+  getCachedAddressTransactions,
+  getCachedAddressUTXOs,
+  setCachedAddressStats,
+  setCachedAddressTxIds,
+  setCachedAddressUTXOs
 } from './address-cache-service';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
@@ -17,6 +17,13 @@ const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
+
+// Additional fallback providers for better reliability
+// Note: Only includes Esplora-compatible providers (Blockchair uses different API format)
+const FALLBACK_PROVIDERS = [
+  // These are the same as ESPLORA_BASES, so we'll just use ESPLORA_BASES directly
+  // No additional fallback providers are needed since we already have the main ones
+];
 
 type CacheEntry = { data: any; timestamp: number; ttl: number };
 
@@ -47,7 +54,7 @@ function setCachedData(key: string, data: any, ttl: number): void {
 /**
  * Fetch JSON with proper error handling and timeout
  */
-async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 10000): Promise<any> {
+async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 15000): Promise<any> {
   console.log(`🌐 Fetching: ${url}`);
   
   return new Promise((resolve, reject) => {
@@ -110,8 +117,9 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
       }
     };
     
-    xhr.onerror = () => {
-      reject(new Error('Network error'));
+    xhr.onerror = (event) => {
+      console.error(`❌ XMLHttpRequest error for ${url}:`, event);
+      reject(new Error('Network error - request failed'));
     };
     
     xhr.ontimeout = () => {
@@ -121,6 +129,7 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
     xhr.open('GET', url, true);
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('User-Agent', 'BitSleuthWallet/1.0');
+    xhr.setRequestHeader('Cache-Control', 'no-cache');
     
     // Add any custom headers from options
     if (options?.headers) {
@@ -226,11 +235,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
-  const attemptsPerProvider = 2;
+  const attemptsPerProvider = 3; // Increased attempts per provider
   let lastError: any = null;
   let providerIndex = 0;
   
-  for (const base of ESPLORA_BASES) {
+  // Try all providers
+  const allProviders = ESPLORA_BASES;
+  
+  for (const base of allProviders) {
     const url = `${base}${path}`;
     console.log(`🔄 Trying ${base} for ${path}`);
     
@@ -382,7 +394,38 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     console.log(`🔄 Switching to next provider for ${path}`);
   }
   
+  // If all providers failed, provide a more helpful error message
+  if (lastError?.message?.includes('Network error')) {
+    throw new Error('Upstream data provider is temporarily unavailable. Please try again in a moment.');
+  }
+  
   throw lastError ?? new Error('Failed to fetch from any Esplora provider');
+}
+
+/**
+ * Test network connectivity to Esplora-compatible API providers
+ */
+export async function testNetworkConnectivity(): Promise<{ connected: boolean; workingProviders: string[]; errors: string[] }> {
+  const workingProviders: string[] = [];
+  const errors: string[] = [];
+  
+  // Test all Esplora-compatible providers
+  const allEsploraProviders = ESPLORA_BASES;
+  
+  for (const provider of allEsploraProviders) {
+    try {
+      await fetchJson(`${provider}/blocks/tip/height`, undefined, 5000);
+      workingProviders.push(provider);
+    } catch (error) {
+      errors.push(`${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  return {
+    connected: workingProviders.length > 0,
+    workingProviders,
+    errors
+  };
 }
 
 /**
@@ -504,7 +547,7 @@ export async function getBTCPrice(): Promise<{ data: { price: number; change24h:
   const cached = getCachedData(cacheKey);
   if (cached) {
     console.log(`📦 Cache hit for BTC price`);
-    return { data: cached, error: null };
+    return { data: cached.data, error: null };
   }
   
   try {
