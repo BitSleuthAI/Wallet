@@ -15,8 +15,16 @@ import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTrans
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
+const BLOCKCHAIR_API_BASE = 'https://api.blockchair.com/bitcoin';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
+
+// Additional fallback providers for better reliability
+const FALLBACK_PROVIDERS = [
+  'https://blockstream.info/api',
+  'https://mempool.space/api',
+  'https://api.blockchair.com/bitcoin'
+];
 
 type CacheEntry = { data: any; timestamp: number; ttl: number };
 
@@ -47,7 +55,7 @@ function setCachedData(key: string, data: any, ttl: number): void {
 /**
  * Fetch JSON with proper error handling and timeout
  */
-async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 10000): Promise<any> {
+async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 15000): Promise<any> {
   console.log(`🌐 Fetching: ${url}`);
   
   return new Promise((resolve, reject) => {
@@ -110,8 +118,9 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
       }
     };
     
-    xhr.onerror = () => {
-      reject(new Error('Network error'));
+    xhr.onerror = (event) => {
+      console.error(`❌ XMLHttpRequest error for ${url}:`, event);
+      reject(new Error('Network error - request failed'));
     };
     
     xhr.ontimeout = () => {
@@ -121,6 +130,7 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
     xhr.open('GET', url, true);
     xhr.setRequestHeader('Accept', 'application/json');
     xhr.setRequestHeader('User-Agent', 'BitSleuthWallet/1.0');
+    xhr.setRequestHeader('Cache-Control', 'no-cache');
     
     // Add any custom headers from options
     if (options?.headers) {
@@ -226,11 +236,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
-  const attemptsPerProvider = 2;
+  const attemptsPerProvider = 3; // Increased attempts per provider
   let lastError: any = null;
   let providerIndex = 0;
   
-  for (const base of ESPLORA_BASES) {
+  // Try all providers including fallbacks
+  const allProviders = [...ESPLORA_BASES, ...FALLBACK_PROVIDERS.filter(p => !ESPLORA_BASES.includes(p))];
+  
+  for (const base of allProviders) {
     const url = `${base}${path}`;
     console.log(`🔄 Trying ${base} for ${path}`);
     
@@ -382,7 +395,35 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     console.log(`🔄 Switching to next provider for ${path}`);
   }
   
+  // If all providers failed, provide a more helpful error message
+  if (lastError?.message?.includes('Network error')) {
+    throw new Error('Upstream data provider is temporarily unavailable. Please try again in a moment.');
+  }
+  
   throw lastError ?? new Error('Failed to fetch from any Esplora provider');
+}
+
+/**
+ * Test network connectivity to API providers
+ */
+export async function testNetworkConnectivity(): Promise<{ connected: boolean; workingProviders: string[]; errors: string[] }> {
+  const workingProviders: string[] = [];
+  const errors: string[] = [];
+  
+  for (const provider of FALLBACK_PROVIDERS) {
+    try {
+      await fetchJson(`${provider}/blocks/tip/height`, undefined, 5000);
+      workingProviders.push(provider);
+    } catch (error) {
+      errors.push(`${provider}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+  
+  return {
+    connected: workingProviders.length > 0,
+    workingProviders,
+    errors
+  };
 }
 
 /**

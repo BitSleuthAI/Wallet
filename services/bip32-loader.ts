@@ -11,47 +11,69 @@ let bip32LoadPromise: Promise<any> | null = null;
  * Create a wrapper for HDKey nodes to ensure all derived nodes have the same interface
  */
 function wrapHdkeyNode(hdkey: any, HDKey: any) {
-  return {
-    ...hdkey,
-    derive: (pathOrIndex: string | number) => {
-      console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
-      const derivedHdkey = typeof pathOrIndex === 'string' ? hdkey.derive(pathOrIndex) : hdkey.deriveChild(pathOrIndex);
-      return wrapHdkeyNode(derivedHdkey, HDKey);
-    },
-    derivePath: (path: string) => {
-      console.log('🔧 derivePath called with path:', path);
-      const derivedHdkey = hdkey.derive(path);
-      return wrapHdkeyNode(derivedHdkey, HDKey);
-    },
-    deriveChild: (index: number) => {
-      console.log('🔧 deriveChild called with index:', index);
-      const derivedHdkey = hdkey.deriveChild(index);
-      return wrapHdkeyNode(derivedHdkey, HDKey);
-    },
-    neutered: () => {
-      console.log('🔧 neutered() called');
-      // @scure/bip32 doesn't have neutered() method, use publicExtendedKey instead
-      const neuteredHdkey = HDKey.fromExtendedKey(hdkey.publicExtendedKey);
-      return wrapHdkeyNode(neuteredHdkey, HDKey);
-    },
-    toBase58: () => {
-      console.log('🔧 toBase58() called');
-      // @scure/bip32 returns privateExtendedKey for regular nodes, publicExtendedKey for neutered nodes
-      // Check both for errors and falsy values to handle neutered nodes properly
-      try {
-        const privateKey = hdkey.privateExtendedKey;
-        // If privateExtendedKey exists and is truthy, use it
-        if (privateKey) {
-          return privateKey;
-        }
-        // If privateExtendedKey is falsy (undefined/null), this is likely a neutered node
-        return hdkey.publicExtendedKey;
-      } catch (error) {
-        // If privateExtendedKey throws an error, this is a neutered node
-        return hdkey.publicExtendedKey;
+  // Create a proxy to ensure all properties are accessible
+  const wrapped = new Proxy(hdkey, {
+    get(target, prop) {
+      // Handle custom methods
+      if (prop === 'derive') {
+        return (pathOrIndex: string | number) => {
+          console.log('🔧 Custom derive called with:', typeof pathOrIndex === 'number' ? `index: ${pathOrIndex}` : `path: ${pathOrIndex}`);
+          const derivedHdkey = typeof pathOrIndex === 'string' ? target.derive(pathOrIndex) : target.deriveChild(pathOrIndex);
+          return wrapHdkeyNode(derivedHdkey, HDKey);
+        };
       }
+      
+      if (prop === 'derivePath') {
+        return (path: string) => {
+          console.log('🔧 derivePath called with path:', path);
+          const derivedHdkey = target.derive(path);
+          return wrapHdkeyNode(derivedHdkey, HDKey);
+        };
+      }
+      
+      if (prop === 'deriveChild') {
+        return (index: number) => {
+          console.log('🔧 deriveChild called with index:', index);
+          const derivedHdkey = target.deriveChild(index);
+          return wrapHdkeyNode(derivedHdkey, HDKey);
+        };
+      }
+      
+      if (prop === 'neutered') {
+        return () => {
+          console.log('🔧 neutered() called');
+          // @scure/bip32 doesn't have neutered() method, use publicExtendedKey instead
+          const neuteredHdkey = HDKey.fromExtendedKey(target.publicExtendedKey);
+          return wrapHdkeyNode(neuteredHdkey, HDKey);
+        };
+      }
+      
+      if (prop === 'toBase58') {
+        return () => {
+          console.log('🔧 toBase58() called');
+          // @scure/bip32 returns privateExtendedKey for regular nodes, publicExtendedKey for neutered nodes
+          // Check both for errors and falsy values to handle neutered nodes properly
+          try {
+            const privateKey = target.privateExtendedKey;
+            // If privateExtendedKey exists and is truthy, use it
+            if (privateKey) {
+              return privateKey;
+            }
+            // If privateExtendedKey is falsy (undefined/null), this is likely a neutered node
+            return target.publicExtendedKey;
+          } catch (error) {
+            // If privateExtendedKey throws an error, this is a neutered node
+            return target.publicExtendedKey;
+          }
+        };
+      }
+      
+      // For all other properties, return from the original target
+      return target[prop];
     }
-  };
+  });
+  
+  return wrapped;
 }
 
 /**

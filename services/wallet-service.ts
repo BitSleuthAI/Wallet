@@ -50,14 +50,22 @@ export function clearAddressCache(xpub?: string): void {
 /**
  * Generate P2WPKH address from public key
  */
-async function getP2wpkhAddress(pubKey: Buffer): Promise<string> {
+async function getP2wpkhAddress(pubKey: Buffer | Uint8Array): Promise<string> {
   try {
+    // Convert Uint8Array to Buffer if needed
+    let pubKeyBuffer: Buffer;
+    if (pubKey instanceof Uint8Array) {
+      pubKeyBuffer = Buffer.from(pubKey);
+    } else {
+      pubKeyBuffer = pubKey;
+    }
+    
     // Use bitcoinjs-lib for reliable P2WPKH address generation
     const bitcoin = require('bitcoinjs-lib');
     
     // Create P2WPKH address from public key
     const { address } = bitcoin.payments.p2wpkh({
-      pubkey: pubKey,
+      pubkey: pubKeyBuffer,
       network: bitcoin.networks.bitcoin
     });
     
@@ -507,10 +515,20 @@ export async function generateAddressFromXpub(xpub: string, index: number): Prom
     const bip32Instance = bip32Module.BIP32Factory(ecc);
     
     const node = bip32Instance.fromBase58(xpub);
+    console.log('🔧 Node created from xpub, checking properties...');
+    console.log('🔧 Node has publicKey:', !!node.publicKey);
+    console.log('🔧 Node has privateKey:', !!node.privateKey);
+    
     // Fix: Include change level (chain 0 for external addresses) in BIP84 derivation path
     const child = node.deriveChild(0).deriveChild(index);
+    console.log('🔧 Child derived, checking properties...');
+    console.log('🔧 Child has publicKey:', !!child.publicKey);
+    console.log('🔧 Child publicKey type:', typeof child.publicKey);
+    console.log('🔧 Child publicKey length:', child.publicKey ? child.publicKey.length : 'N/A');
     
     if (!child.publicKey) {
+      console.error('❌ Child node missing publicKey property');
+      console.error('❌ Child node properties:', Object.keys(child));
       throw new Error('Failed to derive public key from xpub');
     }
     
