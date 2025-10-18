@@ -21,8 +21,8 @@ const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 // Additional fallback providers for better reliability
 // Note: Only includes Esplora-compatible providers (Blockchair uses different API format)
 const FALLBACK_PROVIDERS = [
-  'https://blockstream.info/api',
-  'https://mempool.space/api'
+  // These are the same as ESPLORA_BASES, so we'll just use ESPLORA_BASES directly
+  // No additional fallback providers are needed since we already have the main ones
 ];
 
 type CacheEntry = { data: any; timestamp: number; ttl: number };
@@ -239,8 +239,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   let lastError: any = null;
   let providerIndex = 0;
   
-  // Try all providers including fallbacks
-  const allProviders = [...ESPLORA_BASES, ...FALLBACK_PROVIDERS.filter(p => !ESPLORA_BASES.includes(p))];
+  // Try all providers
+  const allProviders = ESPLORA_BASES;
   
   for (const base of allProviders) {
     const url = `${base}${path}`;
@@ -410,7 +410,7 @@ export async function testNetworkConnectivity(): Promise<{ connected: boolean; w
   const errors: string[] = [];
   
   // Test all Esplora-compatible providers
-  const allEsploraProviders = [...ESPLORA_BASES, ...FALLBACK_PROVIDERS];
+  const allEsploraProviders = ESPLORA_BASES;
   
   for (const provider of allEsploraProviders) {
     try {
