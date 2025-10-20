@@ -94,6 +94,19 @@ android {
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.1.6"
+        
+        // Add memory management flags to prevent SIGABRT crashes
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a", "x86", "x86_64"
+        }
+        
+        // Add memory safety flags
+        externalNativeBuild {
+            cmake {
+                cppFlags "-frtti -fexceptions -fsanitize=address"
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
     }
     
     compileOptions {

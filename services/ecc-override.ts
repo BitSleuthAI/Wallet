@@ -6,6 +6,12 @@ console.log('🔧 Setting up ECC override to prevent tiny-secp256k1 WASM loading
 export const createNobleECC = () => {
   try {
     console.log('🔧 Loading @noble/secp256k1...');
+    
+    // Add memory safety check
+    if (typeof require === 'undefined') {
+      throw new Error('Require function not available - possible memory corruption');
+    }
+    
     const mod = require('@noble/secp256k1');
     console.log('✅ @noble/secp256k1 module loaded');
     console.log('🔧 Module shape:', Object.keys(mod || {}));

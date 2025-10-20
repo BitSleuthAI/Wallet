@@ -373,8 +373,18 @@ export default function RootLayout() {
       console.log('🚀 Initializing app in RootLayout...');
       
       try {
-        // Initialize crypto
-        const success = await initializeCrypto();
+        // Add memory safety check before crypto initialization
+        if (typeof global === 'undefined') {
+          throw new Error('Global object not available during app initialization');
+        }
+        
+        // Initialize crypto with timeout to prevent hanging
+        const cryptoPromise = initializeCrypto();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Crypto initialization timeout')), 10000)
+        );
+        
+        const success = await Promise.race([cryptoPromise, timeoutPromise]);
         if (success) {
           console.log('✅ Crypto initialized successfully');
         } else {

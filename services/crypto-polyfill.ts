@@ -12,6 +12,11 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
     console.log('🔧 Global crypto initialized flag:', (global as any).__cryptoInitialized);
     console.log('🔧 Force reinit:', forceReinit);
     
+    // Add memory safety check
+    if (typeof global === 'undefined') {
+      throw new Error('Global object not available - possible memory corruption');
+    }
+    
     // Check if already initialized (unless force reinit)
     if ((global as any).__cryptoInitialized && !forceReinit) {
       console.log('✅ Crypto already initialized');
