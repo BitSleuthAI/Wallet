@@ -1,4 +1,4 @@
-package ai.bitsleuth.wallet
+package com.bitsleuthwallet
 
 import android.app.Application
 import android.content.res.Configuration
