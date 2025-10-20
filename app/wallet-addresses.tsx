@@ -71,9 +71,6 @@ export default function WalletAddressesScreen() {
   const {
     theme,
     currentWallet,
-    addresses,
-    isLoadingAddresses,
-    isRefreshingAddresses,
   } = useWallet();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
@@ -85,17 +82,24 @@ export default function WalletAddressesScreen() {
   const addressesQuery = useQuery({
     queryKey: ['wallet-addresses-all-chains', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
-      if (!currentWallet?.xpub) return [];
+      if (!currentWallet?.xpub) {
+        console.log('❌ No current wallet or xpub available');
+        return [];
+      }
       
       console.log(`🔍 Generating addresses for both chains using gap limit logic with caching...`);
+      console.log(`🔍 Current wallet:`, currentWallet.name, currentWallet.xpub.substring(0, 20) + '...');
       
       try {
         // Fetch both receiving and change addresses in parallel
         // They share the same discoverUsedAddresses cache, so the second call is very fast
-        const [receivingData, changeData] = await Promise.all([
-          walletService.generateAddressesForView(currentWallet.xpub, 'receiving'),
-          walletService.generateAddressesForView(currentWallet.xpub, 'change')
-        ]);
+        console.log('🔍 Fetching receiving addresses...');
+        const receivingData = await walletService.generateAddressesForView(currentWallet.xpub, 'receiving');
+        console.log(`✅ Received ${receivingData.length} receiving addresses`);
+        
+        console.log('🔍 Fetching change addresses...');
+        const changeData = await walletService.generateAddressesForView(currentWallet.xpub, 'change');
+        console.log(`✅ Received ${changeData.length} change addresses`);
         
         const allAddresses: AddressInfo[] = [...receivingData, ...changeData].map((addrData) => ({
           address: addrData.address,
@@ -110,6 +114,12 @@ export default function WalletAddressesScreen() {
         }));
         
         console.log(`✅ Generated ${allAddresses.length} addresses total (${receivingData.length} receiving, ${changeData.length} change)`);
+        console.log(`🔍 Address breakdown:`, {
+          receiving: allAddresses.filter(a => a.type === 'receiving').length,
+          change: allAddresses.filter(a => a.type === 'change').length,
+          used: allAddresses.filter(a => a.isUsed).length,
+          unused: allAddresses.filter(a => !a.isUsed).length
+        });
         return allAddresses;
       } catch (error) {
         console.error(`❌ Failed to generate addresses:`, error);
@@ -140,10 +150,18 @@ export default function WalletAddressesScreen() {
 
   // Get address data for current tab (filtered from query data)
   const addressData = useMemo((): AddressInfo[] => {
-    // Use cached addresses from the store to avoid empty states while refreshing
-    const sourceData = addresses || [];
+    // Use data from the addressesQuery instead of the wallet store
+    const sourceData = addressesQuery.data || [];
     
-    return sourceData
+    console.log(`🔍 Address data filtering for ${selectedTab} tab:`, {
+      totalSourceData: sourceData.length,
+      selectedTab,
+      queryLoading: addressesQuery.isLoading,
+      queryError: addressesQuery.error,
+      queryData: sourceData.length > 0 ? sourceData.slice(0, 3).map(a => ({ address: a.address.substring(0, 10) + '...', type: a.type, index: a.index })) : 'No data'
+    });
+    
+    const filteredData = sourceData
       .filter(addressInfo => addressInfo.address && addressInfo.address.trim() !== '') // Filter out empty addresses
       .filter(addr => addr.type === selectedTab)
       .filter((addr, index, array) => {
@@ -157,7 +175,10 @@ export default function WalletAddressesScreen() {
         }
         return a.index - b.index;
       });
-  }, [addresses, selectedTab]);
+    
+    console.log(`✅ Filtered ${filteredData.length} ${selectedTab} addresses`);
+    return filteredData;
+  }, [addressesQuery.data, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {
@@ -365,7 +386,7 @@ export default function WalletAddressesScreen() {
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {(isLoadingAddresses && !addresses?.length) ? (
+        {(addressesQuery.isLoading && !addressesQuery.data?.length) ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>

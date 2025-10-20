@@ -162,53 +162,30 @@ export const getAddressUTXOs = async (address: string, addressIndex?: number): P
 };
 
 /**
- * Get Bitcoin price (fallback for send screen)
+ * Get Bitcoin price using the improved esplora service with multiple fallbacks
  */
 export const getBitcoinPrice = async (): Promise<BitcoinPrice> => {
   try {
-    console.log('💲 Fetching Bitcoin price...');
+    console.log('💲 Fetching Bitcoin price using esplora service...');
     
-    const xhr = new XMLHttpRequest();
+    // Use the improved esplora service with multiple fallbacks
+    const { getBTCPrice } = require('./esplora-service');
+    const result = await getBTCPrice();
     
-    return new Promise((resolve, reject) => {
-      xhr.timeout = 10000;
-      
-      xhr.onreadystatechange = () => {
-        if (xhr.readyState === 4) {
-          if (xhr.status === 200) {
-            try {
-              const data = JSON.parse(xhr.responseText);
-              console.log('✅ Bitcoin price fetched:', data.USD.last);
-              
-              resolve({
-                usd: data.USD.last,
-                usd_24h_change: 0, // Not available from this API
-              });
-            } catch (parseError) {
-              console.error('❌ Failed to parse price response:', parseError);
-              reject(new Error('Failed to parse price data'));
-            }
-          } else {
-            console.error('❌ Price fetch failed with status:', xhr.status);
-            reject(new Error(`Price fetch failed: ${xhr.status}`));
-          }
-        }
-      };
-      
-      xhr.onerror = () => {
-        console.error('❌ Price fetch network error');
-        reject(new Error('Network error'));
-      };
-      
-      xhr.ontimeout = () => {
-        console.error('❌ Price fetch timeout');
-        reject(new Error('Request timeout'));
-      };
-      
-      xhr.open('GET', 'https://blockchain.info/ticker', true);
-      xhr.setRequestHeader('Accept', 'application/json');
-      xhr.send();
-    });
+    if (result.error) {
+      throw new Error(result.error);
+    }
+    
+    if (!result.data) {
+      throw new Error('No price data received');
+    }
+    
+    console.log('✅ Bitcoin price fetched:', result.data.price);
+    
+    return {
+      usd: result.data.price,
+      usd_24h_change: result.data.change24h,
+    };
   } catch (error) {
     console.error('❌ getBitcoinPrice failed:', error);
     throw error;

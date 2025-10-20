@@ -4,6 +4,9 @@ import '../polyfills';
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
 
+// CRITICAL: Initialize networking polyfill for DNS resolution issues
+import { initializeNetworkingPolyfill } from '../services/networking-polyfill';
+
 import ActivityTracker from '@/components/ActivityTracker';
 import PinUnlockScreen from '@/components/PinUnlockScreen';
 import SplashScreen from '@/components/SplashScreen';
@@ -377,6 +380,10 @@ export default function RootLayout() {
         } else {
           console.warn('⚠️ Crypto initialization failed, but continuing');
         }
+
+        // Initialize networking polyfill for DNS resolution issues
+        initializeNetworkingPolyfill();
+        console.log('✅ Networking polyfill initialized');
 
         // Crashlytics is now initialized in the service
         console.log('✅ App initialization complete');

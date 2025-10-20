@@ -11,6 +11,7 @@ import {
   setCachedAddressTxIds,
   setCachedAddressUTXOs
 } from './address-cache-service';
+import { reliableFetch } from './networking-polyfill';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
@@ -53,10 +54,154 @@ function setCachedData(key: string, data: any, ttl: number): void {
 
 /**
  * Fetch JSON with proper error handling and timeout
+ * Uses reliable fetch with multiple fallback strategies for React Native DNS issues
  */
-async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 15000): Promise<any> {
+async function fetchJson(url: string, options?: RequestInit, timeoutMs: number = 30000): Promise<any> {
   console.log(`🌐 Fetching: ${url}`);
   
+  // Try reliable fetch first (handles DNS issues better)
+  try {
+    const response = await reliableFetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BitSleuthWallet/1.0',
+        'Cache-Control': 'no-cache',
+        ...options?.headers,
+      },
+    });
+    
+    if (!response.ok) {
+      const responseText = await response.text();
+      
+      // Check for Blockstream's non-JSON notice page
+      if (responseText.includes("Blockstream Explorer API NOTICE")) {
+        const err: any = new Error('ESPLORA_PROVIDER_NOTICE');
+        err.code = 'ESPLORA_PROVIDER_NOTICE';
+        throw err;
+      }
+      
+      // Handle specific text errors
+      if (responseText.toLowerCase().includes('invalid bitcoin address')) {
+        throw new Error('The address you entered is not a valid Bitcoin address.');
+      }
+      if (responseText.toLowerCase().includes('invalid txid')) {
+        throw new Error('The transaction ID you entered is not valid.');
+      }
+      
+      // Handle rate limiting (429)
+      if (response.status === 429) {
+        console.log(`⚠️ Rate limited by ${url.includes('blockstream') ? 'Blockstream' : 'Mempool.space'} - switching providers`);
+        throw new Error('Rate limited - too many requests');
+      }
+      
+      // Handle 404 - not an error, just no data
+      if (response.status === 404) {
+        console.log(`ℹ️ No data found for ${url}`);
+        throw new Error('Not found - no data available');
+      }
+      
+      // Log other errors
+      console.error(`❌ API request to ${url} failed with status ${response.status}:`, responseText.substring(0, 200));
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+    
+  } catch (error: any) {
+    console.log(`❌ Reliable fetch failed for ${url}:`, error.message);
+    
+    // If reliable fetch fails, try regular fetch as fallback
+    if (error.message?.includes('DNS resolution failed') || error.message?.includes('Unable to resolve host')) {
+      console.log(`🔄 DNS issue detected, trying regular fetch fallback for ${url}`);
+      return fetchJsonFallback(url, options, timeoutMs);
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
+}
+
+/**
+ * Fallback fetch using regular fetch API
+ */
+async function fetchJsonFallback(url: string, options?: RequestInit, timeoutMs: number = 30000): Promise<any> {
+  console.log(`🔄 Trying regular fetch fallback for ${url}`);
+  
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'BitSleuthWallet/1.0',
+        'Cache-Control': 'no-cache',
+        ...options?.headers,
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (!response.ok) {
+      const responseText = await response.text();
+      
+      // Check for Blockstream's non-JSON notice page
+      if (responseText.includes("Blockstream Explorer API NOTICE")) {
+        const err: any = new Error('ESPLORA_PROVIDER_NOTICE');
+        err.code = 'ESPLORA_PROVIDER_NOTICE';
+        throw err;
+      }
+      
+      // Handle specific text errors
+      if (responseText.toLowerCase().includes('invalid bitcoin address')) {
+        throw new Error('The address you entered is not a valid Bitcoin address.');
+      }
+      if (responseText.toLowerCase().includes('invalid txid')) {
+        throw new Error('The transaction ID you entered is not valid.');
+      }
+      
+      // Handle rate limiting (429)
+      if (response.status === 429) {
+        console.log(`⚠️ Rate limited by ${url.includes('blockstream') ? 'Blockstream' : 'Mempool.space'} - switching providers`);
+        throw new Error('Rate limited - too many requests');
+      }
+      
+      // Handle 404 - not an error, just no data
+      if (response.status === 404) {
+        console.log(`ℹ️ No data found for ${url}`);
+        throw new Error('Not found - no data available');
+      }
+      
+      // Log other errors
+      console.error(`❌ API request to ${url} failed with status ${response.status}:`, responseText.substring(0, 200));
+      throw new Error(`API request failed with status ${response.status}`);
+    }
+    
+    const data = await response.json();
+    return data;
+    
+  } catch (error: any) {
+    console.log(`❌ Regular fetch fallback failed for ${url}:`, error.message);
+    
+    // If regular fetch also fails, try XMLHttpRequest as last resort
+    if (error.name === 'AbortError' || error.message?.includes('Network error') || error.message?.includes('fetch')) {
+      console.log(`🔄 Regular fetch failed, trying XMLHttpRequest as last resort for ${url}`);
+      return fetchJsonXHR(url, options, timeoutMs);
+    }
+    
+    // Re-throw other errors
+    throw error;
+  }
+}
+
+/**
+ * XMLHttpRequest fallback for fetch API
+ */
+async function fetchJsonXHR(url: string, options?: RequestInit, timeoutMs: number = 30000): Promise<any> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
     xhr.timeout = timeoutMs;
@@ -119,6 +264,12 @@ async function fetchJson(url: string, options?: RequestInit, timeoutMs: number =
     
     xhr.onerror = (event) => {
       console.error(`❌ XMLHttpRequest error for ${url}:`, event);
+      console.error(`❌ Error details:`, {
+        readyState: xhr.readyState,
+        status: xhr.status,
+        statusText: xhr.statusText,
+        responseText: xhr.responseText?.substring(0, 200),
+      });
       reject(new Error('Network error - request failed'));
     };
     
@@ -395,8 +546,20 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   }
   
   // If all providers failed, provide a more helpful error message
-  if (lastError?.message?.includes('Network error')) {
-    throw new Error('Upstream data provider is temporarily unavailable. Please try again in a moment.');
+  if (lastError?.message?.includes('Network error') || lastError?.message?.includes('Unable to resolve host')) {
+    throw new Error('Network connectivity issue detected. Please check your internet connection and try again.');
+  }
+  
+  if (lastError?.message?.includes('getaddrinfo ENOTFOUND')) {
+    throw new Error('DNS resolution failed. Please check your internet connection and DNS settings.');
+  }
+  
+  // Check if we have any cached data to return as fallback
+  const cached = getCachedData(cacheKey);
+  if (cached) {
+    const age = Date.now() - cached.timestamp;
+    console.log(`📦 Returning stale cached data for ${path} (age ${age}ms) - all providers failed`);
+    return cached.data;
   }
   
   throw lastError ?? new Error('Failed to fetch from any Esplora provider');
@@ -537,11 +700,11 @@ export async function getCurrentBlockHeight(): Promise<{ data: number | null; er
 }
 
 /**
- * Get BTC price from CoinGecko API (provides accurate 24h change data)
+ * Get BTC price from multiple sources with fallback
  * Cached for 5 minutes to avoid rate limiting
  */
 export async function getBTCPrice(): Promise<{ data: { price: number; change24h: number } | null; error: string | null }> {
-  const cacheKey = 'btc-price-coingecko';
+  const cacheKey = 'btc-price-multi';
   
   // Check cache first
   const cached = getCachedData(cacheKey);
@@ -550,34 +713,74 @@ export async function getBTCPrice(): Promise<{ data: { price: number; change24h:
     return { data: cached.data, error: null };
   }
   
-  try {
-    console.log(`💲 Getting BTC price from CoinGecko...`);
-    const response = await fetchJson('https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true', {}, 60000);
-    const bitcoinData = response?.bitcoin;
-    const price = bitcoinData?.usd;
-    const change24h = bitcoinData?.usd_24h_change;
-    
-    if (typeof price === 'number' && price > 0) {
-      const priceData = { 
-        price, 
-        change24h: typeof change24h === 'number' ? change24h : 0 
-      };
-      
-      // Cache for 5 minutes (300000ms)
-      setCachedData(cacheKey, priceData, 300000);
-      
-      return { 
-        data: priceData, 
-        error: null 
-      };
+  // Try multiple price sources in order of preference
+  const priceSources = [
+    {
+      name: 'CoinGecko',
+      url: 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true',
+      parser: (data: any) => {
+        const bitcoinData = data?.bitcoin;
+        return {
+          price: bitcoinData?.usd,
+          change24h: bitcoinData?.usd_24h_change || 0
+        };
+      }
+    },
+    {
+      name: 'Blockchain.info',
+      url: 'https://blockchain.info/ticker',
+      parser: (data: any) => {
+        return {
+          price: data?.USD?.last,
+          change24h: 0 // Not available from this API
+        };
+      }
+    },
+    {
+      name: 'CoinCap',
+      url: 'https://api.coincap.io/v2/assets/bitcoin',
+      parser: (data: any) => {
+        return {
+          price: parseFloat(data?.data?.priceUsd || '0'),
+          change24h: parseFloat(data?.data?.changePercent24Hr || '0')
+        };
+      }
     }
-    
-    return { data: null, error: 'Invalid price data received' };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error(`❌ Failed to get BTC price:`, message);
-    return { data: null, error: message };
+  ];
+  
+  for (const source of priceSources) {
+    try {
+      console.log(`💲 Getting BTC price from ${source.name}...`);
+      const response = await fetchJson(source.url, {}, 30000);
+      const parsed = source.parser(response);
+      
+      if (typeof parsed.price === 'number' && parsed.price > 0) {
+        const priceData = { 
+          price: parsed.price, 
+          change24h: typeof parsed.change24h === 'number' ? parsed.change24h : 0 
+        };
+        
+        // Cache for 5 minutes (300000ms)
+        setCachedData(cacheKey, priceData, 300000);
+        
+        console.log(`✅ BTC price fetched from ${source.name}: $${priceData.price}`);
+        return { 
+          data: priceData, 
+          error: null 
+        };
+      }
+      
+      console.warn(`⚠️ Invalid price data from ${source.name}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.warn(`❌ Failed to get BTC price from ${source.name}:`, message);
+      continue; // Try next source
+    }
   }
+  
+  // All sources failed
+  console.error(`❌ All BTC price sources failed`);
+  return { data: null, error: 'Unable to fetch Bitcoin price from any source' };
 }
 
 /**
@@ -593,4 +796,57 @@ export async function testProviderConnectivity(): Promise<{ data: boolean; error
     console.error(`❌ Provider connectivity test failed:`, message);
     return { data: false, error: message };
   }
+}
+
+/**
+ * Test basic network connectivity with multiple endpoints
+ */
+export async function testBasicConnectivity(): Promise<{ data: boolean; error: string | null }> {
+  const testEndpoints = [
+    'https://httpbin.org/get',
+    'https://api.github.com',
+    'https://www.google.com',
+    'https://1.1.1.1' // Cloudflare DNS
+  ];
+  
+  for (const endpoint of testEndpoints) {
+    try {
+      console.log(`🔍 Testing connectivity to ${endpoint}...`);
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(endpoint, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitSleuthWallet/1.0',
+        },
+        signal: controller.signal,
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (response.ok || response.status < 500) {
+        console.log(`✅ Basic connectivity test passed with ${endpoint}`);
+        return { data: true, error: null };
+      }
+      
+      console.warn(`⚠️ ${endpoint} returned status ${response.status}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.warn(`❌ Connectivity test failed for ${endpoint}:`, message);
+      
+      // Check if it's a DNS resolution issue
+      if (message.includes('Unable to resolve host') || message.includes('getaddrinfo ENOTFOUND')) {
+        console.error(`❌ DNS resolution failed for ${endpoint}`);
+        return { data: false, error: 'DNS resolution failed - check internet connection' };
+      }
+      
+      continue; // Try next endpoint
+    }
+  }
+  
+  console.error(`❌ All connectivity tests failed`);
+  return { data: false, error: 'No network connectivity detected' };
 }
