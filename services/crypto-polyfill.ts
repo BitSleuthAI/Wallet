@@ -166,6 +166,11 @@ export const initializeCrypto = async (
     // Final abort check before setting initialized flag
     if (signal?.aborted) {
       console.warn('⚠️ Crypto initialization aborted before finalize');
+      // Clean up ECC instance to maintain consistent state
+      if (g.ecc) {
+        console.log('🔧 Cleaning up ECC instance due to abort');
+        g.ecc = undefined;
+      }
       return false;
     }
 
