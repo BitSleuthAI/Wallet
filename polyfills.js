@@ -7,15 +7,13 @@ import 'react-native-url-polyfill/auto';
 // Ensure global object is properly initialized for React Native
 if (typeof global === 'undefined') {
   // Create global object if it doesn't exist
-  (function() {
-    if (typeof globalThis !== 'undefined') {
-      global = globalThis;
-    } else if (typeof window !== 'undefined') {
-      global = window;
-    } else {
-      global = {};
-    }
-  })();
+  if (typeof globalThis !== 'undefined') {
+    global = globalThis;
+  } else if (typeof window !== 'undefined') {
+    global = window;
+  } else {
+    global = {};
+  }
 }
 
 // Ensure global is available on globalThis as well
