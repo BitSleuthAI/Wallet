@@ -3,31 +3,36 @@
 
 // Ensure Buffer is available for bitcoinjs-lib
 import { Buffer } from '@craftzdog/react-native-buffer';
-(global as any).Buffer = Buffer;
+// Guard against environments where `global` may be unavailable; fall back to globalThis
+const rootGlobal: any = typeof global !== 'undefined' ? (global as any) : (typeof globalThis !== 'undefined' ? (globalThis as any) : undefined);
+if (rootGlobal) {
+  rootGlobal.Buffer = Buffer;
+}
 
 // Initialize crypto and ECC library
 export const initializeCrypto = async (forceReinit: boolean = false): Promise<boolean> => {
+  // Resolve the global object reference safely before any usage
+  let g: any = typeof global !== 'undefined' ? (global as any) : (typeof globalThis !== 'undefined' ? (globalThis as any) : undefined);
   try {
     console.log('🔧 Initializing crypto polyfills and ECC library...');
-    console.log('🔧 Global crypto initialized flag:', (global as any).__cryptoInitialized);
-    console.log('🔧 Force reinit:', forceReinit);
-    
-    // Add memory safety check
-    if (typeof global === 'undefined') {
+    // Add memory safety check BEFORE any access to global
+    if (!g) {
       throw new Error('Global object not available - possible memory corruption');
     }
+    console.log('🔧 Global crypto initialized flag:', g.__cryptoInitialized);
+    console.log('🔧 Force reinit:', forceReinit);
     
     // Check if already initialized (unless force reinit)
-    if ((global as any).__cryptoInitialized && !forceReinit) {
+    if (g.__cryptoInitialized && !forceReinit) {
       console.log('✅ Crypto already initialized');
       // Verify ECC is actually available
-      const ecc = (global as any).ecc;
+      const ecc = g.ecc;
       if (ecc) {
         console.log('✅ ECC verified available');
         return true;
       } else {
         console.warn('⚠️ Crypto flag set but ECC missing, reinitializing...');
-        (global as any).__cryptoInitialized = false;
+        g.__cryptoInitialized = false;
       }
     }
     
@@ -79,10 +84,10 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
     
     // Set the global ECC instance
     console.log('🔧 Setting global ECC instance...');
-    (global as any).ecc = nobleECC;
+    g.ecc = nobleECC;
     
     // Immediately verify it was set
-    const eccVerify = (global as any).ecc;
+    const eccVerify = g.ecc;
     console.log('🔧 Global ECC set verification:', typeof eccVerify, eccVerify ? Object.keys(eccVerify) : 'null');
     
     if (!eccVerify) {
@@ -127,14 +132,18 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
     
     // Mark as initialized
     console.log('🔧 Marking crypto as initialized...');
-    (global as any).__cryptoInitialized = true;
+    g.__cryptoInitialized = true;
     
     console.log('✅ Crypto initialization completed successfully');
     return true;
     
   } catch (error) {
     console.error('❌ Failed to initialize crypto:', error);
-    (global as any).__cryptoInitialized = false;
+    // Safely attempt to mark as uninitialized if a global root exists
+    const safeGlobal: any = g || (typeof global !== 'undefined' ? (global as any) : (typeof globalThis !== 'undefined' ? (globalThis as any) : undefined));
+    if (safeGlobal) {
+      safeGlobal.__cryptoInitialized = false;
+    }
     return false;
   }
 };
