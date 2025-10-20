@@ -17,15 +17,16 @@ export const initializeCrypto = async (
   // Resolve the global object reference safely before any usage
   let g: any = typeof global !== 'undefined' ? (global as any) : (typeof globalThis !== 'undefined' ? (globalThis as any) : undefined);
   try {
+    // Add memory safety check BEFORE any access that may rely on the global object
+    if (!g) {
+      throw new Error('Global object not available - possible memory corruption');
+    }
+
     console.log('🔧 Initializing crypto polyfills and ECC library...');
     // Check for abort as early as possible
     if (signal?.aborted) {
       console.warn('⚠️ Crypto initialization aborted before start');
       return false;
-    }
-    // Add memory safety check BEFORE any access to global
-    if (!g) {
-      throw new Error('Global object not available - possible memory corruption');
     }
     console.log('🔧 Global crypto initialized flag:', g.__cryptoInitialized);
     console.log('🔧 Force reinit:', forceReinit);
