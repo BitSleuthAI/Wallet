@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "npm": {
+        "cache": false
+      },
       "android": {
         "image": "ubuntu-22.04-jdk-17-ndk-r25b"
       },
@@ -17,6 +20,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "npm": {
+        "cache": false
+      },
       "android": {
         "image": "ubuntu-22.04-jdk-17-ndk-r25b"
       },
@@ -27,6 +33,9 @@
     },
     "production": {
       "autoIncrement": true,
+      "npm": {
+        "cache": false
+      },
       "android": {
         "image": "ubuntu-22.04-jdk-17-ndk-r25b"
       },
