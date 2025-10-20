@@ -368,14 +368,19 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    // Initialize crypto and Firebase Crashlytics on app start
+    // Initialize app with proper timing to avoid React Native bridge issues
     const initializeApp = async () => {
       console.log('🚀 Initializing app in RootLayout...');
       
       try {
+        // Wait a bit to ensure React Native bridge is fully initialized
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
         // Add memory safety check before crypto initialization
         if (typeof global === 'undefined') {
-          throw new Error('Global object not available during app initialization');
+          console.warn('⚠️ Global object not available, skipping crypto initialization');
+          ExpoSplashScreen.hideAsync();
+          return;
         }
         
         // Initialize crypto with AbortController-based timeout
@@ -383,7 +388,7 @@ export default function RootLayout() {
         const timeoutId = setTimeout(() => {
           console.warn('⚠️ Aborting crypto initialization due to timeout');
           controller.abort();
-        }, 10000);
+        }, 5000); // Reduced timeout to avoid blocking
 
         const cryptoOutcome = await initializeCrypto(false, controller.signal)
           .then((ok) => ({ source: 'crypto', ok: ok === true }))
@@ -417,10 +422,12 @@ export default function RootLayout() {
       ExpoSplashScreen.hideAsync();
     };
     
-    initializeApp();
+    // Delay initialization to ensure React Native bridge is ready
+    const initTimeout = setTimeout(initializeApp, 200);
     
     // Ensure we cancel any in-flight initialization on unmount
     return () => {
+      clearTimeout(initTimeout);
       try {
         if (typeof global !== 'undefined' && (global as any).AbortController) {
           // No-op: controller is scoped inside initializeApp, but if we refactor to outer scope,
