@@ -25,6 +25,8 @@ config.resolver.alias = {
   'web-streams-polyfill/ponyfill/es6': 'web-streams-polyfill/dist/ponyfill.js',
   // Fix for Metro source map generation - ensure this module resolves correctly
   '@babel/traverse--for-generate-function-map': require.resolve('@babel/traverse'),
+  // Ensure @babel/traverse resolves correctly for metro-config
+  '@babel/traverse': require.resolve('@babel/traverse'),
 };
 
 // Ensure polyfills are resolved correctly
