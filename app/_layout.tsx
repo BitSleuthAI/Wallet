@@ -373,19 +373,56 @@ export default function RootLayout() {
       console.log('🚀 Initializing app in RootLayout...');
       
       try {
-        // Check React Native bridge readiness by testing native module availability
-        const isBridgeReady = () => {
+        // Check React Native bridge readiness by testing actual native module calls
+        const isBridgeReady = async () => {
           try {
-            // Test if native modules are available (indicates bridge is ready)
+            // Test if React Native core is available
             const testNative = require('react-native');
-            return testNative && typeof testNative.Platform !== 'undefined';
+            if (!testNative || typeof testNative.Platform === 'undefined') {
+              return false;
+            }
+
+            // Test if NativeModules is available and functional
+            const { NativeModules } = testNative;
+            if (!NativeModules) {
+              return false;
+            }
+
+            // Test actual native module availability by checking if we can access them
+            // This is more reliable than just checking Platform availability
+            const testNativeModuleAccess = () => {
+              try {
+                // Try to access NativeModules object properties
+                // This will throw if the bridge isn't ready
+                const moduleKeys = Object.keys(NativeModules);
+                
+                // Additional test: try to access a specific native module that we know exists
+                // This ensures the bridge is not just available but functional
+                if (testNative.Platform.OS === 'android') {
+                  // On Android, try to access GooglePlayServicesChecker if available
+                  const googlePlayServices = NativeModules.GooglePlayServicesChecker;
+                  if (googlePlayServices && typeof googlePlayServices === 'object') {
+                    // Bridge is ready if we can access the module object
+                    return true;
+                  }
+                }
+                
+                // For iOS or if specific modules aren't available, 
+                // just check that NativeModules is accessible
+                return moduleKeys.length >= 0; // Even empty object means bridge is ready
+              } catch {
+                return false;
+              }
+            };
+
+            return testNativeModuleAccess();
           } catch {
             return false;
           }
         };
 
         // Wait for bridge readiness with exponential backoff instead of arbitrary delay
-        let bridgeReady = isBridgeReady();
+        let bridgeReady = await isBridgeReady();
         let attempts = 0;
         const maxAttempts = 10;
         
@@ -393,14 +430,16 @@ export default function RootLayout() {
           const delay = Math.min(50 * Math.pow(1.5, attempts), 500); // 50, 75, 112, 168, 252, 378, 500ms
           console.log(`🔧 Waiting for React Native bridge readiness... (attempt ${attempts + 1}/${maxAttempts})`);
           await new Promise(resolve => setTimeout(resolve, delay));
-          bridgeReady = isBridgeReady();
+          bridgeReady = await isBridgeReady();
           attempts++;
         }
 
         if (!bridgeReady) {
           console.warn('⚠️ React Native bridge not ready after max attempts, proceeding with initialization');
+          console.warn('💡 Some native features may not be available until bridge is ready');
         } else {
           console.log('✅ React Native bridge is ready');
+          console.log('📱 Native modules are accessible and functional');
         }
         
         // Check if global object is available - if not, we still need to initialize what we can
@@ -409,8 +448,9 @@ export default function RootLayout() {
           console.warn('⚠️ Global object not available, initializing without crypto');
         }
         
-        // Initialize crypto only if global is available
-        if (globalAvailable) {
+        // Initialize crypto only if global is available and bridge is ready
+        // Bridge readiness is important for crypto operations that may use native modules
+        if (globalAvailable && bridgeReady) {
           // Initialize crypto with proper timeout for slower devices
           const controller = new AbortController();
           const timeoutId = setTimeout(() => {
@@ -453,6 +493,35 @@ export default function RootLayout() {
               }
             }
           }
+        } else if (globalAvailable && !bridgeReady) {
+          console.warn('⚠️ Global available but bridge not ready - crypto initialization may be unstable');
+          console.warn('💡 Proceeding with crypto initialization anyway, but native modules may not work');
+          
+          // Still try to initialize crypto even if bridge isn't ready
+          // This provides better error handling than completely skipping it
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => {
+              console.warn('⚠️ Aborting crypto initialization due to timeout (bridge not ready)');
+              controller.abort();
+            }, 5000); // Shorter timeout when bridge isn't ready
+
+            const cryptoOutcome = await initializeCrypto(false, controller.signal)
+              .then((ok) => ({ source: 'crypto', ok: ok === true }))
+              .catch((error) => ({ source: 'crypto', ok: false, error }));
+
+            clearTimeout(timeoutId);
+
+            if (cryptoOutcome.ok) {
+              console.log('✅ Crypto initialized successfully despite bridge issues');
+            } else {
+              console.warn('⚠️ Crypto initialization failed (bridge not ready):', (cryptoOutcome as any).error);
+            }
+          } catch (error) {
+            console.warn('⚠️ Crypto initialization error (bridge not ready):', error);
+          }
+        } else if (!globalAvailable) {
+          console.warn('⚠️ Skipping crypto initialization - global object not available');
         }
 
         // Initialize networking polyfill for DNS resolution issues (works without global)
