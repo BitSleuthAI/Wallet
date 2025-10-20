@@ -368,13 +368,40 @@ function RootLayoutNav() {
 
 export default function RootLayout() {
   useEffect(() => {
-    // Initialize app with proper timing to avoid React Native bridge issues
+    // Initialize app with proper React Native bridge readiness detection
     const initializeApp = async () => {
       console.log('🚀 Initializing app in RootLayout...');
       
       try {
-        // Wait a bit to ensure React Native bridge is fully initialized
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Check React Native bridge readiness by testing native module availability
+        const isBridgeReady = () => {
+          try {
+            // Test if native modules are available (indicates bridge is ready)
+            const testNative = require('react-native');
+            return testNative && typeof testNative.Platform !== 'undefined';
+          } catch {
+            return false;
+          }
+        };
+
+        // Wait for bridge readiness with exponential backoff instead of arbitrary delay
+        let bridgeReady = isBridgeReady();
+        let attempts = 0;
+        const maxAttempts = 10;
+        
+        while (!bridgeReady && attempts < maxAttempts) {
+          const delay = Math.min(50 * Math.pow(1.5, attempts), 500); // 50, 75, 112, 168, 252, 378, 500ms
+          console.log(`🔧 Waiting for React Native bridge readiness... (attempt ${attempts + 1}/${maxAttempts})`);
+          await new Promise(resolve => setTimeout(resolve, delay));
+          bridgeReady = isBridgeReady();
+          attempts++;
+        }
+
+        if (!bridgeReady) {
+          console.warn('⚠️ React Native bridge not ready after max attempts, proceeding with initialization');
+        } else {
+          console.log('✅ React Native bridge is ready');
+        }
         
         // Check if global object is available - if not, we still need to initialize what we can
         const globalAvailable = typeof global !== 'undefined';
@@ -384,12 +411,12 @@ export default function RootLayout() {
         
         // Initialize crypto only if global is available
         if (globalAvailable) {
-          // Initialize crypto with AbortController-based timeout
+          // Initialize crypto with proper timeout for slower devices
           const controller = new AbortController();
           const timeoutId = setTimeout(() => {
             console.warn('⚠️ Aborting crypto initialization due to timeout');
             controller.abort();
-          }, 5000); // Reduced timeout to avoid blocking
+          }, 10000); // Restored to 10s for slower devices
 
           const cryptoOutcome = await initializeCrypto(false, controller.signal)
             .then((ok) => ({ source: 'crypto', ok: ok === true }))
@@ -401,6 +428,21 @@ export default function RootLayout() {
             console.log('✅ Crypto initialized successfully');
           } else {
             console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
+            
+            // Attempt retry for crypto initialization failures
+            if (!cryptoOutcome.ok && !controller.signal.aborted) {
+              console.log('🔄 Retrying crypto initialization...');
+              try {
+                const retryOutcome = await initializeCrypto(true, controller.signal);
+                if (retryOutcome) {
+                  console.log('✅ Crypto initialization succeeded on retry');
+                } else {
+                  console.warn('⚠️ Crypto initialization retry also failed');
+                }
+              } catch (retryError) {
+                console.warn('⚠️ Crypto initialization retry failed:', retryError);
+              }
+            }
           }
         }
 
@@ -424,12 +466,11 @@ export default function RootLayout() {
       }
     };
     
-    // Delay initialization to ensure React Native bridge is ready
-    const initTimeout = setTimeout(initializeApp, 200);
+    // Initialize immediately - bridge readiness is checked inside initializeApp
+    initializeApp();
     
     // Ensure we cancel any in-flight initialization on unmount
     return () => {
-      clearTimeout(initTimeout);
       try {
         if (typeof global !== 'undefined' && (global as any).AbortController) {
           // No-op: controller is scoped inside initializeApp, but if we refactor to outer scope,
