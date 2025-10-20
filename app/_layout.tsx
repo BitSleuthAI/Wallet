@@ -430,10 +430,19 @@ export default function RootLayout() {
             console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
             
             // Attempt retry for crypto initialization failures
-            if (!cryptoOutcome.ok && !controller.signal.aborted) {
+            if (!cryptoOutcome.ok) {
               console.log('🔄 Retrying crypto initialization...');
               try {
-                const retryOutcome = await initializeCrypto(true, controller.signal);
+                // Create a fresh AbortController for retry attempt
+                const retryController = new AbortController();
+                const retryTimeoutId = setTimeout(() => {
+                  console.warn('⚠️ Aborting crypto initialization retry due to timeout');
+                  retryController.abort();
+                }, 10000); // 10s timeout for retry as well
+
+                const retryOutcome = await initializeCrypto(true, retryController.signal);
+                clearTimeout(retryTimeoutId);
+                
                 if (retryOutcome) {
                   console.log('✅ Crypto initialization succeeded on retry');
                 } else {
