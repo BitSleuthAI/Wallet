@@ -373,12 +373,28 @@ export default function RootLayout() {
       console.log('🚀 Initializing app in RootLayout...');
       
       try {
-        // Initialize crypto
-        const success = await initializeCrypto();
-        if (success) {
+        // Add memory safety check before crypto initialization
+        if (typeof global === 'undefined') {
+          throw new Error('Global object not available during app initialization');
+        }
+        
+        // Initialize crypto with AbortController-based timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.warn('⚠️ Aborting crypto initialization due to timeout');
+          controller.abort();
+        }, 10000);
+
+        const cryptoOutcome = await initializeCrypto(false, controller.signal)
+          .then((ok) => ({ source: 'crypto', ok: ok === true }))
+          .catch((error) => ({ source: 'crypto', ok: false, error }));
+
+        clearTimeout(timeoutId);
+
+        if (cryptoOutcome.ok) {
           console.log('✅ Crypto initialized successfully');
         } else {
-          console.warn('⚠️ Crypto initialization failed, but continuing');
+          console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
         }
 
         // Initialize networking polyfill for DNS resolution issues
@@ -402,6 +418,16 @@ export default function RootLayout() {
     };
     
     initializeApp();
+    
+    // Ensure we cancel any in-flight initialization on unmount
+    return () => {
+      try {
+        if (typeof global !== 'undefined' && (global as any).AbortController) {
+          // No-op: controller is scoped inside initializeApp, but if we refactor to outer scope,
+          // we will abort here. Keeping cleanup for future safety.
+        }
+      } catch {}
+    };
   }, []);
 
   return (
