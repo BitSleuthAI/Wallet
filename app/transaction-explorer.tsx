@@ -668,7 +668,7 @@ const buildExplorerData = (
 
   const inputValueSats = normalizeVin.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
   const outputValueSats = normalizeVout.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
-  const feeSats = typeof txDetails.fee === 'number' ? Math.round(txDetails.fee * 1e8) : (txDetails.fee ?? 0);
+  const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : (txDetails.fee ?? 0);
   const feeBtc = feeSats / 1e8;
 
   const addressSet = new Set(currentWallet?.addresses ?? []);
