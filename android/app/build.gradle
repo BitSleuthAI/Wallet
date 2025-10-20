@@ -120,13 +120,6 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
-            // Development-only sanitizer to help catch native memory issues
-            externalNativeBuild {
-                cmake {
-                    cppFlags "-frtti -fexceptions -fsanitize=address"
-                    arguments "-DANDROID_STL=c++_shared"
-                }
-            }
         }
         release {
             // Caution! In production, you need to generate your own keystore file.
@@ -136,12 +129,6 @@ android {
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
             crunchPngs (findProperty('android.enablePngCrunchInReleaseBuilds')?.toBoolean() ?: true)
-        }
-    }
-    // Configure CMake at the top level so Gradle can discover the native build
-    externalNativeBuild {
-        cmake {
-            path "CMakeLists.txt"
         }
     }
     packagingOptions {
