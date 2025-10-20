@@ -8,11 +8,12 @@ import 'react-native-url-polyfill/auto';
 if (typeof global === 'undefined') {
   // Create global object if it doesn't exist
   if (typeof globalThis !== 'undefined') {
-    global = globalThis;
+    // Use eval to avoid strict mode ReferenceError when assigning to global
+    eval('global = globalThis');
   } else if (typeof window !== 'undefined') {
-    global = window;
+    eval('global = window');
   } else {
-    global = {};
+    eval('global = {}');
   }
 }
 
