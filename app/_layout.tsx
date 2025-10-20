@@ -376,33 +376,35 @@ export default function RootLayout() {
         // Wait a bit to ensure React Native bridge is fully initialized
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Add memory safety check before crypto initialization
-        if (typeof global === 'undefined') {
-          console.warn('⚠️ Global object not available, skipping crypto initialization');
-          ExpoSplashScreen.hideAsync();
-          return;
+        // Check if global object is available - if not, we still need to initialize what we can
+        const globalAvailable = typeof global !== 'undefined';
+        if (!globalAvailable) {
+          console.warn('⚠️ Global object not available, initializing without crypto');
         }
         
-        // Initialize crypto with AbortController-based timeout
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-          console.warn('⚠️ Aborting crypto initialization due to timeout');
-          controller.abort();
-        }, 5000); // Reduced timeout to avoid blocking
+        // Initialize crypto only if global is available
+        if (globalAvailable) {
+          // Initialize crypto with AbortController-based timeout
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => {
+            console.warn('⚠️ Aborting crypto initialization due to timeout');
+            controller.abort();
+          }, 5000); // Reduced timeout to avoid blocking
 
-        const cryptoOutcome = await initializeCrypto(false, controller.signal)
-          .then((ok) => ({ source: 'crypto', ok: ok === true }))
-          .catch((error) => ({ source: 'crypto', ok: false, error }));
+          const cryptoOutcome = await initializeCrypto(false, controller.signal)
+            .then((ok) => ({ source: 'crypto', ok: ok === true }))
+            .catch((error) => ({ source: 'crypto', ok: false, error }));
 
-        clearTimeout(timeoutId);
+          clearTimeout(timeoutId);
 
-        if (cryptoOutcome.ok) {
-          console.log('✅ Crypto initialized successfully');
-        } else {
-          console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
+          if (cryptoOutcome.ok) {
+            console.log('✅ Crypto initialized successfully');
+          } else {
+            console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
+          }
         }
 
-        // Initialize networking polyfill for DNS resolution issues
+        // Initialize networking polyfill for DNS resolution issues (works without global)
         initializeNetworkingPolyfill();
         console.log('✅ Networking polyfill initialized');
 
@@ -416,10 +418,10 @@ export default function RootLayout() {
           context: 'app_initialization',
           timestamp: new Date().toISOString(),
         });
+      } finally {
+        // Always hide splash screen after initialization attempt
+        ExpoSplashScreen.hideAsync();
       }
-      
-      // Hide Expo splash screen after initialization
-      ExpoSplashScreen.hideAsync();
     };
     
     // Delay initialization to ensure React Native bridge is ready

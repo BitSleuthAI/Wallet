@@ -9,6 +9,9 @@ config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 // Add resolver configuration to handle @noble/hashes crypto.js warning
 config.resolver.resolverMainFields = ['react-native', 'browser', 'main'];
 
+// Add asset resolver configuration for expo-asset
+config.resolver.assetExts = [...config.resolver.assetExts, 'bin', 'txt', 'jpg', 'png', 'json', 'gif', 'webp', 'svg'];
+
 // Add extraNodeModules to handle Node.js polyfills using node-libs-react-native
 config.resolver.extraNodeModules = {
   ...nodeLibs,

@@ -4,6 +4,9 @@ import 'react-native-get-random-values';
 import 'react-native-polyfill-globals/auto';
 import 'react-native-url-polyfill/auto';
 
+// Import expo-asset to ensure it's available
+import 'expo-asset';
+
 // Ensure global object is properly initialized for React Native
 if (typeof global === 'undefined') {
   // Create global object if it doesn't exist
