@@ -379,16 +379,24 @@ export default function RootLayout() {
         }
         
         // Initialize crypto with timeout to prevent hanging
-        const cryptoPromise = initializeCrypto();
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Crypto initialization timeout')), 10000)
-        );
-        
-        const success = await Promise.race([cryptoPromise, timeoutPromise]);
-        if (success) {
-          console.log('✅ Crypto initialized successfully');
+        const cryptoOutcome = await Promise.race([
+          initializeCrypto()
+            .then((result) => ({ source: 'crypto', ok: result === true }))
+            .catch((error) => ({ source: 'crypto', ok: false, error })),
+          new Promise((resolve) =>
+            setTimeout(() => resolve({ source: 'timeout' }), 10000)
+          ),
+        ]);
+
+        if ((cryptoOutcome as any)?.source === 'timeout') {
+          console.warn('⚠️ Crypto initialization timeout, continuing without crypto');
         } else {
-          console.warn('⚠️ Crypto initialization failed, but continuing');
+          const { ok, error } = cryptoOutcome as { source: 'crypto'; ok: boolean; error?: unknown };
+          if (ok) {
+            console.log('✅ Crypto initialized successfully');
+          } else {
+            console.warn('⚠️ Crypto initialization failed, but continuing', error);
+          }
         }
 
         // Initialize networking polyfill for DNS resolution issues
