@@ -10,11 +10,19 @@ if (rootGlobal) {
 }
 
 // Initialize crypto and ECC library
-export const initializeCrypto = async (forceReinit: boolean = false): Promise<boolean> => {
+export const initializeCrypto = async (
+  forceReinit: boolean = false,
+  signal?: AbortSignal,
+): Promise<boolean> => {
   // Resolve the global object reference safely before any usage
   let g: any = typeof global !== 'undefined' ? (global as any) : (typeof globalThis !== 'undefined' ? (globalThis as any) : undefined);
   try {
     console.log('🔧 Initializing crypto polyfills and ECC library...');
+    // Check for abort as early as possible
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted before start');
+      return false;
+    }
     // Add memory safety check BEFORE any access to global
     if (!g) {
       throw new Error('Global object not available - possible memory corruption');
@@ -36,6 +44,12 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
       }
     }
     
+    // Check for abort before heavy work
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted before ECC creation');
+      return false;
+    }
+
     let nobleECC;
     
     try {
@@ -48,6 +62,12 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
       throw new Error('Cryptographic library initialization failed. The wallet cannot operate securely without proper ECC support.');
     }
     
+    // Check for abort after ECC creation
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted after ECC creation');
+      return false;
+    }
+
     // Validate ECC implementation before using it
     console.log('🔧 Validating ECC implementation...');
     
@@ -80,6 +100,12 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
       throw new Error('ECC signature verification failed');
     }
     
+    // Check for abort after validation
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted after validation');
+      return false;
+    }
+
     console.log('✅ ECC implementation validation passed');
     
     // Set the global ECC instance
@@ -100,6 +126,12 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
       throw new Error('ECC on global does not match created instance');
     }
     
+    // Check for abort before bitcoinjs-lib work
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted before bitcoinjs-lib setup');
+      return false;
+    }
+
     console.log('✅ ECC successfully set and verified on global object');
     
     // Initialize bitcoinjs-lib with our ECC implementation
@@ -130,6 +162,12 @@ export const initializeCrypto = async (forceReinit: boolean = false): Promise<bo
       console.warn('⚠️ BitcoinJS initialization failed, continuing without it:', bitcoinError);
     }
     
+    // Final abort check before setting initialized flag
+    if (signal?.aborted) {
+      console.warn('⚠️ Crypto initialization aborted before finalize');
+      return false;
+    }
+
     // Mark as initialized
     console.log('🔧 Marking crypto as initialized...');
     g.__cryptoInitialized = true;

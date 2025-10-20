@@ -378,25 +378,23 @@ export default function RootLayout() {
           throw new Error('Global object not available during app initialization');
         }
         
-        // Initialize crypto with timeout to prevent hanging
-        const cryptoOutcome = await Promise.race([
-          initializeCrypto()
-            .then((result) => ({ source: 'crypto', ok: result === true }))
-            .catch((error) => ({ source: 'crypto', ok: false, error })),
-          new Promise((resolve) =>
-            setTimeout(() => resolve({ source: 'timeout' }), 10000)
-          ),
-        ]);
+        // Initialize crypto with AbortController-based timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+          console.warn('⚠️ Aborting crypto initialization due to timeout');
+          controller.abort();
+        }, 10000);
 
-        if ((cryptoOutcome as any)?.source === 'timeout') {
-          console.warn('⚠️ Crypto initialization timeout, continuing without crypto');
+        const cryptoOutcome = await initializeCrypto(false, controller.signal)
+          .then((ok) => ({ source: 'crypto', ok: ok === true }))
+          .catch((error) => ({ source: 'crypto', ok: false, error }));
+
+        clearTimeout(timeoutId);
+
+        if (cryptoOutcome.ok) {
+          console.log('✅ Crypto initialized successfully');
         } else {
-          const { ok, error } = cryptoOutcome as { source: 'crypto'; ok: boolean; error?: unknown };
-          if (ok) {
-            console.log('✅ Crypto initialized successfully');
-          } else {
-            console.warn('⚠️ Crypto initialization failed, but continuing', error);
-          }
+          console.warn('⚠️ Crypto initialization failed or aborted, continuing', (cryptoOutcome as any).error);
         }
 
         // Initialize networking polyfill for DNS resolution issues
@@ -420,6 +418,16 @@ export default function RootLayout() {
     };
     
     initializeApp();
+    
+    // Ensure we cancel any in-flight initialization on unmount
+    return () => {
+      try {
+        if (typeof global !== 'undefined' && (global as any).AbortController) {
+          // No-op: controller is scoped inside initializeApp, but if we refactor to outer scope,
+          // we will abort here. Keeping cleanup for future safety.
+        }
+      } catch {}
+    };
   }, []);
 
   return (
