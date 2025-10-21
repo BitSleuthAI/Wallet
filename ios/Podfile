@@ -11,6 +11,9 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 install! 'cocoapods',
   :deterministic_uuids => false
 
+# Enable modular headers for Firebase Swift pods
+use_modular_headers!
+
 prepare_react_native_project!
 
 target 'BitSleuthWallet' do
@@ -59,6 +62,24 @@ target 'BitSleuthWallet' do
           config.build_settings['CODE_SIGNING_ALLOWED'] = 'NO'
         end
       end
+    end
+
+    # Replace conflicting ReactCommon module map with minimal version
+    reactcommon_modulemap = File.join(installer.sandbox.root, 'Headers', 'Public', 'ReactCommon', 'ReactCommon.modulemap')
+    if File.exist?(reactcommon_modulemap)
+      File.delete(reactcommon_modulemap)
+      # Create a minimal module map with a different name to avoid conflicts
+      File.write(reactcommon_modulemap, "module ReactCommonMinimal {\n  umbrella header \"ReactCommon.h\"\n  export *\n  module * { export * }\n}\n")
+      puts "Replaced conflicting ReactCommon.modulemap with minimal version"
+    end
+
+    # Replace conflicting react_runtime module maps with minimal version
+    react_runtime_modulemap = File.join(installer.sandbox.root, 'Headers', 'Public', 'react_runtime', 'React-jsitooling.modulemap')
+    if File.exist?(react_runtime_modulemap)
+      File.delete(react_runtime_modulemap)
+      # Create a minimal module map with a different name to avoid conflicts
+      File.write(react_runtime_modulemap, "module ReactJsiTooling {\n  umbrella header \"React-jsitooling.h\"\n  export *\n  module * { export * }\n}\n")
+      puts "Replaced conflicting React-jsitooling.modulemap with minimal version"
     end
   end
 end

@@ -19,6 +19,7 @@
     "@babel/traverse--for-generate-function-map": "npm:@babel/traverse@^7.28.4",
     "@babel/types": "^7.28.4",
     "@craftzdog/react-native-buffer": "^6.1.0",
+    "@expo/cli": "^54.0.12",
     "@expo/config-plugins": "~10.1.1",
     "@expo/configure-splash-screen": "^0.6.0",
     "@expo/vector-icons": "^14.1.0",
