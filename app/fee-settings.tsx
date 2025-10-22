@@ -5,30 +5,30 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-    AlertTriangle,
-    ArrowLeft,
-    CheckCircle,
-    Clock,
-    DollarSign,
-    Info,
-    RefreshCw,
-    Settings,
-    TrendingUp,
-    Zap,
+  AlertTriangle,
+  ArrowLeft,
+  CheckCircle,
+  Clock,
+  DollarSign,
+  Info,
+  RefreshCw,
+  Settings,
+  TrendingUp,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-    ActivityIndicator,
-    Alert,
-    Platform,
-    Pressable,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
@@ -464,7 +464,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.customFeeRate.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Custom fee rate input: "${text}"`);
-                const numericValue = parseInt(text) || 0;
+                const numericValue = parseFloat(text) || 0;
                 updateSetting('customFeeRate', numericValue);
                 if (feeSettings.defaultPreset !== 'custom') {
                   // Auto-select custom when user types
@@ -681,7 +681,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.maxFeeRate.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Max fee rate input: ${text}`);
-                const numericValue = parseInt(text) || 100;
+                const numericValue = parseFloat(text) || 100;
                 updateSetting('maxFeeRate', numericValue);
               }}
               keyboardType="numeric"
@@ -718,7 +718,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.dustThreshold.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Dust threshold input: ${text}`);
-                const numericValue = parseInt(text) || 546;
+                const numericValue = parseFloat(text) || 546;
                 updateSetting('dustThreshold', numericValue);
               }}
               keyboardType="numeric"

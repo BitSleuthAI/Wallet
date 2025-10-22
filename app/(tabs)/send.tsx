@@ -119,7 +119,7 @@ export default function SendScreen() {
   const handleCustomFeeRateChange = (rate: string) => {
     console.log(`🔧 Send screen: Custom fee rate changed to ${rate}`);
     
-    const numericValue = parseInt(rate) || 0;
+    const numericValue = parseFloat(rate) || 0;
     
     // Update wallet store directly
     const updatedSettings = { 
