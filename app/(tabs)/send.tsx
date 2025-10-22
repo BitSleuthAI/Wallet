@@ -7,22 +7,22 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressUTXOs, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
-import type { UTXO } from '@/types/wallet';
+import type { FeeSettings, UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -44,20 +44,44 @@ export default function SendScreen() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(5);
-  const [customFeeRate, setCustomFeeRate] = useState('10');
-  const [selectedFeeType, setSelectedFeeType] = useState<'slow' | 'normal' | 'fast' | 'custom'>('normal');
-  const [enableRBF, setEnableRBF] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [feeEstimates, setFeeEstimates] = useState<any>(null);
+  
+  // Computed values from feeSettings - no local state duplication
+  const selectedFeeType = feeSettings?.defaultPreset === 'economy' ? 'slow' : 
+                          feeSettings?.defaultPreset === 'standard' ? 'normal' : 
+                          feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom';
+  const enableRBF = feeSettings?.enableRBF ?? true;
+  const customFeeRate = feeSettings?.customFeeRate?.toString() ?? '10';
+  
+  // Compute fee rate from feeSettings and feeEstimates - single source of truth
+  const feeRate = React.useMemo(() => {
+    if (!feeSettings) return 5; // Default fallback
+    
+    if (feeSettings.defaultPreset === 'custom') {
+      return feeSettings.customFeeRate;
+    } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
+      // Use network estimates when available
+      return feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
+             feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
+             feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
+             feeEstimates.halfHourFee;
+    } else {
+      // Use fallback rates when estimates aren't available
+      return feeSettings.defaultPreset === 'economy' ? 1 :
+             feeSettings.defaultPreset === 'standard' ? 5 :
+             feeSettings.defaultPreset === 'priority' ? 15 :
+             feeSettings.customFeeRate;
+    }
+  }, [feeSettings, feeEstimates]);
   // Use Bitcoin price from wallet store (already converted to selected currency)
   const bitcoinPrice = walletBitcoinPrice?.usd || null;
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
     message: string | null;
   }>({ isValid: false, message: null });
-  const [feeEstimates, setFeeEstimates] = useState<any>(null);
   const [feeWithConfidence, setFeeWithConfidence] = useState<{
     fast: { fee: number; confidence: string; timeEstimate: string };
     medium: { fee: number; confidence: string; timeEstimate: string };
@@ -65,8 +89,6 @@ export default function SendScreen() {
   } | null>(null);
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<UTXO[]>([]);
-  const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
-  const [lastAppliedFeeSettings, setLastAppliedFeeSettings] = useState<string | null>(null);
   const lastFeeEstimatesRef = useRef<any>(null);
   const [customFeeValidation, setCustomFeeValidation] = useState<{
     isValid: boolean;
@@ -80,32 +102,88 @@ export default function SendScreen() {
     reason: string;
     congestion: 'low' | 'medium' | 'high';
   } | null>(null);
+  const [userHasInteractedWithFees, setUserHasInteractedWithFees] = useState(false);
 
-  // Reset user interaction state only when component mounts
+  // Simple handlers that directly update wallet store
+  const handleFeePresetChange = (preset: 'slow' | 'normal' | 'fast' | 'custom') => {
+    console.log(`🔧 Send screen: Fee preset changed to ${preset}`);
+    console.log(`🔧 Current feeSettings.defaultPreset: ${feeSettings?.defaultPreset}`);
+    
+    // Mark user interaction to prevent auto-adjustment from overriding
+    setUserHasInteractedWithFees(true);
+    
+    // Map send screen preset to fee settings preset
+    const feeSettingsPreset = preset === 'slow' ? 'economy' : 
+                             preset === 'normal' ? 'standard' : 
+                             preset === 'fast' ? 'priority' : 'custom';
+    
+    console.log(`🔧 Mapped to fee settings preset: ${feeSettingsPreset}`);
+    
+    // Update wallet store directly
+    const updatedSettings = { ...feeSettings, defaultPreset: feeSettingsPreset as FeeSettings['defaultPreset'] };
+    console.log(`🔧 Updating wallet store with:`, updatedSettings);
+    setFeeSettings(updatedSettings).catch(error => {
+      console.error(`❌ Failed to update fee preset:`, error);
+    });
+  };
+
+  const handleRBFChange = (value: boolean) => {
+    console.log(`🔧 Send screen: RBF changed to ${value}`);
+    console.log(`🔧 Current feeSettings.enableRBF: ${feeSettings?.enableRBF}`);
+    
+    // Update wallet store directly
+    const updatedSettings = { ...feeSettings, enableRBF: value };
+    console.log(`🔧 Updating wallet store with:`, updatedSettings);
+    setFeeSettings(updatedSettings).catch(error => {
+      console.error(`❌ Failed to update RBF setting:`, error);
+    });
+  };
+
+  const handleCustomFeeRateChange = (rate: string) => {
+    console.log(`🔧 Send screen: Custom fee rate changed to ${rate}`);
+    
+    // Mark user interaction to prevent auto-adjustment from overriding
+    setUserHasInteractedWithFees(true);
+    
+    // Validate input before storing in wallet settings
+    const numericValue = parseFloat(rate);
+    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
+    
+    // Only update wallet store if the input is valid
+    if (!rate.trim()) {
+      // Empty input - don't update wallet store, let UI handle it
+      console.log(`🔧 Empty input - not updating wallet store`);
+      return;
+    }
+    
+    if (isNaN(numericValue) || numericValue <= 0) {
+      // Invalid input - don't update wallet store
+      console.log(`🔧 Invalid input (${rate}) - not updating wallet store`);
+      return;
+    }
+    
+    if (numericValue > maxRate) {
+      // Exceeds maximum - don't update wallet store
+      console.log(`🔧 Input exceeds maximum (${numericValue} > ${maxRate}) - not updating wallet store`);
+      return;
+    }
+    
+    // Input is valid - update wallet store
+    const updatedSettings = { 
+      ...feeSettings, 
+      customFeeRate: numericValue,
+      defaultPreset: 'custom' as FeeSettings['defaultPreset'] // Auto-set to custom when user changes rate
+    };
+    console.log(`🔧 Valid input - updating wallet store with:`, updatedSettings);
+    setFeeSettings(updatedSettings).catch(error => {
+      console.error(`❌ Failed to update custom fee rate:`, error);
+    });
+  };
+
+  // Reset user interaction state when wallet changes
   useEffect(() => {
     setUserHasInteractedWithFees(false);
-  }, []);
-
-  // Track fee settings changes but preserve user's manual fee selections
-  // This prevents the fee management effect from overriding user-selected rates when settings change
-  useEffect(() => {
-    if (feeSettings) {
-      // Only track preset and custom fee rate changes, not RBF (which doesn't affect fee rates)
-      const settingsKey = `${feeSettings.defaultPreset}-${feeSettings.customFeeRate}`;
-      if (lastAppliedFeeSettings !== settingsKey) {
-        // Only reset user interaction on initial load (when lastAppliedFeeSettings is null)
-        // or when preset/custom fee rate actually changes (not RBF or other settings)
-        if (lastAppliedFeeSettings === null) {
-          // Initial load - reset user interaction to allow default settings
-          setUserHasInteractedWithFees(false);
-        } else {
-          // Settings actually changed - only reset if it's a fee-related change
-          setUserHasInteractedWithFees(false);
-        }
-        setLastAppliedFeeSettings(settingsKey);
-      }
-    }
-  }, [feeSettings, lastAppliedFeeSettings]);
+  }, [currentWallet]);
 
   // Load fee estimates on component mount and wallet change
   useEffect(() => {
@@ -113,7 +191,7 @@ export default function SendScreen() {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
-        setLastFeeEstimates(fees);
+        lastFeeEstimatesRef.current = fees;
         
         // Load fee confidence data
         if (fees) {
@@ -160,49 +238,7 @@ export default function SendScreen() {
     return () => clearInterval(refreshInterval);
   }, [feeSettings?.autoAdjustFees, userHasInteractedWithFees]);
 
-  // Initial fee settings application - only runs once when settings first load
-  useEffect(() => {
-    if (feeSettingsLoading || !feeSettings || userHasInteractedWithFees) return;
-
-    // Apply fee settings only on initial load or when settings change
-    const presetType = feeSettings.defaultPreset === 'economy' ? 'slow' : 
-                      feeSettings.defaultPreset === 'standard' ? 'normal' : 
-                      feeSettings.defaultPreset === 'priority' ? 'fast' : 'custom';
-    setSelectedFeeType(presetType);
-    setCustomFeeRate(feeSettings.customFeeRate.toString());
-    setEnableRBF(feeSettings.enableRBF);
-  }, [feeSettings, feeSettingsLoading, userHasInteractedWithFees]);
-
-  // Fee rate updates - handles both initial load and network estimate updates
-  useEffect(() => {
-    if (feeSettingsLoading || !feeSettings) return;
-
-    // Only update fee rates if user hasn't manually interacted with fees
-    // This preserves user's manual fee selections while allowing automatic updates for new users
-    if (userHasInteractedWithFees) {
-      return; // Don't override user's manual selections
-    }
-
-    // Update fee rates based on current preset only when user hasn't interacted
-    if (feeSettings.defaultPreset === 'custom') {
-      // For custom preset, use the stored custom fee rate
-      setFeeRate(feeSettings.customFeeRate);
-    } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
-      // Use network estimates when available
-      const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
-                       feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
-                       feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
-                       feeEstimates.halfHourFee;
-      setFeeRate(presetFee);
-    } else {
-      // Use fallback rates when estimates aren't available
-      const fallbackRate = feeSettings.defaultPreset === 'economy' ? 1 :
-                         feeSettings.defaultPreset === 'standard' ? 5 :
-                         feeSettings.defaultPreset === 'priority' ? 15 :
-                         feeSettings.customFeeRate;
-      setFeeRate(fallbackRate);
-    }
-  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
+  // No sync effects needed - feeRate is now computed directly from feeSettings and feeEstimates
 
   // Auto-adjust fees based on network conditions
   useEffect(() => {
@@ -211,11 +247,9 @@ export default function SendScreen() {
       // 1. Auto-adjust is enabled in settings
       // 2. User hasn't manually interacted with fees
       // 3. We have fee estimates available
-      // 4. We're not in custom fee mode (auto-adjust doesn't override custom rates)
       if (!feeSettings?.autoAdjustFees || 
-          userHasInteractedWithFees || 
-          !feeEstimates || 
-          selectedFeeType === 'custom') {
+          userHasInteractedWithFees ||
+          !feeEstimates) {
         setAutoAdjustmentActive(false);
         return;
       }
@@ -329,7 +363,10 @@ export default function SendScreen() {
         const rateChangePercent = delta / currentRate;
 
         // Only adjust if difference is meaningful or we exceed cap
-        if (delta < 1 && rateChangePercent < 0.05) {
+        // Use consistent thresholds for both checking and applying adjustments
+        const significantChange = delta >= 1 || rateChangePercent >= 0.05;
+        
+        if (!significantChange) {
           setAutoAdjustmentActive(false);
           setLastAutoAdjustment((prev) =>
             prev && prev.congestion === congestion ? prev : null
@@ -346,11 +383,27 @@ export default function SendScreen() {
           return;
         }
 
-        setFeeRate(newRate);
+        // Apply auto-adjustment by updating feeSettings
+        // For custom preset, update the custom fee rate
+        if (feeSettings.defaultPreset === 'custom') {
+          const updatedSettings = { ...feeSettings, customFeeRate: newRate };
+          setFeeSettings(updatedSettings).catch(error => {
+            console.error('Failed to update custom fee rate for auto-adjustment:', error);
+          });
+        } else {
+          // For preset modes, switch to custom mode with the adjusted rate
+          // Note: This changes the user's preset preference to 'custom' to apply the auto-adjustment
+          const updatedSettings = { 
+            ...feeSettings, 
+            customFeeRate: newRate,
+            defaultPreset: 'custom' as FeeSettings['defaultPreset']
+          };
+          setFeeSettings(updatedSettings).catch(error => {
+            console.error('Failed to update fee settings for auto-adjustment:', error);
+          });
+        }
+        
         setAutoAdjustmentActive(true);
-
-        // Update tier using explicit intent from congestion logic
-        setSelectedFeeType(appliedTier);
 
         setLastAutoAdjustment({
           timestamp: Date.now(),
@@ -396,7 +449,7 @@ export default function SendScreen() {
     }
 
     lastFeeEstimatesRef.current = feeEstimates;
-  }, [feeEstimates, feeSettings, userHasInteractedWithFees, selectedFeeType, feeRate]);
+  }, [feeEstimates, feeSettings, userHasInteractedWithFees, feeRate]);
 
   useEffect(() => {
     const fetchUtxos = async () => {
@@ -1140,9 +1193,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setSelectedFeeType('slow');
-                    setFeeRate(feeEstimates?.economyFee || 1);
-                    setUserHasInteractedWithFees(true);
+                    handleFeePresetChange('slow');
                   }}
                 >
                   <Text style={[
@@ -1164,9 +1215,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setSelectedFeeType('normal');
-                    setFeeRate(feeEstimates?.halfHourFee || 5);
-                    setUserHasInteractedWithFees(true);
+                    handleFeePresetChange('normal');
                   }}
                 >
                   <Text style={[
@@ -1188,9 +1237,7 @@ export default function SendScreen() {
                     }
                   ]}
                   onPress={() => {
-                    setSelectedFeeType('fast');
-                    setFeeRate(feeEstimates?.fastestFee || 15);
-                    setUserHasInteractedWithFees(true);
+                    handleFeePresetChange('fast');
                   }}
                 >
                   <Text style={[
@@ -1213,7 +1260,7 @@ export default function SendScreen() {
                   ]}
                   onPress={() => {
                     // Switch to custom fee type
-                    setSelectedFeeType('custom');
+                    handleFeePresetChange('custom');
                     
                     // If no valid custom rate is entered, use the stored custom fee rate from settings
                     if (!customFeeRate || isNaN(parseFloat(customFeeRate)) || parseFloat(customFeeRate) <= 0) {
@@ -1222,14 +1269,10 @@ export default function SendScreen() {
                       
                       // Use the smaller of fallback rate or max allowed rate
                       const finalRate = Math.min(fallbackRate, maxRate);
-                      setFeeRate(finalRate);
-                      setCustomFeeRate(finalRate.toString());
+                      handleCustomFeeRateChange(finalRate.toString());
                       setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
                     }
                     // If customFeeRate is already set and valid, the onChangeText handler will handle the validation
-                    
-                    // Mark as user interaction
-                    setUserHasInteractedWithFees(true);
                   }}
                 >
                   <Text style={[
@@ -1252,50 +1295,35 @@ export default function SendScreen() {
                     placeholderTextColor={theme.colors.textSecondary}
                     value={customFeeRate}
                     onChangeText={(text) => {
-                      // Always update customFeeRate to keep the input responsive
-                      setCustomFeeRate(text);
+                      // Update validation state for UI feedback
+                      const rate = parseFloat(text);
+                      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                       
-                      // Only update feeRate if we're currently in custom mode
-                      if (selectedFeeType === 'custom') {
-                        const rate = parseFloat(text);
-                        const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
-                        
-                        // Validate input and update validation state
-                        if (!text.trim()) {
-                          // Empty input - clear validation state and reset fee rate to default
-                          setCustomFeeValidation({ isValid: true, message: null });
-                          // Reset to the stored custom fee rate from settings as fallback
-                          const fallbackRate = feeSettings?.customFeeRate || 10;
-                          setFeeRate(fallbackRate);
-                        } else if (isNaN(rate) || rate <= 0) {
-                          // Invalid format
-                          setCustomFeeValidation({ 
-                            isValid: false, 
-                            message: 'Please enter a valid fee rate' 
-                          });
-                        } else if (rate > maxRate) {
-                          // Exceeds maximum
-                          setCustomFeeValidation({ 
-                            isValid: false, 
-                            message: `Maximum allowed: ${maxRate} sat/vB` 
-                          });
-                        } else {
-                          // Valid rate
-                          setCustomFeeValidation({ 
-                            isValid: true, 
-                            message: 'Valid fee rate' 
-                          });
-                        }
-                        
-                        // Always update feeRate to match the displayed value
-                        // This ensures consistency between UI and actual transaction
-                        if (!isNaN(rate) && rate > 0) {
-                          setFeeRate(rate);
-                        }
-                        
-                        // Mark as user interaction
-                        setUserHasInteractedWithFees(true);
+                      if (!text.trim()) {
+                        // Empty input - clear validation state
+                        setCustomFeeValidation({ isValid: true, message: null });
+                      } else if (isNaN(rate) || rate <= 0) {
+                        // Invalid format
+                        setCustomFeeValidation({ 
+                          isValid: false, 
+                          message: 'Please enter a valid fee rate' 
+                        });
+                      } else if (rate > maxRate) {
+                        // Exceeds maximum
+                        setCustomFeeValidation({ 
+                          isValid: false, 
+                          message: `Maximum allowed: ${maxRate} sat/vB` 
+                        });
+                      } else {
+                        // Valid rate
+                        setCustomFeeValidation({ 
+                          isValid: true, 
+                          message: 'Valid fee rate' 
+                        });
                       }
+                      
+                      // Only update wallet store if input is valid
+                      handleCustomFeeRateChange(text);
                     }}
                     keyboardType="numeric"
                   />
@@ -1391,7 +1419,7 @@ export default function SendScreen() {
               </View>
               <Switch
                 value={enableRBF}
-                onValueChange={setEnableRBF}
+                onValueChange={handleRBFChange}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor="white"
               />
