@@ -464,7 +464,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.customFeeRate.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Custom fee rate input: "${text}"`);
-                const numericValue = parseFloat(text) || 0;
+                const numericValue = parseInt(text) || 0;
                 updateSetting('customFeeRate', numericValue);
                 if (feeSettings.defaultPreset !== 'custom') {
                   // Auto-select custom when user types
@@ -681,7 +681,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.maxFeeRate.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Max fee rate input: ${text}`);
-                const numericValue = parseFloat(text) || 100;
+                const numericValue = parseInt(text) || 100;
                 updateSetting('maxFeeRate', numericValue);
               }}
               keyboardType="numeric"
@@ -718,7 +718,7 @@ export default function FeeSettingsScreen() {
               value={feeSettings.dustThreshold.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Dust threshold input: ${text}`);
-                const numericValue = parseFloat(text) || 546;
+                const numericValue = parseInt(text) || 546;
                 updateSetting('dustThreshold', numericValue);
               }}
               keyboardType="numeric"
