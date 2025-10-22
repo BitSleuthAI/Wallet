@@ -361,7 +361,10 @@ export default function SendScreen() {
         const rateChangePercent = delta / currentRate;
 
         // Only adjust if difference is meaningful or we exceed cap
-        if (delta < 1 && rateChangePercent < 0.05) {
+        // Use consistent thresholds for both checking and applying adjustments
+        const significantChange = delta >= 1 || rateChangePercent >= 0.05;
+        
+        if (!significantChange) {
           setAutoAdjustmentActive(false);
           setLastAutoAdjustment((prev) =>
             prev && prev.congestion === congestion ? prev : null
@@ -378,16 +381,9 @@ export default function SendScreen() {
           return;
         }
 
-        // Only apply auto-adjustment if the change is significant enough
-        // This prevents tiny adjustments that override user selections
-        const significantChange = delta >= 2 || rateChangePercent >= 0.1;
-        
-        if (significantChange) {
-          setFeeRate(newRate);
-          setAutoAdjustmentActive(true);
-        } else {
-          setAutoAdjustmentActive(false);
-        }
+        // Apply auto-adjustment since we've already verified it's significant
+        setFeeRate(newRate);
+        setAutoAdjustmentActive(true);
 
         // Note: We don't update the preset here since that would override user selections
         // The fee rate is updated above, but the preset remains as the user selected it
