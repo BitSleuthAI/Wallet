@@ -247,11 +247,9 @@ export default function SendScreen() {
       // 1. Auto-adjust is enabled in settings
       // 2. User hasn't manually interacted with fees
       // 3. We have fee estimates available
-      // 4. We're not in custom fee mode (auto-adjust doesn't override custom rates)
       if (!feeSettings?.autoAdjustFees || 
           userHasInteractedWithFees ||
-          !feeEstimates || 
-          feeSettings.defaultPreset === 'custom') {
+          !feeEstimates) {
         setAutoAdjustmentActive(false);
         return;
       }
@@ -386,14 +384,24 @@ export default function SendScreen() {
         }
 
         // Apply auto-adjustment by updating feeSettings
-        // Only auto-adjust when in custom mode to avoid confusing users with preset changes
-        if ((feeSettings.defaultPreset as string) === 'custom') {
+        // For custom preset, update the custom fee rate
+        if (feeSettings.defaultPreset === 'custom') {
           const updatedSettings = { ...feeSettings, customFeeRate: newRate };
           setFeeSettings(updatedSettings).catch(error => {
             console.error('Failed to update custom fee rate for auto-adjustment:', error);
           });
+        } else {
+          // For preset modes, temporarily switch to custom mode with the adjusted rate
+          // This preserves the user's original preset preference while applying the adjustment
+          const updatedSettings = { 
+            ...feeSettings, 
+            customFeeRate: newRate,
+            defaultPreset: 'custom' as FeeSettings['defaultPreset']
+          };
+          setFeeSettings(updatedSettings).catch(error => {
+            console.error('Failed to update fee settings for auto-adjustment:', error);
+          });
         }
-        // For preset modes, we don't auto-adjust to avoid overriding user's preset choice
         
         setAutoAdjustmentActive(true);
 
