@@ -145,14 +145,36 @@ export default function SendScreen() {
     // Mark user interaction to prevent auto-adjustment from overriding
     setUserHasInteractedWithFees(true);
     
-    const numericValue = parseFloat(rate) || 0;
+    // Validate input before storing in wallet settings
+    const numericValue = parseFloat(rate);
+    const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
     
-    // Update wallet store directly
+    // Only update wallet store if the input is valid
+    if (!rate.trim()) {
+      // Empty input - don't update wallet store, let UI handle it
+      console.log(`🔧 Empty input - not updating wallet store`);
+      return;
+    }
+    
+    if (isNaN(numericValue) || numericValue <= 0) {
+      // Invalid input - don't update wallet store
+      console.log(`🔧 Invalid input (${rate}) - not updating wallet store`);
+      return;
+    }
+    
+    if (numericValue > maxRate) {
+      // Exceeds maximum - don't update wallet store
+      console.log(`🔧 Input exceeds maximum (${numericValue} > ${maxRate}) - not updating wallet store`);
+      return;
+    }
+    
+    // Input is valid - update wallet store
     const updatedSettings = { 
       ...feeSettings, 
       customFeeRate: numericValue,
       defaultPreset: 'custom' as FeeSettings['defaultPreset'] // Auto-set to custom when user changes rate
     };
+    console.log(`🔧 Valid input - updating wallet store with:`, updatedSettings);
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update custom fee rate:`, error);
     });
@@ -1265,43 +1287,35 @@ export default function SendScreen() {
                     placeholderTextColor={theme.colors.textSecondary}
                     value={customFeeRate}
                     onChangeText={(text) => {
-                      // Always update customFeeRate to keep the input responsive
-                      handleCustomFeeRateChange(text);
+                      // Update validation state for UI feedback
+                      const rate = parseFloat(text);
+                      const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
                       
-                      // Only update feeRate if we're currently in custom mode
-                      if (selectedFeeType === 'custom') {
-                        const rate = parseFloat(text);
-                        const maxRate = (feeSettings && feeSettings.maxFeeRate) ? feeSettings.maxFeeRate : 100;
-                        
-                        // Validate input and update validation state
-                        if (!text.trim()) {
-                          // Empty input - clear validation state and reset fee rate to default
-                          setCustomFeeValidation({ isValid: true, message: null });
-                          // feeRate will be computed automatically from feeSettings
-                        } else if (isNaN(rate) || rate <= 0) {
-                          // Invalid format
-                          setCustomFeeValidation({ 
-                            isValid: false, 
-                            message: 'Please enter a valid fee rate' 
-                          });
-                        } else if (rate > maxRate) {
-                          // Exceeds maximum
-                          setCustomFeeValidation({ 
-                            isValid: false, 
-                            message: `Maximum allowed: ${maxRate} sat/vB` 
-                          });
-                        } else {
-                          // Valid rate
-                          setCustomFeeValidation({ 
-                            isValid: true, 
-                            message: 'Valid fee rate' 
-                          });
-                        }
-                        
-                        // feeRate is now computed automatically from feeSettings
-                        
-                        // User interaction handled by handleCustomFeeRateChange
+                      if (!text.trim()) {
+                        // Empty input - clear validation state
+                        setCustomFeeValidation({ isValid: true, message: null });
+                      } else if (isNaN(rate) || rate <= 0) {
+                        // Invalid format
+                        setCustomFeeValidation({ 
+                          isValid: false, 
+                          message: 'Please enter a valid fee rate' 
+                        });
+                      } else if (rate > maxRate) {
+                        // Exceeds maximum
+                        setCustomFeeValidation({ 
+                          isValid: false, 
+                          message: `Maximum allowed: ${maxRate} sat/vB` 
+                        });
+                      } else {
+                        // Valid rate
+                        setCustomFeeValidation({ 
+                          isValid: true, 
+                          message: 'Valid fee rate' 
+                        });
                       }
+                      
+                      // Only update wallet store if input is valid
+                      handleCustomFeeRateChange(text);
                     }}
                     keyboardType="numeric"
                   />
