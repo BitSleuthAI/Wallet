@@ -58,6 +58,7 @@ export default function FeeSettingsScreen() {
 
   // Sync local state with wallet store feeSettings when it updates
   useEffect(() => {
+    console.log(`🔧 Syncing fee settings from wallet store:`, feeSettings);
     setSelectedPreset(feeSettings.defaultPreset);
     setCustomFeeRate(feeSettings.customFeeRate.toString());
     setSettings(feeSettings);
@@ -92,9 +93,13 @@ export default function FeeSettingsScreen() {
   };
 
   const updateSetting = <K extends keyof FeeSettings>(key: K, value: FeeSettings[K]) => {
+    console.log(`🔧 Updating fee setting: ${key} = ${value}`);
     const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
-    setFeeSettings(newSettings);
+    // Handle async setFeeSettings
+    setFeeSettings(newSettings).catch(error => {
+      console.error(`❌ Failed to update fee setting ${key}:`, error);
+    });
   };
 
   const getFeePresetInfo = (preset: FeePreset) => {
@@ -144,6 +149,8 @@ export default function FeeSettingsScreen() {
     const info = getFeePresetInfo(preset);
     const isSelected = selectedPreset === preset;
     const estimatedCost = estimateTransactionCost(info.rate);
+    
+    console.log(`🔧 FeePresetCard render: ${preset}, isSelected: ${isSelected}, selectedPreset: ${selectedPreset}`);
 
     return (
       <TouchableOpacity
@@ -156,6 +163,7 @@ export default function FeeSettingsScreen() {
           },
         ]}
         onPress={() => {
+          console.log(`🔧 Selecting fee preset: ${preset}`);
           setSelectedPreset(preset);
           updateSetting('defaultPreset', preset);
         }}
@@ -215,7 +223,9 @@ export default function FeeSettingsScreen() {
     value: boolean;
     onValueChange: (value: boolean) => void;
     icon: any;
-  }) => (
+  }) => {
+    console.log(`🔧 SettingToggle render: ${title} = ${value}`);
+    return (
     <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.settingIcon, { backgroundColor: theme.colors.primary + '20' }]}>
         <Icon color={theme.colors.primary} size={20} />
@@ -232,7 +242,10 @@ export default function FeeSettingsScreen() {
         <Pressable
           accessibilityRole="switch"
           accessibilityState={{ checked: value }}
-          onPress={() => onValueChange(!value)}
+          onPress={() => {
+            console.log(`🔧 Web switch pressed: ${title}, current value: ${value}, new value: ${!value}`);
+            onValueChange(!value);
+          }}
           style={[
             styles.webSwitch,
             {
@@ -261,6 +274,7 @@ export default function FeeSettingsScreen() {
       )}
     </View>
   );
+  };
 
   const SectionHeader = ({ title, subtitle }: { title: string; subtitle?: string }) => (
     <View style={styles.sectionHeader}>
@@ -448,10 +462,13 @@ export default function FeeSettingsScreen() {
               ]}
               value={customFeeRate}
               onChangeText={(text) => {
+                console.log(`🔧 Custom fee rate input: ${text}`);
                 setCustomFeeRate(text);
-                updateSetting('customFeeRate', parseInt(text) || 0);
+                const numericValue = parseInt(text) || 0;
+                updateSetting('customFeeRate', numericValue);
                 if (selectedPreset !== 'custom') {
                   // Auto-select custom when user types
+                  console.log(`🔧 Auto-selecting custom preset`);
                   setSelectedPreset('custom');
                   updateSetting('defaultPreset', 'custom');
                 }
@@ -477,6 +494,7 @@ export default function FeeSettingsScreen() {
               },
             ]}
             onPress={() => {
+              console.log(`🔧 Using custom fee rate button pressed`);
               setSelectedPreset('custom');
               updateSetting('defaultPreset', 'custom');
             }}
@@ -500,7 +518,10 @@ export default function FeeSettingsScreen() {
           title="Replace-by-Fee (RBF)"
           subtitle="Allow fee bumping for unconfirmed transactions"
           value={settings.enableRBF}
-          onValueChange={(value) => updateSetting('enableRBF', value)}
+          onValueChange={(value) => {
+            console.log(`🔧 RBF toggle: ${value}`);
+            updateSetting('enableRBF', value);
+          }}
           icon={TrendingUp}
         />
         
@@ -542,7 +563,10 @@ export default function FeeSettingsScreen() {
           title="Child-Pays-for-Parent (CPFP)"
           subtitle="Enable CPFP fee bumping for received transactions"
           value={settings.enableCPFP}
-          onValueChange={(value) => updateSetting('enableCPFP', value)}
+          onValueChange={(value) => {
+            console.log(`🔧 CPFP toggle: ${value}`);
+            updateSetting('enableCPFP', value);
+          }}
           icon={DollarSign}
         />
         
@@ -581,7 +605,10 @@ export default function FeeSettingsScreen() {
           title="Auto-Adjust Fees"
           subtitle="Automatically adjust fees based on network conditions"
           value={settings.autoAdjustFees}
-          onValueChange={(value) => updateSetting('autoAdjustFees', value)}
+          onValueChange={(value) => {
+            console.log(`🔧 Auto-adjust fees toggle: ${value}`);
+            updateSetting('autoAdjustFees', value);
+          }}
           icon={Zap}
         />
 
@@ -645,7 +672,11 @@ export default function FeeSettingsScreen() {
                 },
               ]}
               value={settings.maxFeeRate.toString()}
-              onChangeText={(text) => updateSetting('maxFeeRate', parseInt(text) || 100)}
+              onChangeText={(text) => {
+                console.log(`🔧 Max fee rate input: ${text}`);
+                const numericValue = parseInt(text) || 100;
+                updateSetting('maxFeeRate', numericValue);
+              }}
               keyboardType="numeric"
               selectTextOnFocus
             />
@@ -678,7 +709,11 @@ export default function FeeSettingsScreen() {
                 },
               ]}
               value={settings.dustThreshold.toString()}
-              onChangeText={(text) => updateSetting('dustThreshold', parseInt(text) || 546)}
+              onChangeText={(text) => {
+                console.log(`🔧 Dust threshold input: ${text}`);
+                const numericValue = parseInt(text) || 546;
+                updateSetting('dustThreshold', numericValue);
+              }}
               keyboardType="numeric"
               selectTextOnFocus
             />

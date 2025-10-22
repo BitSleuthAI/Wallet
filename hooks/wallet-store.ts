@@ -659,20 +659,24 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const { mutate: saveAutoLock } = saveAutoLockMutation;
 
   const upsertFeeSettings = useCallback(async (walletId: string, settings: FeeSettings) => {
+    console.log(`🔧 Wallet store: upsertFeeSettings called for wallet ${walletId}:`, settings);
     const normalized = normalizeFeeSettings(settings);
 
     const updatedMap = { ...feeSettingsMap, [walletId]: normalized };
 
     if (!feeSettingsMapsEqual(updatedMap, feeSettingsMap)) {
+      console.log(`🔧 Wallet store: Updating fee settings map`);
       setFeeSettingsMap(updatedMap);
     }
 
     if (walletId === currentWalletId && !areFeeSettingsEqual(normalized, feeSettings)) {
+      console.log(`🔧 Wallet store: Updating current wallet fee settings state`);
       setFeeSettingsState(normalized);
     }
 
     try {
       await AsyncStorage.setItem(FEE_SETTINGS_STORAGE_KEY, JSON.stringify(updatedMap));
+      console.log(`🔧 Wallet store: Fee settings persisted to storage`);
     } catch (err) {
       console.warn('Failed to persist fee settings map', err);
     }
@@ -727,9 +731,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [currentWalletId, feeSettingsLoading, getCurrentFeeSettings]);
 
-  const setFeeSettings = useCallback((settings: FeeSettings) => {
+  const setFeeSettings = useCallback(async (settings: FeeSettings) => {
     const walletId = currentWalletId || FALLBACK_WALLET_ID;
-    void upsertFeeSettings(walletId, settings);
+    console.log(`🔧 Wallet store: Setting fee settings for wallet ${walletId}:`, settings);
+    await upsertFeeSettings(walletId, settings);
   }, [currentWalletId, upsertFeeSettings]);
 
   const setCoinControlSelected = useCallback((ids: string[]) => {
