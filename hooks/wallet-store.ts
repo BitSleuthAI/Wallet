@@ -732,14 +732,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     applySettingsMap();
   }, [feeSettingsByWalletQuery.data, feeSettingsByWalletQuery.isLoading, migrateLegacyFeeSettings, feeSettingsMap]);
 
-  // REMOVED: This effect was causing fee preset reversion by overriding user selections
-  // The upsertFeeSettings function already handles updating the current wallet's state correctly
-  // useEffect(() => {
-  //   if (!feeSettingsLoading) {
-  //     const settings = getCurrentFeeSettings();
-  //     setFeeSettingsState(settings);
-  //   }
-  // }, [currentWalletId, feeSettingsLoading, getCurrentFeeSettings]);
+  // Sync feeSettings state with current wallet's settings
+  // This ensures the UI displays the correct settings when switching wallets or on startup
+  useEffect(() => {
+    if (!feeSettingsLoading && currentWalletId) {
+      const settings = getCurrentFeeSettings();
+      // Only update if the settings are actually different to avoid unnecessary re-renders
+      if (!areFeeSettingsEqual(settings, feeSettings)) {
+        console.log(`🔧 Wallet store: Syncing fee settings for wallet ${currentWalletId}:`, settings);
+        setFeeSettingsState(settings);
+      }
+    }
+  }, [currentWalletId, feeSettingsLoading, getCurrentFeeSettings, feeSettings]);
 
   const setFeeSettings = useCallback(async (settings: FeeSettings) => {
     const walletId = currentWalletId || FALLBACK_WALLET_ID;
