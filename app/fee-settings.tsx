@@ -48,21 +48,14 @@ export default function FeeSettingsScreen() {
   const [feeEstimates, setFeeEstimates] = useState<FeeEstimate | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
-  const [selectedPreset, setSelectedPreset] = useState<FeePreset>(feeSettings.defaultPreset);
-  const [customFeeRate, setCustomFeeRate] = useState<string>(feeSettings.customFeeRate.toString());
-  const [settings, setSettings] = useState<FeeSettings>(feeSettings);
+  
+  // No local state duplication - use feeSettings directly
 
   useEffect(() => {
     loadFeeEstimates();
   }, []);
 
-  // Sync local state with wallet store feeSettings when it updates
-  useEffect(() => {
-    console.log(`🔧 Syncing fee settings from wallet store:`, feeSettings);
-    setSelectedPreset(feeSettings.defaultPreset);
-    setCustomFeeRate(feeSettings.customFeeRate.toString());
-    setSettings(feeSettings);
-  }, [feeSettings]);
+  // No sync effects needed - React automatically re-renders when feeSettings changes
 
   const loadFeeEstimates = async () => {
     try {
@@ -94,9 +87,9 @@ export default function FeeSettingsScreen() {
 
   const updateSetting = <K extends keyof FeeSettings>(key: K, value: FeeSettings[K]) => {
     console.log(`🔧 Updating fee setting: ${key} = ${value}`);
-    const newSettings = { ...settings, [key]: value };
-    setSettings(newSettings);
-    // Handle async setFeeSettings
+    
+    // Update wallet store directly
+    const newSettings = { ...feeSettings, [key]: value };
     setFeeSettings(newSettings).catch(error => {
       console.error(`❌ Failed to update fee setting ${key}:`, error);
     });
@@ -126,7 +119,7 @@ export default function FeeSettingsScreen() {
         };
       case 'custom':
         return {
-          rate: parseInt(customFeeRate) || 0,
+          rate: feeSettings.customFeeRate,
           time: 'Variable',
           description: 'Set your own fee rate'
         };
@@ -147,24 +140,30 @@ export default function FeeSettingsScreen() {
     icon: any;
   }) => {
     const info = getFeePresetInfo(preset);
-    const isSelected = selectedPreset === preset;
+    const isSelected = feeSettings.defaultPreset === preset;
     const estimatedCost = estimateTransactionCost(info.rate);
     
-    console.log(`🔧 FeePresetCard render: ${preset}, isSelected: ${isSelected}, selectedPreset: ${selectedPreset}`);
-
     return (
       <TouchableOpacity
         style={[
           styles.presetCard,
           {
-            backgroundColor: theme.colors.surface,
+            backgroundColor: isSelected ? theme.colors.primary : theme.colors.surface,
             borderColor: isSelected ? theme.colors.primary : theme.colors.border,
-            borderWidth: isSelected ? 2 : 1,
+            borderWidth: isSelected ? 3 : 1,
+            shadowColor: isSelected ? theme.colors.primary : 'transparent',
+            shadowOffset: isSelected ? { width: 0, height: 4 } : { width: 0, height: 0 },
+            shadowOpacity: isSelected ? 0.3 : 0,
+            shadowRadius: isSelected ? 8 : 0,
+            elevation: isSelected ? 5 : 0,
+            transform: isSelected ? [{ scale: 1.02 }] : [{ scale: 1 }],
           },
         ]}
+        activeOpacity={0.7}
         onPress={() => {
           console.log(`🔧 Selecting fee preset: ${preset}`);
-          setSelectedPreset(preset);
+          console.log(`🔧 Current feeSettings.defaultPreset: ${feeSettings.defaultPreset}`);
+          // Update global state directly
           updateSetting('defaultPreset', preset);
         }}
       >
@@ -173,36 +172,36 @@ export default function FeeSettingsScreen() {
             <Icon color={theme.colors.primary} size={20} />
           </View>
           <View style={styles.presetInfo}>
-            <Text style={[styles.presetTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.presetTitle, { color: isSelected ? '#FFFFFF' : theme.colors.text }]}>
               {title}
             </Text>
-            <Text style={[styles.presetTime, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.presetTime, { color: isSelected ? '#FFFFFF' : theme.colors.textSecondary }]}>
               {info.time}
             </Text>
           </View>
           {isSelected && (
-            <CheckCircle color={theme.colors.primary} size={20} />
+            <CheckCircle color="#FFFFFF" size={20} />
           )}
         </View>
         
-        <Text style={[styles.presetDescription, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.presetDescription, { color: isSelected ? '#FFFFFF' : theme.colors.textSecondary }]}>
           {info.description}
         </Text>
         
         <View style={styles.presetStats}>
           <View style={styles.statItem}>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.statLabel, { color: isSelected ? '#FFFFFF' : theme.colors.textSecondary }]}>
               Fee Rate
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            <Text style={[styles.statValue, { color: isSelected ? '#FFFFFF' : theme.colors.text }]}>
               {info.rate} sat/vB
             </Text>
           </View>
           <View style={styles.statItem}>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.statLabel, { color: isSelected ? '#FFFFFF' : theme.colors.textSecondary }]}>
               Est. Cost
             </Text>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+            <Text style={[styles.statValue, { color: isSelected ? '#FFFFFF' : theme.colors.text }]}>
               {estimatedCost} sats
             </Text>
           </View>
@@ -224,7 +223,6 @@ export default function FeeSettingsScreen() {
     onValueChange: (value: boolean) => void;
     icon: any;
   }) => {
-    console.log(`🔧 SettingToggle render: ${title} = ${value}`);
     return (
     <View style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}>
       <View style={[styles.settingIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -266,7 +264,10 @@ export default function FeeSettingsScreen() {
       ) : (
         <Switch
           value={value}
-          onValueChange={onValueChange}
+          onValueChange={(newValue) => {
+            console.log(`🔧 Native switch pressed: ${title}, current value: ${value}, new value: ${newValue}`);
+            onValueChange(newValue);
+          }}
           trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
           thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
           ios_backgroundColor={theme.colors.border}
@@ -445,7 +446,7 @@ export default function FeeSettingsScreen() {
                 Set your own rate
               </Text>
             </View>
-            {selectedPreset === 'custom' && (
+            {feeSettings.defaultPreset === 'custom' && (
               <CheckCircle color={theme.colors.primary} size={20} />
             )}
           </View>
@@ -460,16 +461,13 @@ export default function FeeSettingsScreen() {
                   color: theme.colors.text,
                 },
               ]}
-              value={customFeeRate}
+              value={feeSettings.customFeeRate.toString()}
               onChangeText={(text) => {
-                console.log(`🔧 Custom fee rate input: ${text}`);
-                setCustomFeeRate(text);
+                console.log(`🔧 Custom fee rate input: "${text}"`);
                 const numericValue = parseInt(text) || 0;
                 updateSetting('customFeeRate', numericValue);
-                if (selectedPreset !== 'custom') {
+                if (feeSettings.defaultPreset !== 'custom') {
                   // Auto-select custom when user types
-                  console.log(`🔧 Auto-selecting custom preset`);
-                  setSelectedPreset('custom');
                   updateSetting('defaultPreset', 'custom');
                 }
               }}
@@ -487,21 +485,29 @@ export default function FeeSettingsScreen() {
             style={[
               styles.customFeeButton,
               {
-                backgroundColor: selectedPreset === 'custom' 
-                  ? theme.colors.primary + '20' 
+                backgroundColor: feeSettings.defaultPreset === 'custom' 
+                  ? theme.colors.primary 
                   : 'transparent',
                 borderColor: theme.colors.primary,
+                borderWidth: feeSettings.defaultPreset === 'custom' ? 3 : 1,
+                shadowColor: feeSettings.defaultPreset === 'custom' ? theme.colors.primary : 'transparent',
+                shadowOffset: feeSettings.defaultPreset === 'custom' ? { width: 0, height: 4 } : { width: 0, height: 0 },
+                shadowOpacity: feeSettings.defaultPreset === 'custom' ? 0.3 : 0,
+                shadowRadius: feeSettings.defaultPreset === 'custom' ? 8 : 0,
+                elevation: feeSettings.defaultPreset === 'custom' ? 5 : 0,
+                transform: feeSettings.defaultPreset === 'custom' ? [{ scale: 1.02 }] : [{ scale: 1 }],
               },
             ]}
+            activeOpacity={0.7}
             onPress={() => {
               console.log(`🔧 Using custom fee rate button pressed`);
-              setSelectedPreset('custom');
+              // Update wallet store directly to set custom preset
               updateSetting('defaultPreset', 'custom');
             }}
           >
             <Text style={[
               styles.customFeeButtonText,
-              { color: theme.colors.primary },
+              { color: feeSettings.defaultPreset === 'custom' ? '#FFFFFF' : theme.colors.primary },
             ]}>
               Use Custom Rate
             </Text>
@@ -517,16 +523,17 @@ export default function FeeSettingsScreen() {
         <SettingToggle
           title="Replace-by-Fee (RBF)"
           subtitle="Allow fee bumping for unconfirmed transactions"
-          value={settings.enableRBF}
+          value={feeSettings.enableRBF}
           onValueChange={(value) => {
             console.log(`🔧 RBF toggle: ${value}`);
+            console.log(`🔧 Current feeSettings.enableRBF: ${feeSettings.enableRBF}`);
             updateSetting('enableRBF', value);
           }}
           icon={TrendingUp}
         />
         
         {/* RBF Information Card */}
-        {settings.enableRBF && (
+        {feeSettings.enableRBF && (
           <View style={[styles.rbfInfoCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.rbfInfoHeader}>
               <View style={[styles.rbfInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -562,7 +569,7 @@ export default function FeeSettingsScreen() {
         <SettingToggle
           title="Child-Pays-for-Parent (CPFP)"
           subtitle="Enable CPFP fee bumping for received transactions"
-          value={settings.enableCPFP}
+          value={feeSettings.enableCPFP}
           onValueChange={(value) => {
             console.log(`🔧 CPFP toggle: ${value}`);
             updateSetting('enableCPFP', value);
@@ -571,7 +578,7 @@ export default function FeeSettingsScreen() {
         />
         
         {/* CPFP Information Card */}
-        {settings.enableCPFP && (
+        {feeSettings.enableCPFP && (
           <View style={[styles.cpfpInfoCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.cpfpInfoHeader}>
               <View style={[styles.cpfpInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -604,7 +611,7 @@ export default function FeeSettingsScreen() {
         <SettingToggle
           title="Auto-Adjust Fees"
           subtitle="Automatically adjust fees based on network conditions"
-          value={settings.autoAdjustFees}
+          value={feeSettings.autoAdjustFees}
           onValueChange={(value) => {
             console.log(`🔧 Auto-adjust fees toggle: ${value}`);
             updateSetting('autoAdjustFees', value);
@@ -613,7 +620,7 @@ export default function FeeSettingsScreen() {
         />
 
         {/* Auto-Adjust Information Card */}
-        {settings.autoAdjustFees && (
+        {feeSettings.autoAdjustFees && (
           <View style={[styles.autoAdjustInfoCard, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.autoAdjustInfoHeader}>
               <View style={[styles.autoAdjustInfoIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -671,7 +678,7 @@ export default function FeeSettingsScreen() {
                   color: theme.colors.text,
                 },
               ]}
-              value={settings.maxFeeRate.toString()}
+              value={feeSettings.maxFeeRate.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Max fee rate input: ${text}`);
                 const numericValue = parseInt(text) || 100;
@@ -708,7 +715,7 @@ export default function FeeSettingsScreen() {
                   color: theme.colors.text,
                 },
               ]}
-              value={settings.dustThreshold.toString()}
+              value={feeSettings.dustThreshold.toString()}
               onChangeText={(text) => {
                 console.log(`🔧 Dust threshold input: ${text}`);
                 const numericValue = parseInt(text) || 546;
