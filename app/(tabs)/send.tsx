@@ -391,8 +391,8 @@ export default function SendScreen() {
             console.error('Failed to update custom fee rate for auto-adjustment:', error);
           });
         } else {
-          // For preset modes, temporarily switch to custom mode with the adjusted rate
-          // This preserves the user's original preset preference while applying the adjustment
+          // For preset modes, switch to custom mode with the adjusted rate
+          // Note: This changes the user's preset preference to 'custom' to apply the auto-adjustment
           const updatedSettings = { 
             ...feeSettings, 
             customFeeRate: newRate,
