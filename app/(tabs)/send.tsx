@@ -44,10 +44,10 @@ export default function SendScreen() {
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
-  const [feeRate, setFeeRate] = useState(5);
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [feeEstimates, setFeeEstimates] = useState<any>(null);
   
   // Computed values from feeSettings - no local state duplication
   const selectedFeeType = feeSettings?.defaultPreset === 'economy' ? 'slow' : 
@@ -55,13 +55,33 @@ export default function SendScreen() {
                           feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom';
   const enableRBF = feeSettings?.enableRBF ?? true;
   const customFeeRate = feeSettings?.customFeeRate?.toString() ?? '10';
+  
+  // Compute fee rate from feeSettings and feeEstimates - single source of truth
+  const feeRate = React.useMemo(() => {
+    if (!feeSettings) return 5; // Default fallback
+    
+    if (feeSettings.defaultPreset === 'custom') {
+      return feeSettings.customFeeRate;
+    } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
+      // Use network estimates when available
+      return feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
+             feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
+             feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
+             feeEstimates.halfHourFee;
+    } else {
+      // Use fallback rates when estimates aren't available
+      return feeSettings.defaultPreset === 'economy' ? 1 :
+             feeSettings.defaultPreset === 'standard' ? 5 :
+             feeSettings.defaultPreset === 'priority' ? 15 :
+             feeSettings.customFeeRate;
+    }
+  }, [feeSettings, feeEstimates]);
   // Use Bitcoin price from wallet store (already converted to selected currency)
   const bitcoinPrice = walletBitcoinPrice?.usd || null;
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
     message: string | null;
   }>({ isValid: false, message: null });
-  const [feeEstimates, setFeeEstimates] = useState<any>(null);
   const [feeWithConfidence, setFeeWithConfidence] = useState<{
     fast: { fee: number; confidence: string; timeEstimate: string };
     medium: { fee: number; confidence: string; timeEstimate: string };
@@ -196,45 +216,7 @@ export default function SendScreen() {
     return () => clearInterval(refreshInterval);
   }, [feeSettings?.autoAdjustFees, userHasInteractedWithFees]);
 
-  // No sync effects needed - React automatically re-renders when feeSettings changes
-
-  // Fee rate updates - handles both initial load and network estimate updates
-  useEffect(() => {
-    if (feeSettingsLoading || !feeSettings) return;
-
-    // Only update fee rates if user hasn't manually interacted with fees
-    // This preserves user's manual fee selections while allowing automatic updates for new users
-    if (userHasInteractedWithFees) {
-      return; // Don't override user's manual selections
-    }
-
-    console.log(`🔧 Send screen: Fee rate update effect running`);
-    console.log(`🔧 Current feeSettings.defaultPreset: ${feeSettings.defaultPreset}`);
-    console.log(`🔧 Current feeRate: ${feeRate}`);
-
-    // Update fee rates based on current preset
-    if (feeSettings.defaultPreset === 'custom') {
-      // For custom preset, use the stored custom fee rate
-      console.log(`🔧 Setting fee rate to custom: ${feeSettings.customFeeRate}`);
-      setFeeRate(feeSettings.customFeeRate);
-    } else if (feeEstimates && feeEstimates.economyFee && feeEstimates.halfHourFee && feeEstimates.fastestFee) {
-      // Use network estimates when available
-      const presetFee = feeSettings.defaultPreset === 'economy' ? feeEstimates.economyFee :
-                       feeSettings.defaultPreset === 'standard' ? feeEstimates.halfHourFee :
-                       feeSettings.defaultPreset === 'priority' ? feeEstimates.fastestFee :
-                       feeEstimates.halfHourFee;
-      console.log(`🔧 Setting fee rate to network estimate: ${presetFee} for preset ${feeSettings.defaultPreset}`);
-      setFeeRate(presetFee);
-    } else {
-      // Use fallback rates when estimates aren't available
-      const fallbackRate = feeSettings.defaultPreset === 'economy' ? 1 :
-                         feeSettings.defaultPreset === 'standard' ? 5 :
-                         feeSettings.defaultPreset === 'priority' ? 15 :
-                         feeSettings.customFeeRate;
-      console.log(`🔧 Setting fee rate to fallback: ${fallbackRate} for preset ${feeSettings.defaultPreset}`);
-      setFeeRate(fallbackRate);
-    }
-  }, [feeSettings, feeSettingsLoading, feeEstimates, userHasInteractedWithFees]);
+  // No sync effects needed - feeRate is now computed directly from feeSettings and feeEstimates
 
   // Auto-adjust fees based on network conditions
   useEffect(() => {
@@ -381,12 +363,17 @@ export default function SendScreen() {
           return;
         }
 
-        // Apply auto-adjustment since we've already verified it's significant
-        setFeeRate(newRate);
+        // Apply auto-adjustment by updating feeSettings
+        // Only auto-adjust when in custom mode to avoid confusing users with preset changes
+        if ((feeSettings.defaultPreset as string) === 'custom') {
+          const updatedSettings = { ...feeSettings, customFeeRate: newRate };
+          setFeeSettings(updatedSettings).catch(error => {
+            console.error('Failed to update custom fee rate for auto-adjustment:', error);
+          });
+        }
+        // For preset modes, we don't auto-adjust to avoid overriding user's preset choice
+        
         setAutoAdjustmentActive(true);
-
-        // Note: We don't update the preset here since that would override user selections
-        // The fee rate is updated above, but the preset remains as the user selected it
 
         setLastAutoAdjustment({
           timestamp: Date.now(),
@@ -1177,7 +1164,6 @@ export default function SendScreen() {
                   ]}
                   onPress={() => {
                     handleFeePresetChange('slow');
-                    setFeeRate(feeEstimates?.economyFee || 1);
                   }}
                 >
                   <Text style={[
@@ -1200,7 +1186,6 @@ export default function SendScreen() {
                   ]}
                   onPress={() => {
                     handleFeePresetChange('normal');
-                    setFeeRate(feeEstimates?.halfHourFee || 5);
                   }}
                 >
                   <Text style={[
@@ -1223,7 +1208,6 @@ export default function SendScreen() {
                   ]}
                   onPress={() => {
                     handleFeePresetChange('fast');
-                    setFeeRate(feeEstimates?.fastestFee || 15);
                   }}
                 >
                   <Text style={[
@@ -1255,7 +1239,6 @@ export default function SendScreen() {
                       
                       // Use the smaller of fallback rate or max allowed rate
                       const finalRate = Math.min(fallbackRate, maxRate);
-                      setFeeRate(finalRate);
                       handleCustomFeeRateChange(finalRate.toString());
                       setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
                     }
@@ -1294,9 +1277,7 @@ export default function SendScreen() {
                         if (!text.trim()) {
                           // Empty input - clear validation state and reset fee rate to default
                           setCustomFeeValidation({ isValid: true, message: null });
-                          // Reset to the stored custom fee rate from settings as fallback
-                          const fallbackRate = feeSettings?.customFeeRate || 10;
-                          setFeeRate(fallbackRate);
+                          // feeRate will be computed automatically from feeSettings
                         } else if (isNaN(rate) || rate <= 0) {
                           // Invalid format
                           setCustomFeeValidation({ 
@@ -1317,11 +1298,7 @@ export default function SendScreen() {
                           });
                         }
                         
-                        // Always update feeRate to match the displayed value
-                        // This ensures consistency between UI and actual transaction
-                        if (!isNaN(rate) && rate > 0) {
-                          setFeeRate(rate);
-                        }
+                        // feeRate is now computed automatically from feeSettings
                         
                         // User interaction handled by handleCustomFeeRateChange
                       }
