@@ -844,7 +844,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       // Use the esplora service directly to respect existing caching
-      const { getAddressUTXOs: esploraGetAddressUTXOs } = await import('@/services/esplora-service');
+      const { getAddressUTXOs: esploraGetAddressUTXOs, getCurrentBlockHeight } = await import('@/services/esplora-service');
+      
+      // Get current block height for confirmations calculation
+      const blockHeightResult = await getCurrentBlockHeight();
+      const currentBlockHeight = blockHeightResult.data || 0;
+      console.log('🔍 Wallet store: Current block height:', currentBlockHeight);
+      
       const all: UTXO[] = [];
       
       // Use the same logic as coin control - try to discover used addresses first
@@ -908,9 +914,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         const frozenSet = new Set(coinControlFrozen[walletId] || []);
         const utxosWithFrozenStatus = all.map(utxo => {
           const id = `${utxo.txid}:${utxo.vout}`;
+          // Calculate confirmations
+          let confirmations = 0;
+          if (utxo.status?.confirmed && utxo.status.block_height && currentBlockHeight) {
+            confirmations = currentBlockHeight - utxo.status.block_height + 1;
+          }
           return {
             ...utxo,
             frozen: frozenSet.has(id),
+            confirmations,
           };
         });
         
@@ -972,13 +984,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         }
       }
       
-      // Apply frozen status
+      // Apply frozen status and calculate confirmations
       const frozenSet = new Set(coinControlFrozen[walletId] || []);
       const utxosWithFrozenStatus = all.map(utxo => {
         const id = `${utxo.txid}:${utxo.vout}`;
+        // Calculate confirmations
+        let confirmations = 0;
+        if (utxo.status?.confirmed && utxo.status.block_height && currentBlockHeight) {
+          confirmations = currentBlockHeight - utxo.status.block_height + 1;
+        }
         return {
           ...utxo,
           frozen: frozenSet.has(id),
+          confirmations,
         };
       });
       
