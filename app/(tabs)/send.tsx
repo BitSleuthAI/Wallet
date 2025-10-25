@@ -140,7 +140,6 @@ export default function SendScreen() {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
-        // setLastFeeEstimates(fees); // Removed - function doesn't exist
         
         // Load fee confidence data
         if (fees) {
