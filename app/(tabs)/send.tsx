@@ -100,11 +100,11 @@ export default function SendScreen() {
     
     // Update wallet store directly
     const allowedPresets = ['economy', 'standard', 'priority', 'custom'] as const;
-    if (!allowedPresets.includes(feeSettingsPreset as typeof allowedPresets[number])) {
-      console.warn(`❌ Invalid feeSettingsPreset: ${feeSettingsPreset}. Falling back to 'standard'.`);
-      feeSettingsPreset = 'standard';
-    }
-    const updatedSettings = { ...feeSettings, defaultPreset: feeSettingsPreset };
+    const validPreset = allowedPresets.includes(feeSettingsPreset as typeof allowedPresets[number])
+      ? feeSettingsPreset
+      : (console.warn(`❌ Invalid feeSettingsPreset: ${feeSettingsPreset}. Falling back to 'standard'.`), 'standard');
+    
+    const updatedSettings = { ...feeSettings, defaultPreset: validPreset };
     console.log(`🔧 Updating wallet store with:`, updatedSettings);
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update fee preset:`, error);
