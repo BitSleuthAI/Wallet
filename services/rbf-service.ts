@@ -902,7 +902,6 @@ async function createCancellationTransaction(
       
       // Try to create a simple ECPair to verify ECC is working
       try {
-        const testPrivateKey = new Uint8Array(32);
         testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
         
         // Test if we can create an ECPair (this is the real test)
