@@ -152,7 +152,12 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
 
 export async function setCachedAddressUTXOs(address: string, utxos: any[], xpubHint?: string): Promise<void> {
   try {
-    // Don't cache empty UTXO results to avoid caching temporary network issues
+    /*
+     * Don't cache empty UTXO results.
+     * Rationale: An empty UTXO array may be caused by temporary network issues or provider downtime,
+     * so caching it could result in missing funds being shown to the user until the cache expires.
+     * By not caching empty results, we ensure that the next fetch will attempt to get fresh data.
+     */
     if (!utxos || utxos.length === 0) {
       console.log(`🚫 Not caching empty UTXO result for ${address.substring(0, 10)}...`);
       return;
