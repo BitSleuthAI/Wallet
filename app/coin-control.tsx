@@ -1,34 +1,31 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
-import { getAddressUTXOs } from '@/services/bitcoin-service';
-import { discoverUsedAddresses } from '@/services/wallet-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
-  ArrowLeft,
-  CheckCircle,
-  ChevronDown,
-  ChevronUp,
-  Circle,
-  Coins,
-  Filter,
-  Info,
-  Snowflake,
-  Zap,
+    ArrowLeft,
+    CheckCircle,
+    ChevronDown,
+    ChevronUp,
+    Circle,
+    Coins,
+    Filter,
+    Info,
+    Snowflake,
+    Zap,
 } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  Pressable,
-  RefreshControl,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Platform,
+    Pressable,
+    RefreshControl,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 
 type SortOption = 'value' | 'confirmations' | 'age' | 'address';
@@ -37,9 +34,7 @@ type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 export default function CoinControlScreen() {
   const { theme, currentWallet, coinControl } = useWallet();
   const router = useRouter();
-  const [utxos, setUtxos] = useState<UTXO[]>([]);
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
-  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [sortBy, setSortBy] = useState<SortOption>('value');
   const [sortAscending, setSortAscending] = useState<boolean>(false);
   const [filterBy, setFilterBy] = useState<FilterOption>('all');
@@ -48,57 +43,32 @@ export default function CoinControlScreen() {
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
   const loadUtxos = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      if (!currentWallet) {
-        setUtxos([]);
-        return;
-      }
-      const all: UTXO[] = [];
+    if (!currentWallet) return;
+    
+    console.log('🔍 Coin control: Loading UTXOs for wallet in FAST MODE:', currentWallet.id);
+    await coinControl.loadWalletUtxos(currentWallet.id, true); // true = fastMode
+  }, [currentWallet?.id]); // FIXED: Removed coinControl to prevent unnecessary re-renders
 
-      // Prefer discovered used addresses (covers both receiving and change chains)
-      let addressEntries: Array<{ address: string; index: number }> = [];
-      try {
-        if (currentWallet.xpub) {
-          const metadata = await discoverUsedAddresses(currentWallet.xpub, true) as Array<{ address: string; index: number; chain: number; isUsed: boolean }>;
-          const used = metadata.filter(m => m.isUsed);
-          addressEntries = used.map(m => ({ address: m.address, index: m.index }));
-        }
-      } catch (e) {
-        console.warn('Failed to discover used addresses, falling back to local wallet addresses', e);
-      }
+  // Get UTXOs from wallet store
+  const utxos = useMemo(() => {
+    if (!currentWallet) return [];
+    const retrievedUtxos = coinControl.getWalletUtxos(currentWallet.id);
+    console.log('🔍 Coin control: Retrieved UTXOs from wallet store:', retrievedUtxos.length);
+    console.log('🔍 Coin control: UTXO details:', retrievedUtxos.map(u => ({
+      txid: u.txid?.substring(0, 10) + '...',
+      vout: u.vout,
+      value: u.value,
+      status: u.status,
+      frozen: u.frozen,
+      address: u.address?.substring(0, 10) + '...'
+    })));
+    return retrievedUtxos;
+  }, [currentWallet, coinControl]);
 
-      // Fallback to wallet's known addresses if discovery returned nothing
-      if (!addressEntries.length) {
-        addressEntries = (currentWallet.addresses || []).map((a, i) => ({ address: a, index: i }));
-      }
-
-      for (const { address: addr, index } of addressEntries) {
-        try {
-          const list = await getAddressUTXOs(addr, index);
-          for (const u of list) {
-            all.push({ ...u, address: addr });
-          }
-        } catch (e) {
-          console.warn('Failed to load UTXOs for address', addr, e);
-        }
-      }
-      const frozenSet = new Set(coinControl.getFrozenUtxoIds());
-      setUtxos(all.map(utxo => {
-        const id = `${utxo.txid}:${utxo.vout}`;
-        return {
-          ...utxo,
-          frozen: frozenSet.has(id),
-        };
-      }));
-      const preSelected = new Set(coinControl.getSelectedUtxoIds().filter(id => !frozenSet.has(id)));
-      setSelectedUtxos(preSelected);
-    } catch (error) {
-      console.error('Error loading UTXOs:', error);
-      Alert.alert('Error', 'Failed to load UTXOs');
-    } finally {
-      setIsLoading(false);
-    }
+  // Get loading state from wallet store
+  const isLoading = useMemo(() => {
+    if (!currentWallet) return false;
+    return coinControl.isUtxosLoading(currentWallet.id);
   }, [currentWallet, coinControl]);
 
   useEffect(() => {
@@ -106,30 +76,61 @@ export default function CoinControlScreen() {
   }, [loadUtxos]);
 
   const onRefresh = async () => {
+    if (!currentWallet) return;
+    
     setRefreshing(true);
-    await loadUtxos();
-    setRefreshing(false);
+    try {
+      console.log('🔄 Coin control: Refreshing UTXOs for wallet in COMPLETE MODE:', currentWallet.id);
+      await coinControl.loadWalletUtxos(currentWallet.id, false); // false = complete mode
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const filteredAndSortedUtxos = useMemo(() => {
+    console.log('🔍 Coin control: Starting filtering with', utxos.length, 'UTXOs');
+    console.log('🔍 Coin control: Filter settings:', { filterBy, hideSmallUtxos });
+    
     let filtered = utxos.filter(utxo => {
-      if (hideSmallUtxos && utxo.value < 1000000) return false; // Hide UTXOs < 0.01 BTC
+      console.log('🔍 Coin control: Filtering UTXO:', {
+        txid: utxo.txid?.substring(0, 10) + '...',
+        value: utxo.value,
+        status: utxo.status,
+        frozen: utxo.frozen,
+        hideSmallUtxos: hideSmallUtxos,
+        filterBy: filterBy
+      });
       
+      if (hideSmallUtxos && utxo.value < 1000000) {
+        console.log('🔍 Coin control: UTXO filtered out (too small)');
+        return false; // Hide UTXOs < 0.01 BTC
+      }
+      
+      let passesFilter = false;
       switch (filterBy) {
         case 'confirmed':
-          return utxo.status.confirmed;
+          passesFilter = utxo.status?.confirmed === true;
+          break;
         case 'unconfirmed':
-          return !utxo.status.confirmed;
+          passesFilter = utxo.status?.confirmed === false;
+          break;
         case 'frozen':
-          return utxo.frozen;
+          passesFilter = utxo.frozen === true;
+          break;
         case 'unfrozen':
-          return !utxo.frozen;
+          passesFilter = utxo.frozen === false;
+          break;
         default:
-          return true;
+          passesFilter = true;
       }
+      
+      console.log('🔍 Coin control: UTXO filter result:', passesFilter);
+      return passesFilter;
     });
+    
+    console.log('🔍 Coin control: After filtering:', filtered.length, 'UTXOs remain');
 
-    return filtered.sort((a, b) => {
+    const sorted = filtered.sort((a, b) => {
       let comparison = 0;
       
       switch (sortBy) {
@@ -140,8 +141,8 @@ export default function CoinControlScreen() {
           comparison = (a.confirmations || 0) - (b.confirmations || 0);
           break;
         case 'age':
-          const aTime = a.status.block_time || 0;
-          const bTime = b.status.block_time || 0;
+          const aTime = a.status?.block_time || 0;
+          const bTime = b.status?.block_time || 0;
           comparison = aTime - bTime;
           break;
         case 'address':
@@ -151,6 +152,17 @@ export default function CoinControlScreen() {
       
       return sortAscending ? comparison : -comparison;
     });
+    
+    console.log('🔍 Coin control: Final sorted UTXOs:', sorted.length);
+    console.log('🔍 Coin control: Final UTXO details:', sorted.map(u => ({
+      txid: u.txid?.substring(0, 10) + '...',
+      vout: u.vout,
+      value: u.value,
+      status: u.status,
+      frozen: u.frozen
+    })));
+    
+    return sorted;
   }, [utxos, sortBy, sortAscending, filterBy, hideSmallUtxos]);
 
   const toggleUtxoSelection = (utxoId: string) => {

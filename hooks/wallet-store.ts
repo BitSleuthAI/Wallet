@@ -1,7 +1,8 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
-import { clearCacheForWalletXpub } from '@/services/address-cache-service';
+import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
-import { getWalletData } from '@/services/wallet-service';
+import { clearAllCache } from '@/services/transaction-cache-service';
+import { clearAddressCache, getWalletData } from '@/services/wallet-service';
 import { FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -194,6 +195,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const cryptoReadyRef = useRef(false);
   const [feeSettingsMap, setFeeSettingsMap] = useState<Record<string, FeeSettings>>({});
   const [feeSettings, setFeeSettingsState] = useState<FeeSettings>(() => ({ ...defaultFeeSettings }));
+  const [walletUtxos, setWalletUtxos] = useState<Record<string, UTXO[]>>({});
+  const [utxosLoading, setUtxosLoading] = useState<Record<string, boolean>>({});
+  const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -806,6 +810,220 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     return all.filter(u => ids.has(`${u.txid}:${u.vout}`));
   }, [getSelectedUtxoIds]);
 
+  // Progressive UTXO loading: Fast first, then complete in background
+  const loadWalletUtxos = useCallback(async (walletId: string, fastMode: boolean = false) => {
+    console.log('🔍 Wallet store: loadWalletUtxos called for wallet:', walletId, 'fastMode:', fastMode);
+    
+    if (!walletId) {
+      console.warn('🔍 Wallet store: No walletId provided');
+      return;
+    }
+    
+    // Check if already loading
+    if (utxosLoading[walletId]) {
+      console.log('🔍 Wallet store: UTXOs already loading for wallet:', walletId);
+      return;
+    }
+    
+    // Check if already cached and not expired (10 minutes TTL to match esplora service)
+    const cacheAge = utxosCacheTimestamp[walletId] ? Date.now() - utxosCacheTimestamp[walletId] : Infinity;
+    const cacheTtlMs = 10 * 60 * 1000; // 10 minutes
+    
+    console.log('🔍 Wallet store: Cache check - walletId:', walletId, 'cached:', !!walletUtxos[walletId], 'count:', walletUtxos[walletId]?.length || 0, 'age:', Math.round(cacheAge / 1000), 's', 'expired:', cacheAge >= cacheTtlMs);
+    
+    if (walletUtxos[walletId] && walletUtxos[walletId].length > 0 && cacheAge < cacheTtlMs) {
+      console.log('🔍 Wallet store: UTXOs already cached for wallet:', walletId, 'count:', walletUtxos[walletId].length, 'age:', Math.round(cacheAge / 1000), 's');
+      return walletUtxos[walletId];
+    }
+    
+    console.log('🔍 Wallet store: Loading UTXOs for wallet:', walletId, 'fastMode:', fastMode);
+    setUtxosLoading(prev => ({ ...prev, [walletId]: true }));
+    
+    try {
+      const wallet = wallets.find(w => w.id === walletId);
+      if (!wallet) {
+        console.warn('Wallet not found:', walletId);
+        return [];
+      }
+      
+      // Use the esplora service directly to respect existing caching
+      const { getAddressUTXOs: esploraGetAddressUTXOs } = await import('@/services/esplora-service');
+      const all: UTXO[] = [];
+      
+      // Use the same logic as coin control - try to discover used addresses first
+      // TEMPORARY FIX: Skip address discovery and use wallet's stored addresses directly
+      // This bypasses the address discovery issue where it finds 0 used addresses despite having a balance
+      let addressEntries: Array<{ address: string; index: number }> = [];
+      
+      console.log('🔍 Wallet store: Skipping address discovery, using wallet stored addresses directly');
+      console.log('🔍 Wallet store: Wallet has', wallet.addresses?.length || 0, 'stored addresses');
+      console.log('🔍 Wallet store: Wallet balance:', wallet.balance, 'BTC');
+      
+      // Use wallet's stored addresses directly since address discovery is failing
+      addressEntries = (wallet.addresses || []).map((a, i) => ({ address: a, index: i }));
+      console.log('🔍 Wallet store: Using', addressEntries.length, 'wallet stored addresses');
+      
+      console.log('🔍 Wallet store: Address entries to check:', addressEntries.map(a => ({
+        address: a.address.substring(0, 10) + '...',
+        index: a.index
+      })));
+      
+      // Progressive loading strategy: Fast first, then complete in background
+      if (fastMode) {
+        console.log('🚀 Fast mode: Loading UTXOs from first 3 addresses only');
+        // In fast mode, only check the first 3 addresses (most likely to have UTXOs)
+        const fastAddresses = addressEntries.slice(0, 3);
+        
+        for (const { address: addr, index } of fastAddresses) {
+          try {
+            const result = await esploraGetAddressUTXOs(addr);
+            
+            if (result.error) {
+              console.warn('Failed to load UTXOs for address', addr, result.error);
+              continue;
+            }
+            
+            const list = result.data || [];
+            console.log(`🚀 Fast mode: Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
+            console.log(`🚀 Fast mode: Raw UTXOs for ${addr.substring(0, 10)}:`, list.map(u => ({
+              txid: u.txid?.substring(0, 10) + '...',
+              vout: u.vout,
+              value: u.value,
+              status: u.status
+            })));
+            
+            for (const u of list) {
+              const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
+              if (actualAddressIndex === -1) {
+                console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses, skipping UTXO`);
+                continue;
+              }
+              
+              console.log(`🚀 Fast mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
+              all.push({ ...u, address: addr, addressIndex: actualAddressIndex });
+            }
+          } catch (e) {
+            console.warn('Failed to load UTXOs for address', addr, e);
+          }
+        }
+        
+        // Cache fast results immediately
+        const frozenSet = new Set(coinControlFrozen[walletId] || []);
+        const utxosWithFrozenStatus = all.map(utxo => {
+          const id = `${utxo.txid}:${utxo.vout}`;
+          return {
+            ...utxo,
+            frozen: frozenSet.has(id),
+          };
+        });
+        
+        console.log('🚀 Fast mode: Loaded', utxosWithFrozenStatus.length, 'UTXOs for wallet:', walletId);
+        console.log('🚀 Fast mode: Final UTXOs summary:', utxosWithFrozenStatus.map(u => ({
+          txid: u.txid?.substring(0, 10) + '...',
+          vout: u.vout,
+          value: u.value,
+          address: u.address?.substring(0, 10) + '...',
+          addressIndex: u.addressIndex,
+          frozen: u.frozen,
+          status: u.status
+        })));
+        
+        setWalletUtxos(prev => ({ ...prev, [walletId]: utxosWithFrozenStatus }));
+        setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
+        
+        // Start background loading of remaining addresses
+        console.log('🔄 Starting background loading of remaining addresses...');
+        setTimeout(() => {
+          loadWalletUtxos(walletId, false); // Complete loading in background
+        }, 1000);
+        
+        return utxosWithFrozenStatus;
+      } else {
+        console.log('🔄 Complete mode: Loading UTXOs from all addresses');
+        // Complete mode: load from all addresses
+        for (const { address: addr, index } of addressEntries) {
+          try {
+            const result = await esploraGetAddressUTXOs(addr);
+            
+            if (result.error) {
+              console.warn('Failed to load UTXOs for address', addr, result.error);
+              continue;
+            }
+            
+            const list = result.data || [];
+            console.log(`🔄 Complete mode: Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
+            console.log(`🔄 Complete mode: Raw UTXOs for ${addr.substring(0, 10)}:`, list.map(u => ({
+              txid: u.txid?.substring(0, 10) + '...',
+              vout: u.vout,
+              value: u.value,
+              status: u.status
+            })));
+            
+            for (const u of list) {
+              const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
+              if (actualAddressIndex === -1) {
+                console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses, skipping UTXO`);
+                continue;
+              }
+              
+              console.log(`🔄 Complete mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
+              all.push({ ...u, address: addr, addressIndex: actualAddressIndex });
+            }
+          } catch (e) {
+            console.warn('Failed to load UTXOs for address', addr, e);
+          }
+        }
+      }
+      
+      // Apply frozen status
+      const frozenSet = new Set(coinControlFrozen[walletId] || []);
+      const utxosWithFrozenStatus = all.map(utxo => {
+        const id = `${utxo.txid}:${utxo.vout}`;
+        return {
+          ...utxo,
+          frozen: frozenSet.has(id),
+        };
+      });
+      
+      console.log('🔍 Wallet store: Loaded', utxosWithFrozenStatus.length, 'UTXOs for wallet:', walletId);
+      console.log('🔍 Wallet store: UTXOs details:', utxosWithFrozenStatus.map(u => ({
+        txid: u.txid.substring(0, 10) + '...',
+        vout: u.vout,
+        value: u.value,
+        address: u.address?.substring(0, 10) + '...',
+        addressIndex: u.addressIndex,
+        frozen: u.frozen
+      })));
+      
+      setWalletUtxos(prev => ({ ...prev, [walletId]: utxosWithFrozenStatus }));
+      setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
+      
+      console.log('🔍 Wallet store: UTXOs cached successfully for wallet:', walletId);
+      return utxosWithFrozenStatus;
+    } catch (error) {
+      console.error('Error loading UTXOs for wallet:', walletId, error);
+      return [];
+    } finally {
+      setUtxosLoading(prev => ({ ...prev, [walletId]: false }));
+    }
+  }, [wallets, coinControlFrozen, utxosLoading, walletUtxos, utxosCacheTimestamp]);
+  
+  const getWalletUtxos = useCallback((walletId: string) => {
+    return walletUtxos[walletId] || [];
+  }, [walletUtxos]);
+  
+  const isUtxosLoading = useCallback((walletId: string) => {
+    return utxosLoading[walletId] || false;
+  }, [utxosLoading]);
+  
+  const refreshWalletUtxos = useCallback(async (walletId: string) => {
+    console.log('🔄 Refreshing UTXOs for wallet:', walletId);
+    setWalletUtxos(prev => ({ ...prev, [walletId]: [] }));
+    setUtxosLoading(prev => ({ ...prev, [walletId]: false }));
+    setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: 0 }));
+    return await loadWalletUtxos(walletId);
+  }, [loadWalletUtxos]);
+
   const formatCurrency = useCallback((amount: number, showSymbol: boolean = true) => {
     const symbol = CURRENCY_SYMBOLS[selectedCurrency];
     const formatted = amount.toLocaleString(undefined, {
@@ -825,19 +1043,72 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   const refreshData = useCallback(async () => {
     try {
+      console.log('🔄 Refreshing wallet data...');
+      
+      // Clear mock/test data
       await AsyncStorage.multiRemove([
         'mock_data', 'test_data', 'sample_data', 'dummy_data',
         'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
 
+      // Clear ALL wallet-related caches and data to force completely fresh data
+      if (currentWallet?.xpub) {
+        console.log('🔄 Clearing ALL wallet data and caches...');
+        
+        // Clear address cache (both persistent and in-memory)
+        await clearCacheForWalletXpub(currentWallet.xpub);
+        clearAddressCache(currentWallet.xpub);
+        console.log('✅ Address cache cleared');
+        
+        // Clear empty UTXO caches that might be blocking fresh fetches
+        await clearEmptyUTXOCaches();
+        console.log('✅ Empty UTXO caches cleared');
+        
+        // Clear transaction cache to ensure fresh transaction data
+        await clearAllCache();
+        console.log('✅ Transaction cache cleared');
+        
+        // Clear ALL wallet-related AsyncStorage keys to ensure no stale data
+        const keysToRemove = [
+          // Address cache keys (pattern-based)
+          ...(await AsyncStorage.getAllKeys()).filter(key => 
+            key.startsWith('addr_cache_') || 
+            key.startsWith('addr_wallet_') ||
+            key.startsWith('wallet_addrs_') ||
+            key.startsWith('wallet_txids_')
+          ),
+          // Transaction cache keys
+          'tx_cache_confirmed',
+          'tx_cache_unconfirmed',
+          // General cache keys that might contain wallet data
+          'mock_data', 'test_data', 'sample_data', 'dummy_data',
+          'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
+          'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
+        ];
+        
+        if (keysToRemove.length > 0) {
+          console.log(`🗑️ Removing ${keysToRemove.length} additional cache keys...`);
+          await AsyncStorage.multiRemove(keysToRemove);
+          console.log('✅ Additional cache keys cleared');
+        }
+        
+        console.log('✅ Complete wallet data refresh prepared');
+      }
+
+      // Completely clear and invalidate React Query caches
+      console.log('🔄 Clearing React Query caches...');
+      queryClient.clear(); // Clear ALL cached queries
       queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
       queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
       queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
+      console.log('✅ React Query caches cleared');
+      
+      console.log('✅ Wallet data refresh completed');
     } catch (err) {
       console.warn('⚠️ Error during data refresh:', err);
     }
-  }, [queryClient]);
+  }, [queryClient, currentWallet?.xpub]);
 
   const debugTransactionFetching = useCallback(async () => {
     if (!currentWallet || !currentWallet.addresses.length) {
@@ -1353,6 +1624,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isFrozen: isUtxoFrozen,
     filterSelectedUtxos,
     getFrozenUtxoIds,
+    loadWalletUtxos,
+    getWalletUtxos,
+    isUtxosLoading,
+    refreshWalletUtxos,
   }), [
     getSelectedUtxoIds,
     setCoinControlSelected,
@@ -1361,6 +1636,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isUtxoFrozen,
     filterSelectedUtxos,
     getFrozenUtxoIds,
+    loadWalletUtxos,
+    getWalletUtxos,
+    isUtxosLoading,
+    refreshWalletUtxos,
   ]);
 
   const feedbackData = useMemo(() => ({

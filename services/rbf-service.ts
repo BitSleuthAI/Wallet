@@ -315,8 +315,76 @@ export async function createReplacementTransaction(
       throw new Error('ECC library not available');
     }
     
+    // Validate ECC library before using it
+    console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
+    
+    // Test basic ECC functionality
+    const testPrivateKey = new Uint8Array(32);
+    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+    
+    try {
+      // Test private key validation
+      if (!ecc.isPrivate(testPrivateKey)) {
+        throw new Error('ECC private key validation failed');
+      }
+      
+      // Test point generation
+      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+      if (!publicKey || publicKey.length !== 33) {
+        throw new Error('ECC point generation failed');
+      }
+      
+      console.log('✅ ECC library validation passed');
+    } catch (eccError) {
+      console.error('❌ ECC library validation failed:', eccError);
+      throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
+    }
+    
     // Initialize bitcoinjs-lib with ECC
-    bitcoin.initEccLib(ecc);
+    try {
+      console.log('🔧 Initializing bitcoinjs-lib with ECC...');
+      bitcoin.initEccLib(ecc);
+      
+      // Verify the initialization worked by checking if ECC is properly set
+      console.log('🔧 Verifying ECC initialization...');
+      
+      // Add a small delay to ensure ECC is fully initialized
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Check if ECPair exists and has the required methods
+      if (!bitcoin.ECPair) {
+        console.error('❌ bitcoin.ECPair is undefined after initEccLib');
+        throw new Error('bitcoin.ECPair not available after ECC initialization');
+      }
+      
+      if (typeof bitcoin.ECPair.fromPrivateKey !== 'function') {
+        console.error('❌ bitcoin.ECPair.fromPrivateKey is not a function');
+        console.error('❌ Available ECPair methods:', Object.keys(bitcoin.ECPair));
+        throw new Error('bitcoin.ECPair.fromPrivateKey method not available');
+      }
+      
+      // Try to create a simple ECPair to verify ECC is working
+      try {
+        const testPrivateKey = new Uint8Array(32);
+        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+        
+        // Test if we can create an ECPair (this is the real test)
+        const testECPair = bitcoin.ECPair.fromPrivateKey(testPrivateKey);
+        if (!testECPair || !testECPair.publicKey) {
+          throw new Error('ECPair creation failed');
+        }
+        
+        console.log('✅ ECC initialization verified - ECPair creation successful');
+      } catch (verifyError) {
+        console.error('❌ ECC verification failed:', verifyError);
+        throw new Error('bitcoinjs-lib ECC initialization verification failed');
+      }
+      
+      console.log('✅ bitcoinjs-lib initialized with ECC successfully');
+    } catch (initError) {
+      console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
+      throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
+    }
     const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder
@@ -784,8 +852,76 @@ async function createCancellationTransaction(
       throw new Error('ECC library not available');
     }
     
+    // Validate ECC library before using it
+    console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
+    
+    // Test basic ECC functionality
+    const testPrivateKey = new Uint8Array(32);
+    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+    
+    try {
+      // Test private key validation
+      if (!ecc.isPrivate(testPrivateKey)) {
+        throw new Error('ECC private key validation failed');
+      }
+      
+      // Test point generation
+      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+      if (!publicKey || publicKey.length !== 33) {
+        throw new Error('ECC point generation failed');
+      }
+      
+      console.log('✅ ECC library validation passed');
+    } catch (eccError) {
+      console.error('❌ ECC library validation failed:', eccError);
+      throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
+    }
+    
     // Initialize bitcoinjs-lib with ECC
-    bitcoin.initEccLib(ecc);
+    try {
+      console.log('🔧 Initializing bitcoinjs-lib with ECC...');
+      bitcoin.initEccLib(ecc);
+      
+      // Verify the initialization worked by checking if ECC is properly set
+      console.log('🔧 Verifying ECC initialization...');
+      
+      // Add a small delay to ensure ECC is fully initialized
+      await new Promise(resolve => setTimeout(resolve, 200));
+      
+      // Check if ECPair exists and has the required methods
+      if (!bitcoin.ECPair) {
+        console.error('❌ bitcoin.ECPair is undefined after initEccLib');
+        throw new Error('bitcoin.ECPair not available after ECC initialization');
+      }
+      
+      if (typeof bitcoin.ECPair.fromPrivateKey !== 'function') {
+        console.error('❌ bitcoin.ECPair.fromPrivateKey is not a function');
+        console.error('❌ Available ECPair methods:', Object.keys(bitcoin.ECPair));
+        throw new Error('bitcoin.ECPair.fromPrivateKey method not available');
+      }
+      
+      // Try to create a simple ECPair to verify ECC is working
+      try {
+        const testPrivateKey = new Uint8Array(32);
+        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+        
+        // Test if we can create an ECPair (this is the real test)
+        const testECPair = bitcoin.ECPair.fromPrivateKey(testPrivateKey);
+        if (!testECPair || !testECPair.publicKey) {
+          throw new Error('ECPair creation failed');
+        }
+        
+        console.log('✅ ECC initialization verified - ECPair creation successful');
+      } catch (verifyError) {
+        console.error('❌ ECC verification failed:', verifyError);
+        throw new Error('bitcoinjs-lib ECC initialization verification failed');
+      }
+      
+      console.log('✅ bitcoinjs-lib initialized with ECC successfully');
+    } catch (initError) {
+      console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
+      throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
+    }
     const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder

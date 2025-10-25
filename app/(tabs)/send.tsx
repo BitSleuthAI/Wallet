@@ -5,28 +5,30 @@ import { createButtonStyle, createInputStyle, platformStyles } from '@/constants
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import { getAddressUTXOs, isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
+import { isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Modal,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    Modal,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 export default function SendScreen() {
-  const { animatedStyle } = useTabAnimation(1); // Send tab = index 1
+  console.log('🔍 Send screen: Component mounted/rendered');
+  const { animatedStyle } = useTabAnimation(1);
+  const { refreshData } = useWallet(); // Send tab = index 1
   const { 
     currentWallet, 
     balance, 
@@ -97,7 +99,7 @@ export default function SendScreen() {
     console.log(`🔧 Mapped to fee settings preset: ${feeSettingsPreset}`);
     
     // Update wallet store directly
-    const updatedSettings = { ...feeSettings, defaultPreset: feeSettingsPreset };
+    const updatedSettings = { ...feeSettings, defaultPreset: feeSettingsPreset as 'economy' | 'standard' | 'priority' | 'custom' };
     console.log(`🔧 Updating wallet store with:`, updatedSettings);
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update fee preset:`, error);
@@ -125,7 +127,7 @@ export default function SendScreen() {
     const updatedSettings = { 
       ...feeSettings, 
       customFeeRate: numericValue,
-      defaultPreset: 'custom' // Auto-set to custom when user changes rate
+      defaultPreset: 'custom' as const // Auto-set to custom when user changes rate
     };
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update custom fee rate:`, error);
@@ -138,7 +140,7 @@ export default function SendScreen() {
       try {
         const fees = await feeEstimationService.getFeeEstimates().catch(() => null);
         setFeeEstimates(fees);
-        setLastFeeEstimates(fees);
+        // setLastFeeEstimates(fees); // Removed - function doesn't exist
         
         // Load fee confidence data
         if (fees) {
@@ -166,23 +168,29 @@ export default function SendScreen() {
     loadFeeEstimates();
   }, [currentWallet]);
 
-  // Periodic fee refresh for auto-adjustment
+  // Periodic fee refresh for auto-adjustment - DISABLED to prevent excessive API calls
   useEffect(() => {
     if (!feeSettings?.autoAdjustFees) {
       return;
     }
 
-    const refreshInterval = setInterval(async () => {
+    // DISABLED: This was causing excessive API calls and HTTP 429 errors
+    // Instead, fees will be refreshed only when user manually triggers a refresh
+    // or when the component mounts/remounts
+    console.log('🔄 Periodic fee refresh DISABLED to prevent excessive API calls');
+    
+    // Optional: Refresh fees only once when auto-adjustment is enabled
+    const refreshOnce = async () => {
       try {
-        console.log('🔄 Periodic fee refresh for auto-adjustment...');
+        console.log('🔄 One-time fee refresh for auto-adjustment...');
         const freshEstimates = await feeEstimationService.refreshFeeEstimates();
         setFeeEstimates(freshEstimates);
       } catch (error) {
         console.warn('Failed to refresh fees for auto-adjustment:', error);
       }
-    }, 30000); // Refresh every 30 seconds
-
-    return () => clearInterval(refreshInterval);
+    };
+    
+    refreshOnce();
   }, [feeSettings?.autoAdjustFees]);
 
   // No sync effects needed - React automatically re-renders when feeSettings changes
@@ -227,27 +235,53 @@ export default function SendScreen() {
     
   }, [feeEstimates, feeSettings, feeRate]);
 
+  // UTXO fetching useEffect - SIMPLIFIED AND FORCED TO RUN
+  console.log('🔍 Send screen: About to define UTXO fetching useEffect');
+  console.log('🔍 Send screen: useEffect dependencies - currentWallet?.id:', currentWallet?.id, 'balance:', balance);
+  
   useEffect(() => {
+    console.log('🔍 Send screen: useEffect triggered - FORCED RUN');
+    console.log('🔍 Send screen: currentWallet:', currentWallet ? currentWallet.name : 'null');
+    console.log('🔍 Send screen: currentWallet.xpub:', currentWallet?.xpub ? 'present' : 'missing');
+    console.log('🔍 Send screen: balance:', balance);
+    
     const fetchUtxos = async () => {
       try {
-        if (!currentWallet) return;
-        const frozenIds = new Set(coinControl.getFrozenUtxoIds());
-        const all: UTXO[] = [];
-        for (let i = 0; i < currentWallet.addresses.length; i++) {
-          const addr = currentWallet.addresses[i];
-          const list = await getAddressUTXOs(addr, i);
-          list.forEach((u) => {
-            const id = `${u.txid}:${u.vout}`;
-            all.push({ ...u, address: addr, frozen: frozenIds.has(id) });
-          });
+        if (!currentWallet || !currentWallet.xpub) {
+          console.log('🔍 Send screen: Early return - no wallet or xpub');
+          setAvailableUtxos([]);
+          return;
         }
-        setAvailableUtxos(all);
+        
+        console.log('🔍 Send screen: Starting UTXO fetch for wallet:', currentWallet.name);
+        console.log('🔍 Send screen: Wallet has', currentWallet.addresses.length, 'addresses');
+        
+        // Load UTXOs from wallet store in FAST MODE (first 3 addresses only)
+        console.log('🔍 Send screen: Loading UTXOs for wallet in FAST MODE:', currentWallet.id);
+        await coinControl.loadWalletUtxos(currentWallet.id, true); // true = fastMode
+        
+        // Get UTXOs from wallet store
+        const cachedUtxos = coinControl.getWalletUtxos(currentWallet.id);
+        console.log('🔍 Send screen: Got', cachedUtxos.length, 'UTXOs from wallet store');
+        console.log('🔍 Send screen: Cached UTXOs details:', cachedUtxos.map(u => ({
+          txid: u.txid?.substring(0, 10) + '...',
+          vout: u.vout,
+          value: u.value,
+          address: u.address?.substring(0, 10) + '...',
+          addressIndex: u.addressIndex,
+          frozen: u.frozen,
+          status: u.status
+        })));
+
+        setAvailableUtxos(cachedUtxos);
       } catch (e) {
         console.warn('Failed to fetch UTXOs', e);
+        setAvailableUtxos([]);
       }
     };
+    
     fetchUtxos();
-  }, [currentWallet, coinControl]);
+  }, [currentWallet?.id, balance, coinControl]); // Added coinControl back to ensure it runs
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
@@ -504,21 +538,126 @@ export default function SendScreen() {
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
       
       // Validate wallet addresses and current index
+      console.log('🔍 Wallet validation - addresses count:', currentWallet.addresses?.length || 0);
+      console.log('🔍 Wallet validation - current address index:', currentWallet.currentAddressIndex);
+      console.log('🔍 Wallet validation - available UTXOs count:', availableUtxos.length);
+      console.log('🔍 Wallet validation - selected UTXOs count:', selected.length);
+      
       if (!currentWallet.addresses || currentWallet.addresses.length === 0) {
+        console.error('❌ No addresses available in wallet');
         throw new Error('No addresses available in wallet');
       }
       
       if (currentWallet.currentAddressIndex < 0 || currentWallet.currentAddressIndex >= currentWallet.addresses.length) {
+        console.error('❌ Invalid current address index:', currentWallet.currentAddressIndex, 'out of', currentWallet.addresses.length);
         throw new Error('Invalid current address index');
       }
       
       if (!currentWallet.mnemonic || currentWallet.mnemonic.trim() === '') {
+        console.error('❌ Wallet mnemonic is missing');
         throw new Error('Wallet mnemonic is required for transaction signing');
       }
       
       // Get the current address and its index for signing
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;
+      
+      console.log('🔍 Using current address:', currentAddress.substring(0, 10) + '...');
+      console.log('🔍 Send screen: Wallet addresses being passed to sendTransaction:', currentWallet.addresses.length);
+      console.log('🔍 Send screen: availableUtxos.length:', availableUtxos.length);
+      console.log('🔍 Send screen: selected.length:', selected.length);
+      console.log('🔍 Send screen: availableUtxos details:', availableUtxos.map(u => ({
+        txid: u.txid.substring(0, 10) + '...',
+        vout: u.vout,
+        value: u.value,
+        address: u.address?.substring(0, 10) + '...',
+        addressIndex: u.addressIndex,
+        frozen: u.frozen
+      })));
+      console.log('🔍 Send screen: selectedUtxoIds:', selectedUtxoIds);
+      console.log('🔍 Send screen: coinControl.getWalletUtxos result:', coinControl.getWalletUtxos(currentWallet.id));
+      console.log('🔍 Send screen: coinControl.isUtxosLoading result:', coinControl.isUtxosLoading(currentWallet.id));
+      
+      // If no UTXOs are selected via coin control, automatically select the most efficient UTXOs
+      let utxosToUse: UTXO[];
+      if (selected.length > 0) {
+        utxosToUse = selected;
+        console.log('🔍 Send screen: Using manually selected UTXOs:', utxosToUse.length);
+      } else {
+        // Automatic UTXO selection: choose confirmed UTXOs (not frozen) - BlueWallet approach
+        const unfrozenUtxos = availableUtxos.filter(utxo => !utxo.frozen && utxo.status?.confirmed);
+        console.log('🔍 Send screen: Available confirmed unfrozen UTXOs:', unfrozenUtxos.length);
+        
+        if (unfrozenUtxos.length === 0) {
+          console.warn('⚠️ No confirmed unfrozen UTXOs available for automatic selection');
+          throw new Error('No confirmed UTXOs available for transaction. Please ensure you have confirmed Bitcoin in your wallet.');
+        }
+        
+        // Sort UTXOs by value (largest first) for efficient selection - BlueWallet approach
+        const sortedUtxos = unfrozenUtxos.sort((a, b) => b.value - a.value);
+        
+        // Calculate total needed (amount + estimated fee)
+        const amountSatoshis = Math.floor(amountInBTC * 1e8);
+        const estimatedFeeSatoshis = Math.floor((estimatedFee || 0.0001) * 1e8);
+        const totalNeeded = amountSatoshis + estimatedFeeSatoshis;
+        
+        console.log('🔍 Send screen: Amount needed:', amountSatoshis, 'sats');
+        console.log('🔍 Send screen: Estimated fee:', estimatedFeeSatoshis, 'sats');
+        console.log('🔍 Send screen: Total needed:', totalNeeded, 'sats');
+        
+        // Greedy selection: pick UTXOs until we have enough - BlueWallet approach
+        const selectedUtxos: UTXO[] = [];
+        let totalSelected = 0;
+        
+        for (const utxo of sortedUtxos) {
+          selectedUtxos.push(utxo);
+          totalSelected += utxo.value;
+          
+          if (totalSelected >= totalNeeded) {
+            break; // We have enough UTXOs
+          }
+        }
+        
+        if (totalSelected < totalNeeded) {
+          console.error('❌ Insufficient funds: need', totalNeeded, 'have', totalSelected);
+          throw new Error(`Insufficient funds. Need ${totalNeeded} sats but only have ${totalSelected} sats available.`);
+        }
+        
+        utxosToUse = selectedUtxos;
+        console.log('🔍 Send screen: Automatically selected', utxosToUse.length, 'UTXOs');
+        console.log('🔍 Send screen: Total selected value:', totalSelected, 'sats');
+        console.log('🔍 Send screen: Change amount:', totalSelected - totalNeeded, 'sats');
+        console.log('🔍 Send screen: Sample selected UTXO:', utxosToUse[0] ? {
+          txid: utxosToUse[0].txid.substring(0, 10) + '...',
+          vout: utxosToUse[0].vout,
+          value: utxosToUse[0].value,
+          address: utxosToUse[0].address?.substring(0, 10) + '...'
+        } : 'No UTXOs');
+      }
+      
+      console.log('🔍 Send screen: UTXOs to use for transaction:', utxosToUse.length);
+      
+      // If we have UTXOs available, use them directly instead of fetching fresh
+      if (utxosToUse.length > 0) {
+        console.log('✅ Using pre-loaded UTXOs for transaction (automatic selection)');
+      } else {
+        console.log('⚠️ No UTXOs available in send screen, will let sendTransaction fetch fresh data');
+      }
+      console.log('🔍 Available UTXOs:', availableUtxos.length);
+      console.log('🔍 Selected UTXOs:', selected.length);
+      console.log('🔍 Sample UTXO:', utxosToUse[0] ? {
+        txid: utxosToUse[0].txid.substring(0, 10) + '...',
+        vout: utxosToUse[0].vout,
+        value: utxosToUse[0].value,
+        address: utxosToUse[0].address?.substring(0, 10) + '...'
+      } : 'No UTXOs');
+      
+      // Debug: Check if we're passing UTXOs to sendTransaction
+      if (utxosToUse.length > 0) {
+        console.log('✅ Send screen: Passing', utxosToUse.length, 'UTXOs to sendTransaction');
+      } else {
+        console.log('⚠️ Send screen: No UTXOs to pass to sendTransaction, will let it fetch fresh');
+      }
       
       const result = await sendTransaction(
         currentAddress,
@@ -528,7 +667,7 @@ export default function SendScreen() {
         currentWallet.mnemonic,
         addressIndex,
         enableRBF,
-        selected.length > 0 ? selected : undefined,
+        utxosToUse.length > 0 ? utxosToUse : undefined,
         currentWallet.addresses
       );
       
@@ -549,6 +688,10 @@ export default function SendScreen() {
         `Fee Rate: ${feeRateText} sat/vB\n\n` +
         `The transaction will appear in your wallet once it receives confirmations. ` +
         `This typically takes 10-60 minutes depending on network congestion.`;
+      
+      // Refresh transaction history and balance to show the new transaction
+      console.log('🔄 Refreshing wallet data after successful transaction...');
+      await refreshData();
       
       Alert.alert(
         'Transaction Broadcast Successfully! 🎉',
@@ -1049,7 +1192,8 @@ export default function SendScreen() {
                       // Use the smaller of fallback rate or max allowed rate
                       const finalRate = Math.min(fallbackRate, maxRate);
                       setFeeRate(finalRate);
-                      setCustomFeeRate(finalRate.toString());
+                      // Update custom fee rate through wallet store
+                      handleCustomFeeRateChange(finalRate.toString());
                       setCustomFeeValidation({ isValid: true, message: 'Valid fee rate' });
                     }
                     // If customFeeRate is already set and valid, the onChangeText handler will handle the validation

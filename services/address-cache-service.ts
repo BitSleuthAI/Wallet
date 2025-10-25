@@ -152,11 +152,19 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
 
 export async function setCachedAddressUTXOs(address: string, utxos: any[], xpubHint?: string): Promise<void> {
   try {
+    // Don't cache empty UTXO results to avoid caching temporary network issues
+    if (!utxos || utxos.length === 0) {
+      console.log(`🚫 Not caching empty UTXO result for ${address.substring(0, 10)}...`);
+      return;
+    }
+    
     const entry: PersistedEntry<any[]> = {
-      data: utxos || [],
+      data: utxos,
       timestamp: Date.now(),
     };
     await AsyncStorage.setItem(KEY_UTXOS(address), JSON.stringify(entry));
+    console.log(`💾 Cached ${utxos.length} UTXOs for ${address.substring(0, 10)}...`);
+    
     if (xpubHint) {
       await AsyncStorage.setItem(KEY_ADDR_WALLET(address), xpubHint);
       const existing = await getWalletAddresses(xpubHint);
@@ -238,6 +246,35 @@ export async function setCachedAddressTransactions(address: string, txs: any[], 
     await setCachedAddressTxIds(address, txids, xpubHint);
   } catch (error) {
     console.warn('Failed to cache address transactions:', error);
+  }
+}
+
+export async function clearEmptyUTXOCaches(): Promise<void> {
+  try {
+    console.log('🧹 Clearing empty UTXO caches...');
+    const allKeys = await AsyncStorage.getAllKeys();
+    const utxoKeys = allKeys.filter(key => key.startsWith(KEY_PREFIX + 'utxos_'));
+    
+    let clearedCount = 0;
+    for (const key of utxoKeys) {
+      try {
+        const raw = await AsyncStorage.getItem(key);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          const data = parsed.data || parsed;
+          if (Array.isArray(data) && data.length === 0) {
+            await AsyncStorage.removeItem(key);
+            clearedCount++;
+            console.log(`🗑️ Cleared empty UTXO cache: ${key}`);
+          }
+        }
+      } catch (e) {
+        console.warn(`Failed to check UTXO cache ${key}:`, e);
+      }
+    }
+    console.log(`✅ Cleared ${clearedCount} empty UTXO caches`);
+  } catch (error) {
+    console.warn('Failed to clear empty UTXO caches:', error);
   }
 }
 
