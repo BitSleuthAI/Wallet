@@ -127,10 +127,11 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
     return Array.from(new Set(usedAddresses));
   }
   
-  console.log(`🔍 Cache miss or expired, performing address discovery...`);
-  
-  try {
-    await ensureECC();
+    console.log(`🔍 Cache miss or expired, performing address discovery...`);
+    console.log(`🔍 Full xpub for discovery:`, xpub);
+    
+    try {
+      await ensureECC();
     
     // Use centralized bip32 loader
     const bip32Module = await loadBip32Module();
@@ -168,6 +169,7 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
       while (gap < GAP_LIMIT) {
         const batch = await deriveAddressBatch(node, chain, index, index + GAP_LIMIT);
         console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
+        console.log(`🔍 Batch addresses:`, batch.map(addr => addr.substring(0, 10) + '...'));
         
         // Query the batch with controlled concurrency to avoid rate limiting
         // Process addresses sequentially with small delays to avoid 429 errors
@@ -175,6 +177,7 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         for (let i = 0; i < batch.length; i++) {
           const addr = batch[i];
           try {
+            console.log(`🔍 Checking address ${index + i}: ${addr}`);
             const result = await esploraGet(`/address/${addr}/txs`, 900000);
             console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
             addressTxs.push(result);
@@ -191,8 +194,16 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         
         // Process addresses in order and track gap correctly
         for (let i = 0; i < addressTxs.length; i++) {
-          const isUsed = addressTxs[i] && Array.isArray(addressTxs[i]) && addressTxs[i].length > 0;
+          const addressTxsResult = addressTxs[i];
+          const isUsed = addressTxsResult && Array.isArray(addressTxsResult) && addressTxsResult.length > 0;
           const addressIndex = index + i;
+          
+          console.log(`🔍 Address ${addressIndex} (${batch[i].substring(0, 10)}...):`, {
+            hasResult: !!addressTxsResult,
+            isArray: Array.isArray(addressTxsResult),
+            txCount: Array.isArray(addressTxsResult) ? addressTxsResult.length : 'N/A',
+            isUsed: isUsed
+          });
           
           if (returnMetadata) {
             allAddressMetadata.push({
@@ -206,7 +217,7 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
           if (isUsed) {
             allUsedAddresses.push(batch[i]);
             gap = 0; // Reset gap when we find a used address
-            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i]}`);
+            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i]} (${addressTxsResult.length} transactions)`);
           } else {
             gap++; // Increment gap for unused address
             console.log(`🔍 Address ${addressIndex} unused, gap: ${gap}`);
@@ -235,13 +246,26 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
     console.log(`✅ Cached address metadata for xpub: ${xpub.substring(0, 20)}...`);
     
     if (returnMetadata) {
-      console.log(`✅ Address discovery complete: ${allAddressMetadata.filter(a => a.isUsed).length} used addresses found`);
+      const usedCount = allAddressMetadata.filter(a => a.isUsed).length;
+      console.log(`✅ Address discovery complete: ${usedCount} used addresses found out of ${allAddressMetadata.length} total`);
+      console.log(`📋 All metadata:`, allAddressMetadata.map(a => ({
+        address: a.address.substring(0, 10) + '...',
+        index: a.index,
+        chain: a.chain,
+        isUsed: a.isUsed
+      })));
       return allAddressMetadata;
     }
     
     const uniqueAddresses = Array.from(new Set(allUsedAddresses));
     console.log(`✅ Address discovery complete: ${uniqueAddresses.length} used addresses found`);
     console.log(`📋 Used addresses:`, uniqueAddresses.map(addr => addr.substring(0, 10) + '...'));
+    console.log(`📋 All discovered addresses:`, allAddressMetadata.map(a => ({
+      address: a.address.substring(0, 10) + '...',
+      index: a.index,
+      chain: a.chain,
+      isUsed: a.isUsed
+    })));
     
     return uniqueAddresses;
   } catch (error) {
@@ -358,23 +382,59 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
 
     // Process transactions
     const transactions: Transaction[] = Array.from(allTxs.values()).map((tx: any): Transaction => {
-      let netAmountSatoshis = 0;
       const ourAddressesSet = new Set(usedAddresses);
-
-      // Calculate net amount for this wallet
+      
+      // Calculate amounts for proper display
+      let receivedAmountSatoshis = 0;  // Amount received from external addresses
+      let sentAmountSatoshis = 0;      // Amount sent to external addresses
+      let changeAmountSatoshis = 0;    // Amount returned as change
+      
+      // Calculate received amount (from external addresses to our addresses)
       tx.vout.forEach((out: any) => {
         if (out.scriptpubkey_address && ourAddressesSet.has(out.scriptpubkey_address)) {
-          netAmountSatoshis += out.value;
+          receivedAmountSatoshis += out.value;
         }
       });
       
+      // Calculate sent amount (from our addresses to external addresses)
       tx.vin.forEach((inp: any) => {
         if (inp.prevout?.scriptpubkey_address && ourAddressesSet.has(inp.prevout.scriptpubkey_address)) {
-          netAmountSatoshis -= inp.prevout.value;
+          sentAmountSatoshis += inp.prevout.value;
         }
       });
-
-      const netBtc = netAmountSatoshis / 1e8;
+      
+      // Calculate change (amount returned to our addresses)
+      // For sent transactions, exclude the primary recipient from change calculation
+      let primaryRecipientAddress: string | null = null;
+      if (isSent) {
+        // Find the first output to an external address (not ours)
+        const externalOutputs = tx.vout.filter((out: any) => out.scriptpubkey_address && !ourAddressesSet.has(out.scriptpubkey_address));
+        if (externalOutputs.length > 0) {
+          // Optionally, pick the largest output as the primary recipient
+          primaryRecipientAddress = externalOutputs.reduce((maxOut: any, out: any) => out.value > maxOut.value ? out : maxOut, externalOutputs[0]).scriptpubkey_address;
+        }
+      }
+      tx.vout.forEach((out: any) => {
+        if (
+          out.scriptpubkey_address &&
+          ourAddressesSet.has(out.scriptpubkey_address) &&
+          (!isSent || out.scriptpubkey_address !== primaryRecipientAddress)
+        ) {
+          changeAmountSatoshis += out.value;
+        }
+      });
+      
+      // Determine transaction type and display amount
+      const isSent = sentAmountSatoshis > 0;
+      const isReceived = receivedAmountSatoshis > 0 && sentAmountSatoshis === 0;
+      
+      // For sent transactions, show the amount sent to external addresses (excluding change)
+      // For received transactions, show the amount received
+      const displayAmountSatoshis = isSent 
+        ? sentAmountSatoshis - changeAmountSatoshis  // Amount sent minus change returned
+        : receivedAmountSatoshis;  // Amount received
+      
+      const displayAmountBtc = displayAmountSatoshis / 1e8;
       const isConfirmed = tx.status?.confirmed || false;
       const confirmations = isConfirmed && latestBlockHeight ? latestBlockHeight - tx.status.block_height + 1 : 0;
       const txDate = isConfirmed ? new Date(tx.status.block_time * 1000) : new Date();
@@ -428,12 +488,12 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
 
       return {
         txid: tx.txid,
-        type: netBtc >= 0 ? 'received' : 'sent',
-        amount: Math.abs(netBtc),
-        amountUSD: Math.abs(netBtc) * btcPrice,
-        address: netBtc >= 0 
-          ? (tx.vout?.find((output: any) => ourAddressesSet.has(output.scriptpubkey_address))?.scriptpubkey_address || usedAddresses[0])
-          : (tx.vin?.find((input: any) => ourAddressesSet.has(input.prevout?.scriptpubkey_address))?.prevout?.scriptpubkey_address || usedAddresses[0]),
+        type: isSent ? 'sent' : 'received',
+        amount: Math.abs(displayAmountBtc),
+        amountUSD: Math.abs(displayAmountBtc) * btcPrice,
+        address: isSent 
+          ? (tx.vout?.find((output: any) => !ourAddressesSet.has(output.scriptpubkey_address))?.scriptpubkey_address || 'External Address')
+          : (tx.vin?.find((input: any) => !ourAddressesSet.has(input.prevout?.scriptpubkey_address))?.prevout?.scriptpubkey_address || 'External Address'),
         timestamp: txDate.getTime(),
         confirmations,
         status: isConfirmed ? 'confirmed' : 'pending',

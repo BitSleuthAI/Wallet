@@ -5,7 +5,6 @@
 
 import { BitcoinPrice, UTXO } from '@/types/wallet';
 import { loadBip32Module } from './bip32-loader';
-import { getAddressUTXOs as esploraGetAddressUTXOs } from './esplora-service';
 
 // Use centralized bip32 loader
 let bip32: any = null;
@@ -134,11 +133,42 @@ export const isValidBitcoinAddress = (address: string): boolean => {
 export const getAddressUTXOs = async (address: string, addressIndex?: number): Promise<UTXO[]> => {
   try {
     console.log('🔍 Fetching UTXOs (cached) for address:', address.substring(0, 10) + '...');
+    const { getAddressUTXOs: esploraGetAddressUTXOs } = await import('./esplora-service');
     const result = await esploraGetAddressUTXOs(address);
     if (result.error) {
+      console.error('❌ Esplora service error:', result.error);
       throw new Error(result.error);
     }
     const data = result.data || [];
+    console.log('🔍 Raw UTXOs from esplora service:', data.length);
+    
+    // If we get empty results, try direct API call as fallback
+    if (data.length === 0) {
+      console.log('🔄 Empty UTXOs from cached service, trying direct API call...');
+      try {
+        const directResult = await fetchDirectUTXOs(address);
+        if (directResult.length > 0) {
+          console.log('✅ Direct API call found', directResult.length, 'UTXOs');
+          return directResult.map((utxo: any) => ({
+            txid: utxo.txid,
+            vout: utxo.vout,
+            value: utxo.value,
+            scriptPubKey: utxo.scriptpubkey,
+            address: utxo.status?.confirmed ? address : undefined,
+            addressIndex: addressIndex,
+            status: {
+              confirmed: utxo.status?.confirmed || false,
+              block_height: utxo.status?.block_height,
+              block_hash: utxo.status?.block_hash,
+              block_time: utxo.status?.block_time,
+            },
+          }));
+        }
+      } catch (directError) {
+        console.warn('⚠️ Direct API call also failed:', directError);
+      }
+    }
+    
     const utxos: UTXO[] = data.map((utxo: any) => ({
       txid: utxo.txid,
       vout: utxo.vout,
@@ -160,6 +190,23 @@ export const getAddressUTXOs = async (address: string, addressIndex?: number): P
     throw error;
   }
 };
+
+// Direct API call bypassing all caching
+async function fetchDirectUTXOs(address: string): Promise<any[]> {
+  try {
+    console.log('🌐 Direct API call for UTXOs:', address.substring(0, 10) + '...');
+    const response = await fetch(`https://blockstream.info/api/address/${address}/utxo`);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const data = await response.json();
+    console.log('🌐 Direct API response:', Array.isArray(data) ? data.length : 'not array');
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    console.error('❌ Direct API call failed:', error);
+    throw error;
+  }
+}
 
 /**
  * Get Bitcoin price using the improved esplora service with multiple fallbacks
@@ -207,6 +254,16 @@ export const sendTransaction = async (
   allWalletAddresses?: string[]
 ): Promise<{ txid: string; fee: number; amount: number }> => {
   try {
+    console.log('🔍 sendTransaction: Received selectedUTXOs.length:', selectedUTXOs ? selectedUTXOs.length : 'null/undefined');
+    console.log('🔍 sendTransaction: Received allWalletAddresses.length:', allWalletAddresses ? allWalletAddresses.length : 'null/undefined');
+    console.log('🔍 sendTransaction: selectedUTXOs details:', selectedUTXOs ? selectedUTXOs.map(u => ({
+      txid: u.txid.substring(0, 10) + '...',
+      vout: u.vout,
+      value: u.value,
+      address: u.address?.substring(0, 10) + '...',
+      addressIndex: u.addressIndex,
+      frozen: u.frozen
+    })) : 'null/undefined');
     console.log('📤 Sending transaction...');
     console.log('From:', fromAddress.substring(0, 10) + '...');
     console.log('To:', toAddress.substring(0, 10) + '...');
@@ -239,86 +296,68 @@ export const sendTransaction = async (
     // Convert amount to satoshis
     const amountSatoshis = Math.floor(amount * 1e8);
     
-    let utxosToUse: UTXO[];
+    let utxosToUse: UTXO[] = [];
     let actualFee: number;
     
     if (selectedUTXOs && selectedUTXOs.length > 0) {
-      // Use coin control selected UTXOs
-      console.log('🔍 Using coin control selected UTXOs:', selectedUTXOs.length);
+      // Use pre-selected UTXOs (from coin control or pre-loaded from send screen)
+      console.log('🔍 Using pre-selected UTXOs:', selectedUTXOs.length);
+      console.log('🔍 Sample pre-selected UTXO:', selectedUTXOs[0] ? {
+        txid: selectedUTXOs[0].txid.substring(0, 10) + '...',
+        vout: selectedUTXOs[0].vout,
+        value: selectedUTXOs[0].value,
+        address: selectedUTXOs[0].address?.substring(0, 10) + '...'
+      } : 'No UTXOs');
+      
+      // Filter out frozen UTXOs and ensure we have confirmed UTXOs
       utxosToUse = selectedUTXOs.filter(utxo => utxo.status.confirmed);
       
       if (utxosToUse.length === 0) {
-        throw new Error('No confirmed UTXOs in selected set');
-      }
-      
-      // Calculate actual fee for selected UTXOs
-      const totalInputValue = utxosToUse.reduce((sum, utxo) => sum + utxo.value, 0);
-      
-      // Calculate change amount first
-      const tempFee = Math.ceil(estimateTransactionSize(utxosToUse.length, 2) * feeRate);
-      const tempChange = totalInputValue - amountSatoshis - tempFee;
-      
-      // Calculate actual output count based on change amount
-      const actualOutputCount = calculateOutputCount(tempChange);
-      
-      // Recalculate fee with accurate output count
-      const estimatedSize = estimateTransactionSize(utxosToUse.length, actualOutputCount);
-      actualFee = Math.ceil(estimatedSize * feeRate);
-      const totalNeeded = amountSatoshis + actualFee;
-      
-      if (totalInputValue < totalNeeded) {
-        throw new Error('Insufficient funds in selected UTXOs');
-      }
-      
-      console.log('✅ Using coin control UTXOs:', utxosToUse.length);
-    } else {
-      // Get UTXOs from all wallet addresses and select automatically
-      console.log('🔍 Fetching UTXOs for transaction...');
-      
-      let allUtxos: UTXO[] = [];
-      
-      if (allWalletAddresses && allWalletAddresses.length > 0) {
-        // Fetch UTXOs from all wallet addresses
-        console.log('🔍 Fetching UTXOs from all wallet addresses:', allWalletAddresses.length);
-        
-        for (let i = 0; i < allWalletAddresses.length; i++) {
-          const address = allWalletAddresses[i];
-          try {
-            const addressUtxos = await getAddressUTXOs(address, i);
-            // Add the address index to each UTXO for proper signing
-            const utxosWithIndex = addressUtxos.map(utxo => ({
-              ...utxo,
-              addressIndex: i
-            }));
-            allUtxos.push(...utxosWithIndex);
-            console.log(`✅ Fetched ${addressUtxos.length} UTXOs from address ${i}`);
-          } catch (error) {
-            console.warn(`⚠️ Failed to fetch UTXOs from address ${i}:`, error);
-            // Continue with other addresses even if one fails
-          }
-        }
+        console.warn('⚠️ No confirmed UTXOs in pre-selected set, trying to fetch fresh UTXOs...');
+        // Fall through to fresh UTXO fetching
       } else {
-        // Fallback to just the from address if no wallet addresses provided
-        console.log('⚠️ No wallet addresses provided, falling back to from address only');
-        const utxos = await getAddressUTXOs(fromAddress, addressIndex);
-        allUtxos = utxos.map(utxo => ({
-          ...utxo,
-          addressIndex: addressIndex
-        }));
+        console.log('✅ Using pre-selected confirmed UTXOs:', utxosToUse.length);
       }
-      
-      if (allUtxos.length === 0) {
-        throw new Error('No UTXOs available in wallet');
-      }
-      
-      console.log(`✅ Total UTXOs available: ${allUtxos.length}`);
-      
-      // Select UTXOs using greedy algorithm
-      const selectedUTXOsResult = selectUTXOs(allUtxos, amountSatoshis, feeRate);
-      utxosToUse = selectedUTXOsResult.selectedUTXOs;
-      actualFee = selectedUTXOsResult.fee;
-      console.log('✅ Selected UTXOs:', utxosToUse.length);
     }
+    
+    // If we don't have UTXOs from pre-selection, we cannot proceed
+    if (!utxosToUse || utxosToUse.length === 0) {
+      console.log('⚠️ sendTransaction: No UTXOs provided, cannot proceed with transaction');
+      console.log('⚠️ sendTransaction: utxosToUse:', utxosToUse);
+      console.log('⚠️ sendTransaction: selectedUTXOs:', selectedUTXOs);
+      throw new Error('No UTXOs available for transaction. Please ensure UTXOs are loaded in the wallet.');
+    }
+    
+    console.log('✅ sendTransaction: Using', utxosToUse.length, 'UTXOs for transaction');
+    console.log('✅ sendTransaction: UTXOs to use details:', utxosToUse.map(u => ({
+      txid: u.txid.substring(0, 10) + '...',
+      vout: u.vout,
+      value: u.value,
+      address: u.address?.substring(0, 10) + '...',
+      addressIndex: u.addressIndex,
+      frozen: u.frozen
+    })));
+    
+    // Calculate fee based on pre-selected UTXOs
+    const totalInputValue = utxosToUse.reduce((sum, utxo) => sum + utxo.value, 0);
+    
+    // Calculate change amount first
+    const tempFee = Math.ceil(estimateTransactionSize(utxosToUse.length, 2) * feeRate);
+    const tempChange = totalInputValue - amountSatoshis - tempFee;
+    
+    // Calculate actual output count based on change amount
+    const actualOutputCount = calculateOutputCount(tempChange);
+    
+    // Recalculate fee with accurate output count
+    const estimatedSize = estimateTransactionSize(utxosToUse.length, actualOutputCount);
+    actualFee = Math.ceil(estimatedSize * feeRate);
+    const totalNeeded = amountSatoshis + actualFee;
+    
+    if (totalInputValue < totalNeeded) {
+      throw new Error('Insufficient funds in selected UTXOs');
+    }
+    
+    console.log('✅ Using pre-selected UTXOs:', utxosToUse.length);
     
     // Create transaction
     console.log('🔧 Creating transaction...');
@@ -496,38 +535,309 @@ async function createTransaction(
       throw new Error('ECC library not available');
     }
     
+    // Validate ECC library before using it
+    console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
+    
+    // Test basic ECC functionality
+    const testPrivateKey = new Uint8Array(32);
+    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+    
+    try {
+      // Test private key validation
+      if (!ecc.isPrivate(testPrivateKey)) {
+        throw new Error('ECC private key validation failed');
+      }
+      
+      // Test point generation
+      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+      if (!publicKey || publicKey.length !== 33) {
+        throw new Error('ECC point generation failed');
+      }
+      
+      // Test signing and verification
+      const testHash = new Uint8Array(32);
+      testHash.fill(0xaa); // Fill with test data
+      
+      const signature = ecc.sign(testHash, testPrivateKey);
+      if (!signature || signature.length === 0) {
+        throw new Error('ECC signing failed');
+      }
+      
+      const isValid = ecc.verify(testHash, publicKey, signature);
+      if (!isValid) {
+        throw new Error('ECC signature verification failed');
+      }
+      
+      console.log('✅ ECC library validation passed');
+    } catch (eccError) {
+      console.error('❌ ECC library validation failed:', eccError);
+      throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
+    }
+    
     // Initialize bitcoinjs-lib with ECC
-    bitcoin.initEccLib(ecc);
+    try {
+      console.log('🔧 Initializing bitcoinjs-lib with ECC...');
+      console.log('🔧 ECC object keys:', Object.keys(ecc));
+      console.log('🔧 ECC object type:', typeof ecc);
+      
+      // Check if bitcoinjs-lib has the initEccLib method
+      if (typeof bitcoin.initEccLib !== 'function') {
+        throw new Error('bitcoinjs-lib.initEccLib is not a function');
+      }
+      
+      // No arbitrary delay; rely on synchronous/asynchronous initEccLib
+      
+      console.log('🔧 Calling bitcoin.initEccLib...');
+      const initResult = bitcoin.initEccLib(ecc);
+      if (initResult instanceof Promise) {
+        await initResult;
+      }
+      
+      // Verify the initialization worked by checking if ECC is properly set
+      console.log('🔧 Verifying ECC initialization...');
+      
+      // Check that bitcoin.ECPair is available after initialization
+      if (!bitcoin.ECPair) {
+        throw new Error('ECC initialization failed: bitcoin.ECPair is not available');
+      }
+      
+      // Log what's available on the bitcoin object for debugging
+      console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
+      console.log('🔧 bitcoin.ECPair:', typeof bitcoin.ECPair, bitcoin.ECPair);
+      
+      // In bitcoinjs-lib 7.0.0, ECPair might not be directly available
+      // Let's check if we can access it through other means
+      let ECPair = bitcoin.ECPair;
+      
+      // Try alternative ways to access ECPair in bitcoinjs-lib 7.0.0
+      if (!ECPair) {
+        console.log('🔧 ECPair not directly available, trying alternative access methods...');
+        
+        // Try accessing through bitcoin.ECPair or bitcoin.ECPairFactory
+        if (bitcoin.ECPairFactory) {
+          console.log('🔧 Found ECPairFactory, using it');
+          ECPair = bitcoin.ECPairFactory(ecc);
+        } else if (bitcoin.ECPair) {
+          console.log('🔧 Found ECPair directly');
+          ECPair = bitcoin.ECPair;
+        } else {
+          // Try to create ECPair manually using the ECC library
+          console.log('🔧 Creating ECPair manually using ECC library...');
+          try {
+            const testPrivateKey = new Uint8Array(32);
+            testPrivateKey[31] = 1;
+            
+            // Test if our ECC library can create a public key
+            const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+            if (publicKey && publicKey.length === 33) {
+              console.log('✅ ECC library can create public keys - ECC initialization successful');
+              // Skip ECPair verification and proceed
+            } else {
+              throw new Error('ECC library cannot create valid public keys');
+            }
+          } catch (eccTestError) {
+            console.error('❌ ECC library test failed:', eccTestError);
+            throw new Error('ECC library not working properly after bitcoinjs-lib initialization');
+          }
+        }
+      }
+      
+      // If we found ECPair, test it
+      if (ECPair) {
+        try {
+          const testPrivateKey = new Uint8Array(32);
+          testPrivateKey[31] = 1;
+          
+          const testECPair = ECPair.fromPrivateKey(testPrivateKey);
+          if (!testECPair || !testECPair.publicKey) {
+            throw new Error('ECPair creation failed');
+          }
+          
+          console.log('✅ ECC initialization verified - ECPair creation successful');
+        } catch (verifyError) {
+          console.error('❌ ECPair verification failed:', verifyError);
+          throw new Error('bitcoinjs-lib ECC initialization verification failed');
+        }
+      }
+      
+      console.log('✅ bitcoinjs-lib initialized with ECC successfully');
+    } catch (initError) {
+      console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
+      console.error('❌ Error type:', typeof initError);
+      console.error('❌ Error message:', initError instanceof Error ? initError.message : 'Unknown error');
+      console.error('❌ Error stack:', initError instanceof Error ? initError.stack : 'No stack');
+      throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
+    }
     
     // Create transaction builder
-    const txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    console.log('🔧 Creating PSBT (bitcoinjs-lib 7.0.0+ approach)...');
+    console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
+    console.log('🔧 bitcoin.networks:', typeof bitcoin.networks, bitcoin.networks);
+    
+    let txb;
+    try {
+      // Check if TransactionBuilder is available
+      if (!bitcoin.TransactionBuilder) {
+        console.error('❌ bitcoin.TransactionBuilder is not available');
+        console.error('❌ Available bitcoin methods:', Object.keys(bitcoin));
+        throw new Error('TransactionBuilder not available in bitcoinjs-lib');
+      }
+      
+      // Check if networks is available
+      if (!bitcoin.networks) {
+        console.error('❌ bitcoin.networks is not available');
+        throw new Error('bitcoin.networks not available');
+      }
+      
+      if (!bitcoin.networks.bitcoin) {
+        console.error('❌ bitcoin.networks.bitcoin is not available');
+        console.error('❌ Available networks:', Object.keys(bitcoin.networks));
+        throw new Error('bitcoin.networks.bitcoin not available');
+      }
+      
+      console.log('🔧 Creating TransactionBuilder with bitcoin network...');
+      txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+      console.log('✅ TransactionBuilder created successfully');
+    } catch (txbError) {
+      console.error('❌ Failed to create TransactionBuilder:', txbError);
+      console.error('❌ Error type:', typeof txbError);
+      console.error('❌ Error message:', txbError instanceof Error ? txbError.message : 'Unknown error');
+      console.error('❌ Error stack:', txbError instanceof Error ? txbError.stack : 'No stack');
+      
+      // Try alternative approach - use PSBT instead of TransactionBuilder
+      console.log('🔧 TransactionBuilder failed, trying PSBT approach...');
+      try {
+        // In bitcoinjs-lib 7.0.0, we need to use PSBT instead of TransactionBuilder
+        if (bitcoin.Psbt) {
+          console.log('🔧 Using PSBT instead of TransactionBuilder...');
+          // Create PSBT instance
+          txb = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+          console.log('✅ PSBT created successfully');
+        } else {
+          throw new Error('Neither TransactionBuilder nor PSBT available');
+        }
+      } catch (psbtError) {
+        console.error('❌ PSBT approach also failed:', psbtError);
+        throw new Error(`Failed to create TransactionBuilder: ${txbError instanceof Error ? txbError.message : 'Unknown error'}`);
+      }
+    }
     
     // Calculate total input value and change
     const totalInputValue = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
     const changeAmount = totalInputValue - amountSatoshis - feeAmount;
     
-    // Add inputs with RBF support
-    for (const utxo of utxos) {
-      if (enableRBF) {
-        // Enable RBF by setting sequence number to 0xFFFFFFFD (allows replacement)
-        txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
-      } else {
-        // Standard sequence number (no RBF)
-        txb.addInput(utxo.txid, utxo.vout);
+    // Check if we're using PSBT or TransactionBuilder
+    const isPSBT = txb instanceof bitcoin.Psbt;
+    console.log('🔧 Using transaction type:', isPSBT ? 'PSBT' : 'TransactionBuilder');
+    
+    if (isPSBT) {
+      // PSBT approach for bitcoinjs-lib 7.0.0
+      console.log('🔧 Adding inputs to PSBT...');
+      
+      // Add inputs to PSBT
+      for (const utxo of utxos) {
+        console.log(`🔧 Processing UTXO: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
+        console.log(`🔧 UTXO data:`, {
+          txid: utxo.txid,
+          vout: utxo.vout,
+          value: utxo.value,
+          scriptPubKey: utxo.scriptPubKey,
+          address: utxo.address,
+          addressIndex: utxo.addressIndex
+        });
+        
+        // Check if scriptPubKey is available, generate it if missing
+        let scriptPubKey = utxo.scriptPubKey;
+        if (!scriptPubKey) {
+          console.log(`🔧 UTXO missing scriptPubKey, generating from address: ${utxo.address}`);
+          
+          if (!utxo.address) {
+            console.error('❌ UTXO missing both scriptPubKey and address:', utxo);
+            throw new Error(`UTXO ${utxo.txid}:${utxo.vout} missing both scriptPubKey and address`);
+          }
+          
+          // Generate scriptPubKey for P2WPKH (Bech32) address
+          try {
+            // For P2WPKH addresses (starting with bc1), the scriptPubKey is OP_0 + 20-byte hash
+            const address = bitcoin.address.fromBech32(utxo.address);
+            if (address.version === 0 && address.data.length === 20) {
+              // P2WPKH: OP_0 (0x00) + 20-byte hash
+              // Convert the 20-byte hash to hex string
+              const hashHex = Buffer.from(address.data).toString('hex');
+              scriptPubKey = `0014${hashHex}`;
+              console.log(`✅ Generated P2WPKH scriptPubKey: ${scriptPubKey}`);
+              console.log(`🔧 Address data length: ${address.data.length}, hash: ${hashHex}`);
+            } else {
+              throw new Error(`Unsupported address type for ${utxo.address} - version: ${address.version}, data length: ${address.data.length}`);
+            }
+          } catch (addressError) {
+            console.error('❌ Failed to generate scriptPubKey from address:', addressError);
+            throw new Error(`Failed to generate scriptPubKey for address ${utxo.address}: ${addressError instanceof Error ? addressError.message : 'Unknown error'}`);
+          }
+        }
+        
+        const inputData = {
+          hash: utxo.txid,
+          index: utxo.vout,
+          sequence: enableRBF ? 0xFFFFFFFD : undefined,
+          witnessUtxo: {
+            script: new Uint8Array(Buffer.from(scriptPubKey, 'hex')),
+            value: BigInt(utxo.value),
+          },
+        };
+        
+        txb.addInput(inputData);
+        console.log(`✅ Added PSBT input: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
       }
-    }
-    
-    // Add output to recipient
-    txb.addOutput(toAddress, amountSatoshis);
-    
-    // Add change output if needed (dust threshold is 546 satoshis)
-    if (changeAmount > 546) {
-      console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
-      const changeAddress = await generateChangeAddress(mnemonic, 0); // Use first change address
-      txb.addOutput(changeAddress, changeAmount);
-      console.log('✅ Added change output:', changeAddress, changeAmount, 'satoshis');
-    } else if (changeAmount > 0) {
-      console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
+      
+      // Add outputs to PSBT
+      console.log('🔧 Adding outputs to PSBT...');
+      txb.addOutput({
+        address: toAddress,
+        value: BigInt(amountSatoshis),
+      });
+      console.log(`✅ Added PSBT output: ${toAddress.substring(0, 8)}... (${amountSatoshis} sats)`);
+      
+      // Add change output if needed
+      if (changeAmount > 546) {
+        console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
+        const changeAddress = await generateChangeAddress(mnemonic, 0);
+        txb.addOutput({
+          address: changeAddress,
+          value: BigInt(changeAmount),
+        });
+        console.log('✅ Added PSBT change output:', changeAddress.substring(0, 8), '...', changeAmount, 'satoshis');
+      } else if (changeAmount > 0) {
+        console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
+      }
+      
+    } else {
+      // TransactionBuilder approach (legacy)
+      console.log('🔧 Adding inputs to TransactionBuilder...');
+      
+      // Add inputs with RBF support
+      for (const utxo of utxos) {
+        if (enableRBF) {
+          // Enable RBF by setting sequence number to 0xFFFFFFFD (allows replacement)
+          txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
+        } else {
+          // Standard sequence number (no RBF)
+          txb.addInput(utxo.txid, utxo.vout);
+        }
+      }
+      
+      // Add output to recipient
+      txb.addOutput(toAddress, amountSatoshis);
+      
+      // Add change output if needed (dust threshold is 546 satoshis)
+      if (changeAmount > 546) {
+        console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
+        const changeAddress = await generateChangeAddress(mnemonic, 0); // Use first change address
+        txb.addOutput(changeAddress, changeAmount);
+        console.log('✅ Added change output:', changeAddress, changeAmount, 'satoshis');
+      } else if (changeAmount > 0) {
+        console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
+      }
     }
     
     // Sign inputs
@@ -570,14 +880,30 @@ async function createTransaction(
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
       }
       
-      // Sign the input with correct parameters for P2WPKH
-      // Parameters: (inputIndex, keyPair, redeemScript, hashType, witnessValue)
-      txb.sign(i, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      if (isPSBT) {
+        // PSBT signing approach
+        console.log(`🔐 Signing PSBT input ${i} with P2WPKH...`);
+        txb.signInput(i, child);
+      } else {
+        // TransactionBuilder signing approach (legacy)
+        console.log(`🔐 Signing TransactionBuilder input ${i} with P2WPKH...`);
+        // Parameters: (inputIndex, keyPair, redeemScript, hashType, witnessValue)
+        txb.sign(i, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
+      }
     }
     
     // Build transaction
-    const tx = txb.build();
-    const txHex = tx.toHex();
+    let txHex: string;
+    if (isPSBT) {
+      console.log('🔧 Finalizing PSBT...');
+      txb.finalizeAllInputs();
+      const tx = txb.extractTransaction();
+      txHex = tx.toHex();
+    } else {
+      console.log('🔧 Building TransactionBuilder transaction...');
+      const tx = txb.build();
+      txHex = tx.toHex();
+    }
     
     console.log('✅ Transaction created:', txHex.substring(0, 100) + '...');
     return txHex;

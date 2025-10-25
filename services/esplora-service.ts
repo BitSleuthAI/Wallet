@@ -4,12 +4,12 @@
  */
 
 import {
-  getCachedAddressStats,
-  getCachedAddressTransactions,
-  getCachedAddressUTXOs,
-  setCachedAddressStats,
-  setCachedAddressTxIds,
-  setCachedAddressUTXOs
+    getCachedAddressStats,
+    getCachedAddressTransactions,
+    getCachedAddressUTXOs,
+    setCachedAddressStats,
+    setCachedAddressTxIds,
+    setCachedAddressUTXOs
 } from './address-cache-service';
 import { reliableFetch } from './networking-polyfill';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
@@ -362,13 +362,22 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
-  // Address UTXO cache
+  // Address UTXO cache - but skip if cached result is empty
   if (addressUtxoMatch) {
     const address = addressUtxoMatch[1];
     const cachedUtxos = await getCachedAddressUTXOs(address);
-    if (cachedUtxos) {
+    if (cachedUtxos && cachedUtxos.length > 0) {
       console.log(`📦 Address UTXOs cache hit for ${address} (${cachedUtxos.length})`);
       return cachedUtxos;
+    } else if (cachedUtxos && cachedUtxos.length === 0) {
+      console.log(`🚫 Skipping empty UTXO cache for ${address.substring(0, 10)}..., fetching fresh data`);
+      // Clear the empty cache entry
+      try {
+        const { clearEmptyUTXOCaches } = await import('./address-cache-service');
+        await clearEmptyUTXOCaches();
+      } catch (e) {
+        console.warn('Failed to clear empty UTXO caches:', e);
+      }
     }
   }
   
@@ -491,7 +500,20 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
             await setCachedAddressStats(address, data, xpubHint);
           } else if (addressUtxoMatch) {
             const address = addressUtxoMatch[1];
-            await setCachedAddressUTXOs(address, Array.isArray(data) ? data : [], xpubHint);
+            const utxos = Array.isArray(data) ? data : [];
+            
+            // If we get empty UTXOs, clear any existing empty caches to force fresh fetches
+            if (utxos.length === 0) {
+              console.log(`🔄 Empty UTXOs for ${address.substring(0, 10)}..., clearing empty caches`);
+              try {
+                const { clearEmptyUTXOCaches } = await import('./address-cache-service');
+                await clearEmptyUTXOCaches();
+              } catch (e) {
+                console.warn('Failed to clear empty UTXO caches:', e);
+              }
+            }
+            
+            await setCachedAddressUTXOs(address, utxos, xpubHint);
           } else {
             // Use general cache for other data
             setCachedData(cacheKey, data, cacheTtlMs);
@@ -674,12 +696,15 @@ export async function getTransactionOutspends(txid: string): Promise<{ data: any
 export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
   try {
     console.log(`💰 Getting UTXOs for: ${address.substring(0, 10)}...`);
+    console.log(`💰 Full address: ${address}`);
     const utxos = await esploraGet(`/address/${address}/utxo`, 300000, xpubHint);
+    console.log(`💰 Raw esplora response for ${address.substring(0, 10)}:`, utxos);
     const arr = Array.isArray(utxos) ? utxos : [];
+    console.log(`💰 Processed UTXOs for ${address.substring(0, 10)}:`, arr.length);
     return { data: arr, error: null };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
-    console.error(`❌ Failed to get address UTXOs:`, message);
+    console.error(`❌ Failed to get address UTXOs for ${address.substring(0, 10)}:`, message);
     return { data: null, error: message };
   }
 }
