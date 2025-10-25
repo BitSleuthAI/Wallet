@@ -585,17 +585,21 @@ async function createTransaction(
         throw new Error('bitcoinjs-lib.initEccLib is not a function');
       }
       
-      // Add a small delay to ensure ECC is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // No arbitrary delay; rely on synchronous/asynchronous initEccLib
       
       console.log('🔧 Calling bitcoin.initEccLib...');
-      bitcoin.initEccLib(ecc);
+      const initResult = bitcoin.initEccLib(ecc);
+      if (initResult instanceof Promise) {
+        await initResult;
+      }
       
       // Verify the initialization worked by checking if ECC is properly set
       console.log('🔧 Verifying ECC initialization...');
       
-      // Add a small delay to ensure ECC is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 200));
+      // Check that bitcoin.ECPair is available after initialization
+      if (!bitcoin.ECPair) {
+        throw new Error('ECC initialization failed: bitcoin.ECPair is not available');
+      }
       
       // Log what's available on the bitcoin object for debugging
       console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
