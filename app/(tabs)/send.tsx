@@ -132,7 +132,7 @@ export default function SendScreen() {
     const updatedSettings = { 
       ...feeSettings, 
       customFeeRate: numericValue,
-      defaultPreset: 'custom' as const // Auto-set to custom when user changes rate
+      defaultPreset: 'custom' // Auto-set to custom when user changes rate
     };
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update custom fee rate:`, error);
