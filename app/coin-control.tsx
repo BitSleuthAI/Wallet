@@ -47,7 +47,7 @@ export default function CoinControlScreen() {
     
     console.log('🔍 Coin control: Loading UTXOs for wallet in FAST MODE:', currentWallet.id);
     await coinControl.loadWalletUtxos(currentWallet.id, true); // true = fastMode
-  }, [currentWallet?.id]); // FIXED: Removed coinControl to prevent unnecessary re-renders
+  }, [currentWallet?.id, coinControl]); // Include coinControl to avoid stale closures
 
   // Get UTXOs from wallet store
   const utxos = useMemo(() => {
