@@ -195,9 +195,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const cryptoReadyRef = useRef(false);
   const [feeSettingsMap, setFeeSettingsMap] = useState<Record<string, FeeSettings>>({});
   const [feeSettings, setFeeSettingsState] = useState<FeeSettings>(() => ({ ...defaultFeeSettings }));
-  const [walletUtxos, setWalletUtxos] = useState<Record<string, UTXO[]>>({});
-  const [utxosLoading, setUtxosLoading] = useState<Record<string, boolean>>({});
-  const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
+  const [walletUtxoState, setWalletUtxoState] = useState<Record<string, { utxos: UTXO[]; loading: boolean; timestamp: number }>>({});
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
