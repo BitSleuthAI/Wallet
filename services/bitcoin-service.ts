@@ -760,7 +760,7 @@ async function createTransaction(
               // P2WPKH: OP_0 (0x00) + 20-byte hash
               // Convert the 20-byte hash to hex string
               const hashHex = Buffer.from(address.data).toString('hex');
-              scriptPubKey = '0014' + hashHex;
+              scriptPubKey = `0014${hashHex}`;
               console.log(`✅ Generated P2WPKH scriptPubKey: ${scriptPubKey}`);
               console.log(`🔧 Address data length: ${address.data.length}, hash: ${hashHex}`);
             } else {
