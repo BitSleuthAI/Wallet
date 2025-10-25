@@ -183,12 +183,8 @@ export default function CoinControlScreen() {
     const target = utxos.find(utxo => `${utxo.txid}:${utxo.vout}` === utxoId);
     const wasFrozen = target?.frozen ?? false;
     coinControl.toggleFreeze(utxoId);
-    setUtxos(prev => prev.map(utxo => {
-      if (`${utxo.txid}:${utxo.vout}` === utxoId) {
-        return { ...utxo, frozen: !utxo.frozen };
-      }
-      return utxo;
-    }));
+    // Note: No need to update local state - the coinControl store manages frozen status
+    // and the component will re-render when coinControl state changes
     if (!wasFrozen) {
       setSelectedUtxos(prev => {
         if (!prev.has(utxoId)) return prev;
@@ -217,14 +213,8 @@ export default function CoinControlScreen() {
         coinControl.toggleFreeze(utxoId);
       }
     });
-    // Reflect in local UI state
-    setUtxos(prev => prev.map(utxo => {
-      const utxoId = `${utxo.txid}:${utxo.vout}`;
-      if (selectedUtxos.has(utxoId)) {
-        return { ...utxo, frozen: true };
-      }
-      return utxo;
-    }));
+    // Note: No need to update local state - the coinControl store manages frozen status
+    // and the component will re-render when coinControl state changes
     setSelectedUtxos(prev => {
       const next = new Set(prev);
       selectedUtxos.forEach(id => next.delete(id));
@@ -239,14 +229,8 @@ export default function CoinControlScreen() {
         coinControl.toggleFreeze(utxoId);
       }
     });
-    // Reflect in local UI state
-    setUtxos(prev => prev.map(utxo => {
-      const utxoId = `${utxo.txid}:${utxo.vout}`;
-      if (selectedUtxos.has(utxoId)) {
-        return { ...utxo, frozen: false };
-      }
-      return utxo;
-    }));
+    // Note: No need to update local state - the coinControl store manages frozen status
+    // and the component will re-render when coinControl state changes
     setSelectedUtxos(prev => {
       const next = new Set(prev);
       selectedUtxos.forEach(id => next.delete(id));
@@ -276,7 +260,7 @@ export default function CoinControlScreen() {
   const getStatusText = (utxo: UTXO) => {
     if (utxo.frozen) return 'Frozen';
     if (!utxo.status.confirmed) return 'Unconfirmed';
-    return `${utxo.confirmations} conf`;
+    return `${utxo.confirmations || 0} conf`;
   };
 
   const totalSelectedValue = useMemo(() => {
