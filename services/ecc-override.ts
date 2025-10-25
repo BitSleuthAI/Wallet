@@ -576,8 +576,8 @@ export const createNobleECC = () => {
         const tweak = new Uint8Array(32);
         
         for (let i = 0; i < 32; i++) {
-          pubkey[i] = parseInt(testVector.pubkey.substr(i * 2, 2), 16);
-          tweak[i] = parseInt(testVector.tweak.substr(i * 2, 2), 16);
+          pubkey[i] = parseInt(testVector.pubkey.substring(i * 2, i * 2 + 2), 16);
+          tweak[i] = parseInt(testVector.tweak.substring(i * 2, i * 2 + 2), 16);
         }
         
         const result = eccInterface.xOnlyPointAddTweak(pubkey, tweak);
