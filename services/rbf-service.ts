@@ -365,8 +365,8 @@ export async function createReplacementTransaction(
       
       // Try to create a simple ECPair to verify ECC is working
       try {
-        const testPrivateKey = new Uint8Array(32);
-        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+        // Reuse the testPrivateKey defined earlier
+        // (already set to a valid value)
         
         // Test if we can create an ECPair (this is the real test)
         const testECPair = bitcoin.ECPair.fromPrivateKey(testPrivateKey);
