@@ -404,8 +404,22 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       });
       
       // Calculate change (amount returned to our addresses)
+      // For sent transactions, exclude the primary recipient from change calculation
+      let primaryRecipientAddress: string | null = null;
+      if (isSent) {
+        // Find the first output to an external address (not ours)
+        const externalOutputs = tx.vout.filter((out: any) => out.scriptpubkey_address && !ourAddressesSet.has(out.scriptpubkey_address));
+        if (externalOutputs.length > 0) {
+          // Optionally, pick the largest output as the primary recipient
+          primaryRecipientAddress = externalOutputs.reduce((maxOut: any, out: any) => out.value > maxOut.value ? out : maxOut, externalOutputs[0]).scriptpubkey_address;
+        }
+      }
       tx.vout.forEach((out: any) => {
-        if (out.scriptpubkey_address && ourAddressesSet.has(out.scriptpubkey_address)) {
+        if (
+          out.scriptpubkey_address &&
+          ourAddressesSet.has(out.scriptpubkey_address) &&
+          (!isSent || out.scriptpubkey_address !== primaryRecipientAddress)
+        ) {
           changeAmountSatoshis += out.value;
         }
       });
