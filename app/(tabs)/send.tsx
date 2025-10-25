@@ -26,7 +26,9 @@ import {
 } from 'react-native';
 
 export default function SendScreen() {
-  console.log('🔍 Send screen: Component mounted/rendered');
+  if (__DEV__) {
+    console.log('🔍 Send screen: Component mounted/rendered');
+  }
   const { animatedStyle } = useTabAnimation(1);
   const { refreshData } = useWallet(); // Send tab = index 1
   const { 
