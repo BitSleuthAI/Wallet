@@ -1068,13 +1068,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         
         // Clear ALL wallet-related AsyncStorage keys to ensure no stale data
         const keysToRemove = [
-          // Address cache keys (pattern-based)
-          ...(await AsyncStorage.getAllKeys()).filter(key => 
-            key.startsWith('addr_cache_') || 
-            key.startsWith('addr_wallet_') ||
-            key.startsWith('wallet_addrs_') ||
-            key.startsWith('wallet_txids_')
-          ),
+          // Address cache keys (constructed directly from xpub)
+          `addr_cache_${currentWallet.xpub}`,
+          `addr_wallet_${currentWallet.xpub}`,
+          `wallet_addrs_${currentWallet.xpub}`,
+          `wallet_txids_${currentWallet.xpub}`,
           // Transaction cache keys
           'tx_cache_confirmed',
           'tx_cache_unconfirmed',
