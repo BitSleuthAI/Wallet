@@ -265,15 +265,15 @@ export async function createCPFPTransaction(
       
       // Try to create a simple ECPair to verify ECC is working
       try {
-        const testPrivateKey = new Uint8Array(32);
-        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-        
+        const verifyPrivateKey = new Uint8Array(32);
+        verifyPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+          
         // Test if we can create an ECPair (this is the real test)
-        const testECPair = bitcoin.ECPair.fromPrivateKey(testPrivateKey);
+        const testECPair = bitcoin.ECPair.fromPrivateKey(verifyPrivateKey);
         if (!testECPair || !testECPair.publicKey) {
           throw new Error('ECPair creation failed');
         }
-        
+          
         console.log('✅ ECC initialization verified - ECPair creation successful');
       } catch (verifyError) {
         console.error('❌ ECC verification failed:', verifyError);
