@@ -1082,9 +1082,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           'tx_cache_confirmed',
           'tx_cache_unconfirmed',
           // General cache keys that might contain wallet data
-          'mock_data', 'test_data', 'sample_data', 'dummy_data',
-          'demo_balance', 'demo_transactions', 'mock_balance', 'mock_transactions',
-          'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
+          // (Removed duplicate mock/test data keys already cleared earlier)
         ];
         
         if (keysToRemove.length > 0) {
