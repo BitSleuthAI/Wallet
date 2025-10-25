@@ -280,7 +280,7 @@ export default function SendScreen() {
     };
     
     fetchUtxos();
-  }, [currentWallet?.id, balance, coinControl]); // Added coinControl back to ensure it runs
+  }, [currentWallet?.id, balance, coinControl.loadWalletUtxos, coinControl.getWalletUtxos]); // Depend only on stable method references
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
