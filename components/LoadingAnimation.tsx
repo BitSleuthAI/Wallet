@@ -34,7 +34,7 @@ export default function LoadingAnimation({
   const dotSize = sizeMap[size];
 
   useEffect(() => {
-    const animation = (scaleValue: Animated.SharedValue<number>, opacityValue: Animated.SharedValue<number>, delay: number) => {
+    const animation = (scaleValue: ReturnType<typeof useSharedValue<number>>, opacityValue: ReturnType<typeof useSharedValue<number>>, delay: number) => {
       scaleValue.value = withDelay(
         delay,
         withRepeat(

@@ -58,9 +58,9 @@ export class AnimationManager {
   }
 
   // Get spring configuration based on performance mode
-  getSpringConfig(baseConfig: { tension: number; friction: number }) {
+  getSpringConfig(baseConfig: { stiffness: number; damping: number }) {
     if (!this.shouldAnimate()) {
-      return { tension: 1000, friction: 100 }; // Instant animation
+      return { stiffness: 1000, damping: 100 }; // Instant animation
     }
     
     switch (this.performanceMode) {
@@ -68,13 +68,13 @@ export class AnimationManager {
         return baseConfig;
       case 'medium':
         return {
-          tension: baseConfig.tension * 0.8,
-          friction: baseConfig.friction * 1.2,
+          stiffness: baseConfig.stiffness * 0.8,
+          damping: baseConfig.damping * 1.2,
         };
       case 'low':
         return {
-          tension: baseConfig.tension * 0.6,
-          friction: baseConfig.friction * 1.5,
+          stiffness: baseConfig.stiffness * 0.6,
+          damping: baseConfig.damping * 1.5,
         };
       default:
         return baseConfig;

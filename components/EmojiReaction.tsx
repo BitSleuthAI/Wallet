@@ -96,7 +96,7 @@ export default function EmojiReaction({
     setIsVisible(true);
     
     // Animate in
-    scale.value = withSpring(1, { tension: 100, friction: 8 });
+    scale.value = withSpring(1, { damping: 8, stiffness: 100 });
     opacity.value = withTiming(1, { duration: 300 });
 
     // Auto-hide after duration
@@ -106,7 +106,7 @@ export default function EmojiReaction({
   };
 
   const hideReaction = () => {
-    scale.value = withSpring(0, { tension: 100, friction: 8 });
+    scale.value = withSpring(0, { damping: 8, stiffness: 100 });
     opacity.value = withTiming(0, { duration: 200 }, () => {
       setIsVisible(false);
       onComplete?.();
