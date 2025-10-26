@@ -12,17 +12,17 @@ import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    Modal,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  Modal,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 export default function SendScreen() {
@@ -100,11 +100,12 @@ export default function SendScreen() {
     
     console.log(`🔧 Mapped to fee settings preset: ${feeSettingsPreset}`);
     
-    // Update wallet store directly
+    // Update wallet store directly with properly typed preset
     const allowedPresets = ['economy', 'standard', 'priority', 'custom'] as const;
-    const validPreset = allowedPresets.includes(feeSettingsPreset as typeof allowedPresets[number])
-      ? feeSettingsPreset
-      : (console.warn(`❌ Invalid feeSettingsPreset: ${feeSettingsPreset}. Falling back to 'standard'.`), 'standard');
+    type AllowedPreset = typeof allowedPresets[number];
+    const validPreset: AllowedPreset = allowedPresets.includes(feeSettingsPreset as AllowedPreset)
+      ? (feeSettingsPreset as AllowedPreset)
+      : (console.warn(`❌ Invalid feeSettingsPreset: ${feeSettingsPreset}. Falling back to 'standard'.`), 'standard' as const);
     
     const updatedSettings = { ...feeSettings, defaultPreset: validPreset };
     console.log(`🔧 Updating wallet store with:`, updatedSettings);
@@ -130,11 +131,11 @@ export default function SendScreen() {
     
     const numericValue = parseInt(rate) || 0;
     
-    // Update wallet store directly
+    // Update wallet store directly with properly typed preset
     const updatedSettings = { 
       ...feeSettings, 
       customFeeRate: numericValue,
-      defaultPreset: 'custom' // Auto-set to custom when user changes rate
+      defaultPreset: 'custom' as const // Auto-set to custom when user changes rate
     };
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update custom fee rate:`, error);
@@ -1087,7 +1088,11 @@ export default function SendScreen() {
                 );
               })()}
               
-              <TouchableOpacity onPress={handleSendMax}>
+              <TouchableOpacity 
+                onPress={handleSendMax}
+                style={styles.sendMaxButton}
+                activeOpacity={0.7}
+              >
                 <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>Send Max</Text>
               </TouchableOpacity>
             </View>
@@ -1387,14 +1392,16 @@ export default function SendScreen() {
               style={[
                 createButtonStyle(theme, 'primary'),
                 styles.reviewButton,
-                { 
-                  opacity: (!recipientAddress || !amount || isLoading || !addressValidation.isValid) ? 0.5 : 1
-                }
+                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonDisabled
               ]}
               onPress={handleReviewTransaction}
               disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
+              activeOpacity={0.8}
             >
-              <Text style={styles.reviewButtonText}>
+              <Text style={[
+                styles.reviewButtonText,
+                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonTextDisabled
+              ]}>
                 {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
               </Text>
             </TouchableOpacity>
@@ -1506,6 +1513,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     marginBottom: 8,
   },
+  sendMaxButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    alignSelf: 'flex-end',
+    borderRadius: 8,
+  },
   sendMaxText: {
     fontSize: 14,
     fontWeight: '500',
@@ -1556,7 +1569,11 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    ...platformStyles.shadow,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   feeButtonText: {
     fontSize: 12,
@@ -1647,11 +1664,24 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: 12,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  reviewButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   reviewButtonText: {
     color: 'white',
     fontSize: 18,
     fontWeight: '600',
+  },
+  reviewButtonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.7)',
   },
   emptyState: {
     flex: 1,

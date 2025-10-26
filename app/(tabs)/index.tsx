@@ -421,12 +421,15 @@ export default function WalletScreen() {
                 selectedPeriod === period && { 
                   backgroundColor: theme.colors.primary,
                   transform: [{ scale: 1.05 }],
+                  shadowOpacity: 0.15,
+                  elevation: 3,
                 },
               ]}
-                      onPress={() => {
-                        setSelectedPeriod(period);
-                        incrementUsageCount('settings_interaction');
-                      }}
+              onPress={() => {
+                setSelectedPeriod(period);
+                incrementUsageCount('settings_interaction');
+              }}
+              activeOpacity={0.7}
             >
               <Text style={[
                 styles.periodText,
@@ -506,7 +509,7 @@ export default function WalletScreen() {
               </Text>
             </View>
           ) : (
-            transactions.slice(0, 5).map((transaction) => (
+            transactions.slice(0, 5).map((transaction: any) => (
               <TransactionItem
                 key={transaction.txid}
                 transaction={transaction}
@@ -713,7 +716,11 @@ const styles = StyleSheet.create({
     marginTop: 20,
     padding: 16,
     borderRadius: 16,
-    ...platformStyles.shadow,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   periodButton: {
     flex: 1,
@@ -723,6 +730,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginHorizontal: 4,
     backgroundColor: 'rgba(0,0,0,0.05)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0,
+    shadowRadius: 2,
+    elevation: 0,
   },
   periodText: {
     fontSize: 14,
@@ -741,7 +753,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 16,
-    ...platformStyles.buttonShadow,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
   },
   receiveButton: {
     flex: 1,
@@ -750,7 +766,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 16,
-    ...platformStyles.buttonShadow,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 4,
   },
   actionButtonText: {
     color: 'white',
