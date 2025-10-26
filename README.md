@@ -7,8 +7,9 @@
 [![Version](https://img.shields.io/badge/version-1.1.6-blue.svg)](https://github.com/bitsleuth/wallet)
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg)](https://github.com/bitsleuth/wallet)
 [![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
-[![React Native](https://img.shields.io/badge/React%20Native-0.79-61dafb.svg)](https://reactnative.dev/)
-[![Expo](https://img.shields.io/badge/Expo-53-000020.svg)](https://expo.dev/)
+[![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb.svg)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-54-000020.svg)](https://expo.dev/)
+[![New Architecture](https://img.shields.io/badge/New%20Architecture-Enabled-green.svg)](https://reactnative.dev/architecture/landing-page)
 
 *Self-custody Bitcoin wallet with enterprise-grade security and modern UX*
 
@@ -103,10 +104,10 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 ## 🛠 Tech Stack
 
 ### Core Framework
-- **React Native** 0.79.5 - Cross-platform mobile framework
-- **Expo** SDK 53 - Development and build platform
+- **React Native** 0.81.5 - Cross-platform mobile framework with New Architecture enabled
+- **Expo** SDK 54 - Development and build platform
 - **TypeScript** 5.8 - Type-safe development
-- **React** 19.0 - UI library
+- **React** 19.1 - UI library
 
 ### Bitcoin & Cryptography
 - **bitcoinjs-lib** 6.1.7 - Bitcoin transaction creation and signing
@@ -125,7 +126,7 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - **NativeWind** 4.1 - Tailwind CSS for React Native
 - **React Navigation** 7.1 - Navigation library
 - **Lucide React Native** - Modern icon set
-- **React Native Reanimated** 3.17 - Smooth animations
+- **React Native Reanimated** 4.1 - Smooth animations
 
 ### Platform Services
 - **Expo Local Authentication** - Biometric authentication (Face ID, Touch ID)
@@ -161,6 +162,8 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 ---
 
 ## 🚀 Getting Started
+
+> **New Architecture Enabled**: This project uses React Native's New Architecture (Fabric renderer and TurboModules) for improved performance. See [NEW_ARCHITECTURE_MIGRATION.md](NEW_ARCHITECTURE_MIGRATION.md) for details.
 
 ### 1. Clone and Install
 
