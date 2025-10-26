@@ -126,7 +126,7 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - **NativeWind** 4.1 - Tailwind CSS for React Native
 - **React Navigation** 7.1 - Navigation library
 - **Lucide React Native** - Modern icon set
-- **React Native Reanimated** 3.17 - Smooth animations
+- **React Native Reanimated** 4.1 - Smooth animations
 
 ### Platform Services
 - **Expo Local Authentication** - Biometric authentication (Face ID, Touch ID)

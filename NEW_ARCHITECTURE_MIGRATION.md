@@ -8,7 +8,7 @@ This document outlines the migration from Expo Legacy Architecture to Expo New A
 
 #### 1. app.json
 - Set `newArchEnabled: true` at the top level of the Expo config
-- Updated `ios.googleServicesFile` path to point to root directory
+- Updated `ios.googleServicesFile` path from `./ios/BitSleuthWallet/GoogleService-Info.plist` to `./GoogleService-Info.plist` (root directory) for compatibility with prebuild
 
 #### 2. Android (android/gradle.properties)
 - Changed `newArchEnabled=false` to `newArchEnabled=true`
