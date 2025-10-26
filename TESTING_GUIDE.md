@@ -69,7 +69,7 @@ This guide provides manual testing steps to verify that Bitcoin sending, UTXO ma
 **Sub-test 3a**: All UTXOs frozen
 1. Freeze ALL UTXOs in coin control
 2. Try to send Bitcoin
-3. Should get error: "No confirmed UTXOs available for transaction"
+3. Should get error: "All selected UTXOs are frozen. Please unfreeze some UTXOs or select different ones."
 
 **Sub-test 3b**: Some UTXOs frozen
 1. Freeze some (but not all) UTXOs
@@ -134,7 +134,7 @@ This guide provides manual testing steps to verify that Bitcoin sending, UTXO ma
 
 **Expected Result**:
 - Only confirmed UTXOs are used for sending
-- If all UTXOs are unconfirmed, error: "All selected UTXOs are either frozen or unconfirmed"
+- If all UTXOs are unconfirmed, error: "All selected UTXOs are unconfirmed. Please wait for confirmations or select confirmed UTXOs."
 
 ## Console Log Verification
 
