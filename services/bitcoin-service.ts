@@ -306,26 +306,50 @@ export const sendTransaction = async (
         txid: selectedUTXOs[0].txid.substring(0, 10) + '...',
         vout: selectedUTXOs[0].vout,
         value: selectedUTXOs[0].value,
-        address: selectedUTXOs[0].address?.substring(0, 10) + '...'
+        address: selectedUTXOs[0].address?.substring(0, 10) + '...',
+        frozen: selectedUTXOs[0].frozen
       } : 'No UTXOs');
       
       // Filter out frozen UTXOs and ensure we have confirmed UTXOs
-      utxosToUse = selectedUTXOs.filter(utxo => utxo.status.confirmed);
+      // CRITICAL: Must exclude frozen UTXOs to prevent using locked coins
+      const confirmedUtxos = selectedUTXOs.filter(utxo => utxo.status.confirmed);
+      const unfrozenUtxos = confirmedUtxos.filter(utxo => !utxo.frozen);
+      
+      console.log('🔍 Confirmed UTXOs:', confirmedUtxos.length);
+      console.log('🔍 Frozen UTXOs filtered out:', confirmedUtxos.length - unfrozenUtxos.length);
+      console.log('🔍 Unfrozen confirmed UTXOs:', unfrozenUtxos.length);
+      
+      utxosToUse = unfrozenUtxos;
       
       if (utxosToUse.length === 0) {
-        console.warn('⚠️ No confirmed UTXOs in pre-selected set, trying to fetch fresh UTXOs...');
-        // Fall through to fresh UTXO fetching
+        console.warn('⚠️ No confirmed unfrozen UTXOs in pre-selected set');
+        // Fall through to error handling below
       } else {
-        console.log('✅ Using pre-selected confirmed UTXOs:', utxosToUse.length);
+        console.log('✅ Using pre-selected confirmed unfrozen UTXOs:', utxosToUse.length);
       }
     }
     
     // If we don't have UTXOs from pre-selection, we cannot proceed
     if (!utxosToUse || utxosToUse.length === 0) {
-      console.log('⚠️ sendTransaction: No UTXOs provided, cannot proceed with transaction');
+      console.log('⚠️ sendTransaction: No UTXOs available for transaction');
       console.log('⚠️ sendTransaction: utxosToUse:', utxosToUse);
       console.log('⚠️ sendTransaction: selectedUTXOs:', selectedUTXOs);
-      throw new Error('No UTXOs available for transaction. Please ensure UTXOs are loaded in the wallet.');
+      
+      // Provide specific error messages based on the situation
+      if (selectedUTXOs && selectedUTXOs.length > 0) {
+        const allFrozen = selectedUTXOs.every(utxo => utxo.frozen);
+        const allUnconfirmed = selectedUTXOs.every(utxo => !utxo.status.confirmed);
+        
+        if (allFrozen) {
+          throw new Error('All selected UTXOs are frozen. Please unfreeze some UTXOs or select different ones.');
+        } else if (allUnconfirmed) {
+          throw new Error('All selected UTXOs are unconfirmed. Please wait for confirmations or select confirmed UTXOs.');
+        } else {
+          throw new Error('No confirmed, unfrozen UTXOs available in selection. Please check your coin control settings.');
+        }
+      } else {
+        throw new Error('No UTXOs available for transaction. Please ensure UTXOs are loaded in the wallet.');
+      }
     }
     
     console.log('✅ sendTransaction: Using', utxosToUse.length, 'UTXOs for transaction');

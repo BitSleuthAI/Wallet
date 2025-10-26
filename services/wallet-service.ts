@@ -351,7 +351,15 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
 
           if (utxosResult.data && Array.isArray(utxosResult.data)) {
             utxosResult.data.forEach((utxo: any) => {
-              utxos.push({ txid: utxo.txid, vout: utxo.vout, address, value: utxo.value });
+              // Include all UTXO fields needed for transactions
+              utxos.push({ 
+                txid: utxo.txid, 
+                vout: utxo.vout, 
+                address, 
+                value: utxo.value,
+                status: utxo.status || { confirmed: false },
+                scriptPubKey: utxo.scriptpubkey
+              });
             });
           }
 
