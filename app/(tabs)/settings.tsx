@@ -122,6 +122,7 @@ export default function SettingsScreen() {
       style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}
       onPress={onPress}
       disabled={!onPress}
+      activeOpacity={onPress ? 0.7 : 1}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
         <Icon color={iconColor} size={20} />
@@ -593,6 +594,11 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginVertical: 2,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   iconContainer: {
     width: 40,
@@ -643,8 +649,13 @@ const styles = StyleSheet.create({
     marginBottom: 40,
     paddingVertical: 16,
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 2,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
   },
   logoutText: {
     fontSize: 16,

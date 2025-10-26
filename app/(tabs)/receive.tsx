@@ -237,7 +237,6 @@ export default function ReceiveScreen() {
               styles.newAddressButton,
               { 
                 alignSelf: 'center',
-                opacity: isGeneratingAddress ? 0.7 : 1
               }
             ]}
             onPress={() => {
@@ -245,6 +244,7 @@ export default function ReceiveScreen() {
               incrementUsageCount('receive_interaction');
             }}
             disabled={isGeneratingAddress}
+            activeOpacity={0.8}
           >
             <Animated.View style={{ transform: [{ rotate: spin }] }}>
               <RefreshCw color="white" size={20} />
@@ -261,15 +261,13 @@ export default function ReceiveScreen() {
             style={[
               createButtonStyle(theme, 'secondary'),
               styles.actionButton,
-              { 
-                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-              }
             ]}
             onPress={() => {
               handleCopy();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
+            activeOpacity={0.7}
           >
             <Copy color={theme.colors.text} size={20} />
             <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
@@ -281,15 +279,13 @@ export default function ReceiveScreen() {
             style={[
               createButtonStyle(theme, 'secondary'),
               styles.actionButton,
-              { 
-                opacity: currentAddress && currentAddress.length > 0 ? 1 : 0.5
-              }
             ]}
             onPress={() => {
               handleShare();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
+            activeOpacity={0.7}
           >
             <ShareIcon color={theme.colors.text} size={20} />
             <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
@@ -325,11 +321,21 @@ const styles = StyleSheet.create({
     padding: 20,
     marginBottom: 30,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   qrCodeWrapper: {
     backgroundColor: 'white',
     padding: 20,
     borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   addressSection: {
     alignItems: 'center',
@@ -354,6 +360,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 12,
     marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 3,
   },
   newAddressText: {
     color: 'white',
@@ -375,6 +386,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 16,
     borderRadius: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
   },
   actionButtonText: {
     fontSize: 16,
