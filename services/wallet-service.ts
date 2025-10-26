@@ -169,26 +169,41 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
       while (gap < GAP_LIMIT) {
         const batch = await deriveAddressBatch(node, chain, index, index + GAP_LIMIT);
         console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
-        console.log(`🔍 Batch addresses:`, batch.map(addr => addr.substring(0, 10) + '...'));
         
-        // Query the batch with controlled concurrency to avoid rate limiting
-        // Process addresses sequentially with small delays to avoid 429 errors
-        const addressTxs: any[] = [];
-        for (let i = 0; i < batch.length; i++) {
-          const addr = batch[i];
-          try {
-            console.log(`🔍 Checking address ${index + i}: ${addr}`);
-            const result = await esploraGet(`/address/${addr}/txs`, 900000);
-            console.log(`📊 Address ${index + i}: ${Array.isArray(result) ? result.length : 0} transactions`);
-            addressTxs.push(result);
-            
-            // Add small delay between requests to avoid rate limiting (especially on iOS)
-            if (i < batch.length - 1) {
-              await new Promise(resolve => setTimeout(resolve, 250));
-            }
-          } catch (error) {
-            console.warn(`⚠️ Failed to check address ${index + i}:`, error);
-            addressTxs.push([]);
+        // OPTIMIZED: Use concurrent requests with sub-batching to reduce total time
+        // Process 5 addresses concurrently instead of sequentially
+        const CONCURRENT_BATCH_SIZE = 5;
+        const addressTxs: any[] = new Array(batch.length);
+        
+        for (let i = 0; i < batch.length; i += CONCURRENT_BATCH_SIZE) {
+          const concurrentBatch = batch.slice(i, i + CONCURRENT_BATCH_SIZE);
+          const batchIndices = Array.from({ length: concurrentBatch.length }, (_, idx) => i + idx);
+          
+          // Fetch transactions for all addresses in this concurrent batch in parallel
+          const batchResults = await Promise.all(
+            concurrentBatch.map(async (addr, idx) => {
+              try {
+                const result = await esploraGet(`/address/${addr}/txs`, 900000, xpub);
+                const txCount = Array.isArray(result) ? result.length : 0;
+                if (txCount > 0) {
+                  console.log(`✅ Address ${index + batchIndices[idx]}: ${txCount} transactions`);
+                }
+                return result;
+              } catch (error) {
+                console.warn(`⚠️ Failed to check address ${index + batchIndices[idx]}:`, error);
+                return [];
+              }
+            })
+          );
+          
+          // Store results in correct positions
+          batchResults.forEach((result, idx) => {
+            addressTxs[batchIndices[idx]] = result;
+          });
+          
+          // Add small delay between concurrent batches to avoid rate limiting
+          if (i + CONCURRENT_BATCH_SIZE < batch.length) {
+            await new Promise(resolve => setTimeout(resolve, 500));
           }
         }
         
@@ -197,13 +212,6 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
           const addressTxsResult = addressTxs[i];
           const isUsed = addressTxsResult && Array.isArray(addressTxsResult) && addressTxsResult.length > 0;
           const addressIndex = index + i;
-          
-          console.log(`🔍 Address ${addressIndex} (${batch[i].substring(0, 10)}...):`, {
-            hasResult: !!addressTxsResult,
-            isArray: Array.isArray(addressTxsResult),
-            txCount: Array.isArray(addressTxsResult) ? addressTxsResult.length : 'N/A',
-            isUsed: isUsed
-          });
           
           if (returnMetadata) {
             allAddressMetadata.push({
@@ -217,10 +225,9 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
           if (isUsed) {
             allUsedAddresses.push(batch[i]);
             gap = 0; // Reset gap when we find a used address
-            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i]} (${addressTxsResult.length} transactions)`);
+            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i].substring(0, 10)}... (${addressTxsResult.length} txs)`);
           } else {
             gap++; // Increment gap for unused address
-            console.log(`🔍 Address ${addressIndex} unused, gap: ${gap}`);
           }
         }
         
@@ -232,9 +239,8 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
 
         index += GAP_LIMIT;
 
-        // Slow down between batches to avoid hitting provider rate limits during
-        // large wallet discovery sweeps.
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Delay between main batches to avoid hitting provider rate limits
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
     }
     
@@ -248,24 +254,11 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
     if (returnMetadata) {
       const usedCount = allAddressMetadata.filter(a => a.isUsed).length;
       console.log(`✅ Address discovery complete: ${usedCount} used addresses found out of ${allAddressMetadata.length} total`);
-      console.log(`📋 All metadata:`, allAddressMetadata.map(a => ({
-        address: a.address.substring(0, 10) + '...',
-        index: a.index,
-        chain: a.chain,
-        isUsed: a.isUsed
-      })));
       return allAddressMetadata;
     }
     
     const uniqueAddresses = Array.from(new Set(allUsedAddresses));
     console.log(`✅ Address discovery complete: ${uniqueAddresses.length} used addresses found`);
-    console.log(`📋 Used addresses:`, uniqueAddresses.map(addr => addr.substring(0, 10) + '...'));
-    console.log(`📋 All discovered addresses:`, allAddressMetadata.map(a => ({
-      address: a.address.substring(0, 10) + '...',
-      index: a.index,
-      chain: a.chain,
-      isUsed: a.isUsed
-    })));
     
     return uniqueAddresses;
   } catch (error) {
