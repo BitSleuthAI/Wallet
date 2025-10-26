@@ -858,47 +858,82 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       
       const all: UTXO[] = [];
       
-      // Use the same logic as coin control - try to discover used addresses first
-      // TEMPORARY FIX: Skip address discovery and use wallet's stored addresses directly
-      // This bypasses the address discovery issue where it finds 0 used addresses despite having a balance
-      let addressEntries: Array<{ address: string; index: number }> = [];
+      // OPTIMIZED: Use address metadata to only check addresses with transaction history
+      // This dramatically reduces API calls and prevents rate limiting
+      let addressEntries: Array<{ address: string; index: number; isUsed?: boolean }> = [];
       
-      console.log('🔍 Wallet store: Skipping address discovery, using wallet stored addresses directly');
+      console.log('🔍 Wallet store: Using intelligent address discovery to minimize API calls');
       console.log('🔍 Wallet store: Wallet has', wallet.addresses?.length || 0, 'stored addresses');
       console.log('🔍 Wallet store: Wallet balance:', wallet.balance, 'BTC');
       
-      // Use wallet's stored addresses directly since address discovery is failing
-      addressEntries = (wallet.addresses || []).map((a, i) => ({ address: a, index: i }));
-      console.log('🔍 Wallet store: Using', addressEntries.length, 'wallet stored addresses');
+      try {
+        // Try to get address metadata from cache to identify used addresses
+        const { discoverUsedAddresses } = await import('@/services/wallet-service');
+        const metadata = await discoverUsedAddresses(wallet.xpub, true);
+        
+        console.log('🔍 Wallet store: Address metadata retrieved:', metadata.length, 'addresses');
+        console.log('🔍 Wallet store: Metadata sample:', metadata.slice(0, 5).map(m => ({
+          address: m.address.substring(0, 10) + '...',
+          index: m.index,
+          chain: m.chain,
+          isUsed: m.isUsed
+        })));
+        
+        // Filter to only used addresses (addresses with transaction history)
+        const usedMetadata = metadata.filter(m => m.isUsed);
+        console.log(`✅ Found ${usedMetadata.length} used addresses out of ${metadata.length} total`);
+        
+        // Map to address entries with usage info
+        addressEntries = usedMetadata.map(m => ({
+          address: m.address,
+          index: m.index,
+          isUsed: m.isUsed
+        }));
+        
+        // If no used addresses found, fall back to wallet's stored addresses
+        // (this can happen for brand new wallets or if discovery fails)
+        if (addressEntries.length === 0) {
+          console.log('⚠️ No used addresses found via metadata, falling back to wallet stored addresses');
+          addressEntries = (wallet.addresses || []).map((a, i) => ({ 
+            address: a, 
+            index: i,
+            isUsed: undefined 
+          }));
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to get address metadata, falling back to wallet stored addresses:', error);
+        // Fall back to all wallet addresses if discovery fails
+        addressEntries = (wallet.addresses || []).map((a, i) => ({ 
+          address: a, 
+          index: i,
+          isUsed: undefined 
+        }));
+      }
       
-      console.log('🔍 Wallet store: Address entries to check:', addressEntries.map(a => ({
+      console.log('🔍 Wallet store: Will check', addressEntries.length, 'addresses for UTXOs');
+      console.log('🔍 Wallet store: Address entries to check:', addressEntries.slice(0, 10).map(a => ({
         address: a.address.substring(0, 10) + '...',
-        index: a.index
+        index: a.index,
+        isUsed: a.isUsed
       })));
       
       // Progressive loading strategy: Fast first, then complete in background
       if (fastMode) {
-        console.log('🚀 Fast mode: Loading UTXOs from first 3 addresses only');
+        console.log('🚀 Fast mode: Loading UTXOs from first 3 used addresses only');
         // In fast mode, only check the first 3 addresses (most likely to have UTXOs)
         const fastAddresses = addressEntries.slice(0, 3);
         
         for (const { address: addr, index } of fastAddresses) {
           try {
-            const result = await esploraGetAddressUTXOs(addr);
+            const result = await esploraGetAddressUTXOs(addr, wallet.xpub);
             
             if (result.error) {
-              console.warn('Failed to load UTXOs for address', addr, result.error);
+              console.warn('Failed to load UTXOs for address', addr.substring(0, 10) + '...:', result.error);
               continue;
             }
             
             const list = result.data || [];
             console.log(`🚀 Fast mode: Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
-            console.log(`🚀 Fast mode: Raw UTXOs for ${addr.substring(0, 10)}:`, list.map(u => ({
-              txid: u.txid?.substring(0, 10) + '...',
-              vout: u.vout,
-              value: u.value,
-              status: u.status
-            })));
             
             for (const u of list) {
               const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
@@ -907,7 +942,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
                 continue;
               }
               
-              console.log(`🚀 Fast mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
               // Ensure UTXO has all required fields including scriptPubKey
               all.push({ 
                 ...u, 
@@ -917,7 +951,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
               });
             }
           } catch (e) {
-            console.warn('Failed to load UTXOs for address', addr, e);
+            console.warn('Failed to load UTXOs for address', addr.substring(0, 10) + '...:', e);
           }
         }
         
@@ -959,44 +993,65 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         
         return utxosWithFrozenStatus;
       } else {
-        console.log('🔄 Complete mode: Loading UTXOs from all addresses');
-        // Complete mode: load from all addresses
-        for (const { address: addr, index } of addressEntries) {
-          try {
-            const result = await esploraGetAddressUTXOs(addr);
-            
-            if (result.error) {
-              console.warn('Failed to load UTXOs for address', addr, result.error);
-              continue;
-            }
-            
-            const list = result.data || [];
-            console.log(`🔄 Complete mode: Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
-            console.log(`🔄 Complete mode: Raw UTXOs for ${addr.substring(0, 10)}:`, list.map(u => ({
-              txid: u.txid?.substring(0, 10) + '...',
-              vout: u.vout,
-              value: u.value,
-              status: u.status
-            })));
-            
-            for (const u of list) {
-              const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
-              if (actualAddressIndex === -1) {
-                console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses, skipping UTXO`);
-                continue;
+        console.log('🔄 Complete mode: Loading UTXOs from all addresses with intelligent batching');
+        
+        // Use batched concurrent fetching to speed up loading while respecting rate limits
+        const BATCH_SIZE = 5; // Process 5 addresses concurrently
+        const DELAY_BETWEEN_BATCHES = 1000; // 1 second delay between batches to avoid rate limits
+        
+        for (let i = 0; i < addressEntries.length; i += BATCH_SIZE) {
+          const batch = addressEntries.slice(i, i + BATCH_SIZE);
+          console.log(`🔄 Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(addressEntries.length / BATCH_SIZE)} (${batch.length} addresses)`);
+          
+          // Fetch UTXOs for all addresses in this batch concurrently
+          const batchPromises = batch.map(async ({ address: addr, index }) => {
+            try {
+              const result = await esploraGetAddressUTXOs(addr, wallet.xpub);
+              
+              if (result.error) {
+                console.warn('Failed to load UTXOs for address', addr.substring(0, 10) + '...:', result.error);
+                return [];
               }
               
-              console.log(`🔄 Complete mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
-              // Ensure UTXO has all required fields including scriptPubKey
-              all.push({ 
-                ...u, 
-                address: addr, 
-                addressIndex: actualAddressIndex,
-                scriptPubKey: u.scriptpubkey || u.scriptPubKey // Handle both naming conventions
-              });
+              const list = result.data || [];
+              console.log(`🔄 Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
+              
+              // Map UTXOs with correct address index
+              return list.map((u: any) => {
+                const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
+                if (actualAddressIndex === -1) {
+                  console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses`);
+                  return null;
+                }
+                
+                // Ensure UTXO has all required fields including scriptPubKey
+                return { 
+                  ...u, 
+                  address: addr, 
+                  addressIndex: actualAddressIndex,
+                  scriptPubKey: u.scriptpubkey || u.scriptPubKey
+                };
+              }).filter((u: any) => u !== null);
+            } catch (e) {
+              console.warn('Failed to load UTXOs for address', addr.substring(0, 10) + '...:', e);
+              return [];
             }
-          } catch (e) {
-            console.warn('Failed to load UTXOs for address', addr, e);
+          });
+          
+          // Wait for all addresses in this batch to complete
+          const batchResults = await Promise.all(batchPromises);
+          
+          // Flatten and add to all UTXOs
+          for (const utxos of batchResults) {
+            all.push(...utxos);
+          }
+          
+          console.log(`✅ Batch complete: ${all.length} total UTXOs collected so far`);
+          
+          // Add delay between batches to avoid rate limiting (except for last batch)
+          if (i + BATCH_SIZE < addressEntries.length) {
+            console.log(`⏱️ Waiting ${DELAY_BETWEEN_BATCHES}ms before next batch to avoid rate limits...`);
+            await new Promise(resolve => setTimeout(resolve, DELAY_BETWEEN_BATCHES));
           }
         }
       }
