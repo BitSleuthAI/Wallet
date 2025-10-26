@@ -20,6 +20,9 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
+# Enable modular headers for all pods to support Swift pods like Firebase
+use_modular_headers!
+
 target 'BitSleuthWallet' do
   use_expo_modules!
 
