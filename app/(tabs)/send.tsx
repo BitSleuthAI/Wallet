@@ -588,8 +588,20 @@ export default function SendScreen() {
       // If no UTXOs are selected via coin control, automatically select the most efficient UTXOs
       let utxosToUse: UTXO[];
       if (selected.length > 0) {
-        utxosToUse = selected;
-        console.log('🔍 Send screen: Using manually selected UTXOs:', utxosToUse.length);
+        // Filter out frozen UTXOs from manually selected UTXOs
+        // This prevents accidentally using frozen coins
+        const unfrozenSelected = selected.filter(utxo => !utxo.frozen && utxo.status?.confirmed);
+        
+        if (unfrozenSelected.length === 0) {
+          console.warn('⚠️ All manually selected UTXOs are frozen or unconfirmed');
+          throw new Error('All selected UTXOs are either frozen or unconfirmed. Please select different UTXOs or wait for confirmations.');
+        }
+        
+        utxosToUse = unfrozenSelected;
+        console.log('🔍 Send screen: Using manually selected unfrozen UTXOs:', utxosToUse.length);
+        if (unfrozenSelected.length < selected.length) {
+          console.log('🔍 Send screen: Filtered out', selected.length - unfrozenSelected.length, 'frozen/unconfirmed UTXOs');
+        }
       } else {
         // Automatic UTXO selection: choose confirmed UTXOs (not frozen) - BlueWallet approach
         const unfrozenUtxos = availableUtxos.filter(utxo => !utxo.frozen && utxo.status?.confirmed);
