@@ -76,6 +76,7 @@
     "process": "^0.11.10",
     "querystring-es3": "^0.2.1",
     "react": "19.1.0",
+    "react-dom": "^19.1.0",
     "react-native": "0.81.5",
     "react-native-biometrics": "^3.0.1",
     "react-native-bip32-utils": "^0.9.3",
@@ -105,6 +106,7 @@
     "eas-cli-local-build-plugin": "^1.0.240",
     "eslint": "^9.35.0",
     "eslint-config-expo": "~10.0.0",
+    "expo-mcp": "^0.1.13",
     "patch-package": "^8.0.1",
     "typescript": "~5.8.3"
   },
