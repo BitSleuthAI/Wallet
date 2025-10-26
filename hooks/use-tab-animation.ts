@@ -3,7 +3,6 @@ import { useRef } from 'react';
 import { Animated } from 'react-native';
 
 export const useTabAnimation = (tabIndex: number) => {
-  const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
   const isInitialMount = useRef(true);
 
@@ -13,7 +12,6 @@ export const useTabAnimation = (tabIndex: number) => {
       // Skip animation on initial mount for instant first load
       if (isInitialMount.current) {
         isInitialMount.current = false;
-        slideAnim.setValue(0);
         opacityAnim.setValue(1);
         return;
       }
