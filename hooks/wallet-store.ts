@@ -908,7 +908,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
               }
               
               console.log(`🚀 Fast mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
-              all.push({ ...u, address: addr, addressIndex: actualAddressIndex });
+              // Ensure UTXO has all required fields including scriptPubKey
+              all.push({ 
+                ...u, 
+                address: addr, 
+                addressIndex: actualAddressIndex,
+                scriptPubKey: u.scriptpubkey || u.scriptPubKey // Handle both naming conventions
+              });
             }
           } catch (e) {
             console.warn('Failed to load UTXOs for address', addr, e);
@@ -981,7 +987,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
               }
               
               console.log(`🔄 Complete mode UTXO from ${addr.substring(0, 10)}... assigned addressIndex: ${actualAddressIndex}`);
-              all.push({ ...u, address: addr, addressIndex: actualAddressIndex });
+              // Ensure UTXO has all required fields including scriptPubKey
+              all.push({ 
+                ...u, 
+                address: addr, 
+                addressIndex: actualAddressIndex,
+                scriptPubKey: u.scriptpubkey || u.scriptPubKey // Handle both naming conventions
+              });
             }
           } catch (e) {
             console.warn('Failed to load UTXOs for address', addr, e);
