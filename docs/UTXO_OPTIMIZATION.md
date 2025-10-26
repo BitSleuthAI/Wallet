@@ -188,14 +188,31 @@ The optimization maintains full compatibility with PSBT (Partially Signed Bitcoi
 
 ## References
 
-- [BlueWallet](https://github.com/BlueWallet/BlueWallet) - Inspiration for optimization strategies
+- [BlueWallet](https://github.com/BlueWallet/BlueWallet) - Reference implementation for Bitcoin wallet best practices
 - [Esplora API](https://github.com/blockstream/esplora/blob/master/API.md) - API documentation
-- [BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) - Gap limit specification
+- [BIP44](https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki) - Gap limit specification (20 addresses)
 
 ## Future Improvements
 
-1. **Adaptive Batching**: Adjust batch size based on network conditions
-2. **Exponential Backoff**: More sophisticated retry logic for rate limits
-3. **Progressive Enhancement**: Load most recent addresses first
+### High Priority (P0)
+1. **Adaptive Batching**: Adjust batch size based on network conditions and provider response times
+   - Implementation effort: 2-3 days
+   - Benefit: Further reduce rate limiting risk
+
+### Medium Priority (P1)
+2. **Exponential Backoff**: More sophisticated retry logic for rate limits with provider rotation
+   - Implementation effort: 1-2 days
+   - Benefit: Better resilience to temporary rate limits
+
+3. **Progressive Enhancement**: Load most recent addresses first (higher indices)
+   - Implementation effort: 1 day
+   - Benefit: Faster perceived loading for active wallets
+
+### Low Priority (P2)
 4. **WebSocket Support**: Real-time UTXO updates without polling
+   - Implementation effort: 5-7 days
+   - Benefit: Better UX, reduced API calls
+
 5. **Multi-Provider Load Balancing**: Distribute requests across multiple Esplora instances
+   - Implementation effort: 3-4 days
+   - Benefit: Higher throughput, better redundancy
