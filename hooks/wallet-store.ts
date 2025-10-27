@@ -317,6 +317,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const stored = await AsyncStorage.getItem('currentWalletId');
       return stored || null;
     },
+    staleTime: Infinity,
+    gcTime: Infinity,
   });
 
   const feeSettingsByWalletQuery = useQuery({
@@ -378,13 +380,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [currentWalletQuery.data]);
 
   useEffect(() => {
-    if (coinControlSelectedQuery.data) {
+    if (coinControlSelectedQuery.data !== undefined) {
       setCoinControlSelectedState(coinControlSelectedQuery.data);
     }
   }, [coinControlSelectedQuery.data]);
 
   useEffect(() => {
-    if (coinControlFrozenQuery.data) {
+    if (coinControlFrozenQuery.data !== undefined) {
       setCoinControlFrozenState(coinControlFrozenQuery.data);
     }
   }, [coinControlFrozenQuery.data]);
