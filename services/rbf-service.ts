@@ -925,7 +925,7 @@ async function createCancellationTransaction(
         console.log('✅ ECC library verification successful - ready for RBF transaction');
       } catch (verifyError) {
         console.error('❌ ECC verification failed:', verifyError);
-        throw new Error('bitcoinjs-lib ECC initialization verification failed');
+        throw new Error(`ECC library not working properly: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
       }
       
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
