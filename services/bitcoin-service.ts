@@ -679,175 +679,99 @@ async function createTransaction(
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
     
-    // Create transaction builder
-    console.log('🔧 Creating PSBT (bitcoinjs-lib 7.0.0+ approach)...');
-    console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
-    console.log('🔧 bitcoin.networks:', typeof bitcoin.networks, bitcoin.networks);
+    // Create PSBT (bitcoinjs-lib 7.0.0+ approach)
+    console.log('🔧 Creating PSBT...');
     
-    let txb;
-    try {
-      // Check if TransactionBuilder is available
-      if (!bitcoin.TransactionBuilder) {
-        console.error('❌ bitcoin.TransactionBuilder is not available');
-        console.error('❌ Available bitcoin methods:', Object.keys(bitcoin));
-        throw new Error('TransactionBuilder not available in bitcoinjs-lib');
-      }
-      
-      // Check if networks is available
-      if (!bitcoin.networks) {
-        console.error('❌ bitcoin.networks is not available');
-        throw new Error('bitcoin.networks not available');
-      }
-      
-      if (!bitcoin.networks.bitcoin) {
-        console.error('❌ bitcoin.networks.bitcoin is not available');
-        console.error('❌ Available networks:', Object.keys(bitcoin.networks));
-        throw new Error('bitcoin.networks.bitcoin not available');
-      }
-      
-      console.log('🔧 Creating TransactionBuilder with bitcoin network...');
-      txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
-      console.log('✅ TransactionBuilder created successfully');
-    } catch (txbError) {
-      console.error('❌ Failed to create TransactionBuilder:', txbError);
-      console.error('❌ Error type:', typeof txbError);
-      console.error('❌ Error message:', txbError instanceof Error ? txbError.message : 'Unknown error');
-      console.error('❌ Error stack:', txbError instanceof Error ? txbError.stack : 'No stack');
-      
-      // Try alternative approach - use PSBT instead of TransactionBuilder
-      console.log('🔧 TransactionBuilder failed, trying PSBT approach...');
-      try {
-        // In bitcoinjs-lib 7.0.0, we need to use PSBT instead of TransactionBuilder
-        if (bitcoin.Psbt) {
-          console.log('🔧 Using PSBT instead of TransactionBuilder...');
-          // Create PSBT instance
-          txb = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
-          console.log('✅ PSBT created successfully');
-        } else {
-          throw new Error('Neither TransactionBuilder nor PSBT available');
-        }
-      } catch (psbtError) {
-        console.error('❌ PSBT approach also failed:', psbtError);
-        throw new Error(`Failed to create TransactionBuilder: ${txbError instanceof Error ? txbError.message : 'Unknown error'}`);
-      }
+    // Validate bitcoin.networks is available
+    if (!bitcoin.networks || !bitcoin.networks.bitcoin) {
+      throw new Error('bitcoin.networks not available');
     }
+    
+    // Create PSBT instance (bitcoinjs-lib 7.0.0+ only supports PSBT)
+    const txb = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+    console.log('✅ PSBT created successfully');
     
     // Calculate total input value and change
     const totalInputValue = utxos.reduce((sum, utxo) => sum + utxo.value, 0);
     const changeAmount = totalInputValue - amountSatoshis - feeAmount;
     
-    // Check if we're using PSBT or TransactionBuilder
-    const isPSBT = txb instanceof bitcoin.Psbt;
-    console.log('🔧 Using transaction type:', isPSBT ? 'PSBT' : 'TransactionBuilder');
+    // Add inputs to PSBT
+    console.log('🔧 Adding inputs to PSBT...');
     
-    if (isPSBT) {
-      // PSBT approach for bitcoinjs-lib 7.0.0
-      console.log('🔧 Adding inputs to PSBT...');
-      
-      // Add inputs to PSBT
-      for (const utxo of utxos) {
-        console.log(`🔧 Processing UTXO: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
-        console.log(`🔧 UTXO data:`, {
-          txid: utxo.txid,
-          vout: utxo.vout,
-          value: utxo.value,
-          scriptPubKey: utxo.scriptPubKey,
-          address: utxo.address,
-          addressIndex: utxo.addressIndex
-        });
-        
-        // Check if scriptPubKey is available, generate it if missing
-        let scriptPubKey = utxo.scriptPubKey;
-        if (!scriptPubKey) {
-          console.log(`🔧 UTXO missing scriptPubKey, generating from address: ${utxo.address}`);
-          
-          if (!utxo.address) {
-            console.error('❌ UTXO missing both scriptPubKey and address:', utxo);
-            throw new Error(`UTXO ${utxo.txid}:${utxo.vout} missing both scriptPubKey and address`);
-          }
-          
-          // Generate scriptPubKey for P2WPKH (Bech32) address
-          try {
-            // For P2WPKH addresses (starting with bc1), the scriptPubKey is OP_0 + 20-byte hash
-            const address = bitcoin.address.fromBech32(utxo.address);
-            if (address.version === 0 && address.data.length === 20) {
-              // P2WPKH: OP_0 (0x00) + 20-byte hash
-              // Convert the 20-byte hash to hex string
-              const hashHex = Buffer.from(address.data).toString('hex');
-              scriptPubKey = `0014${hashHex}`;
-              console.log(`✅ Generated P2WPKH scriptPubKey: ${scriptPubKey}`);
-              console.log(`🔧 Address data length: ${address.data.length}, hash: ${hashHex}`);
-            } else {
-              throw new Error(`Unsupported address type for ${utxo.address} - version: ${address.version}, data length: ${address.data.length}`);
-            }
-          } catch (addressError) {
-            console.error('❌ Failed to generate scriptPubKey from address:', addressError);
-            throw new Error(`Failed to generate scriptPubKey for address ${utxo.address}: ${addressError instanceof Error ? addressError.message : 'Unknown error'}`);
-          }
-        }
-        
-        const inputData = {
-          hash: utxo.txid,
-          index: utxo.vout,
-          sequence: enableRBF ? 0xFFFFFFFD : undefined,
-          witnessUtxo: {
-            script: new Uint8Array(Buffer.from(scriptPubKey, 'hex')),
-            value: BigInt(utxo.value),
-          },
-        };
-        
-        txb.addInput(inputData);
-        console.log(`✅ Added PSBT input: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
-      }
-      
-      // Add outputs to PSBT
-      console.log('🔧 Adding outputs to PSBT...');
-      txb.addOutput({
-        address: toAddress,
-        value: BigInt(amountSatoshis),
+    for (const utxo of utxos) {
+      console.log(`🔧 Processing UTXO: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
+      console.log(`🔧 UTXO data:`, {
+        txid: utxo.txid,
+        vout: utxo.vout,
+        value: utxo.value,
+        scriptPubKey: utxo.scriptPubKey,
+        address: utxo.address,
+        addressIndex: utxo.addressIndex
       });
-      console.log(`✅ Added PSBT output: ${toAddress.substring(0, 8)}... (${amountSatoshis} sats)`);
       
-      // Add change output if needed
-      if (changeAmount > 546) {
-        console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
-        const changeAddress = await generateChangeAddress(mnemonic, 0);
-        txb.addOutput({
-          address: changeAddress,
-          value: BigInt(changeAmount),
-        });
-        console.log('✅ Added PSBT change output:', changeAddress.substring(0, 8), '...', changeAmount, 'satoshis');
-      } else if (changeAmount > 0) {
-        console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
-      }
-      
-    } else {
-      // TransactionBuilder approach (legacy)
-      console.log('🔧 Adding inputs to TransactionBuilder...');
-      
-      // Add inputs with RBF support
-      for (const utxo of utxos) {
-        if (enableRBF) {
-          // Enable RBF by setting sequence number to 0xFFFFFFFD (allows replacement)
-          txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
-        } else {
-          // Standard sequence number (no RBF)
-          txb.addInput(utxo.txid, utxo.vout);
+      // Check if scriptPubKey is available, generate it if missing
+      let scriptPubKey = utxo.scriptPubKey;
+      if (!scriptPubKey) {
+        console.log(`🔧 UTXO missing scriptPubKey, generating from address: ${utxo.address}`);
+        
+        if (!utxo.address) {
+          console.error('❌ UTXO missing both scriptPubKey and address:', utxo);
+          throw new Error(`UTXO ${utxo.txid}:${utxo.vout} missing both scriptPubKey and address`);
+        }
+        
+        // Generate scriptPubKey for P2WPKH (Bech32) address
+        try {
+          // For P2WPKH addresses (starting with bc1), the scriptPubKey is OP_0 + 20-byte hash
+          const address = bitcoin.address.fromBech32(utxo.address);
+          if (address.version === 0 && address.data.length === 20) {
+            // P2WPKH: OP_0 (0x00) + 20-byte hash
+            // Convert the 20-byte hash to hex string
+            const hashHex = Buffer.from(address.data).toString('hex');
+            scriptPubKey = `0014${hashHex}`;
+            console.log(`✅ Generated P2WPKH scriptPubKey: ${scriptPubKey}`);
+            console.log(`🔧 Address data length: ${address.data.length}, hash: ${hashHex}`);
+          } else {
+            throw new Error(`Unsupported address type for ${utxo.address} - version: ${address.version}, data length: ${address.data.length}`);
+          }
+        } catch (addressError) {
+          console.error('❌ Failed to generate scriptPubKey from address:', addressError);
+          throw new Error(`Failed to generate scriptPubKey for address ${utxo.address}: ${addressError instanceof Error ? addressError.message : 'Unknown error'}`);
         }
       }
       
-      // Add output to recipient
-      txb.addOutput(toAddress, amountSatoshis);
+      const inputData = {
+        hash: utxo.txid,
+        index: utxo.vout,
+        sequence: enableRBF ? 0xFFFFFFFD : undefined,
+        witnessUtxo: {
+          script: new Uint8Array(Buffer.from(scriptPubKey, 'hex')),
+          value: BigInt(utxo.value),
+        },
+      };
       
-      // Add change output if needed (dust threshold is 546 satoshis)
-      if (changeAmount > 546) {
-        console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
-        const changeAddress = await generateChangeAddress(mnemonic, 0); // Use first change address
-        txb.addOutput(changeAddress, changeAmount);
-        console.log('✅ Added change output:', changeAddress, changeAmount, 'satoshis');
-      } else if (changeAmount > 0) {
-        console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
-      }
+      txb.addInput(inputData);
+      console.log(`✅ Added PSBT input: ${utxo.txid.substring(0, 8)}...:${utxo.vout}`);
+    }
+    
+    // Add outputs to PSBT
+    console.log('🔧 Adding outputs to PSBT...');
+    txb.addOutput({
+      address: toAddress,
+      value: BigInt(amountSatoshis),
+    });
+    console.log(`✅ Added PSBT output: ${toAddress.substring(0, 8)}... (${amountSatoshis} sats)`);
+    
+    // Add change output if needed
+    if (changeAmount > 546) {
+      console.log('🔧 Generating change address for amount:', changeAmount, 'satoshis');
+      const changeAddress = await generateChangeAddress(mnemonic, 0);
+      txb.addOutput({
+        address: changeAddress,
+        value: BigInt(changeAmount),
+      });
+      console.log('✅ Added PSBT change output:', changeAddress.substring(0, 8), '...', changeAmount, 'satoshis');
+    } else if (changeAmount > 0) {
+      console.log('⚠️ Change amount below dust threshold, adding to fee:', changeAmount, 'satoshis');
     }
     
     // Sign inputs
@@ -892,30 +816,16 @@ async function createTransaction(
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
       }
       
-      if (isPSBT) {
-        // PSBT signing approach
-        console.log(`🔐 Signing PSBT input ${i} with P2WPKH...`);
-        txb.signInput(i, child);
-      } else {
-        // TransactionBuilder signing approach (legacy)
-        console.log(`🔐 Signing TransactionBuilder input ${i} with P2WPKH...`);
-        // Parameters: (inputIndex, keyPair, redeemScript, hashType, witnessValue)
-        txb.sign(i, child, null, bitcoin.Transaction.SIGHASH_ALL, utxo.value);
-      }
+      // PSBT signing approach
+      console.log(`🔐 Signing PSBT input ${i} with P2WPKH...`);
+      txb.signInput(i, child);
     }
     
-    // Build transaction
-    let txHex: string;
-    if (isPSBT) {
-      console.log('🔧 Finalizing PSBT...');
-      txb.finalizeAllInputs();
-      const tx = txb.extractTransaction();
-      txHex = tx.toHex();
-    } else {
-      console.log('🔧 Building TransactionBuilder transaction...');
-      const tx = txb.build();
-      txHex = tx.toHex();
-    }
+    // Finalize and extract transaction
+    console.log('🔧 Finalizing PSBT...');
+    txb.finalizeAllInputs();
+    const tx = txb.extractTransaction();
+    const txHex = tx.toHex();
     
     console.log('✅ Transaction created:', txHex.substring(0, 100) + '...');
     return txHex;
