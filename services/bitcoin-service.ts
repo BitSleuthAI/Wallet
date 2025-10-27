@@ -897,19 +897,21 @@ async function createTransaction(
     for (let i = 0; i < utxos.length; i++) {
       const utxo = utxos[i];
       
-      // Determine the address index for this UTXO
-      // Use the addressIndex from the UTXO if available, otherwise fall back to the provided addressIndex
+      // Determine the address index and chain for this UTXO
+      // Use the addressIndex and chain from the UTXO if available, otherwise fall back to defaults
       const utxoAddressIndex = utxo.addressIndex !== undefined ? utxo.addressIndex : addressIndex;
+      const utxoChain = utxo.chain !== undefined ? utxo.chain : 0; // Default to external chain (0)
       
-      console.log(`🔐 Signing input ${i} with address index ${utxoAddressIndex} (UTXO: ${utxo.txid.substring(0, 8)}...)`);
+      console.log(`🔐 Signing input ${i} with chain ${utxoChain}, address index ${utxoAddressIndex} (UTXO: ${utxo.txid.substring(0, 8)}...)`);
       
       // Validate address index is non-negative
       if (utxoAddressIndex < 0) {
         throw new Error(`Invalid address index ${utxoAddressIndex} for UTXO ${utxo.txid}:${utxo.vout}`);
       }
       
-      // Derive private key for this specific address index
-      const child = root.derive(`m/84'/0'/0'/0/${utxoAddressIndex}`);
+      // Derive private key for this specific address index and chain
+      // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
+      const child = root.derive(`m/84'/0'/0'/${utxoChain}/${utxoAddressIndex}`);
       
       if (!child.privateKey) {
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
