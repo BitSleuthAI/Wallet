@@ -814,6 +814,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     return all.filter(u => ids.has(`${u.txid}:${u.vout}`));
   }, [getSelectedUtxoIds]);
 
+  // Helper function to merge UTXOs without duplicates
+  const mergeUtxos = useCallback((existing: UTXO[], newUtxos: UTXO[]): UTXO[] => {
+    const existingMap = new Map(existing.map(u => [`${u.txid}:${u.vout}`, u]));
+    
+    // Add or update UTXOs from the new fetch
+    newUtxos.forEach(utxo => {
+      existingMap.set(`${utxo.txid}:${utxo.vout}`, utxo);
+    });
+    
+    // Convert map back to array
+    return Array.from(existingMap.values());
+  }, []);
+
   // Progressive UTXO loading: Fast first, then complete in background
   const loadWalletUtxos = useCallback(async (walletId: string, fastMode: boolean = false) => {
     console.log('🔍 Wallet store: loadWalletUtxos called for wallet:', walletId, 'fastMode:', fastMode);
@@ -996,18 +1009,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         })));
         
         // Merge with existing UTXOs to prevent data loss during concurrent loads
-        setWalletUtxos(prev => {
-          const existing = prev[walletId] || [];
-          const existingMap = new Map(existing.map(u => [`${u.txid}:${u.vout}`, u]));
-          
-          // Add or update UTXOs from the new fetch
-          utxosWithFrozenStatus.forEach(utxo => {
-            existingMap.set(`${utxo.txid}:${utxo.vout}`, utxo);
-          });
-          
-          // Convert map back to array
-          return { ...prev, [walletId]: Array.from(existingMap.values()) };
-        });
+        setWalletUtxos(prev => ({
+          ...prev,
+          [walletId]: mergeUtxos(prev[walletId] || [], utxosWithFrozenStatus)
+        }));
         setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
         
         // Start background loading of remaining addresses
@@ -1107,18 +1112,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       })));
       
       // Merge with existing UTXOs to prevent data loss during concurrent loads
-      setWalletUtxos(prev => {
-        const existing = prev[walletId] || [];
-        const existingMap = new Map(existing.map(u => [`${u.txid}:${u.vout}`, u]));
-        
-        // Add or update UTXOs from the new fetch
-        utxosWithFrozenStatus.forEach(utxo => {
-          existingMap.set(`${utxo.txid}:${utxo.vout}`, utxo);
-        });
-        
-        // Convert map back to array
-        return { ...prev, [walletId]: Array.from(existingMap.values()) };
-      });
+      setWalletUtxos(prev => ({
+        ...prev,
+        [walletId]: mergeUtxos(prev[walletId] || [], utxosWithFrozenStatus)
+      }));
       setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
       
       // Mark that complete mode has run for this wallet
@@ -1135,7 +1132,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     } finally {
       setUtxosLoading(prev => ({ ...prev, [walletId]: false }));
     }
-  }, [wallets, coinControlFrozen, utxosLoading, walletUtxos, utxosCacheTimestamp, utxosCompleteModeRan]);
+  }, [wallets, coinControlFrozen, utxosLoading, walletUtxos, utxosCacheTimestamp, utxosCompleteModeRan, mergeUtxos]);
   
   const getWalletUtxos = useCallback((walletId: string) => {
     return walletUtxos[walletId] || [];
