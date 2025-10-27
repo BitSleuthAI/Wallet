@@ -333,6 +333,38 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
 
+  // Load coin control selected state from storage
+  const coinControlSelectedQuery = useQuery({
+    queryKey: ['coinControlSelected'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('coinControlSelected');
+        return stored ? JSON.parse(stored) : {};
+      } catch (err) {
+        console.warn('Failed to load coin control selected state:', err);
+        return {};
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  // Load coin control frozen state from storage
+  const coinControlFrozenQuery = useQuery({
+    queryKey: ['coinControlFrozen'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('coinControlFrozen');
+        return stored ? JSON.parse(stored) : {};
+      } catch (err) {
+        console.warn('Failed to load coin control frozen state:', err);
+        return {};
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
   useEffect(() => {
     if (walletsQuery.data) {
       setWallets(walletsQuery.data);
@@ -344,6 +376,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setCurrentWalletId(currentWalletQuery.data);
     }
   }, [currentWalletQuery.data]);
+
+  useEffect(() => {
+    if (coinControlSelectedQuery.data) {
+      setCoinControlSelectedState(coinControlSelectedQuery.data);
+    }
+  }, [coinControlSelectedQuery.data]);
+
+  useEffect(() => {
+    if (coinControlFrozenQuery.data) {
+      setCoinControlFrozenState(coinControlFrozenQuery.data);
+    }
+  }, [coinControlFrozenQuery.data]);
 
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
