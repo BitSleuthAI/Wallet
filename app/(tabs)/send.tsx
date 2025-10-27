@@ -720,8 +720,11 @@ export default function SendScreen() {
             setEstimatedFee(null);
             setAddressValidation({ isValid: false, message: null });
             
-            // Navigate to transaction history
-            router.push('/transaction-history');
+            // Navigate directly to transaction explorer with the txid
+            router.push({
+              pathname: '/transaction-explorer',
+              params: { txid: result.txid },
+            });
           }
         }, {
           text: 'Done',
