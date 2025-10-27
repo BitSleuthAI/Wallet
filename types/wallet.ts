@@ -90,6 +90,7 @@ export interface UTXO {
   };
   address?: string;
   addressIndex?: number; // Index of the address in the wallet's address array
+  chain?: number; // BIP44 chain: 0 for external/receiving, 1 for internal/change
   scriptPubKey?: string;
   frozen?: boolean; // For coin control
   label?: string;
