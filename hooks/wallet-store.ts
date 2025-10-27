@@ -368,13 +368,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
 
   useEffect(() => {
-    if (walletsQuery.data) {
+    if (walletsQuery.data !== undefined) {
       setWallets(walletsQuery.data);
     }
   }, [walletsQuery.data]);
 
   useEffect(() => {
-    if (currentWalletQuery.data) {
+    if (currentWalletQuery.data !== undefined) {
       setCurrentWalletId(currentWalletQuery.data);
     }
   }, [currentWalletQuery.data]);
