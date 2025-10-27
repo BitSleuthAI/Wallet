@@ -580,7 +580,7 @@ function estimateTransactionSize(inputCount: number, outputCount: number): numbe
 }
 
 // Cache for address-to-index mappings to avoid redundant derivations
-const addressIndexCache = new Map<string, number>();
+const addressIndexCache = new Map<string, number | string>();
 
 /**
  * Clear the address index cache
@@ -671,7 +671,7 @@ export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, ta
       
       if (foundIndex !== -1) {
         // Cache the result
-        addressIndexCache.set(cacheKey, `${chain}:${foundIndex}` as any);
+        addressIndexCache.set(cacheKey, `${chain}:${foundIndex}`);
         console.log(`✅ Found BIP32 chain ${chain}, index ${foundIndex} for address: ${targetAddress}`);
         return { index: foundIndex, chain };
       }
