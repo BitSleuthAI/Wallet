@@ -23,8 +23,8 @@ const KEY_WALLET_ADDRS = (xpub: string) => `${KEY_PREFIX}wallet_addrs_${xpub}`;
 const KEY_WALLET_TXIDS = (xpub: string) => `${KEY_PREFIX}wallet_txids_${xpub}`;
 const KEY_ADDR_WALLET = (address: string) => `${KEY_PREFIX}addr_wallet_${address}`;
 
-const TXIDS_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
-const STATS_TTL_MS = 12 * 60 * 60 * 1000; // 12 hours
+const TXIDS_TTL_MS = 5 * 60 * 1000; // 5 minutes - reduced to ensure recent transactions are fetched
+const STATS_TTL_MS = 5 * 60 * 1000; // 5 minutes - reduced to ensure fresh balance and transaction count
 const UTXOS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
 
 function unique<T>(items: T[]): T[] {
