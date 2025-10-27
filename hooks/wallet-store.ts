@@ -200,6 +200,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [utxosLoading, setUtxosLoading] = useState<Record<string, boolean>>({});
   const [walletUtxos, setWalletUtxos] = useState<Record<string, UTXO[]>>({});
   const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
+  const [utxosCompleteModeRan, setUtxosCompleteModeRan] = useState<Record<string, boolean>>({});
+
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -812,6 +814,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     return all.filter(u => ids.has(`${u.txid}:${u.vout}`));
   }, [getSelectedUtxoIds]);
 
+  // Helper function to merge UTXOs without duplicates
+  const mergeUtxos = useCallback((existing: UTXO[], newUtxos: UTXO[]): UTXO[] => {
+    const existingMap = new Map(existing.map(u => [`${u.txid}:${u.vout}`, u]));
+    
+    // Add or update UTXOs from the new fetch
+    newUtxos.forEach(utxo => {
+      existingMap.set(`${utxo.txid}:${utxo.vout}`, utxo);
+    });
+    
+    // Convert map back to array
+    return Array.from(existingMap.values());
+  }, []);
+
   // Progressive UTXO loading: Fast first, then complete in background
   const loadWalletUtxos = useCallback(async (walletId: string, fastMode: boolean = false) => {
     console.log('🔍 Wallet store: loadWalletUtxos called for wallet:', walletId, 'fastMode:', fastMode);
@@ -833,8 +848,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     
     console.log('🔍 Wallet store: Cache check - walletId:', walletId, 'cached:', !!walletUtxos[walletId], 'count:', walletUtxos[walletId]?.length || 0, 'age:', Math.round(cacheAge / 1000), 's', 'expired:', cacheAge >= cacheTtlMs);
     
-    if (walletUtxos[walletId] && walletUtxos[walletId].length > 0 && cacheAge < cacheTtlMs) {
-      console.log('🔍 Wallet store: UTXOs already cached for wallet:', walletId, 'count:', walletUtxos[walletId].length, 'age:', Math.round(cacheAge / 1000), 's');
+    // Return cached data if:
+    // 1. We have cached UTXOs
+    // 2. The cache is not expired
+    // 3. Either we're in fast mode, OR complete mode has already run for this wallet
+    const hasCache = walletUtxos[walletId] && walletUtxos[walletId].length > 0;
+    const cacheNotExpired = cacheAge < cacheTtlMs;
+    const completeModeAlreadyRan = utxosCompleteModeRan[walletId] === true;
+    
+    if (hasCache && cacheNotExpired && (fastMode || completeModeAlreadyRan)) {
+      console.log('🔍 Wallet store: UTXOs already cached for wallet:', walletId, 'count:', walletUtxos[walletId].length, 'age:', Math.round(cacheAge / 1000), 's', 'completeModeRan:', completeModeAlreadyRan);
       return walletUtxos[walletId];
     }
     
@@ -985,7 +1008,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           status: u.status
         })));
         
-        setWalletUtxos(prev => ({ ...prev, [walletId]: utxosWithFrozenStatus }));
+        // Merge with existing UTXOs to prevent data loss during concurrent loads
+        setWalletUtxos(prev => ({
+          ...prev,
+          [walletId]: mergeUtxos(prev[walletId] || [], utxosWithFrozenStatus)
+        }));
         setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
         
         // Start background loading of remaining addresses
@@ -1084,8 +1111,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         frozen: u.frozen
       })));
       
-      setWalletUtxos(prev => ({ ...prev, [walletId]: utxosWithFrozenStatus }));
+      // Merge with existing UTXOs to prevent data loss during concurrent loads
+      setWalletUtxos(prev => ({
+        ...prev,
+        [walletId]: mergeUtxos(prev[walletId] || [], utxosWithFrozenStatus)
+      }));
       setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
+      
+      // Mark that complete mode has run for this wallet
+      if (!fastMode) {
+        setUtxosCompleteModeRan(prev => ({ ...prev, [walletId]: true }));
+        console.log('✅ Complete mode finished for wallet:', walletId);
+      }
       
       console.log('🔍 Wallet store: UTXOs cached successfully for wallet:', walletId);
       return utxosWithFrozenStatus;
@@ -1095,7 +1132,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     } finally {
       setUtxosLoading(prev => ({ ...prev, [walletId]: false }));
     }
-  }, [wallets, coinControlFrozen, utxosLoading, walletUtxos, utxosCacheTimestamp]);
+  }, [wallets, coinControlFrozen, utxosLoading, walletUtxos, utxosCacheTimestamp, utxosCompleteModeRan, mergeUtxos]);
   
   const getWalletUtxos = useCallback((walletId: string) => {
     return walletUtxos[walletId] || [];
@@ -1110,6 +1147,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     setWalletUtxos(prev => ({ ...prev, [walletId]: [] }));
     setUtxosLoading(prev => ({ ...prev, [walletId]: false }));
     setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: 0 }));
+    setUtxosCompleteModeRan(prev => ({ ...prev, [walletId]: false }));
     return await loadWalletUtxos(walletId);
   }, [loadWalletUtxos]);
 
