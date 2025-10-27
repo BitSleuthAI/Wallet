@@ -631,68 +631,43 @@ async function createTransaction(
       // Verify the initialization worked by checking if ECC is properly set
       console.log('🔧 Verifying ECC initialization...');
       
-      // Check that bitcoin.ECPair is available after initialization
-      if (!bitcoin.ECPair) {
-        throw new Error('ECC initialization failed: bitcoin.ECPair is not available');
-      }
-      
       // Log what's available on the bitcoin object for debugging
       console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
-      console.log('🔧 bitcoin.ECPair:', typeof bitcoin.ECPair, bitcoin.ECPair);
+      console.log('🔧 bitcoin.ECPair:', typeof bitcoin.ECPair);
+      console.log('🔧 bitcoin.ECPairFactory:', typeof bitcoin.ECPairFactory);
       
-      // In bitcoinjs-lib 7.0.0, ECPair might not be directly available
-      // Let's check if we can access it through other means
-      let ECPair = bitcoin.ECPair;
-      
-      // Try alternative ways to access ECPair in bitcoinjs-lib 7.0.0
-      if (!ECPair) {
-        console.log('🔧 ECPair not directly available, trying alternative access methods...');
+      // In bitcoinjs-lib 7.0.0, ECPair was removed and is no longer exported
+      // The library works with PSBT (Partially Signed Bitcoin Transactions) instead
+      // We just need to verify that our ECC library works correctly
+      console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
+      try {
+        const testPrivateKey = new Uint8Array(32);
+        testPrivateKey[31] = 1;
         
-        // Try accessing through bitcoin.ECPair or bitcoin.ECPairFactory
-        if (bitcoin.ECPairFactory) {
-          console.log('🔧 Found ECPairFactory, using it');
-          ECPair = bitcoin.ECPairFactory(ecc);
-        } else if (bitcoin.ECPair) {
-          console.log('🔧 Found ECPair directly');
-          ECPair = bitcoin.ECPair;
-        } else {
-          // Try to create ECPair manually using the ECC library
-          console.log('🔧 Creating ECPair manually using ECC library...');
-          try {
-            const testPrivateKey = new Uint8Array(32);
-            testPrivateKey[31] = 1;
-            
-            // Test if our ECC library can create a public key
-            const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-            if (publicKey && publicKey.length === 33) {
-              console.log('✅ ECC library can create public keys - ECC initialization successful');
-              // Skip ECPair verification and proceed
-            } else {
-              throw new Error('ECC library cannot create valid public keys');
-            }
-          } catch (eccTestError) {
-            console.error('❌ ECC library test failed:', eccTestError);
-            throw new Error('ECC library not working properly after bitcoinjs-lib initialization');
-          }
+        // Test if our ECC library can create a public key
+        const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+        if (!publicKey || publicKey.length !== 33) {
+          throw new Error('ECC library cannot create valid public keys');
         }
-      }
-      
-      // If we found ECPair, test it
-      if (ECPair) {
-        try {
-          const testPrivateKey = new Uint8Array(32);
-          testPrivateKey[31] = 1;
-          
-          const testECPair = ECPair.fromPrivateKey(testPrivateKey);
-          if (!testECPair || !testECPair.publicKey) {
-            throw new Error('ECPair creation failed');
-          }
-          
-          console.log('✅ ECC initialization verified - ECPair creation successful');
-        } catch (verifyError) {
-          console.error('❌ ECPair verification failed:', verifyError);
-          throw new Error('bitcoinjs-lib ECC initialization verification failed');
+        
+        // Test signing
+        const testHash = new Uint8Array(32);
+        testHash.fill(0xaa);
+        const signature = ecc.sign(testHash, testPrivateKey);
+        if (!signature || signature.length === 0) {
+          throw new Error('ECC library cannot create signatures');
         }
+        
+        // Test verification
+        const isValid = ecc.verify(testHash, publicKey, signature);
+        if (!isValid) {
+          throw new Error('ECC library signature verification failed');
+        }
+        
+        console.log('✅ ECC library verification successful - ready for transaction signing');
+      } catch (eccTestError) {
+        console.error('❌ ECC library test failed:', eccTestError);
+        throw new Error(`ECC library not working properly: ${eccTestError instanceof Error ? eccTestError.message : 'Unknown error'}`);
       }
       
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
