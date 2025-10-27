@@ -307,12 +307,22 @@ export const sendTransaction = async (
         vout: selectedUTXOs[0].vout,
         value: selectedUTXOs[0].value,
         address: selectedUTXOs[0].address?.substring(0, 10) + '...',
-        frozen: selectedUTXOs[0].frozen
+        frozen: selectedUTXOs[0].frozen,
+        status: selectedUTXOs[0].status
       } : 'No UTXOs');
+      
+      // Log all UTXO statuses for debugging
+      console.log('🔍 All UTXO statuses:', selectedUTXOs.map(u => ({
+        txid: u.txid.substring(0, 10) + '...',
+        vout: u.vout,
+        status: u.status,
+        frozen: u.frozen
+      })));
       
       // Filter out frozen UTXOs and ensure we have confirmed UTXOs
       // CRITICAL: Must exclude frozen UTXOs to prevent using locked coins
-      const confirmedUtxos = selectedUTXOs.filter(utxo => utxo.status.confirmed);
+      // Use optional chaining to safely access status.confirmed
+      const confirmedUtxos = selectedUTXOs.filter(utxo => utxo.status?.confirmed === true);
       const unfrozenUtxos = confirmedUtxos.filter(utxo => !utxo.frozen);
       
       console.log('🔍 Confirmed UTXOs:', confirmedUtxos.length);
@@ -338,7 +348,7 @@ export const sendTransaction = async (
       // Provide specific error messages based on the situation
       if (selectedUTXOs && selectedUTXOs.length > 0) {
         const allFrozen = selectedUTXOs.every(utxo => utxo.frozen);
-        const allUnconfirmed = selectedUTXOs.every(utxo => !utxo.status.confirmed);
+        const allUnconfirmed = selectedUTXOs.every(utxo => utxo.status?.confirmed !== true);
         
         if (allFrozen) {
           throw new Error('All selected UTXOs are frozen. Please unfreeze some UTXOs or select different ones.');
@@ -421,8 +431,9 @@ function selectUTXOs(utxos: UTXO[], targetAmount: number, feeRate: number): {
   change: number;
 } {
   // Filter confirmed UTXOs and sort by value (largest first)
+  // Use optional chaining to safely access status.confirmed
   const availableUTXOs = utxos
-    .filter(utxo => utxo.status.confirmed)
+    .filter(utxo => utxo.status?.confirmed === true)
     .sort((a, b) => b.value - a.value);
   
   if (availableUTXOs.length === 0) {
