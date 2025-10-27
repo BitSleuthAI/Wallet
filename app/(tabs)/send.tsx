@@ -10,7 +10,7 @@ import { feeEstimationService } from '@/services/fee-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -44,7 +44,7 @@ export default function SendScreen() {
     feeSettingsLoading,
     incrementUsageCount,
   } = useWallet();
-  const { authenticateForTransaction, authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
+  const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
@@ -53,14 +53,17 @@ export default function SendScreen() {
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
   
-  // Computed values from feeSettings - no local state duplication
-  const selectedFeeType = feeSettings?.defaultPreset === 'economy' ? 'slow' : 
-                          feeSettings?.defaultPreset === 'standard' ? 'normal' : 
-                          feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom';
-  const enableRBF = feeSettings?.enableRBF ?? true;
-  const customFeeRate = feeSettings?.customFeeRate?.toString() ?? '10';
+  // Memoize computed values from feeSettings to prevent unnecessary re-renders
+  const selectedFeeType = useMemo(() => 
+    feeSettings?.defaultPreset === 'economy' ? 'slow' : 
+    feeSettings?.defaultPreset === 'standard' ? 'normal' : 
+    feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom',
+    [feeSettings?.defaultPreset]
+  );
+  const enableRBF = useMemo(() => feeSettings?.enableRBF ?? true, [feeSettings?.enableRBF]);
+  const customFeeRate = useMemo(() => feeSettings?.customFeeRate?.toString() ?? '10', [feeSettings?.customFeeRate]);
   // Use Bitcoin price from wallet store (already converted to selected currency)
-  const bitcoinPrice = walletBitcoinPrice?.usd || null;
+  const bitcoinPrice = useMemo(() => walletBitcoinPrice?.usd || null, [walletBitcoinPrice?.usd]);
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
     message: string | null;
@@ -73,23 +76,13 @@ export default function SendScreen() {
   } | null>(null);
   const [selectedUtxoIds, setSelectedUtxoIds] = useState<string[]>([]);
   const [availableUtxos, setAvailableUtxos] = useState<UTXO[]>([]);
-  const lastFeeEstimatesRef = useRef<any>(null);
   const [customFeeValidation, setCustomFeeValidation] = useState<{
     isValid: boolean;
     message: string | null;
   }>({ isValid: true, message: null });
-  const [autoAdjustmentActive, setAutoAdjustmentActive] = useState(false);
-  const [lastAutoAdjustment, setLastAutoAdjustment] = useState<{
-    timestamp: number;
-    oldRate: number;
-    newRate: number;
-    reason: string;
-    congestion: 'low' | 'medium' | 'high';
-  } | null>(null);
-  // Removed complex workarounds - root cause fixed in wallet store
 
-  // Simple handlers that directly update wallet store
-  const handleFeePresetChange = (preset: 'slow' | 'normal' | 'fast' | 'custom') => {
+  // Memoize handlers to prevent recreation on every render
+  const handleFeePresetChange = useCallback((preset: 'slow' | 'normal' | 'fast' | 'custom') => {
     console.log(`🔧 Send screen: Fee preset changed to ${preset}`);
     console.log(`🔧 Current feeSettings.defaultPreset: ${feeSettings?.defaultPreset}`);
     
@@ -112,9 +105,9 @@ export default function SendScreen() {
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update fee preset:`, error);
     });
-  };
+  }, [feeSettings, setFeeSettings]);
 
-  const handleRBFChange = (value: boolean) => {
+  const handleRBFChange = useCallback((value: boolean) => {
     console.log(`🔧 Send screen: RBF changed to ${value}`);
     console.log(`🔧 Current feeSettings.enableRBF: ${feeSettings?.enableRBF}`);
     
@@ -124,9 +117,9 @@ export default function SendScreen() {
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update RBF setting:`, error);
     });
-  };
+  }, [feeSettings, setFeeSettings]);
 
-  const handleCustomFeeRateChange = (rate: string) => {
+  const handleCustomFeeRateChange = useCallback((rate: string) => {
     console.log(`🔧 Send screen: Custom fee rate changed to ${rate}`);
     
     const numericValue = parseInt(rate) || 0;
@@ -140,7 +133,7 @@ export default function SendScreen() {
     setFeeSettings(updatedSettings).catch(error => {
       console.error(`❌ Failed to update custom fee rate:`, error);
     });
-  };
+  }, [feeSettings, setFeeSettings]);
 
   // Load fee estimates on component mount and wallet change
   useEffect(() => {
@@ -232,17 +225,18 @@ export default function SendScreen() {
       console.log(`🔧 Setting fee rate to fallback: ${fallbackRate} for preset ${feeSettings.defaultPreset}`);
       setFeeRate(fallbackRate);
     }
-  }, [feeSettings, feeSettingsLoading, feeEstimates]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [feeSettings, feeSettingsLoading, feeEstimates]); // feeRate is intentionally not included to prevent infinite loop
 
   // Auto-adjust fees based on network conditions - DISABLED to prevent overriding user selections
   useEffect(() => {
     // Disable auto-adjustment for now to prevent it from overriding user selections
-    setAutoAdjustmentActive(false);
+    // setAutoAdjustmentActive(false) - removed as state variable is removed
     return;
     
   }, [feeEstimates, feeSettings, feeRate]);
 
-  // UTXO fetching useEffect - SIMPLIFIED AND FORCED TO RUN
+  // UTXO fetching useEffect - OPTIMIZED to prevent infinite loops
   console.log('🔍 Send screen: About to define UTXO fetching useEffect');
   console.log('🔍 Send screen: useEffect dependencies - currentWallet?.id:', currentWallet?.id, 'balance:', balance);
   
@@ -288,13 +282,15 @@ export default function SendScreen() {
     };
     
     fetchUtxos();
-  }, [currentWallet?.id, balance, coinControl.loadWalletUtxos, coinControl.getWalletUtxos]); // Depend only on stable method references
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWallet?.id, balance]); // Only depend on wallet ID and balance, not coinControl methods
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
     const ids = coinControl.getSelectedUtxoIds().filter(id => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
-  }, [coinControl]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWallet?.id]); // Only re-sync when wallet changes, not on every coinControl update
 
   // Validate Bitcoin address in real-time
   useEffect(() => {
@@ -317,7 +313,7 @@ export default function SendScreen() {
             message: 'Invalid Bitcoin address format' 
           });
         }
-      } catch (error) {
+      } catch {
         setAddressValidation({ 
           isValid: false, 
           message: 'Invalid address format' 
@@ -347,7 +343,7 @@ export default function SendScreen() {
     }
   }, [amount, feeRate]);
 
-  const handleSendMax = () => {
+  const handleSendMax = useCallback(() => {
     try {
       if (balance > 0) {
         // Calculate more accurate fee estimate
@@ -369,9 +365,9 @@ export default function SendScreen() {
       console.error('Error calculating max send amount:', error);
       Alert.alert('Error', 'Failed to calculate maximum sendable amount');
     }
-  };
+  }, [balance, feeRate]);
 
-  const handleQRScan = (data: string) => {
+  const handleQRScan = useCallback((data: string) => {
     try {
       // Handle different QR code formats
       let address = data.trim();
@@ -394,9 +390,9 @@ export default function SendScreen() {
       console.error('Error parsing QR code:', error);
       Alert.alert('Error', 'Invalid QR code format');
     }
-  };
+  }, []);
 
-  const convertAmount = (value: string, fromBTC: boolean): string => {
+  const convertAmount = useCallback((value: string, fromBTC: boolean): string => {
     if (!value || !bitcoinPrice || bitcoinPrice <= 0) return '';
     
     try {
@@ -412,16 +408,16 @@ export default function SendScreen() {
         const result = (numValue / bitcoinPrice).toFixed(8);
         return result && result !== '0.00000000' ? result : '';
       }
-    } catch (error) {
+    } catch {
       return '';
     }
-  };
+  }, [bitcoinPrice]);
 
-  const handleAmountChange = (value: string) => {
+  const handleAmountChange = useCallback((value: string) => {
     setAmount(value);
-  };
+  }, []);
 
-  const toggleCurrency = () => {
+  const toggleCurrency = useCallback(() => {
     if (amount && bitcoinPrice && bitcoinPrice > 0) {
       const convertedAmount = convertAmount(amount, isAmountInBTC);
       if (convertedAmount) {
@@ -429,7 +425,7 @@ export default function SendScreen() {
       }
     }
     setIsAmountInBTC(!isAmountInBTC);
-  };
+  }, [amount, bitcoinPrice, isAmountInBTC, convertAmount]);
 
   const handleSendTransaction = async () => {
     if (isLoading) return;
@@ -920,7 +916,7 @@ export default function SendScreen() {
     }
   };
   
-  const getTimeEstimateForFeeRate = (rate: number): string => {
+  const getTimeEstimateForFeeRate = useCallback((rate: number): string => {
     if (!feeEstimates) return 'Calculating...';
     
     if (rate >= feeEstimates.fastestFee) {
@@ -938,7 +934,7 @@ export default function SendScreen() {
     } else {
       return '6+ hours';
     }
-  };
+  }, [feeEstimates, feeWithConfidence]);
 
   if (!currentWallet) {
     return (
@@ -1318,26 +1314,6 @@ export default function SendScreen() {
                 <View style={styles.feeEstimate}>
                   <Text style={[styles.feeEstimateText, { color: theme.colors.textSecondary }]}>
                     Estimated fee: {estimatedFee.toFixed(8)} BTC{bitcoinPrice && bitcoinPrice > 0 ? ` (${getCurrencySymbol()}${(estimatedFee * bitcoinPrice).toFixed(2)})` : ''}
-                  </Text>
-                </View>
-              )}
-              
-              {/* Auto-adjustment feedback */}
-              {autoAdjustmentActive && lastAutoAdjustment && (
-                <View style={[styles.autoAdjustmentCard, { backgroundColor: theme.colors.primary + '10', borderColor: theme.colors.primary + '30' }]}>
-                  <View style={styles.autoAdjustmentHeader}>
-                    <View style={[styles.autoAdjustmentIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-                      <ArrowUpRight color={theme.colors.primary} size={16} />
-                    </View>
-                    <Text style={[styles.autoAdjustmentTitle, { color: theme.colors.primary }]}>
-                      Auto-Adjusted Fee
-                    </Text>
-                  </View>
-                  <Text style={[styles.autoAdjustmentReason, { color: theme.colors.textSecondary }]}>
-                    {lastAutoAdjustment.reason}
-                  </Text>
-                  <Text style={[styles.autoAdjustmentDetails, { color: theme.colors.textSecondary }]}>
-                    {lastAutoAdjustment.oldRate} → {lastAutoAdjustment.newRate} sat/vB
                   </Text>
                 </View>
               )}
