@@ -403,13 +403,13 @@ export async function createReplacementTransaction(
     
     // Calculate total input value
     let totalInputValue = 0;
-    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number }>();
+    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number; chain: number }>();
     
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
       
-      // Derive the actual BIP32 address index instead of using array index
-      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
+      // Derive the actual BIP32 address index and chain instead of using array index
+      const { index: addressIndex, chain } = await deriveAddressIndexAndChainFromAddress(mnemonic, address);
       
       // Find the corresponding UTXO - improved matching logic
       const utxo = utxos.find(u => {
@@ -438,7 +438,8 @@ export async function createReplacementTransaction(
       inputMap.set(`${input.txid}:${input.vout}`, {
         input,
         utxo,
-        addressIndex
+        addressIndex,
+        chain
       });
     }
     
@@ -592,12 +593,13 @@ export async function createReplacementTransaction(
     
     // Sign each input
     let inputIndex = 0;
-    for (const [key, { input, utxo, addressIndex }] of inputMap) {
-      // Derive private key for this address
-      const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+    for (const [key, { input, utxo, addressIndex, chain }] of inputMap) {
+      // Derive private key for this address using the correct chain
+      // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
+      const child = root.derivePath(`m/84'/0'/0'/${chain}/${addressIndex}`);
       
       if (!child.privateKey) {
-        throw new Error(`Failed to derive private key for address index ${addressIndex}`);
+        throw new Error(`Failed to derive private key for chain ${chain}, address index ${addressIndex}`);
       }
       
       // Sign the input
@@ -939,13 +941,13 @@ async function createCancellationTransaction(
     
     // Calculate total input value
     let totalInputValue = 0;
-    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number }>();
+    const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number; chain: number }>();
     
     for (const input of ourInputs) {
       const address = input.prevout.scriptpubkey_address;
       
-      // Derive the actual BIP32 address index instead of using array index
-      const addressIndex = await deriveAddressIndexFromAddress(mnemonic, address);
+      // Derive the actual BIP32 address index and chain instead of using array index
+      const { index: addressIndex, chain } = await deriveAddressIndexAndChainFromAddress(mnemonic, address);
       
       // Find the corresponding UTXO
       const utxo = utxos.find(u => {
@@ -968,7 +970,8 @@ async function createCancellationTransaction(
       inputMap.set(`${input.txid}:${input.vout}`, {
         input,
         utxo,
-        addressIndex
+        addressIndex,
+        chain
       });
     }
     
@@ -1063,12 +1066,13 @@ async function createCancellationTransaction(
     
     // Sign each input
     let inputIndex = 0;
-    for (const [key, { input, utxo, addressIndex }] of inputMap) {
-      // Derive private key for this address
-      const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
+    for (const [key, { input, utxo, addressIndex, chain }] of inputMap) {
+      // Derive private key for this address using the correct chain
+      // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
+      const child = root.derivePath(`m/84'/0'/0'/${chain}/${addressIndex}`);
       
       if (!child.privateKey) {
-        throw new Error(`Failed to derive private key for address index ${addressIndex}`);
+        throw new Error(`Failed to derive private key for chain ${chain}, address index ${addressIndex}`);
       }
       
       // Sign the input
@@ -1118,6 +1122,104 @@ export function clearAddressIndexCache(): void {
  * 3. Removes arbitrary 1000 address limit
  * 4. Optimizes imports to avoid repeated dynamic imports
  * 5. Adds small delays between batches to prevent UI blocking
+ */
+/**
+ * Derive the BIP32 address index and chain from an address by testing derivation paths
+ * Returns { index, chain } where chain is 0 for external/receiving, 1 for internal/change
+ */
+export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, targetAddress: string): Promise<{ index: number; chain: number }> {
+  try {
+    // Check cache first (need to cache both index and chain)
+    const cacheKey = `${targetAddress}_full`;
+    if (addressIndexCache.has(cacheKey)) {
+      const cached = addressIndexCache.get(cacheKey)!;
+      console.log(`✅ Found cached BIP32 index ${cached} for address: ${targetAddress}`);
+      // Parse the cached value (format: "chain:index")
+      const [chain, index] = cached.toString().split(':').map(Number);
+      return { index, chain };
+    }
+    
+    console.log(`🔍 Deriving BIP32 index and chain for address: ${targetAddress}`);
+    
+    // Ensure bip32 module is loaded
+    if (!bip32) {
+      bip32 = await loadBip32Module();
+    }
+    
+    if (!bip32 || !bip32.BIP32Factory) {
+      throw new Error('BIP32 module or BIP32Factory not available');
+    }
+    const bip39 = require('bip39');
+    const ecc = (global as any).ecc;
+    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bech32 = await import('bech32');
+    const { sha256 } = await import('@noble/hashes/sha256');
+    const { ripemd160 } = await import('@noble/hashes/ripemd160');
+    
+    const seed = await bip39.mnemonicToSeed(mnemonic);
+    const root = bip32Instance.fromSeed(seed);
+    
+    // Check both external (chain 0) and internal/change (chain 1) chains
+    for (const chain of [0, 1]) {
+      const chainNode = root.derivePath(`m/84'/0'/0'/${chain}`);
+      
+      // Use optimized linear search with batching to prevent UI blocking
+      let foundIndex = -1;
+      const batchSize = 50;
+      const batchDelay = 5;
+      let currentIndex = 0;
+      const maxSearchRange = 10000;
+      
+      while (foundIndex === -1 && currentIndex < maxSearchRange) {
+        const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
+        
+        for (let i = currentIndex; i < endIndex; i++) {
+          try {
+            const child = chainNode.derive(i);
+            if (!child.publicKey) continue;
+            
+            // Generate P2WPKH address
+            const sha256Hash = sha256(child.publicKey);
+            const hash160 = ripemd160(sha256Hash);
+            const words = bech32.bech32.toWords(hash160);
+            const address = bech32.bech32.encode('bc', [0, ...words]);
+            
+            if (address === targetAddress) {
+              foundIndex = i;
+              break;
+            }
+          } catch (error) {
+            console.warn(`⚠️ Failed to derive address at chain ${chain}, index ${i}:`, error);
+            continue;
+          }
+        }
+        
+        currentIndex = endIndex;
+        
+        // Small delay between batches to prevent UI blocking
+        if (foundIndex === -1 && currentIndex < maxSearchRange) {
+          await new Promise(resolve => setTimeout(resolve, batchDelay));
+        }
+      }
+      
+      if (foundIndex !== -1) {
+        // Cache the result
+        addressIndexCache.set(cacheKey, `${chain}:${foundIndex}` as any);
+        console.log(`✅ Found BIP32 chain ${chain}, index ${foundIndex} for address: ${targetAddress}`);
+        return { index: foundIndex, chain };
+      }
+    }
+    
+    throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched both chains up to index ${10000})`);
+  } catch (error) {
+    console.error(`❌ Failed to derive address index and chain:`, error);
+    throw error;
+  }
+}
+
+/**
+ * Derive the BIP32 address index from an address by testing derivation paths
+ * Legacy function - prefer deriveAddressIndexAndChainFromAddress for new code
  */
 export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
   try {
