@@ -860,7 +860,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       
       // OPTIMIZED: Use address metadata to only check addresses with transaction history
       // This dramatically reduces API calls and prevents rate limiting
-      let addressEntries: Array<{ address: string; index: number; isUsed?: boolean }> = [];
+      let addressEntries: Array<{ address: string; index: number; chain: number; isUsed?: boolean }> = [];
       
       console.log('🔍 Wallet store: Using intelligent address discovery to minimize API calls');
       console.log('🔍 Wallet store: Wallet has', wallet.addresses?.length || 0, 'stored addresses');
@@ -883,10 +883,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         const usedMetadata = metadata.filter(m => m.isUsed);
         console.log(`✅ Found ${usedMetadata.length} used addresses out of ${metadata.length} total`);
         
-        // Map to address entries with usage info
+        // Map to address entries with usage info including chain
         addressEntries = usedMetadata.map(m => ({
           address: m.address,
           index: m.index,
+          chain: m.chain,
           isUsed: m.isUsed
         }));
         
@@ -897,6 +898,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           addressEntries = (wallet.addresses || []).map((a, i) => ({ 
             address: a, 
             index: i,
+            chain: 0, // Wallet.addresses are all external addresses (chain 0)
             isUsed: undefined 
           }));
         }
@@ -906,6 +908,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         addressEntries = (wallet.addresses || []).map((a, i) => ({ 
           address: a, 
           index: i,
+          chain: 0, // Wallet.addresses are all external addresses (chain 0)
           isUsed: undefined 
         }));
       }
@@ -914,6 +917,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.log('🔍 Wallet store: Address entries to check:', addressEntries.slice(0, 10).map(a => ({
         address: a.address.substring(0, 10) + '...',
         index: a.index,
+        chain: a.chain,
         isUsed: a.isUsed
       })));
       
@@ -923,7 +927,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         // In fast mode, only check the first 3 addresses (most likely to have UTXOs)
         const fastAddresses = addressEntries.slice(0, 3);
         
-        for (const { address: addr, index } of fastAddresses) {
+        for (const { address: addr, index, chain } of fastAddresses) {
           try {
             const result = await esploraGetAddressUTXOs(addr, wallet.xpub);
             
@@ -936,17 +940,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
             console.log(`🚀 Fast mode: Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
             
             for (const u of list) {
-              const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
-              if (actualAddressIndex === -1) {
-                console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses, skipping UTXO`);
-                continue;
-              }
+              // Use index and chain from metadata - no need to look up in wallet.addresses
+              // The addressIndex will be used for derivation during transaction creation
+              // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
               
               // Ensure UTXO has all required fields including scriptPubKey
               all.push({ 
                 ...u, 
                 address: addr, 
-                addressIndex: actualAddressIndex,
+                addressIndex: index,
+                chain: chain,
                 scriptPubKey: u.scriptpubkey || u.scriptPubKey // Handle both naming conventions
               });
             }
@@ -1004,7 +1007,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           console.log(`🔄 Processing batch ${Math.floor(i / BATCH_SIZE) + 1}/${Math.ceil(addressEntries.length / BATCH_SIZE)} (${batch.length} addresses)`);
           
           // Fetch UTXOs for all addresses in this batch concurrently
-          const batchPromises = batch.map(async ({ address: addr, index }) => {
+          const batchPromises = batch.map(async ({ address: addr, index, chain }) => {
             try {
               const result = await esploraGetAddressUTXOs(addr, wallet.xpub);
               
@@ -1016,22 +1019,21 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
               const list = result.data || [];
               console.log(`🔄 Address ${addr.substring(0, 10)}... returned ${list.length} UTXOs`);
               
-              // Map UTXOs with correct address index
+              // Map UTXOs with correct address index and chain from metadata
               return list.map((u: any) => {
-                const actualAddressIndex = wallet.addresses.findIndex(walletAddr => walletAddr === addr);
-                if (actualAddressIndex === -1) {
-                  console.warn(`Address ${addr.substring(0, 10)}... not found in wallet addresses`);
-                  return null;
-                }
+                // Use index and chain from metadata - no need to look up in wallet.addresses
+                // The addressIndex will be used for derivation during transaction creation
+                // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
                 
                 // Ensure UTXO has all required fields including scriptPubKey
                 return { 
                   ...u, 
                   address: addr, 
-                  addressIndex: actualAddressIndex,
+                  addressIndex: index,
+                  chain: chain,
                   scriptPubKey: u.scriptpubkey || u.scriptPubKey
                 };
-              }).filter((u: any) => u !== null);
+              });
             } catch (e) {
               console.warn('Failed to load UTXOs for address', addr.substring(0, 10) + '...:', e);
               return [];
