@@ -5,8 +5,7 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { LiquidGlassView } from '@/components/LiquidGlassView';
-import { isIOS18OrHigher } from '@/utils/platform';
+import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
 
 // Animated icon wrapper with scale animation
 const AnimatedTabIcon = ({ 
@@ -51,7 +50,7 @@ const AnimatedTabIcon = ({
 export default function TabLayout() {
   const { theme } = useWallet();
   const insets = useSafeAreaInsets();
-  const useLiquidGlass = isIOS18OrHigher();
+  const useGlassEffect = isLiquidGlassAvailable();
 
   return (
     <Tabs
@@ -59,7 +58,7 @@ export default function TabLayout() {
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: theme.colors.textSecondary,
         tabBarStyle: {
-          backgroundColor: useLiquidGlass ? 'transparent' : theme.colors.background,
+          backgroundColor: useGlassEffect ? 'transparent' : theme.colors.background,
           borderTopWidth: 0,
           elevation: 0,
           height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
@@ -79,11 +78,11 @@ export default function TabLayout() {
           }),
         },
         tabBarBackground: () => {
-          if (useLiquidGlass) {
+          if (useGlassEffect) {
             return (
-              <LiquidGlassView
-                variant="chrome"
-                intensity={100}
+              <GlassView
+                glassEffectStyle="regular"
+                tintColor={theme.isDark ? '#000000' : '#FFFFFF'}
                 style={StyleSheet.absoluteFill}
               />
             );
