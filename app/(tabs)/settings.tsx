@@ -63,6 +63,12 @@ export default function SettingsScreen() {
 
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
 
+  // Logout button gradient colors (danger/error theme)
+  // Using fixed colors for consistency across themes while maintaining danger indication
+  const logoutGradientColors = theme.isDark 
+    ? ['#FF5252', '#E91E63'] // Bright red to pink for dark mode
+    : ['#EF4444', '#DC2626']; // Red gradient for light mode
+
   // Animation values for logout button
   const logoutScale = useSharedValue(1);
   const AnimatedTouchable = ReanimatedAnimated.createAnimatedComponent(TouchableOpacity);
@@ -73,9 +79,6 @@ export default function SettingsScreen() {
 
   const handleLogout = () => {
     if (isLoggingOut) return; // Prevent multiple logout attempts
-    
-    // Haptic warning feedback
-    HapticService.warning();
     
     Alert.alert(
       'Logout & Erase Wallet',
@@ -88,7 +91,8 @@ export default function SettingsScreen() {
           onPress: async () => {
             setIsLoggingOut(true);
             
-            // Trigger error haptic feedback
+            // Trigger haptic feedback after user confirms
+            HapticService.warning();
             HapticService.error();
             
             try {
@@ -411,12 +415,13 @@ export default function SettingsScreen() {
             activeOpacity={0.9}
           >
             <LinearGradient
-              colors={theme.isDark ? ['#FF5252', '#E91E63'] : ['#EF4444', '#DC2626']}
+              colors={logoutGradientColors}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <View style={styles.logoutButtonContent}>
+              {/* White color for maximum contrast against gradient background */}
               <AlertTriangle color="#FFFFFF" size={20} strokeWidth={2.5} />
               <Text style={styles.logoutText}>
                 {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
