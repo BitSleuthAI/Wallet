@@ -361,92 +361,96 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Display */}
-        <GradientCard theme={theme} style={styles.balanceSection} variant={theme.isDark ? 'glow' : 'primary'}>
-          {hasBalanceError ? (
-            <View style={styles.balanceErrorContainer}>
-              <WifiOff color={theme.colors.textSecondary} size={24} />
-              <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
-                Balance Loading...
-              </Text>
-              <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
-                Bitcoin APIs are temporarily unavailable. Your wallet is safe.
-              </Text>
-              <TouchableOpacity 
-                style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
-                onPress={refreshData}
-              >
-                <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <>
-              <View style={styles.balanceContainer}>
-                <TouchableOpacity 
-                  style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
-                  onPress={() => {
-                    setHideBalanceSetting(!hideBalance);
-                    incrementUsageCount('settings_interaction');
-                  }}
-                >
-                  {hideBalance ? (
-                    <EyeOff color={theme.colors.textSecondary} size={20} />
-                  ) : (
-                    <Eye color={theme.colors.textSecondary} size={20} />
-                  )}
-                </TouchableOpacity>
-                <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
-                  {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
+        <LiquidGlassView variant="thin" intensity={85} style={[styles.balanceSection, styles.glassCard]}>
+          <GradientCard theme={theme} style={styles.balanceCardInner} variant={theme.isDark ? 'glow' : 'primary'}>
+            {hasBalanceError ? (
+              <View style={styles.balanceErrorContainer}>
+                <WifiOff color={theme.colors.textSecondary} size={24} />
+                <Text style={[styles.errorTitle, { color: theme.colors.text }]}>
+                  Balance Loading...
                 </Text>
+                <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
+                  Bitcoin APIs are temporarily unavailable. Your wallet is safe.
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
+                  onPress={refreshData}
+                >
+                  <Text style={styles.retryButtonText}>Retry</Text>
+                </TouchableOpacity>
               </View>
-              <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
-                {hideBalance ? 'Balance hidden' : (hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`)}
-              </Text>
-              {!hideBalance && !hasPriceError && balanceUSD > 0 && bitcoinPrice?.usd_24h_change !== undefined && (
-                <View style={styles.changeContainer}>
-                  <TrendingUp color={bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error} size={16} />
-                  <Text style={[styles.changeText, { color: bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error }]}>
-                    {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{formatCurrency((balanceUSD * bitcoinPrice.usd_24h_change) / 100)} ({bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}%) 24h
+            ) : (
+              <>
+                <View style={styles.balanceContainer}>
+                  <TouchableOpacity 
+                    style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
+                    onPress={() => {
+                      setHideBalanceSetting(!hideBalance);
+                      incrementUsageCount('settings_interaction');
+                    }}
+                  >
+                    {hideBalance ? (
+                      <EyeOff color={theme.colors.textSecondary} size={20} />
+                    ) : (
+                      <Eye color={theme.colors.textSecondary} size={20} />
+                    )}
+                  </TouchableOpacity>
+                  <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
+                    {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
                   </Text>
                 </View>
-              )}
-            </>
-          )}
-        </GradientCard>
+                <Text style={[styles.btcBalance, { color: theme.colors.textSecondary }]}>
+                  {hideBalance ? 'Balance hidden' : (hasPriceError ? 'USD value unavailable' : `${balance.toFixed(8)} BTC`)}
+                </Text>
+                {!hideBalance && !hasPriceError && balanceUSD > 0 && bitcoinPrice?.usd_24h_change !== undefined && (
+                  <View style={styles.changeContainer}>
+                    <TrendingUp color={bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error} size={16} />
+                    <Text style={[styles.changeText, { color: bitcoinPrice.usd_24h_change >= 0 ? theme.colors.success : theme.colors.error }]}>
+                      {bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{formatCurrency((balanceUSD * bitcoinPrice.usd_24h_change) / 100)} ({bitcoinPrice.usd_24h_change >= 0 ? '+' : ''}{bitcoinPrice.usd_24h_change.toFixed(2)}%) 24h
+                    </Text>
+                  </View>
+                )}
+              </>
+            )}
+          </GradientCard>
+        </LiquidGlassView>
 
         {/* Time Period Selector */}
-        <View style={[styles.periodSelector, { backgroundColor: theme.colors.surface }]}>
-          {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
-            <TouchableOpacity
-              key={period}
-              style={[
-                styles.periodButton,
-                selectedPeriod === period && { 
-                  backgroundColor: theme.colors.primary,
-                  transform: [{ scale: 1.05 }],
-                  shadowOpacity: 0.15,
-                  elevation: 3,
-                },
-              ]}
-              onPress={() => {
-                setSelectedPeriod(period);
-                incrementUsageCount('settings_interaction');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={[
-                styles.periodText,
-                { color: selectedPeriod === period ? 'white' : theme.colors.textSecondary }
-              ]}>
-                {period}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
+        <LiquidGlassView variant="thin" intensity={75} style={[styles.periodSelector, styles.glassCard]}>
+          <View style={styles.periodSelectorInner}>
+            {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
+              <TouchableOpacity
+                key={period}
+                style={[
+                  styles.periodButton,
+                  selectedPeriod === period && { 
+                    backgroundColor: theme.colors.primary,
+                    transform: [{ scale: 1.05 }],
+                    shadowOpacity: 0.15,
+                    elevation: 3,
+                  },
+                ]}
+                onPress={() => {
+                  setSelectedPeriod(period);
+                  incrementUsageCount('settings_interaction');
+                }}
+                activeOpacity={0.7}
+              >
+                <Text style={[
+                  styles.periodText,
+                  { color: selectedPeriod === period ? 'white' : theme.colors.textSecondary }
+                ]}>
+                  {period}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </LiquidGlassView>
 
         {/* Balance Chart */}
-        <View style={[styles.chartContainer, { backgroundColor: theme.colors.surface }]}>
+        <LiquidGlassView variant="thin" intensity={80} style={[styles.chartContainer, styles.glassCard]}>
           <BalanceChart selectedPeriod={selectedPeriod} />
-        </View>
+        </LiquidGlassView>
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
@@ -474,7 +478,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Recent Transactions */}
-        <View style={[styles.transactionsSection, { backgroundColor: theme.colors.surface }]}>
+        <LiquidGlassView variant="thin" intensity={80} style={[styles.transactionsSection, styles.glassCard]}>
           <View style={styles.transactionsHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Recent Transactions
@@ -518,7 +522,7 @@ export default function WalletScreen() {
               />
             ))
           )}
-        </View>
+        </LiquidGlassView>
         </ScrollView>
       </Animated.View>
       
@@ -1092,5 +1096,18 @@ const styles = StyleSheet.create({
   },
   animatedContainer: {
     flex: 1,
+  },
+  glassCard: {
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
+  },
+  balanceCardInner: {
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  periodSelectorInner: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    padding: platformStyles.spacing.lg,
   },
 });
