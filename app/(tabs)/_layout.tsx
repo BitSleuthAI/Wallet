@@ -4,6 +4,7 @@ import { Download, Send, Settings, Wallet } from 'lucide-react-native';
 import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 // Animated icon wrapper with scale animation
 const AnimatedTabIcon = ({ 
@@ -47,6 +48,7 @@ const AnimatedTabIcon = ({
 
 export default function TabLayout() {
   const { theme } = useWallet();
+  const insets = useSafeAreaInsets();
 
   return (
     <Tabs
@@ -57,9 +59,9 @@ export default function TabLayout() {
           backgroundColor: theme.colors.background,
           borderTopWidth: 0,
           elevation: 0,
-          height: Platform.OS === 'ios' ? 88 : 64,
+          height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
           paddingTop: Platform.OS === 'ios' ? 8 : 4,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
+          paddingBottom: Platform.OS === 'ios' ? 24 : 8 + insets.bottom,
           ...Platform.select({
             ios: {
               shadowColor: '#000',
