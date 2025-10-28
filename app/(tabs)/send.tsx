@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
@@ -1109,7 +1110,7 @@ export default function SendScreen() {
             </View>
 
             {/* Fee Section */}
-            <View style={[styles.feeSection, { backgroundColor: theme.colors.surface }]}>
+            <LiquidGlassView variant="thin" intensity={80} style={[styles.feeSection, styles.glassCard]}>
               <View style={styles.feeHeader}>
                 <View style={styles.feeInfo}>
                   <ArrowUpRight color={theme.colors.primary} size={20} />
@@ -1349,10 +1350,10 @@ export default function SendScreen() {
                   </Text>
                 </View>
               </View>
-            </View>
+            </LiquidGlassView>
 
             {/* RBF Toggle */}
-            <View style={[styles.rbfSection, { backgroundColor: theme.colors.surface }]}>
+            <LiquidGlassView variant="thin" intensity={75} style={[styles.rbfSection, styles.glassCard]}>
               <View style={styles.rbfInfo}>
                 <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>Enable RBF</Text>
                 <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>Replace-by-fee allows you to increase the fee later</Text>
@@ -1363,20 +1364,22 @@ export default function SendScreen() {
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
                 thumbColor="white"
               />
-            </View>
+            </LiquidGlassView>
 
             {/* Coin Control */}
-            <TouchableOpacity 
-              style={[styles.coinControlSection, { backgroundColor: theme.colors.surface }]}
-              onPress={() => {
-                router.push('/coin-control');
-              }}
-            >
-              <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
-                              <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
-              </Text>
-            </TouchableOpacity>
+            <LiquidGlassView variant="thin" intensity={75} style={styles.glassCard}>
+              <TouchableOpacity 
+                style={styles.coinControlSection}
+                onPress={() => {
+                  router.push('/coin-control');
+                }}
+              >
+                <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
+                                <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
+                  {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
+                </Text>
+              </TouchableOpacity>
+            </LiquidGlassView>
 
             {/* Review Button */}
             <TouchableOpacity
@@ -1781,5 +1784,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     lineHeight: 15,
     marginBottom: 2,
+  },
+  glassCard: {
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
   },
 });
