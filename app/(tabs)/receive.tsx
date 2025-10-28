@@ -1,6 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import WalletSelector from '@/components/WalletSelector';
-import { createButtonStyle } from '@/constants/themes';
+import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import * as Clipboard from 'expo-clipboard';

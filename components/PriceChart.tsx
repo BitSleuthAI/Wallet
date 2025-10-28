@@ -1,3 +1,4 @@
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { WifiOff } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';

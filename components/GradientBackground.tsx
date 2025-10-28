@@ -1,3 +1,4 @@
+import { platformStyles } from '@/constants/themes';
 import { Theme } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useMemo } from 'react';
