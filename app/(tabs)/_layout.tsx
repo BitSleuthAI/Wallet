@@ -16,18 +16,11 @@ export default function TabLayout() {
         default: theme.colors.textSecondary,
         selected: theme.colors.primary,
       }}
-      // Label styling for default and selected states
+      // Label styling - unselected state uses textSecondary, selected uses tintColor
       labelStyle={{
-        default: {
-          fontSize: 11,
-          fontWeight: '600',
-          color: theme.colors.textSecondary,
-        },
-        selected: {
-          fontSize: 11,
-          fontWeight: '600',
-          color: theme.colors.primary,
-        },
+        fontSize: 11,
+        fontWeight: '600',
+        color: theme.colors.textSecondary,
       }}
       // iOS 26+ liquid glass tab bar with minimize behavior
       minimizeBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
