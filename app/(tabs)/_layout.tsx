@@ -5,8 +5,8 @@ import React from 'react';
 import { Platform, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { BlurView } from 'expo-blur';
-import { getLiquidGlassTint, isIOS18OrHigher } from '@/utils/platform';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
+import { isIOS18OrHigher } from '@/utils/platform';
 
 // Animated icon wrapper with scale animation
 const AnimatedTabIcon = ({ 
@@ -81,9 +81,9 @@ export default function TabLayout() {
         tabBarBackground: () => {
           if (useLiquidGlass) {
             return (
-              <BlurView
+              <LiquidGlassView
+                variant="chrome"
                 intensity={100}
-                tint={getLiquidGlassTint(theme.isDark) as any}
                 style={StyleSheet.absoluteFill}
               />
             );
