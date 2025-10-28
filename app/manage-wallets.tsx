@@ -269,6 +269,7 @@ export default function ManageWalletsScreen() {
                   placeholder="Enter wallet name"
                   placeholderTextColor={theme.colors.textSecondary}
                   maxLength={30}
+                  underlineColorAndroid="transparent"
                 />
               </View>
 
