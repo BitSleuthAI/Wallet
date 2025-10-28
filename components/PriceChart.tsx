@@ -371,30 +371,23 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: 16,
-    padding: 20,
+    borderRadius: platformStyles.borderRadius.xl,
+    padding: platformStyles.spacing.xl,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...platformStyles.shadow,
   },
   errorContainer: {
-    paddingVertical: 40,
+    paddingVertical: platformStyles.spacing.huge,
     justifyContent: 'center',
   },
   errorTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
-    marginTop: 12,
+    marginTop: platformStyles.spacing.md,
     marginBottom: 4,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 15,
     textAlign: 'center',
   },
   chartHeader: {
@@ -402,14 +395,14 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 20,
+    marginBottom: platformStyles.spacing.xl,
   },
   chartTitle: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '700',
   },
   chartChange: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   changeContainer: {
