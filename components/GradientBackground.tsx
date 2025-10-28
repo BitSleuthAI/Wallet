@@ -224,8 +224,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   card: {
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: platformStyles.borderRadius.xl,
+    padding: platformStyles.spacing.lg,
     borderWidth: 1,
   },
 });
