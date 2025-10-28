@@ -202,21 +202,21 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.md,
+    padding: platformStyles.spacing.lg,
     marginVertical: platformStyles.spacing.xs,
     marginHorizontal: platformStyles.spacing.xs,
-    borderRadius: platformStyles.borderRadius.medium,
+    borderRadius: platformStyles.borderRadius.large,
     alignItems: 'flex-start',
     ...platformStyles.shadow,
     position: 'relative',
   },
   iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: platformStyles.spacing.sm,
+    marginRight: platformStyles.spacing.md,
     ...platformStyles.shadow,
   },
   content: {
@@ -234,11 +234,13 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   type: {
-    ...platformStyles.typography.body,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '600',
   },
   amount: {
-    ...platformStyles.typography.body,
+    fontSize: 16,
+    lineHeight: 20,
     fontWeight: '600',
   },
   details: {
@@ -248,11 +250,13 @@ const styles = StyleSheet.create({
     marginBottom: platformStyles.spacing.sm,
   },
   date: {
-    ...platformStyles.typography.caption,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '500',
   },
   amountUSD: {
-    ...platformStyles.typography.caption,
+    fontSize: 13,
+    lineHeight: 16,
     fontWeight: '500',
   },
   statusRow: {
@@ -264,14 +268,15 @@ const styles = StyleSheet.create({
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.sm,
-    paddingVertical: platformStyles.spacing.xs,
+    paddingHorizontal: platformStyles.spacing.md,
+    paddingVertical: platformStyles.spacing.xs + 2,
     borderRadius: platformStyles.borderRadius.medium,
     gap: 4,
   },
   statusText: {
     color: 'white',
-    ...platformStyles.typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: '600',
   },
   featureIndicators: {
@@ -282,17 +287,18 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 8,
     gap: 2,
   },
   featureText: {
-    ...platformStyles.typography.caption,
-    fontWeight: '600',
     fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '600',
   },
   address: {
-    ...platformStyles.typography.caption,
+    fontSize: 12,
+    lineHeight: 16,
     marginTop: platformStyles.spacing.xs,
     fontWeight: '500',
   },

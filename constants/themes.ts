@@ -8,14 +8,14 @@ export const platformStyles = {
     ios: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
+      shadowOpacity: 0.08,
+      shadowRadius: 8,
     },
     android: {
-      elevation: 3,
+      elevation: 2,
     },
     web: {
-      boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
     },
   }),
   
@@ -23,15 +23,15 @@ export const platformStyles = {
   cardShadow: Platform.select({
     ios: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.15,
-      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 8 },
+      shadowOpacity: 0.12,
+      shadowRadius: 16,
     },
     android: {
-      elevation: 6,
+      elevation: 8,
     },
     web: {
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.15)',
+      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.12)',
     },
   }),
   
@@ -39,24 +39,25 @@ export const platformStyles = {
   buttonShadow: Platform.select({
     ios: {
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.08,
-      shadowRadius: 2,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
     },
     android: {
-      elevation: 2,
+      elevation: 4,
     },
     web: {
-      boxShadow: '0 1px 2px rgba(0, 0, 0, 0.08)',
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
     },
   }),
   
   // Border radius values for consistency
   borderRadius: {
-    small: 8,
-    medium: 12,
-    large: 16,
-    xl: 20,
+    small: 12,
+    medium: 16,
+    large: 20,
+    xl: 24,
+    xxl: 28,
     round: 999,
   },
   
@@ -69,6 +70,7 @@ export const platformStyles = {
     xl: 20,
     xxl: 24,
     xxxl: 32,
+    huge: 40,
   },
   
   // Typography scale
@@ -112,25 +114,25 @@ export const lightTheme: Theme = {
   isDark: false,
   colors: {
     // Base colors with gradient-inspired tones
-    background: '#FEFEFE',
-    surface: '#FFFFFF',
+    background: '#FFFFFF',
+    surface: '#FAFAFA',
     primary: '#FF8A65', // Coral orange inspired by gradient
     secondary: '#FF6B6B', // Warm red-orange
     accent: '#FFB74D', // Golden orange
     success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
-    text: '#1A1A1A',
+    text: '#1F2937',
     textSecondary: '#6B7280',
-    border: '#F0F0F0',
+    border: '#F3F4F6',
     // Gradient colors - inspired by the orange/coral gradient image
     gradientStart: '#FF8A65', // Coral orange
     gradientEnd: '#FF6B6B', // Warm red-orange
     gradientAccent: '#FFB74D', // Golden accent
     // Glow effects for light theme (subtle)
-    glowPrimary: 'rgba(255, 138, 101, 0.15)',
-    glowSecondary: 'rgba(255, 107, 107, 0.15)',
-    glowAccent: 'rgba(255, 183, 77, 0.15)',
+    glowPrimary: 'rgba(255, 138, 101, 0.12)',
+    glowSecondary: 'rgba(255, 107, 107, 0.12)',
+    glowAccent: 'rgba(255, 183, 77, 0.12)',
     // Additional colors
     purple: '#FF8A65',
     blue: '#3B82F6',
@@ -139,7 +141,7 @@ export const lightTheme: Theme = {
     pink: '#FF6B6B',
     yellow: '#FFB74D',
     // Surface variants
-    surfaceLight: '#FAFAFA',
+    surfaceLight: '#FFFFFF',
     surfaceDark: '#F5F5F5',
     // Card backgrounds with subtle gradient feel
     cardBackground: '#FFFFFF',
@@ -151,25 +153,25 @@ export const darkTheme: Theme = {
   isDark: true,
   colors: {
     // Deep dark background with cool undertones - complementary to warm coral
-    background: '#0A0A0F',
-    surface: '#1A1A2E',
+    background: '#0F172A',
+    surface: '#1E293B',
     primary: '#26F5FE', // Bright cyan - perfect complement to coral orange
     secondary: '#00BCD4', // Teal - creates beautiful gradient with cyan
     accent: '#40E0D0', // Turquoise accent - bridges cyan and teal
     success: '#00E676', // Bright emerald - complements the cool theme
     warning: '#FFB74D', // Keep warm amber for contrast
     error: '#FF5252', // Bright red - maintains energy
-    text: '#F7FAFC',
-    textSecondary: '#A0AEC0',
-    border: '#2D3748',
+    text: '#F1F5F9',
+    textSecondary: '#94A3B8',
+    border: '#334155',
     // Gradient colors - cool cyan theme (opposite energy to warm coral)
     gradientStart: '#26F5FE', // Bright cyan
     gradientEnd: '#00BCD4', // Teal
     gradientAccent: '#40E0D0', // Turquoise accent
     // Glow effects for dark theme (cool cyan glow)
-    glowPrimary: 'rgba(38, 245, 254, 0.4)', // Cyan glow
-    glowSecondary: 'rgba(0, 188, 212, 0.4)', // Teal glow
-    glowAccent: 'rgba(64, 224, 208, 0.4)', // Turquoise glow
+    glowPrimary: 'rgba(38, 245, 254, 0.25)', // Cyan glow
+    glowSecondary: 'rgba(0, 188, 212, 0.25)', // Teal glow
+    glowAccent: 'rgba(64, 224, 208, 0.25)', // Turquoise glow
     // Additional colors with cool variants
     purple: '#26F5FE', // Replace purple with cyan
     blue: '#26F5FE', // Cyan blue
@@ -178,10 +180,10 @@ export const darkTheme: Theme = {
     pink: '#FF4081', // Bright pink for energy
     yellow: '#FFEB3B', // Bright yellow for warmth
     // Surface variants with cool undertones
-    surfaceLight: '#252538',
-    surfaceDark: '#16162A',
+    surfaceLight: '#293548',
+    surfaceDark: '#1A2332',
     // Card backgrounds with cyan glow effect
-    cardBackground: '#1F1F33',
+    cardBackground: '#1E293B',
     cardBorder: '#26F5FE', // Cyan border for accent
   },
 };
@@ -189,12 +191,12 @@ export const darkTheme: Theme = {
 // Enhanced button styles with gradients and fun effects
 export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary' | 'outline' | 'gradient' | 'fun' = 'primary') => {
   const baseStyle = {
-    paddingVertical: platformStyles.spacing.md,
+    paddingVertical: platformStyles.spacing.lg,
     paddingHorizontal: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.medium,
+    borderRadius: platformStyles.borderRadius.large,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    minHeight: 48,
+    minHeight: 52,
     ...platformStyles.buttonShadow,
   };
   
@@ -208,14 +210,14 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
       return {
         ...baseStyle,
         backgroundColor: theme.colors.surface,
-        borderWidth: 1,
+        borderWidth: 1.5,
         borderColor: theme.colors.border,
       };
     case 'outline':
       return {
         ...baseStyle,
         backgroundColor: 'transparent',
-        borderWidth: 1,
+        borderWidth: 2,
         borderColor: theme.colors.primary,
       };
     case 'gradient':
@@ -228,7 +230,7 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
       return {
         ...baseStyle,
         backgroundColor: theme.colors.accent,
-        borderRadius: platformStyles.borderRadius.large,
+        borderRadius: platformStyles.borderRadius.xl,
       };
     default:
       return baseStyle;
@@ -238,16 +240,16 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
 // Enhanced input styles with better visual feedback
 export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'default') => {
   const baseStyle = {
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: theme.colors.border,
-    borderRadius: platformStyles.borderRadius.medium,
-    paddingVertical: platformStyles.spacing.md,
+    borderRadius: platformStyles.borderRadius.large,
+    paddingVertical: platformStyles.spacing.lg,
     paddingHorizontal: platformStyles.spacing.lg,
     fontSize: platformStyles.typography.bodyLarge.fontSize,
     lineHeight: platformStyles.typography.bodyLarge.lineHeight,
     backgroundColor: theme.colors.surface,
     color: theme.colors.text,
-    minHeight: 48,
+    minHeight: 52,
   };
   
   if (variant === 'fun') {
@@ -255,7 +257,7 @@ export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'def
       ...baseStyle,
       borderColor: theme.colors.accent,
       borderWidth: 2,
-      borderRadius: platformStyles.borderRadius.large,
+      borderRadius: platformStyles.borderRadius.xl,
     };
   }
   
@@ -266,7 +268,7 @@ export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'def
 export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 'fun' = 'default') => {
   const baseStyle = {
     backgroundColor: theme.colors.surface,
-    borderRadius: platformStyles.borderRadius.large,
+    borderRadius: platformStyles.borderRadius.xl,
     padding: platformStyles.spacing.lg,
   };
   
@@ -286,7 +288,7 @@ export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 
         ...baseStyle,
         borderWidth: 2,
         borderColor: theme.colors.accent,
-        borderRadius: platformStyles.borderRadius.xl,
+        borderRadius: platformStyles.borderRadius.xxl,
         ...platformStyles.cardShadow,
       };
     default:
