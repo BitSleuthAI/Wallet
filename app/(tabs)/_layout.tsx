@@ -1,6 +1,6 @@
-import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
+import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
 import { useWallet } from '@/hooks/wallet-store';
-import { Download, Send, Settings, Wallet } from 'lucide-react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import React from 'react';
 import { Platform } from 'react-native';
 
@@ -45,52 +45,32 @@ export default function TabLayout() {
     >
       <NativeTabs.Trigger name="index">
         <Icon
-          src={
-            <Wallet
-              color={theme.colors.textSecondary}
-              size={24}
-              strokeWidth={2}
-            />
-          }
+          sf={{ default: 'creditcard', selected: 'creditcard.fill' }}
+          androidSrc={<VectorIcon family={Ionicons} name="wallet" />}
         />
         <Label>Wallet</Label>
       </NativeTabs.Trigger>
       
       <NativeTabs.Trigger name="send">
         <Icon
-          src={
-            <Send
-              color={theme.colors.textSecondary}
-              size={24}
-              strokeWidth={2}
-            />
-          }
+          sf={{ default: 'arrow.up.circle', selected: 'arrow.up.circle.fill' }}
+          androidSrc={<VectorIcon family={Ionicons} name="send" />}
         />
         <Label>Send</Label>
       </NativeTabs.Trigger>
       
       <NativeTabs.Trigger name="receive">
         <Icon
-          src={
-            <Download
-              color={theme.colors.textSecondary}
-              size={24}
-              strokeWidth={2}
-            />
-          }
+          sf={{ default: 'arrow.down.circle', selected: 'arrow.down.circle.fill' }}
+          androidSrc={<VectorIcon family={Ionicons} name="arrow-down-circle" />}
         />
         <Label>Receive</Label>
       </NativeTabs.Trigger>
       
       <NativeTabs.Trigger name="settings">
         <Icon
-          src={
-            <Settings
-              color={theme.colors.textSecondary}
-              size={24}
-              strokeWidth={2}
-            />
-          }
+          sf={{ default: 'gearshape', selected: 'gearshape.fill' }}
+          androidSrc={<VectorIcon family={Ionicons} name="settings" />}
         />
         <Label>Settings</Label>
       </NativeTabs.Trigger>
