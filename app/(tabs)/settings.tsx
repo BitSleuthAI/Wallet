@@ -2,12 +2,15 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import HapticService from '@/services/haptic-service';
 
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import {
+    AlertTriangle,
     Check,
     ChevronRight,
     Clock,
@@ -32,7 +35,7 @@ import {
 import React, { useState } from 'react';
 import {
     Alert,
-    Animated,
+    Animated as RNAnimated,
     Modal,
     Platform,
     Pressable,
@@ -44,6 +47,11 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
+import ReanimatedAnimated, {
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
+} from 'react-native-reanimated';
 
 export default function SettingsScreen() {
   const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
@@ -55,7 +63,19 @@ export default function SettingsScreen() {
 
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
 
+  // Logout button gradient colors (danger/error theme)
+  // Using fixed colors for consistency across themes while maintaining danger indication
+  const logoutGradientColors = theme.isDark 
+    ? ['#FF5252', '#E91E63'] // Bright red to pink for dark mode
+    : ['#EF4444', '#DC2626']; // Red gradient for light mode
 
+  // Animation values for logout button
+  const logoutScale = useSharedValue(1);
+  const AnimatedTouchable = ReanimatedAnimated.createAnimatedComponent(TouchableOpacity);
+
+  const logoutAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: logoutScale.value }],
+  }));
 
   const handleLogout = () => {
     if (isLoggingOut) return; // Prevent multiple logout attempts
@@ -70,6 +90,10 @@ export default function SettingsScreen() {
           style: 'destructive', 
           onPress: async () => {
             setIsLoggingOut(true);
+            
+            // Trigger haptic feedback after user confirms
+            HapticService.warning();
+            HapticService.error();
             
             try {
               console.log('🚀 User confirmed wallet logout and erase');
@@ -101,6 +125,17 @@ export default function SettingsScreen() {
         },
       ]
     );
+  };
+
+  const handleLogoutPressIn = () => {
+    if (isLoggingOut) return;
+    HapticService.light();
+    logoutScale.value = withSpring(0.96, { damping: 15, stiffness: 400 });
+  };
+
+  const handleLogoutPressOut = () => {
+    if (isLoggingOut) return;
+    logoutScale.value = withSpring(1, { damping: 15, stiffness: 400 });
   };
 
   const SettingItem = ({ 
@@ -158,7 +193,7 @@ export default function SettingsScreen() {
           }} 
         />
         
-        <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+        <RNAnimated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* General Section */}
           <SectionHeader title="General" />
@@ -367,23 +402,34 @@ export default function SettingsScreen() {
 
 
           {/* Logout Button */}
-          <TouchableOpacity
+          <AnimatedTouchable
             style={[
-              styles.logoutButton, 
-              { 
-                borderColor: theme.colors.error,
-                opacity: isLoggingOut ? 0.6 : 1
-              }
+              styles.logoutButton,
+              logoutAnimatedStyle,
+              { opacity: isLoggingOut ? 0.7 : 1 }
             ]}
+            onPressIn={handleLogoutPressIn}
+            onPressOut={handleLogoutPressOut}
             onPress={handleLogout}
             disabled={isLoggingOut}
+            activeOpacity={0.9}
           >
-            <Text style={[styles.logoutText, { color: theme.colors.error }]}>
-              {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
-            </Text>
-          </TouchableOpacity>
+            <LinearGradient
+              colors={logoutGradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <View style={styles.logoutButtonContent}>
+              {/* White color for maximum contrast against gradient background */}
+              <AlertTriangle color="#FFFFFF" size={20} strokeWidth={2.5} />
+              <Text style={styles.logoutText}>
+                {isLoggingOut ? 'Clearing Wallet Data...' : 'Logout & Erase Wallet'}
+              </Text>
+            </View>
+          </AnimatedTouchable>
         </ScrollView>
-      </Animated.View>
+      </RNAnimated.View>
 
       {/* Currency Selection Modal */}
       <Modal
@@ -647,19 +693,29 @@ const styles = StyleSheet.create({
     marginHorizontal: 20,
     marginTop: 40,
     marginBottom: 40,
-    paddingVertical: 16,
-    borderRadius: 12,
-    borderWidth: 2,
+    paddingVertical: 18,
+    borderRadius: 16,
     alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+    minHeight: 56,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  logoutButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
   },
   logoutText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 17,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
   },
   webSwitch: {
     width: 48,
