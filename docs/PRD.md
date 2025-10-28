@@ -245,8 +245,8 @@ Bitcoin adoption is growing rapidly, but security breaches and poor UX continue 
 ### Core Technology Stack
 
 **Framework & Runtime:**
-- **React Native**: 0.79.5 - Cross-platform mobile framework
-- **Expo SDK**: 53 - Development and build platform
+- **React Native**: 0.81.5 with New Architecture enabled - Cross-platform mobile framework
+- **Expo SDK**: 54 - Development and build platform
 - **React**: 19.0 - UI library
 - **TypeScript**: 5.8 - Type-safe development
 - **Metro**: Bundler for React Native
