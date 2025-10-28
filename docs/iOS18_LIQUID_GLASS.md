@@ -44,6 +44,7 @@ import { LiquidGlassView } from '@/components/LiquidGlassView';
 The liquid glass effect has been applied to:
 
 1. **Tab Bar Navigation** (`app/(tabs)/_layout.tsx`)
+   - Uses the `LiquidGlassView` component with the 'chrome' variant
    - Uses `systemChromeMaterialLight`/`systemChromeMaterialDark` on iOS 18+
    - Provides a translucent, modern tab bar that shows content behind it
    - Automatically falls back to solid background on iOS < 18
