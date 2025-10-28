@@ -790,11 +790,8 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   periodSelector: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginHorizontal: platformStyles.spacing.xl,
     marginTop: platformStyles.spacing.xl,
-    padding: platformStyles.spacing.lg,
     borderRadius: platformStyles.borderRadius.xl,
     ...platformStyles.shadow,
   },
