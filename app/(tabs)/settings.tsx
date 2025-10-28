@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -154,27 +155,29 @@ export default function SettingsScreen() {
     rightElement?: React.ReactNode;
     iconColor?: string;
   }) => (
-    <TouchableOpacity
-      style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}
-      onPress={onPress}
-      disabled={!onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
-        <Icon color={iconColor} size={20} />
-      </View>
-      <View style={styles.settingContent}>
-        <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-            {subtitle}
+    <LiquidGlassView variant="thin" intensity={75} style={styles.glassCard}>
+      <TouchableOpacity
+        style={styles.settingItem}
+        onPress={onPress}
+        disabled={!onPress}
+        activeOpacity={onPress ? 0.7 : 1}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: iconColor + '20' }]}>
+          <Icon color={iconColor} size={20} />
+        </View>
+        <View style={styles.settingContent}>
+          <Text style={[styles.settingTitle, { color: theme.colors.text }]}>
+            {title}
           </Text>
-        )}
-      </View>
-      {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
-    </TouchableOpacity>
+          {subtitle && (
+            <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+              {subtitle}
+            </Text>
+          )}
+        </View>
+        {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
+      </TouchableOpacity>
+    </LiquidGlassView>
   );
 
   const SectionHeader = ({ title }: { title: string }) => (
@@ -810,5 +813,10 @@ const styles = StyleSheet.create({
   walletItemType: {
     fontSize: 15,
     marginTop: 2,
+  },
+  glassCard: {
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
+    marginBottom: platformStyles.spacing.md,
   },
 });

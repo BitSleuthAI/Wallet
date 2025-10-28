@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -189,7 +190,7 @@ export default function ReceiveScreen() {
           <WalletSelector label="To:" />
 
           {/* QR Code */}
-          <View style={[styles.qrContainer, { backgroundColor: theme.colors.surface, alignSelf: 'center' }]}>
+          <LiquidGlassView variant="thin" intensity={85} style={[styles.qrContainer, styles.glassCard]}>
             <View style={styles.qrCodeWrapper}>
               {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
                 <QRCode
@@ -213,7 +214,7 @@ export default function ReceiveScreen() {
                 </View>
               )}
             </View>
-          </View>
+          </LiquidGlassView>
 
           {/* Address */}
           <View style={styles.addressSection}>
@@ -419,5 +420,9 @@ const styles = StyleSheet.create({
   qrPlaceholderText: {
     fontSize: 17,
     textAlign: 'center',
+  },
+  glassCard: {
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
   },
 });
