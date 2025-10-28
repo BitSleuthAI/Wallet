@@ -3,6 +3,7 @@ import '@/services/crypto-polyfill';
 
 import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
+import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
