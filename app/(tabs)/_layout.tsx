@@ -1,158 +1,99 @@
+import { Icon, Label, NativeTabs } from 'expo-router/unstable-native-tabs';
 import { useWallet } from '@/hooks/wallet-store';
-import { Tabs } from 'expo-router';
 import { Download, Send, Settings, Wallet } from 'lucide-react-native';
 import React from 'react';
-import { Platform, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, withSpring } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { GlassView, isLiquidGlassAvailable } from 'expo-glass-effect';
-
-// Animated icon wrapper with scale animation
-const AnimatedTabIcon = ({ 
-  IconComponent, 
-  focused, 
-  color, 
-  size = 24 
-}: { 
-  IconComponent: any; 
-  focused: boolean; 
-  color: string; 
-  size?: number;
-}) => {
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        { 
-          scale: withSpring(focused ? 1.15 : 1, {
-            damping: 15,
-            stiffness: 200,
-          })
-        },
-      ],
-    };
-  });
-
-  return (
-    <Animated.View style={[styles.iconContainer, animatedStyle]}>
-      {focused && (
-        <View style={[styles.iconBackground, { backgroundColor: color + '15' }]} />
-      )}
-      <IconComponent 
-        color={color} 
-        size={size} 
-        fill={focused ? color : 'none'} 
-        strokeWidth={focused ? 2.5 : 2}
-      />
-    </Animated.View>
-  );
-};
+import { Platform } from 'react-native';
 
 export default function TabLayout() {
   const { theme } = useWallet();
-  const insets = useSafeAreaInsets();
-  const useGlassEffect = isLiquidGlassAvailable();
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarStyle: {
-          backgroundColor: useGlassEffect ? 'transparent' : theme.colors.background,
-          borderTopWidth: 0,
-          elevation: 0,
-          height: Platform.OS === 'ios' ? 88 : 64 + insets.bottom,
-          paddingTop: Platform.OS === 'ios' ? 8 : 4,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8 + insets.bottom,
-          position: 'absolute',
-          ...Platform.select({
-            ios: {
-              shadowColor: '#000',
-              shadowOffset: { width: 0, height: -2 },
-              shadowOpacity: 0.1,
-              shadowRadius: 8,
-            },
-            android: {
-              elevation: 8,
-            },
-          }),
-        },
-        tabBarBackground: () => {
-          if (useGlassEffect) {
-            return (
-              <GlassView
-                glassEffectStyle="regular"
-                tintColor={theme.isDark ? '#000000' : '#FFFFFF'}
-                style={StyleSheet.absoluteFill}
-              />
-            );
-          }
-          return null;
-        },
-        tabBarLabelStyle: {
+    <NativeTabs
+      // Tint color for active tabs
+      tintColor={theme.colors.primary}
+      // Icon colors for default and selected states
+      iconColor={{
+        default: theme.colors.textSecondary,
+        selected: theme.colors.primary,
+      }}
+      // Label styling for default and selected states
+      labelStyle={{
+        default: {
           fontSize: 11,
           fontWeight: '600',
-          marginTop: 4,
+          color: theme.colors.textSecondary,
         },
-        headerStyle: {
-          backgroundColor: theme.colors.background,
+        selected: {
+          fontSize: 11,
+          fontWeight: '600',
+          color: theme.colors.primary,
         },
-        headerTintColor: theme.colors.text,
-        headerShown: false,
       }}
+      // iOS 26+ liquid glass tab bar with minimize behavior
+      minimizeBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
+      // Blur effect for tab bar background (iOS)
+      blurEffect="systemMaterial"
+      // Background color with transparency for glass effect
+      backgroundColor={Platform.select({
+        ios: theme.isDark ? '#00000066' : '#FFFFFF66',
+        android: theme.colors.background,
+      })}
+      // Disable transparent on scroll edge for consistent appearance
+      disableTransparentOnScrollEdge={false}
+      // Shadow color for depth
+      shadowColor={Platform.OS === 'ios' ? '#00000033' : undefined}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'Wallet',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon IconComponent={Wallet} focused={focused} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="send"
-        options={{
-          title: 'Send',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon IconComponent={Send} focused={focused} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="receive"
-        options={{
-          title: 'Receive',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon IconComponent={Download} focused={focused} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Settings',
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon IconComponent={Settings} focused={focused} color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+      <NativeTabs.Trigger name="index">
+        <Icon
+          src={
+            <Wallet
+              color={theme.colors.textSecondary}
+              size={24}
+              strokeWidth={2}
+            />
+          }
+        />
+        <Label>Wallet</Label>
+      </NativeTabs.Trigger>
+      
+      <NativeTabs.Trigger name="send">
+        <Icon
+          src={
+            <Send
+              color={theme.colors.textSecondary}
+              size={24}
+              strokeWidth={2}
+            />
+          }
+        />
+        <Label>Send</Label>
+      </NativeTabs.Trigger>
+      
+      <NativeTabs.Trigger name="receive">
+        <Icon
+          src={
+            <Download
+              color={theme.colors.textSecondary}
+              size={24}
+              strokeWidth={2}
+            />
+          }
+        />
+        <Label>Receive</Label>
+      </NativeTabs.Trigger>
+      
+      <NativeTabs.Trigger name="settings">
+        <Icon
+          src={
+            <Settings
+              color={theme.colors.textSecondary}
+              size={24}
+              strokeWidth={2}
+            />
+          }
+        />
+        <Label>Settings</Label>
+      </NativeTabs.Trigger>
+    </NativeTabs>
   );
 }
-
-const styles = StyleSheet.create({
-  iconContainer: {
-    position: 'relative',
-    justifyContent: 'center',
-    alignItems: 'center',
-    width: 40,
-    height: 40,
-  },
-  iconBackground: {
-    position: 'absolute',
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-  },
-});
