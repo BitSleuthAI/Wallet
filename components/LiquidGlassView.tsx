@@ -1,5 +1,5 @@
 import React from 'react';
-import { Platform, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useWallet } from '@/hooks/wallet-store';
 import { getLiquidGlassTint, getThinMaterialTint, getUltraThinMaterialTint, isIOS } from '@/utils/platform';
