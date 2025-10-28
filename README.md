@@ -92,6 +92,7 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
   - Automatic dark/light theme switching
   - Custom wallet color themes
   - Smooth animations and haptic feedback
+  - Native iOS liquid glass effect on tabs (iOS 18+)
   
 - 📊 **Real-Time Data**
   - Live Bitcoin price updates
@@ -128,6 +129,7 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - **React Navigation** 7.1 - Navigation library
 - **Lucide React Native** - Modern icon set
 - **React Native Reanimated** 4.1 - Smooth animations
+- **Expo Glass Effect** 0.1.4 - Native iOS liquid glass effect (iOS 18+)
 
 ### Platform Services
 - **Expo Local Authentication** - Biometric authentication (Face ID, Touch ID)
@@ -177,6 +179,9 @@ cd wallet
 npm install
 # or
 bun install
+
+# Install iOS dependencies (required for native modules like expo-glass-effect)
+cd ios && pod install && cd ..
 ```
 
 ### 2. Firebase Configuration
