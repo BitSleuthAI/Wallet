@@ -1690,7 +1690,7 @@ const styles = StyleSheet.create({
   },
   setupButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '600',
   },
   validationContainer: {
