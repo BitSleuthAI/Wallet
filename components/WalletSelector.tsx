@@ -1,3 +1,4 @@
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
 import { Check, ChevronDown } from 'lucide-react-native';
