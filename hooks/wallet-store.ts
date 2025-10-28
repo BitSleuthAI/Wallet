@@ -248,7 +248,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     const initializeWallets = async () => {
       try {
         // Get current app version
-        const currentVersion = Constants.expoConfig?.version || '1.1.6';
+        const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
         console.log('📱 Current app version:', currentVersion);
         
         // Check stored version to detect app updates

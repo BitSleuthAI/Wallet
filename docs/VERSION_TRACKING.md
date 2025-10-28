@@ -70,7 +70,7 @@ The version tracking logic is implemented in `hooks/wallet-store.ts` within the 
 
 ```typescript
 // Get current app version
-const currentVersion = Constants.expoConfig?.version || '1.1.6';
+const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read from app.json
 
 // Get stored version
 const storedVersion = await AsyncStorage.getItem('app_version');
