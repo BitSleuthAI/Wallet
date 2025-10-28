@@ -24,6 +24,8 @@ export default function TabLayout() {
       }}
       // iOS 26+ liquid glass tab bar with minimize behavior
       minimizeBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
+      // Android: always show labels
+      labelVisibilityMode="labeled"
       // Blur effect for tab bar background (iOS)
       blurEffect="systemMaterial"
       // Background color with transparency for glass effect
@@ -47,7 +49,7 @@ export default function TabLayout() {
       <NativeTabs.Trigger name="send">
         <Icon
           sf={{ default: 'arrow.up.circle', selected: 'arrow.up.circle.fill' }}
-          androidSrc={<VectorIcon family={Ionicons} name="send" />}
+          androidSrc={<VectorIcon family={Ionicons} name="arrow-up-circle" />}
         />
         <Label>Send</Label>
       </NativeTabs.Trigger>
