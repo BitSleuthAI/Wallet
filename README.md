@@ -92,7 +92,8 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
   - Automatic dark/light theme switching
   - Custom wallet color themes
   - Smooth animations and haptic feedback
-  - Native iOS liquid glass effect on tabs (iOS 18+)
+  - Native iOS 26+ liquid glass tabs with auto-minimize behavior
+  - Material blur effects on iOS 18+
   
 - 📊 **Real-Time Data**
   - Live Bitcoin price updates
