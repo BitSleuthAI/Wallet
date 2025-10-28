@@ -98,6 +98,7 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
   - Multi-currency support (USD, EUR, GBP)
   - Network fee recommendations
   - Transaction status notifications
+  - Automatic data refresh on app updates (ensures fresh balance, transactions, addresses, and UTXOs after each update)
 
 ---
 

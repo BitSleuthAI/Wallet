@@ -9,6 +9,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform } from 'react-native';
+import Constants from 'expo-constants';
 
 // Wallet service imports with platform detection
 let walletService: any;
@@ -246,6 +247,59 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     const initializeWallets = async () => {
       try {
+        // Get current app version
+        const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
+        console.log('📱 Current app version:', currentVersion);
+        
+        // Check stored version to detect app updates
+        const storedVersion = await AsyncStorage.getItem('app_version');
+        console.log('💾 Stored app version:', storedVersion);
+        
+        // Detect if app was updated (version changed)
+        const isAppUpdate = storedVersion !== null && storedVersion !== currentVersion;
+        
+        if (isAppUpdate) {
+          console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
+          console.log('🧹 Clearing all cached wallet data to ensure fresh sync...');
+          
+          // Get all wallets to clear their caches
+          const walletsData = await AsyncStorage.getItem('wallets');
+          if (walletsData) {
+            const wallets = JSON.parse(walletsData);
+            
+            // Clear cache for each wallet's xpub
+            for (const wallet of wallets) {
+              if (wallet.xpub) {
+                console.log(`🧹 Clearing cache for wallet: ${wallet.name}`);
+                await clearCacheForWalletXpub(wallet.xpub);
+                clearAddressCache(wallet.xpub);
+              }
+            }
+          }
+          
+          // Clear empty UTXO caches
+          await clearEmptyUTXOCaches();
+          console.log('✅ Empty UTXO caches cleared');
+          
+          // Clear transaction cache
+          await clearAllCache();
+          console.log('✅ Transaction cache cleared');
+          
+          // Clear React Query caches to force fresh fetches
+          queryClient.clear();
+          console.log('✅ React Query caches cleared');
+          
+          console.log('✅ All wallet data caches cleared - fresh data will be loaded');
+        } else if (storedVersion === null) {
+          console.log('🆕 First launch or version not tracked yet');
+        } else {
+          console.log('✅ Same version - using cached data');
+        }
+        
+        // Update stored version to current version
+        await AsyncStorage.setItem('app_version', currentVersion);
+        console.log('💾 Updated stored app version to:', currentVersion);
+        
         // Clear any potential mock/demo data on every initialization
         await AsyncStorage.multiRemove([
           'mock_data', 'test_data', 'sample_data', 'dummy_data', 
@@ -293,11 +347,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           }
         }
       } catch (error) {
-        // console.warn('⚠️ Error during wallet initialization:', error);
+        console.warn('⚠️ Error during wallet initialization:', error);
       }
     };
     initializeWallets();
-  }, []);
+  }, [queryClient]);
 
   // Load wallets from storage
   const walletsQuery = useQuery({
