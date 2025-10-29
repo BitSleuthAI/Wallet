@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
 import { useQuery } from '@tanstack/react-query';
@@ -8,14 +9,14 @@ import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowDownLeft, ArrowLeft, ArrowUpRight, Copy } from 'lucide-react-native';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ActivityIndicator,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 interface Transaction {
@@ -443,6 +444,7 @@ const styles = StyleSheet.create({
     padding: 24,
     borderRadius: 16,
     marginBottom: 30,
+    ...platformStyles.cardShadow,
   },
   balanceLabel: {
     fontSize: 16,

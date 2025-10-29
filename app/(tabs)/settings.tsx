@@ -8,51 +8,51 @@ import HapticService from '@/services/haptic-service';
 
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
-import { Stack, router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-    AlertTriangle,
-    Check,
-    ChevronRight,
-    Clock,
-    DollarSign,
-    Euro,
-    Eye,
-    EyeOff,
-    FileText,
-    FolderOpen,
-    Info,
-    Lock,
-    Moon,
-    PoundSterling,
-    Scale,
-    Settings,
-    Shield,
-    Sun,
-    UserX,
-    Wallet,
-    X
+  AlertTriangle,
+  Check,
+  ChevronRight,
+  Clock,
+  DollarSign,
+  Euro,
+  Eye,
+  EyeOff,
+  FileText,
+  FolderOpen,
+  Info,
+  Lock,
+  Moon,
+  PoundSterling,
+  Scale,
+  Settings,
+  Shield,
+  Sun,
+  UserX,
+  Wallet,
+  X
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-    Alert,
-    Animated as RNAnimated,
-    Modal,
-    Platform,
-    Pressable,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Switch,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Modal,
+  Platform,
+  Pressable,
+  Animated as RNAnimated,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import ReanimatedAnimated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSpring,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
 } from 'react-native-reanimated';
 
 export default function SettingsScreen() {
@@ -67,7 +67,7 @@ export default function SettingsScreen() {
 
   // Logout button gradient colors (danger/error theme)
   // Using fixed colors for consistency across themes while maintaining danger indication
-  const logoutGradientColors = theme.isDark 
+  const logoutGradientColors: readonly [string, string, ...string[]] = theme.isDark 
     ? ['#FF5252', '#E91E63'] // Bright red to pink for dark mode
     : ['#EF4444', '#DC2626']; // Red gradient for light mode
 
@@ -146,7 +146,8 @@ export default function SettingsScreen() {
     subtitle, 
     onPress, 
     rightElement,
-    iconColor = theme.colors.primary 
+    iconColor = theme.colors.primary,
+    showDivider = true,
   }: {
     icon: any;
     title: string;
@@ -154,8 +155,9 @@ export default function SettingsScreen() {
     onPress?: () => void;
     rightElement?: React.ReactNode;
     iconColor?: string;
+    showDivider?: boolean;
   }) => (
-    <LiquidGlassView variant="thin" intensity={75} style={styles.glassCard}>
+    <>
       <TouchableOpacity
         style={styles.settingItem}
         onPress={onPress}
@@ -177,6 +179,20 @@ export default function SettingsScreen() {
         </View>
         {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
       </TouchableOpacity>
+      {showDivider && (
+        <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
+      )}
+    </>
+  );
+
+  const SettingSection = ({ children }: { children: React.ReactNode }) => (
+    <LiquidGlassView variant="thin" intensity={75} style={[
+      styles.sectionCard,
+      Platform.OS === 'android' && {
+        backgroundColor: '#FFFFFF',
+      }
+    ]}>
+      {children}
     </LiquidGlassView>
   );
 
@@ -198,61 +214,67 @@ export default function SettingsScreen() {
         />
         
         <RNAnimated.View style={[styles.animatedContainer, animatedStyle]}>
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {/* General Section */}
           <SectionHeader title="General" />
           
-          <SettingItem
-            icon={FolderOpen}
-            title="Manage Wallets"
-            subtitle="Add, edit, or remove wallets"
-            onPress={() => router.push('/manage-wallets')}
-          />
-          
-          <SettingItem
-            icon={Wallet}
-            title="Current Wallet"
-            subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
-            onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
-            rightElement={
-              wallets.length > 1 ? (
-                <View style={styles.walletInfo}>
-                  <Text style={[styles.walletCount, { color: theme.colors.textSecondary }]}>
-                    {wallets.length} wallets
+          <SettingSection>
+            <SettingItem
+              icon={FolderOpen}
+              title="Manage Wallets"
+              subtitle="Add, edit, or remove wallets"
+              onPress={() => router.push('/manage-wallets')}
+            />
+            
+            <SettingItem
+              icon={Wallet}
+              title="Current Wallet"
+              subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
+              onPress={() => wallets.length > 1 ? setShowWalletModal(true) : undefined}
+              rightElement={
+                wallets.length > 1 ? (
+                  <View style={styles.walletInfo}>
+                    <Text style={[styles.walletCount, { color: theme.colors.textSecondary }]}>
+                      {wallets.length} wallets
+                    </Text>
+                    <ChevronRight color={theme.colors.textSecondary} size={20} />
+                  </View>
+                ) : undefined
+              }
+            />
+
+            <SettingItem
+              icon={Settings}
+              title="Wallet Settings"
+              subtitle="Configure wallet preferences"
+              onPress={() => router.push('/wallet-settings')}
+            />
+
+            <SettingItem
+              icon={selectedCurrency === 'USD' ? DollarSign : selectedCurrency === 'EUR' ? Euro : PoundSterling}
+              title="Display Currency"
+              subtitle="Set your preferred currency"
+              onPress={() => setShowCurrencyModal(true)}
+              rightElement={
+                <View style={styles.currencyContainer}>
+                  <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
+                    {selectedCurrency} - {getCurrencyName()}
                   </Text>
                   <ChevronRight color={theme.colors.textSecondary} size={20} />
                 </View>
-              ) : undefined
-            }
-          />
+              }
+            />
 
-          <SettingItem
-            icon={Settings}
-            title="Wallet Settings"
-            subtitle="Configure wallet preferences"
-            onPress={() => router.push('/wallet-settings')}
-          />
-
-          <SettingItem
-            icon={selectedCurrency === 'USD' ? DollarSign : selectedCurrency === 'EUR' ? Euro : PoundSterling}
-            title="Display Currency"
-            subtitle="Set your preferred currency"
-            onPress={() => setShowCurrencyModal(true)}
-            rightElement={
-              <View style={styles.currencyContainer}>
-                <Text style={[styles.currencyText, { color: theme.colors.textSecondary }]} numberOfLines={1} ellipsizeMode="tail">
-                  {selectedCurrency} - {getCurrencyName()}
-                </Text>
-                <ChevronRight color={theme.colors.textSecondary} size={20} />
-              </View>
-            }
-          />
-
-          <SettingItem
-            icon={hideBalance ? EyeOff : Eye}
-            title="Hide Balance"
-            subtitle="Hide wallet balance across all wallets"
-            rightElement={
+            <SettingItem
+              icon={hideBalance ? EyeOff : Eye}
+              title="Hide Balance"
+              subtitle="Hide wallet balance across all wallets"
+              showDivider={false}
+              rightElement={
               <View style={styles.themeToggle}>
                 <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
                   {hideBalance ? 'Hidden' : 'Visible'}
@@ -292,13 +314,14 @@ export default function SettingsScreen() {
                 )}
               </View>
             }
-          />
+            />
 
-          <SettingItem
-            icon={theme.isDark ? Moon : Sun}
-            title="Theme"
-            subtitle="Set your preferred theme"
-            rightElement={
+            <SettingItem
+              icon={theme.isDark ? Moon : Sun}
+              title="Theme"
+              subtitle="Set your preferred theme"
+              showDivider={false}
+              rightElement={
               <View style={styles.themeToggle}>
                 <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
                   {theme.isDark ? 'Dark' : 'Light'}
@@ -338,70 +361,80 @@ export default function SettingsScreen() {
                 )}
               </View>
             }
-          />
+            />
+          </SettingSection>
 
           {/* Security Section */}
           <SectionHeader title="Security" />
 
-          <SettingItem
-            icon={Clock}
-            title="Auto-Lock"
-            subtitle="Automatically lock app after inactivity"
-            onPress={() => setShowAutoLockModal(true)}
-            rightElement={
-              <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
-                {autoLockTimeout === -1 ? 'Never' : `${autoLockTimeout} min`}
-              </Text>
-            }
-          />
+          <SettingSection>
+            <SettingItem
+              icon={Clock}
+              title="Auto-Lock"
+              subtitle="Automatically lock app after inactivity"
+              onPress={() => setShowAutoLockModal(true)}
+              rightElement={
+                <Text style={[styles.timeoutText, { color: theme.colors.textSecondary }]}>
+                  {autoLockTimeout === -1 ? 'Never' : `${autoLockTimeout} min`}
+                </Text>
+              }
+            />
 
-          <SettingItem
-            icon={Shield}
-            title="Biometric Authentication"
-            subtitle="Secure your wallet with biometrics"
-            onPress={() => router.push('/passkeys-security')}
-          />
+            <SettingItem
+              icon={Shield}
+              title="Biometric Authentication"
+              subtitle="Secure your wallet with biometrics"
+              onPress={() => router.push('/passkeys-security')}
+              showDivider={false}
+            />
+          </SettingSection>
 
           {/* Privacy Section */}
           <SectionHeader title="Privacy" />
 
-          <SettingItem
-            icon={UserX}
-            title="Transaction Privacy"
-            subtitle="Learn about Bitcoin anonymity"
-            onPress={() => WebBrowser.openBrowserAsync('https://www.bitsleuth.ai/glossary/transaction-privacy')}
-          />
+          <SettingSection>
+            <SettingItem
+              icon={UserX}
+              title="Transaction Privacy"
+              subtitle="Learn about Bitcoin anonymity"
+              onPress={() => WebBrowser.openBrowserAsync('https://www.bitsleuth.ai/glossary/transaction-privacy')}
+              showDivider={false}
+            />
+          </SettingSection>
 
           {/* About Section */}
           <SectionHeader title="About" />
 
-          <SettingItem
-            icon={Info}
-            title="About BitSleuth Wallet"
-            subtitle="Version 1.1.6"
-            onPress={() => router.push('/about')}
-          />
+          <SettingSection>
+            <SettingItem
+              icon={Info}
+              title="About BitSleuth Wallet"
+              subtitle="Version 1.1.6"
+              onPress={() => router.push('/about')}
+            />
 
-          <SettingItem
-            icon={FileText}
-            title="Terms of Service"
-            subtitle="Read our terms and conditions"
-            onPress={() => router.push('/terms-of-service')}
-          />
+            <SettingItem
+              icon={FileText}
+              title="Terms of Service"
+              subtitle="Read our terms and conditions"
+              onPress={() => router.push('/terms-of-service')}
+            />
 
-          <SettingItem
-            icon={Lock}
-            title="Privacy Policy"
-            subtitle="Learn how we protect your privacy"
-            onPress={() => router.push('/privacy-policy')}
-          />
+            <SettingItem
+              icon={Lock}
+              title="Privacy Policy"
+              subtitle="Learn how we protect your privacy"
+              onPress={() => router.push('/privacy-policy')}
+            />
 
-          <SettingItem
-            icon={Scale}
-            title="Legal Disclaimer"
-            subtitle="Important legal information"
-            onPress={() => router.push('/legal-disclaimer')}
-          />
+            <SettingItem
+              icon={Scale}
+              title="Legal Disclaimer"
+              subtitle="Important legal information"
+              onPress={() => router.push('/legal-disclaimer')}
+              showDivider={false}
+            />
+          </SettingSection>
 
 
 
@@ -629,22 +662,35 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: Platform.OS === 'android' ? 100 : platformStyles.spacing.xl,
+  },
   sectionHeader: {
-    fontSize: 19,
+    fontSize: 15,
     fontWeight: '600',
+    textTransform: 'uppercase' as const,
+    letterSpacing: 0.5,
     marginTop: platformStyles.spacing.xxxl,
-    marginBottom: platformStyles.spacing.lg,
+    marginBottom: platformStyles.spacing.md,
     marginHorizontal: platformStyles.spacing.xl,
+    opacity: 0.6,
+  },
+  sectionCard: {
+    marginHorizontal: platformStyles.spacing.xl,
+    marginBottom: platformStyles.spacing.xl,
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
+    ...platformStyles.cardShadow,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: platformStyles.spacing.xl,
     paddingVertical: platformStyles.spacing.lg,
-    marginHorizontal: platformStyles.spacing.xl,
-    marginVertical: platformStyles.spacing.xs,
-    borderRadius: platformStyles.borderRadius.large,
-    ...platformStyles.shadow,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 76, // Align with text after icon (44px icon + 16px margin + 16px padding)
   },
   iconContainer: {
     width: 44,
@@ -813,10 +859,5 @@ const styles = StyleSheet.create({
   walletItemType: {
     fontSize: 15,
     marginTop: 2,
-  },
-  glassCard: {
-    borderRadius: platformStyles.borderRadius.xxl,
-    overflow: 'hidden',
-    marginBottom: platformStyles.spacing.md,
   },
 });

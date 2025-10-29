@@ -209,6 +209,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     ...platformStyles.shadow,
     position: 'relative',
+    overflow: 'hidden',
   },
   iconContainer: {
     width: 44,

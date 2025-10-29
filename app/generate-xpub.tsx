@@ -1,22 +1,23 @@
+import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { GradientBackground } from '@/components/GradientBackground';
+import PinVerificationScreen from '@/components/PinVerificationScreen';
+import { platformStyles } from '@/constants/themes';
+import { useWallet } from '@/hooks/wallet-store';
+import * as Clipboard from 'expo-clipboard';
+import { Stack, router } from 'expo-router';
+import { AlertTriangle, ArrowLeft, Copy } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ScrollView,
-  TextInput,
-  Platform,
+    Alert,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { Stack, router } from 'expo-router';
-import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
-import { ArrowLeft, Copy, AlertTriangle } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
-import * as Clipboard from 'expo-clipboard';
-import { useWallet } from '@/hooks/wallet-store';
-import PinVerificationScreen from '@/components/PinVerificationScreen';
-import { GradientBackground } from '@/components/GradientBackground';
 
 export default function GenerateXPUBScreen() {
   const { currentWallet, theme } = useWallet();
@@ -270,6 +271,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
+    ...platformStyles.shadow,
   },
   warningHeader: {
     flexDirection: 'row',
