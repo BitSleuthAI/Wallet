@@ -147,6 +147,7 @@ export default function GenerateXPUBScreen() {
             editable={false}
             selectTextOnFocus
             testID="xpub-text"
+            underlineColorAndroid="transparent"
           />
         </View>
 

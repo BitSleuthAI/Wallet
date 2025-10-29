@@ -500,6 +500,7 @@ export default function WalletSetupScreen() {
           onChangeText={setWalletName}
           placeholder="My Bitcoin Wallet"
           placeholderTextColor={theme.colors.textSecondary}
+          underlineColorAndroid="transparent"
         />
 
         <Text style={[styles.label, { color: theme.colors.text }]}>
@@ -688,6 +689,7 @@ export default function WalletSetupScreen() {
           onChangeText={setWalletName}
           placeholder="My Bitcoin Wallet"
           placeholderTextColor={theme.colors.textSecondary}
+          underlineColorAndroid="transparent"
         />
 
         <Text style={[styles.label, { color: theme.colors.text }]}>
@@ -746,6 +748,7 @@ export default function WalletSetupScreen() {
             multiline
             numberOfLines={4}
             textAlignVertical="top"
+            underlineColorAndroid="transparent"
           />
           <Text style={[styles.securityMessage, { color: theme.colors.textSecondary }]}>
             We never send your recovery phrase anywhere. It only lives in your device.
@@ -890,6 +893,7 @@ export default function WalletSetupScreen() {
               placeholderTextColor={theme.colors.textSecondary}
               autoCapitalize="none"
               autoCorrect={false}
+              underlineColorAndroid="transparent"
             />
           </View>
         ))}
