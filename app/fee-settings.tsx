@@ -1,34 +1,35 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle,
-  Clock,
-  DollarSign,
-  Info,
-  RefreshCw,
-  Settings,
-  TrendingUp,
-  Zap,
+    AlertTriangle,
+    ArrowLeft,
+    CheckCircle,
+    Clock,
+    DollarSign,
+    Info,
+    RefreshCw,
+    Settings,
+    TrendingUp,
+    Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
-  Alert,
-  Platform,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    ActivityIndicator,
+    Alert,
+    Platform,
+    Pressable,
+    ScrollView,
+    StyleSheet,
+    Switch,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
@@ -850,6 +851,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   presetHeader: {
     flexDirection: 'row',
@@ -903,6 +905,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   customFeeHeader: {
     flexDirection: 'row',
@@ -1007,6 +1010,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   networkRow: {
     flexDirection: 'row',
@@ -1029,6 +1033,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   congestionHeader: {
     flexDirection: 'row',
@@ -1059,6 +1064,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   cpfpInfoHeader: {
     flexDirection: 'row',
@@ -1095,6 +1101,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   autoAdjustInfoHeader: {
     flexDirection: 'row',
@@ -1131,6 +1138,7 @@ const styles = StyleSheet.create({
     marginVertical: 6,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   rbfInfoHeader: {
     flexDirection: 'row',

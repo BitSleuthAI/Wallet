@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
@@ -931,6 +932,7 @@ const styles = StyleSheet.create({
     margin: 16,
     padding: 16,
     borderRadius: 12,
+    ...platformStyles.shadow,
   },
   educationHeader: {
     flexDirection: 'row',

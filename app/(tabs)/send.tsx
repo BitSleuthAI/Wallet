@@ -10,12 +10,13 @@ import { isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-servi
 import { feeEstimationService } from '@/services/fee-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
-import { AlertCircle, ArrowUpRight, CheckCircle, QrCode } from 'lucide-react-native';
+import { AlertCircle, ArrowUpRight, CheckCircle, ChevronRight, Coins, QrCode } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Animated,
   Modal,
+  Platform,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -1112,7 +1113,13 @@ export default function SendScreen() {
             </View>
 
             {/* Fee Section */}
-            <LiquidGlassView variant="thin" intensity={80} style={[styles.feeSection, styles.glassCard]}>
+            <LiquidGlassView variant="thin" intensity={80} style={[
+              styles.feeSection, 
+              styles.glassCard,
+              Platform.OS === 'android' && {
+                backgroundColor: '#FFFFFF',
+              }
+            ]}>
               <View style={styles.feeHeader}>
                 <View style={styles.feeInfo}>
                   <ArrowUpRight color={theme.colors.primary} size={20} />
@@ -1356,7 +1363,13 @@ export default function SendScreen() {
             </LiquidGlassView>
 
             {/* RBF Toggle */}
-            <LiquidGlassView variant="thin" intensity={75} style={[styles.rbfSection, styles.glassCard]}>
+            <LiquidGlassView variant="thin" intensity={75} style={[
+              styles.rbfSection, 
+              styles.glassCard,
+              Platform.OS === 'android' && {
+                backgroundColor: '#FFFFFF',
+              }
+            ]}>
               <View style={styles.rbfInfo}>
                 <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>Enable RBF</Text>
                 <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>Replace-by-fee allows you to increase the fee later</Text>
@@ -1370,17 +1383,45 @@ export default function SendScreen() {
             </LiquidGlassView>
 
             {/* Coin Control */}
-            <LiquidGlassView variant="thin" intensity={75} style={styles.glassCard}>
+            <LiquidGlassView variant="thin" intensity={75} style={[
+              styles.coinControlCard,
+              Platform.OS === 'android' && {
+                backgroundColor: '#FFFFFF',
+              }
+            ]}>
               <TouchableOpacity 
                 style={styles.coinControlSection}
                 onPress={() => {
                   router.push('/coin-control');
                 }}
+                activeOpacity={0.7}
               >
-                <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>Coin Control</Text>
-                                <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
-                  {selectedUtxoIds.length > 0 ? `${selectedUtxoIds.length} selected` : 'Select Coins'}
-                </Text>
+                <View style={styles.coinControlLeft}>
+                  <View style={[styles.coinControlIcon, { 
+                    backgroundColor: selectedUtxoIds.length > 0 ? theme.colors.primary + '20' : theme.colors.textSecondary + '15'
+                  }]}>
+                    <Coins 
+                      color={selectedUtxoIds.length > 0 ? theme.colors.primary : theme.colors.textSecondary} 
+                      size={20} 
+                    />
+                  </View>
+                  <View style={styles.coinControlTextContainer}>
+                    <Text style={[styles.coinControlLabel, { color: theme.colors.text }]}>
+                      Coin Control
+                    </Text>
+                    <Text style={[styles.coinControlSubtitle, { color: theme.colors.textSecondary }]}>
+                      {selectedUtxoIds.length > 0 
+                        ? `${selectedUtxoIds.length} coin${selectedUtxoIds.length !== 1 ? 's' : ''} selected` 
+                        : 'Manual UTXO selection'}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.coinControlRight}>
+                  <Text style={[styles.coinControlAction, { color: theme.colors.primary }]}>
+                    {selectedUtxoIds.length > 0 ? 'Edit' : 'Select'}
+                  </Text>
+                  <ChevronRight color={theme.colors.textSecondary} size={20} />
+                </View>
               </TouchableOpacity>
             </LiquidGlassView>
 
@@ -1435,7 +1476,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: platformStyles.spacing.xl,
+    paddingBottom: Platform.OS === 'android' ? 100 : platformStyles.spacing.xl,
   },
   content: {
     paddingHorizontal: platformStyles.spacing.xl,
@@ -1632,26 +1673,54 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 22,
   },
+  coinControlCard: {
+    marginBottom: platformStyles.spacing.xxl,
+    borderRadius: platformStyles.borderRadius.xxl,
+    overflow: 'hidden',
+    ...platformStyles.cardShadow,
+  },
   coinControlSection: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: platformStyles.spacing.lg,
-    marginBottom: platformStyles.spacing.xxxl,
     paddingHorizontal: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.xl,
-    ...platformStyles.shadow,
+  },
+  coinControlLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  coinControlIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: platformStyles.borderRadius.medium,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: platformStyles.spacing.md,
+  },
+  coinControlTextContainer: {
+    flex: 1,
   },
   coinControlLabel: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '600',
+    marginBottom: 2,
+  },
+  coinControlSubtitle: {
+    fontSize: 14,
+    lineHeight: 18,
+  },
+  coinControlRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
   },
   coinControlAction: {
     fontSize: 15,
-    fontWeight: '500',
+    fontWeight: '600',
   },
   reviewButton: {
-    marginHorizontal: platformStyles.spacing.xl,
     marginTop: platformStyles.spacing.xl,
     marginBottom: platformStyles.spacing.xxxl,
     paddingVertical: platformStyles.spacing.lg,
@@ -1724,6 +1793,7 @@ const styles = StyleSheet.create({
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
+    ...platformStyles.shadow,
   },
   autoAdjustmentHeader: {
     flexDirection: 'row',
@@ -1755,8 +1825,11 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 12,
     borderRadius: 8,
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.1)',
+    ...(Platform.OS === 'ios' && {
+      borderWidth: StyleSheet.hairlineWidth,
+      borderColor: 'rgba(0,0,0,0.1)',
+    }),
+    ...platformStyles.shadow,
   },
   feeEducationHeader: {
     flexDirection: 'row',

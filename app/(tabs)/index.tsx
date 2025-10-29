@@ -1,9 +1,9 @@
 import FeedbackPopup from '@/components/FeedbackPopup';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
 import BalanceChart from '@/components/PriceChart';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
-import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -15,18 +15,19 @@ import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Modal,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -270,6 +271,7 @@ export default function WalletScreen() {
         <Animated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView
           style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -361,7 +363,7 @@ export default function WalletScreen() {
         </View>
 
         {/* Balance Display */}
-        <LiquidGlassView variant="thin" intensity={85} style={[styles.balanceSection, styles.glassCard]}>
+        <View style={styles.balanceSection}>
           <GradientCard theme={theme} style={styles.balanceCardInner} variant={theme.isDark ? 'glow' : 'primary'}>
             {hasBalanceError ? (
               <View style={styles.balanceErrorContainer}>
@@ -413,16 +415,27 @@ export default function WalletScreen() {
               </>
             )}
           </GradientCard>
-        </LiquidGlassView>
+        </View>
 
         {/* Time Period Selector */}
-        <LiquidGlassView variant="thin" intensity={75} style={[styles.periodSelector, styles.glassCard]}>
+        <LiquidGlassView variant="thin" intensity={75} style={[
+          styles.periodSelector, 
+          styles.glassCard,
+          Platform.OS === 'android' && {
+            backgroundColor: '#FFFFFF',
+          }
+        ]}>
           <View style={styles.periodSelectorInner}>
             {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
               <TouchableOpacity
                 key={period}
                 style={[
                   styles.periodButton,
+                  selectedPeriod !== period && { 
+                    backgroundColor: theme.isDark 
+                      ? 'rgba(255, 255, 255, 0.1)' 
+                      : 'rgba(0, 0, 0, 0.05)',
+                  },
                   selectedPeriod === period && { 
                     backgroundColor: theme.colors.primary,
                     transform: [{ scale: 1.05 }],
@@ -448,7 +461,13 @@ export default function WalletScreen() {
         </LiquidGlassView>
 
         {/* Balance Chart */}
-        <LiquidGlassView variant="thin" intensity={80} style={[styles.chartContainer, styles.glassCard]}>
+        <LiquidGlassView variant="thin" intensity={80} style={[
+          styles.chartContainer, 
+          styles.glassCard,
+          Platform.OS === 'android' && {
+            backgroundColor: '#FFFFFF',
+          }
+        ]}>
           <BalanceChart selectedPeriod={selectedPeriod} />
         </LiquidGlassView>
 
@@ -478,7 +497,13 @@ export default function WalletScreen() {
         </View>
 
         {/* Recent Transactions */}
-        <LiquidGlassView variant="thin" intensity={80} style={[styles.transactionsSection, styles.glassCard]}>
+        <LiquidGlassView variant="thin" intensity={80} style={[
+          styles.transactionsSection, 
+          styles.glassCard,
+          Platform.OS === 'android' && {
+            backgroundColor: '#FFFFFF',
+          }
+        ]}>
           <View style={styles.transactionsHeader}>
             <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
               Recent Transactions
@@ -698,6 +723,9 @@ const styles = StyleSheet.create({
   scrollView: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: Platform.OS === 'android' ? 100 : platformStyles.spacing.xl,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -755,9 +783,6 @@ const styles = StyleSheet.create({
   balanceSection: {
     marginHorizontal: platformStyles.spacing.xl,
     marginTop: platformStyles.spacing.xl,
-    padding: platformStyles.spacing.xxl,
-    borderRadius: platformStyles.borderRadius.xxl,
-    ...platformStyles.cardShadow,
   },
   balanceContainer: {
     position: 'relative',
@@ -804,7 +829,7 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.medium,
     alignItems: 'center',
     marginHorizontal: 4,
-    backgroundColor: 'rgba(0,0,0,0.04)',
+    backgroundColor: 'transparent',
   },
   periodText: {
     fontSize: 15,

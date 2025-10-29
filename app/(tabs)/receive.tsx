@@ -1,5 +1,4 @@
 import { GradientBackground } from '@/components/GradientBackground';
-import { LiquidGlassView } from '@/components/LiquidGlassView';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -9,14 +8,15 @@ import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    SafeAreaView,
-    Share,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Alert,
+  Animated,
+  Platform,
+  SafeAreaView,
+  Share,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
@@ -190,31 +190,29 @@ export default function ReceiveScreen() {
           <WalletSelector label="To:" />
 
           {/* QR Code */}
-          <LiquidGlassView variant="thin" intensity={85} style={[styles.qrContainer, styles.glassCard]}>
-            <View style={styles.qrCodeWrapper}>
-              {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
-                <QRCode
-                  value={currentAddress}
-                  size={200}
-                  backgroundColor="white"
-                  color="black"
-                  logo={undefined}
-                  logoSize={0}
-                  logoBackgroundColor="transparent"
-                  logoMargin={0}
-                  logoBorderRadius={0}
-                  quietZone={10}
-                  enableLinearGradient={false}
-                />
-              ) : (
-                <View style={styles.qrPlaceholder}>
-                  <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
-                    {currentWallet ? 'Generating address...' : 'No address available'}
-                  </Text>
-                </View>
-              )}
-            </View>
-          </LiquidGlassView>
+          <View style={styles.qrContainer}>
+            {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
+              <QRCode
+                value={currentAddress}
+                size={220}
+                backgroundColor="white"
+                color="black"
+                logo={undefined}
+                logoSize={0}
+                logoBackgroundColor="transparent"
+                logoMargin={0}
+                logoBorderRadius={0}
+                quietZone={12}
+                enableLinearGradient={false}
+              />
+            ) : (
+              <View style={styles.qrPlaceholder}>
+                <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
+                  {currentWallet ? 'Generating address...' : 'No address available'}
+                </Text>
+              </View>
+            )}
+          </View>
 
           {/* Address */}
           <View style={styles.addressSection}>
@@ -318,17 +316,9 @@ const styles = StyleSheet.create({
   },
 
   qrContainer: {
-    borderRadius: platformStyles.borderRadius.xxl,
-    padding: platformStyles.spacing.xxl,
     marginBottom: platformStyles.spacing.xxxl,
     alignItems: 'center',
-    ...platformStyles.cardShadow,
-  },
-  qrCodeWrapper: {
-    backgroundColor: 'white',
-    padding: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.xl,
-    ...platformStyles.shadow,
+    alignSelf: 'center',
   },
   addressSection: {
     alignItems: 'center',
@@ -365,7 +355,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: platformStyles.spacing.lg,
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingBottom: platformStyles.spacing.xl,
+    paddingBottom: Platform.OS === 'android' ? 120 : platformStyles.spacing.xl,
     paddingTop: platformStyles.spacing.md,
   },
   actionButton: {
@@ -410,19 +400,15 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   qrPlaceholder: {
-    width: 200,
-    height: 200,
+    width: 220,
+    height: 220,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    borderRadius: platformStyles.borderRadius.medium,
+    backgroundColor: 'white',
+    borderRadius: 8,
   },
   qrPlaceholderText: {
     fontSize: 17,
     textAlign: 'center',
-  },
-  glassCard: {
-    borderRadius: platformStyles.borderRadius.xxl,
-    overflow: 'hidden',
   },
 });

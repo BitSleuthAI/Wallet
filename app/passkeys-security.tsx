@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import { secureAuthService, SecuritySettings } from '@/services/secure-auth-service';
@@ -384,6 +385,7 @@ const styles = StyleSheet.create({
     margin: 20,
     padding: 24,
     borderRadius: 16,
+    ...platformStyles.cardShadow,
   },
   headerSubtitle: {
     fontSize: 16,

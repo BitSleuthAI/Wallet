@@ -1,8 +1,8 @@
-import React from 'react';
-import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { useWallet } from '@/hooks/wallet-store';
 import { getLiquidGlassTint, getThinMaterialTint, getUltraThinMaterialTint, isIOS } from '@/utils/platform';
+import { BlurView } from 'expo-blur';
+import React from 'react';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 export type LiquidGlassVariant = 'chrome' | 'thin' | 'ultraThin';
 
@@ -80,15 +80,15 @@ export function LiquidGlassView({
     );
   }
   
-  // On Android, fall back to a semi-transparent view
+  // On Android, render a simple transparent container
+  // The blur effect doesn't translate well to Android, so we keep it minimal
+  // and let the content and gradient background do the visual work
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: theme.isDark 
-            ? 'rgba(0, 0, 0, 0.7)' 
-            : 'rgba(255, 255, 255, 0.7)',
+          backgroundColor: 'transparent',
         },
         style,
       ]}

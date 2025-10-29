@@ -1,27 +1,30 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { LiquidGlassView } from '@/components/LiquidGlassView';
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import {
-    ArrowLeft,
-    ChevronRight,
-    Coins,
-    FileKey,
-    Key,
-    List,
-    Trash2,
-    Wallet,
-    Zap,
+  ArrowLeft,
+  ChevronRight,
+  Coins,
+  FileKey,
+  Key,
+  List,
+  Trash2,
+  Wallet,
+  Zap,
 } from 'lucide-react-native';
 import React from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Alert,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 
@@ -97,47 +100,82 @@ export default function WalletSettingsScreen() {
     );
   };
 
-  const SettingItem = ({ 
-    icon: Icon, 
-    title, 
-    subtitle, 
-    onPress, 
-    rightElement,
-    iconColor = theme.colors.primary,
-    danger = false
-  }: {
+const SettingSection: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+    <LiquidGlassView
+        style={[
+            styles.sectionCard,
+            Platform.OS === 'android' && { backgroundColor: '#FFFFFF' },
+        ]}
+    >
+        {children}
+    </LiquidGlassView>
+);
+
+const SettingItem: React.FC<{
     icon: any;
     title: string;
     subtitle?: string;
     onPress?: () => void;
-    rightElement?: React.ReactNode;
-    iconColor?: string;
     danger?: boolean;
-  }) => (
-    <TouchableOpacity
-      style={[styles.settingItem, { backgroundColor: theme.colors.surface }]}
-      onPress={onPress}
-      disabled={!onPress}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: (danger ? theme.colors.error : iconColor) + '20' }]}>
-        <Icon color={danger ? theme.colors.error : iconColor} size={20} />
-      </View>
-      <View style={styles.settingContent}>
-        <Text style={[styles.settingTitle, { color: danger ? theme.colors.error : theme.colors.text }]}>
-          {title}
-        </Text>
-        {subtitle && (
-          <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
-            {subtitle}
-          </Text>
+    showDivider?: boolean;
+}> = ({ icon: Icon, title, subtitle, onPress, danger, showDivider = true }) => (
+    <>
+        <TouchableOpacity
+            style={styles.settingItem}
+            onPress={onPress}
+            activeOpacity={0.7}
+        >
+            <View style={styles.settingLeft}>
+                <View
+                    style={[
+                        styles.iconContainer,
+                        {
+                            backgroundColor: danger
+                                ? `${theme.colors.error}20`
+                                : `${theme.colors.primary}20`,
+                        },
+                    ]}
+                >
+                    <Icon size={20} color={danger ? theme.colors.error : theme.colors.primary} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                    <Text
+                        style={[
+                            styles.settingLabel,
+                            { color: danger ? theme.colors.error : theme.colors.text },
+                        ]}
+                    >
+                        {title}
+                    </Text>
+                    {subtitle && (
+                        <Text style={[styles.settingSubtitle, { color: theme.colors.textSecondary }]}>
+                            {subtitle}
+                        </Text>
+                    )}
+                </View>
+            </View>
+            {onPress && (
+                <ChevronRight size={20} color={theme.colors.textSecondary} />
+            )}
+        </TouchableOpacity>
+        {showDivider && (
+            <View
+                style={[
+                    styles.divider,
+                    {
+                        backgroundColor:
+                            Platform.OS === 'android'
+                                ? theme.colors.border
+                                : `${theme.colors.border}40`,
+                    },
+                ]}
+            />
         )}
-      </View>
-      {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
-    </TouchableOpacity>
-  );
+    </>
+);
 
-  const SectionHeader = ({ title }: { title: string }) => (
-    <Text style={[styles.sectionHeader, { color: theme.colors.primary }]}>
+const SectionHeader = ({ title }: { title: string }) => (
+    <Text style={[styles.sectionHeader, { color: theme.colors.textSecondary }]}>
       {title}
     </Text>
   );
@@ -170,79 +208,89 @@ export default function WalletSettingsScreen() {
           <View style={styles.headerSpacer} />
         </View>
         
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {/* Wallet Info Section */}
-        <SectionHeader title="Wallet Information" />
-        
-        <SettingItem
-          icon={Wallet}
-          title="Current Wallet"
-          subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
-        />
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={{
+            paddingBottom: Platform.OS === 'android' ? 100 : 24,
+          }}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Wallet Info Section */}
+          <SectionHeader title="Wallet Information" />
+          <SettingSection>
+            <SettingItem
+              icon={Wallet}
+              title="Current Wallet"
+              subtitle={currentWallet ? `${currentWallet.name} (${getWalletTypeDisplayName(currentWallet.type)})` : 'No wallet selected'}
+              showDivider={false}
+            />
+          </SettingSection>
 
-        {/* Security & Privacy Section */}
-        <SectionHeader title="Security & Privacy" />
-        
-        <SettingItem
-          icon={Key}
-          title="View Recovery Phrase"
-          subtitle="Your BIP39 recovery phrase"
-          onPress={() => router.push('/view-recovery-phrase')}
-        />
+          {/* Security & Privacy Section */}
+          <SectionHeader title="Security & Privacy" />
+          <SettingSection>
+            <SettingItem
+              icon={Key}
+              title="View Recovery Phrase"
+              subtitle="Your BIP39 recovery phrase"
+              onPress={() => router.push('/view-recovery-phrase')}
+            />
 
-        <SettingItem
-          icon={FileKey}
-          title="Generate XPUB"
-          subtitle="View your extended public key"
-          onPress={() => router.push('/generate-xpub')}
-        />
+            <SettingItem
+              icon={FileKey}
+              title="Generate XPUB"
+              subtitle="View your extended public key"
+              onPress={() => router.push('/generate-xpub')}
+            />
 
-        <SettingItem
-          icon={List}
-          title="View Addresses"
-          subtitle="Show all derived addresses"
-          onPress={() => router.push('/wallet-addresses')}
-        />
+            <SettingItem
+              icon={List}
+              title="View Addresses"
+              subtitle="Show all derived addresses"
+              onPress={() => router.push('/wallet-addresses')}
+              showDivider={false}
+            />
+          </SettingSection>
 
+          {/* Transaction Settings Section */}
+          <SectionHeader title="Transaction Settings" />
+          <SettingSection>
+            <SettingItem
+              icon={Zap}
+              title="Fee Settings"
+              subtitle="Configure transaction fee preferences"
+              onPress={() => router.push('/fee-settings')}
+            />
 
+            <SettingItem
+              icon={Coins}
+              title="Coin Control"
+              subtitle="Advanced UTXO management"
+              onPress={() => router.push('/coin-control')}
+            />
 
-        {/* Transaction Settings Section */}
-        <SectionHeader title="Transaction Settings" />
+            <SettingItem
+              icon={List}
+              title="Transaction History"
+              subtitle="View all wallet transactions"
+              onPress={() => router.push('/transaction-history')}
+              showDivider={false}
+            />
+          </SettingSection>
 
-        <SettingItem
-          icon={Zap}
-          title="Fee Settings"
-          subtitle="Configure transaction fee preferences"
-          onPress={() => router.push('/fee-settings')}
-        />
-
-        <SettingItem
-          icon={Coins}
-          title="Coin Control"
-          subtitle="Advanced UTXO management"
-          onPress={() => router.push('/coin-control')}
-        />
-
-        <SettingItem
-          icon={List}
-          title="Transaction History"
-          subtitle="View all wallet transactions"
-          onPress={() => router.push('/transaction-history')}
-        />
-
-        {/* Danger Zone */}
-        <SectionHeader title="Danger Zone" />
-
-        <SettingItem
-          icon={Trash2}
-          title="Delete Wallet"
-          subtitle="Permanently remove this wallet"
-          onPress={handleDeleteWallet}
-          danger={true}
-        />
-
-          <View style={styles.bottomSpacing} />
-          </ScrollView>
+          {/* Danger Zone */}
+          <SectionHeader title="Danger Zone" />
+          <SettingSection>
+            <SettingItem
+              icon={Trash2}
+              title="Delete Wallet"
+              subtitle="Permanently remove this wallet"
+              onPress={handleDeleteWallet}
+              danger={true}
+              showDivider={false}
+            />
+          </SettingSection>
+        </ScrollView>
       </AndroidSafeContainer>
     </GradientBackground>
   );
@@ -281,40 +329,55 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   sectionHeader: {
-    fontSize: 18,
+    fontSize: 13,
     fontWeight: '600',
-    marginTop: 30,
-    marginBottom: 16,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: 24,
+    marginBottom: 8,
     marginHorizontal: 20,
+  },
+  sectionCard: {
+    marginHorizontal: 20,
+    borderRadius: 12,
+    overflow: 'hidden',
+    ...platformStyles.cardShadow,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    marginHorizontal: 20,
-    marginVertical: 2,
-    borderRadius: 12,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    justifyContent: 'center',
+  settingLeft: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginRight: 16,
-  },
-  settingContent: {
     flex: 1,
   },
-  settingTitle: {
+  iconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  settingTextContainer: {
+    flex: 1,
+  },
+  settingLabel: {
     fontSize: 16,
     fontWeight: '600',
   },
   settingSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
     lineHeight: 18,
+  },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginLeft: 60, // 16 (padding) + 32 (icon) + 12 (margin)
   },
   timeoutText: {
     fontSize: 14,
