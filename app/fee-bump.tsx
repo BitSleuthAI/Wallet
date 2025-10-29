@@ -588,6 +588,7 @@ export default function FeeBumpScreen() {
                 placeholderTextColor={theme.colors.textSecondary}
                 keyboardType="numeric"
                 selectTextOnFocus
+                underlineColorAndroid="transparent"
               />
               <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>
                 sat/b

@@ -248,6 +248,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
             multiline
             autoCapitalize="none"
             autoCorrect={false}
+            underlineColorAndroid="transparent"
           />
           
           <TouchableOpacity

@@ -555,6 +555,7 @@ export default function WalletScreen() {
                   onChangeText={setEditName}
                   placeholder="Enter wallet name"
                   placeholderTextColor={theme.colors.textSecondary}
+                  underlineColorAndroid="transparent"
                 />
                 
                 <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
@@ -626,6 +627,7 @@ export default function WalletScreen() {
                   onChangeText={setEditName}
                   placeholder="Enter wallet name"
                   placeholderTextColor={theme.colors.textSecondary}
+                  underlineColorAndroid="transparent"
                 />
                 
                 <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>

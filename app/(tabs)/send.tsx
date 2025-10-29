@@ -1023,6 +1023,7 @@ export default function SendScreen() {
                   value={recipientAddress}
                   onChangeText={setRecipientAddress}
                   multiline
+                  underlineColorAndroid="transparent"
                 />
                 <TouchableOpacity 
                   style={styles.qrCodeButton}
@@ -1081,6 +1082,7 @@ export default function SendScreen() {
                 value={amount}
                 onChangeText={handleAmountChange}
                 keyboardType="numeric"
+                underlineColorAndroid="transparent"
               />
               
               {/* Amount conversion display */}
@@ -1287,6 +1289,7 @@ export default function SendScreen() {
                       }
                     }}
                     keyboardType="numeric"
+                    underlineColorAndroid="transparent"
                   />
                   <Text style={[styles.customFeeUnit, { color: theme.colors.textSecondary }]}>sat/vB</Text>
                 </View>

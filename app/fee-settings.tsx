@@ -473,6 +473,7 @@ export default function FeeSettingsScreen() {
               }}
               placeholder="Enter fee rate"
               placeholderTextColor={theme.colors.textSecondary}
+              underlineColorAndroid="transparent"
               keyboardType="numeric"
               selectTextOnFocus
             />
@@ -686,6 +687,7 @@ export default function FeeSettingsScreen() {
               }}
               keyboardType="numeric"
               selectTextOnFocus
+              underlineColorAndroid="transparent"
             />
             <Text style={[styles.inputUnit, { color: theme.colors.textSecondary }]}>
               sat/vB
@@ -723,6 +725,7 @@ export default function FeeSettingsScreen() {
               }}
               keyboardType="numeric"
               selectTextOnFocus
+              underlineColorAndroid="transparent"
             />
             <Text style={[styles.inputUnit, { color: theme.colors.textSecondary }]}>
               sats
