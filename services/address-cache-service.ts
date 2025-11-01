@@ -23,9 +23,15 @@ const KEY_WALLET_ADDRS = (xpub: string) => `${KEY_PREFIX}wallet_addrs_${xpub}`;
 const KEY_WALLET_TXIDS = (xpub: string) => `${KEY_PREFIX}wallet_txids_${xpub}`;
 const KEY_ADDR_WALLET = (address: string) => `${KEY_PREFIX}addr_wallet_${address}`;
 
-const TXIDS_TTL_MS = 10 * 60 * 1000; // 10 minutes - balanced between freshness and API load
-const STATS_TTL_MS = 10 * 60 * 1000; // 10 minutes - balanced between freshness and API load
-const UTXOS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+import { TXIDS_TTL_MS, STATS_TTL_MS, UTXOS_TTL_MS } from '../constants/cache';
+
+// Helper to safely log address info without exposing full address
+function safeAddressLog(address: string, prefix: string = ''): string {
+  // Only show first 6 and last 4 characters, hash middle for privacy
+  const start = address.substring(0, 6);
+  const end = address.substring(address.length - 4);
+  return `${prefix}${start}...${end}`;
+}
 
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
@@ -140,6 +146,13 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
     const raw = await AsyncStorage.getItem(KEY_UTXOS(address));
     const { data, expired } = hydrateCacheEntry<any[]>(raw, UTXOS_TTL_MS);
     if (expired) {
+      console.log(`⏰ UTXO cache expired for ${safeAddressLog(address)}, clearing cache`);
+      await AsyncStorage.removeItem(KEY_UTXOS(address));
+      return null;
+    }
+    // Don't return empty cached UTXOs - they might be stale
+    if (Array.isArray(data) && data.length === 0) {
+      console.log(`🚫 Empty UTXO cache found for ${safeAddressLog(address)}, returning null to fetch fresh data`);
       await AsyncStorage.removeItem(KEY_UTXOS(address));
       return null;
     }

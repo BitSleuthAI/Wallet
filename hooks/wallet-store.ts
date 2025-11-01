@@ -1,4 +1,5 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
+import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_STALE_TIME, REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
@@ -251,15 +252,28 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
         console.log('📱 Current app version:', currentVersion);
         
-        // Check stored version to detect app updates
+        // Check stored version and last launch timestamp
         const storedVersion = await AsyncStorage.getItem('app_version');
+        const lastLaunchTimestamp = await AsyncStorage.getItem('last_launch_timestamp');
         console.log('💾 Stored app version:', storedVersion);
+        console.log('💾 Last launch timestamp:', lastLaunchTimestamp);
         
         // Detect if app was updated (version changed)
         const isAppUpdate = storedVersion !== null && storedVersion !== currentVersion;
         
-        if (isAppUpdate) {
-          console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
+        // Detect if this is a fresh app launch (check if significant time has passed)
+        const timeSinceLastLaunch = lastLaunchTimestamp 
+          ? Date.now() - parseInt(lastLaunchTimestamp, 10)
+          : Infinity;
+        const isFreshLaunch = timeSinceLastLaunch > FRESH_LAUNCH_THRESHOLD_MS;
+        
+        // Clear caches on app update OR fresh launch to ensure data freshness
+        if (isAppUpdate || isFreshLaunch) {
+          if (isAppUpdate) {
+            console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
+          } else {
+            console.log(`🔄 Fresh app launch detected (time since last launch: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
+          }
           console.log('🧹 Clearing all cached wallet data to ensure fresh sync...');
           
           // Get all wallets to clear their caches
@@ -293,11 +307,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         } else if (storedVersion === null) {
           console.log('🆕 First launch or version not tracked yet');
         } else {
-          console.log('✅ Same version - using cached data');
+          console.log(`✅ Recent launch - using cached data (time since last: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
         }
         
-        // Update stored version to current version
+        // Update stored version and launch timestamp
         await AsyncStorage.setItem('app_version', currentVersion);
+        await AsyncStorage.setItem('last_launch_timestamp', Date.now().toString());
         console.log('💾 Updated stored app version to:', currentVersion);
         
         // Clear any potential mock/demo data on every initialization
@@ -570,12 +585,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
-    staleTime: 15 * 60 * 1000, // 15 minutes - keep data fresh longer to avoid redundant refreshes
-    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
+    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Use cached data when returning to the screen to prevent duplicate requests
-    refetchOnReconnect: false, // Avoid immediate refetches when network state changes
+    refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
+    refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
 
   // Transaction history query
@@ -615,12 +630,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
-    staleTime: 15 * 60 * 1000, // 15 minutes - keep data fresh longer to avoid redundant refreshes
-    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
+    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
-    refetchOnMount: false, // Use cached data when returning to the screen to prevent duplicate requests
-    refetchOnReconnect: false, // Avoid immediate refetches when network state changes
+    refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
+    refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
 
   // Save wallets mutation
