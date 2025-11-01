@@ -11,9 +11,12 @@
  * Run with: node scripts/test-cache-invalidation.js
  */
 
-// Import the constant from the centralized cache configuration
-// This ensures tests stay in sync with production values
-const FRESH_LAUNCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes (matches constants/cache.ts)
+// Cache threshold constant
+// NOTE: This value is duplicated from constants/cache.ts because this is a plain Node.js script
+// that doesn't support TypeScript imports. When updating the threshold in constants/cache.ts,
+// remember to also update this value to keep tests in sync with production code.
+// TODO: Consider converting this to a TypeScript test file or using a build step to share constants.
+const FRESH_LAUNCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes (must match constants/cache.ts)
 
 console.log('🧪 Testing Cache Invalidation Logic');
 console.log(`   Fresh launch threshold: ${FRESH_LAUNCH_THRESHOLD_MS / 1000} seconds\n`);

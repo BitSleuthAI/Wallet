@@ -248,11 +248,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     const initializeWallets = async () => {
       try {
-        // Get current app version and build timestamp
+        // Get current app version
         const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
-        const buildTimestamp = Date.now().toString(); // Use current timestamp as build identifier
         console.log('📱 Current app version:', currentVersion);
-        console.log('🏗️ Build timestamp:', buildTimestamp);
         
         // Check stored version and last launch timestamp
         const storedVersion = await AsyncStorage.getItem('app_version');
