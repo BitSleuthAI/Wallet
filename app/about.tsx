@@ -100,11 +100,19 @@ export default function AboutScreen() {
             About BitSleuth Wallet
           </Text>
           <Text style={[styles.version, { color: theme.colors.textSecondary }]}>
-            Version 1.1.6
+            Version 1.2.0
           </Text>
         </View>
 
-        <DropdownSection title="What's New in 1.1.6?" defaultExpanded={true}>
+        <DropdownSection title="What's New in 1.2.0?" defaultExpanded={true}>
+          <BulletPoint text="Balance Refresh Fix: Resolved issues with balance not updating correctly after transactions." />
+          <BulletPoint text="Performance Improvements: Optimized wallet data loading and synchronization." />
+          <BulletPoint text="Enhanced Stability: Fixed various edge cases and improved error handling." />
+          <BulletPoint text="UI Polish: Minor refinements to the user interface for better consistency." />
+          <BulletPoint text="Dependency Updates: Updated core libraries for better security and performance." />
+        </DropdownSection>
+
+        <DropdownSection title="What's New in 1.1.6?">
           <BulletPoint text="Fixed connection issues, including 'Too Many Requests' errors." />
           <BulletPoint text="Multi-Wallet Mastery: Added the ability to add and manage multiple wallets, each with its own name and color." />
           <BulletPoint text="24-Hour Price Oracle: The balance chart now includes a 24-hour price change indicator." />
