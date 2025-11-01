@@ -1825,11 +1825,9 @@ const styles = StyleSheet.create({
     marginTop: 12,
     padding: 12,
     borderRadius: 8,
-    ...(Platform.OS === 'ios' && {
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: 'rgba(0,0,0,0.1)',
-    }),
-    ...platformStyles.shadow,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(0,0,0,0.1)',
+    ...(Platform.OS === 'ios' && platformStyles.shadow),
   },
   feeEducationHeader: {
     flexDirection: 'row',
