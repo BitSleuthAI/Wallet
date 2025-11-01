@@ -272,7 +272,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           if (isAppUpdate) {
             console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
           } else {
-            console.log('🔄 Fresh app launch detected (time since last launch:', Math.round(timeSinceLastLaunch / 1000), 'seconds)');
+            console.log(`🔄 Fresh app launch detected (time since last launch: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
           }
           console.log('🧹 Clearing all cached wallet data to ensure fresh sync...');
           
@@ -307,7 +307,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         } else if (storedVersion === null) {
           console.log('🆕 First launch or version not tracked yet');
         } else {
-          console.log('✅ Recent launch - using cached data (time since last:', Math.round(timeSinceLastLaunch / 1000), 'seconds)');
+          console.log(`✅ Recent launch - using cached data (time since last: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
         }
         
         // Update stored version and launch timestamp
