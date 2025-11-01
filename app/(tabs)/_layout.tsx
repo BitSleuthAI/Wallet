@@ -1,16 +1,30 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
-import React from 'react';
-import { Platform, useColorScheme } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Appearance, Platform, useColorScheme } from 'react-native';
 
 export default function TabLayout() {
   // Use color scheme detection directly since we're outside WalletProvider context
   const colorScheme = useColorScheme();
+  const [themeKey, setThemeKey] = useState(0);
   const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+
+  // Force re-render when appearance changes
+  useEffect(() => {
+    const subscription = Appearance.addChangeListener(() => {
+      // Increment key to force NativeTabs remount with new theme
+      setThemeKey(prev => prev + 1);
+    });
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
 
   return (
     <NativeTabs
+      key={themeKey}
       // Tint color for active tabs
       tintColor={theme.colors.primary}
       // Icon colors for default and selected states
@@ -28,8 +42,8 @@ export default function TabLayout() {
       minimizeBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
       // Android: always show labels
       labelVisibilityMode="labeled"
-      // Blur effect for tab bar background (iOS)
-      blurEffect="systemMaterial"
+      // Blur effect for tab bar background (iOS) - adapts to theme
+      blurEffect={theme.isDark ? 'dark' : 'light'}
       // Background color with transparency for glass effect
       backgroundColor={Platform.select({
         ios: theme.isDark ? '#00000066' : '#FFFFFF66',

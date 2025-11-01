@@ -224,6 +224,27 @@ interface NativeTabTriggerProps {
 - Check that `blurEffect` is set to a valid value
 - Verify iOS version (blur works on iOS 13+, liquid glass on iOS 26+)
 
+### Tab bar stuck in dark mode (not adapting to theme changes)
+**Problem**: On iOS, the liquid glass tabs stay in dark mode even when the app switches to light mode.
+
+**Root Cause**: The `NativeTabs` component doesn't automatically re-render when the device appearance changes. The component receives theme values on mount but doesn't update them when the color scheme switches.
+
+**Solution**: Force remount on appearance changes by:
+1. Add state to track theme changes: `const [themeKey, setThemeKey] = useState(0);`
+2. Listen to appearance changes and update key:
+```tsx
+useEffect(() => {
+  const subscription = Appearance.addChangeListener(() => {
+    setThemeKey(prev => prev + 1);
+  });
+  return () => subscription.remove();
+}, []);
+```
+3. Pass key to `NativeTabs`: `<NativeTabs key={themeKey} ...>`
+4. Ensure `blurEffect` adapts to theme: `blurEffect={theme.isDark ? 'dark' : 'light'}`
+
+This forces React to unmount and remount the `NativeTabs` component with fresh theme values whenever the system appearance changes.
+
 ### Icons not showing
 - Ensure icon is a valid React element
 - Check icon color matches theme
