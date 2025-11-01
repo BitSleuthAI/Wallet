@@ -23,9 +23,9 @@ const KEY_WALLET_ADDRS = (xpub: string) => `${KEY_PREFIX}wallet_addrs_${xpub}`;
 const KEY_WALLET_TXIDS = (xpub: string) => `${KEY_PREFIX}wallet_txids_${xpub}`;
 const KEY_ADDR_WALLET = (address: string) => `${KEY_PREFIX}addr_wallet_${address}`;
 
-const TXIDS_TTL_MS = 10 * 60 * 1000; // 10 minutes - balanced between freshness and API load
-const STATS_TTL_MS = 10 * 60 * 1000; // 10 minutes - balanced between freshness and API load
-const UTXOS_TTL_MS = 2 * 60 * 60 * 1000; // 2 hours
+const TXIDS_TTL_MS = 2 * 60 * 1000; // 2 minutes - faster refresh for transaction lists
+const STATS_TTL_MS = 2 * 60 * 1000; // 2 minutes - faster refresh for address stats (balance)
+const UTXOS_TTL_MS = 2 * 60 * 1000; // 2 minutes - faster refresh for UTXOs to ensure current state
 
 function unique<T>(items: T[]): T[] {
   return Array.from(new Set(items));
@@ -140,6 +140,13 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
     const raw = await AsyncStorage.getItem(KEY_UTXOS(address));
     const { data, expired } = hydrateCacheEntry<any[]>(raw, UTXOS_TTL_MS);
     if (expired) {
+      console.log(`⏰ UTXO cache expired for ${address.substring(0, 10)}..., clearing cache`);
+      await AsyncStorage.removeItem(KEY_UTXOS(address));
+      return null;
+    }
+    // Don't return empty cached UTXOs - they might be stale
+    if (Array.isArray(data) && data.length === 0) {
+      console.log(`🚫 Empty UTXO cache found for ${address.substring(0, 10)}..., returning null to fetch fresh data`);
       await AsyncStorage.removeItem(KEY_UTXOS(address));
       return null;
     }
