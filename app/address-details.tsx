@@ -246,7 +246,7 @@ export default function AddressDetailsScreen() {
               <Copy size={16} color={theme.colors.textSecondary} style={styles.copyIcon} />
             </TouchableOpacity>
             <Text style={[styles.addressSubtitle, { color: theme.colors.textSecondary }]}> 
-              {summaryText}
+              {`Balance: ${formatBTC(balance)} BTC • ${processedTransactions.length} transactions`}
             </Text>
           </View>
 
