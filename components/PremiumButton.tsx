@@ -129,11 +129,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     minHeight: 56,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    ...platformStyles.buttonShadow,
   },
   gradient: {
     borderRadius: 16,

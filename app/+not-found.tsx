@@ -76,14 +76,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformStyles.cardShadow,
   },
   iconContainer: {
     width: 100,

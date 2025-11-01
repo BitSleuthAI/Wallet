@@ -422,7 +422,7 @@ export default function WalletScreen() {
           styles.periodSelector, 
           styles.glassCard,
           Platform.OS === 'android' && {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: theme.colors.surface,
           }
         ]}>
           <View style={styles.periodSelectorInner}>
@@ -465,7 +465,7 @@ export default function WalletScreen() {
           styles.chartContainer, 
           styles.glassCard,
           Platform.OS === 'android' && {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: theme.colors.surface,
           }
         ]}>
           <BalanceChart selectedPeriod={selectedPeriod} />
@@ -501,7 +501,7 @@ export default function WalletScreen() {
           styles.transactionsSection, 
           styles.glassCard,
           Platform.OS === 'android' && {
-            backgroundColor: '#FFFFFF',
+            backgroundColor: theme.colors.surface,
           }
         ]}>
           <View style={styles.transactionsHeader}>
@@ -592,7 +592,7 @@ export default function WalletScreen() {
                         key={colorOption.id}
                         style={[
                           styles.colorOption,
-                          editColor === colorOption.base && styles.selectedColor
+                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
                         ]}
                         onPress={() => setEditColor(colorOption.base)}
                       >
@@ -664,7 +664,7 @@ export default function WalletScreen() {
                         key={colorOption.id}
                         style={[
                           styles.colorOption,
-                          editColor === colorOption.base && styles.selectedColor
+                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
                         ]}
                         onPress={() => setEditColor(colorOption.base)}
                       >
@@ -1046,7 +1046,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: platformStyles.spacing.lg,
     paddingVertical: platformStyles.spacing.md,
     fontSize: 17,
-    borderColor: '#E5E7EB',
+    // borderColor will be set dynamically via theme.colors.border
   },
   colorPicker: {
     flexDirection: 'row',
@@ -1066,7 +1066,7 @@ const styles = StyleSheet.create({
     ...platformStyles.shadow,
   },
   selectedColor: {
-    borderColor: '#007AFF',
+    // borderColor will be set dynamically via theme.colors.primary
     borderWidth: 3,
   },
   colorGradient: {
@@ -1091,18 +1091,18 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     borderWidth: 1.5,
     alignItems: 'center',
-    borderColor: '#E5E7EB',
+    // borderColor will be set dynamically via theme.colors.border
   },
   editCancelText: {
     fontSize: 17,
     fontWeight: '500',
-    color: '#6B7280',
+    // color will be set dynamically via theme.colors.textSecondary
   },
   editSaveButton: {
     flex: 1,
     paddingVertical: platformStyles.spacing.md,
     borderRadius: platformStyles.borderRadius.large,
-    backgroundColor: '#8B5CF6',
+    // backgroundColor will be set dynamically via theme.colors.primary
     alignItems: 'center',
     ...platformStyles.buttonShadow,
   },

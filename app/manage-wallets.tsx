@@ -463,14 +463,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   colorOptionContainer: {
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    ...platformStyles.shadow,
     borderRadius: 20,
   },
   colorOption: {
