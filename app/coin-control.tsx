@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import type { UTXO } from '@/types/wallet';
@@ -19,11 +20,9 @@ import {
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
     Platform,
-    Pressable,
     RefreshControl,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TouchableOpacity,
     View
@@ -437,37 +436,11 @@ export default function CoinControlScreen() {
       
       <View style={styles.filterRow}>
         <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Hide small UTXOs:</Text>
-        {Platform.OS === 'web' ? (
-          <Pressable
-            accessibilityRole="switch"
-            accessibilityState={{ checked: hideSmallUtxos }}
-            onPress={() => setHideSmallUtxos(!hideSmallUtxos)}
-            style={[
-              styles.webSwitch,
-              {
-                backgroundColor: hideSmallUtxos ? theme.colors.primary : theme.colors.border,
-              },
-            ]}
-          >
-            <View
-              style={[
-                styles.webSwitchThumb,
-                {
-                  transform: [{ translateX: hideSmallUtxos ? 24 : 2 }],
-                  backgroundColor: theme.colors.surface,
-                },
-              ]}
-            />
-          </Pressable>
-        ) : (
-          <Switch
-            value={hideSmallUtxos}
-            onValueChange={setHideSmallUtxos}
-            trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-            thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
-            ios_backgroundColor={theme.colors.border}
-          />
-        )}
+        <ThemedSwitch
+          value={hideSmallUtxos}
+          onValueChange={setHideSmallUtxos}
+          theme={theme}
+        />
       </View>
     </View>
   );
@@ -749,19 +722,6 @@ const styles = StyleSheet.create({
   filterButtonText: {
     fontSize: 12,
     marginRight: 4,
-  },
-  webSwitch: {
-    width: 48,
-    height: 28,
-    borderRadius: 9999,
-    justifyContent: 'center',
-  },
-  webSwitchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 9999,
-    // backgroundColor will be set dynamically via theme.colors.surface
-    ...platformStyles.shadow,
   },
   actionBar: {
     flexDirection: 'row',

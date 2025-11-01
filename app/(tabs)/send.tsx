@@ -1,6 +1,7 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
+import { ThemedSwitch } from '@/components/ThemedSwitch';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
@@ -20,7 +21,6 @@ import {
   SafeAreaView,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -1074,12 +1074,11 @@ export default function SendScreen() {
                 </Text>
                 <View style={styles.currencyToggle}>
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>BTC</Text>
-                  <Switch
+                  <ThemedSwitch
                     value={!isAmountInBTC}
                     onValueChange={toggleCurrency}
-                    trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
-                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
-                    ios_backgroundColor={theme.colors.border}
+                    theme={theme}
+                    testID="currency-toggle"
                   />
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>{selectedCurrency}</Text>
                 </View>
@@ -1386,12 +1385,11 @@ export default function SendScreen() {
                 <Text style={[styles.rbfLabel, { color: theme.colors.text }]}>Enable RBF</Text>
                 <Text style={[styles.rbfDescription, { color: theme.colors.textSecondary }]}>Replace-by-fee allows you to increase the fee later</Text>
               </View>
-              <Switch
+              <ThemedSwitch
                 value={enableRBF}
                 onValueChange={handleRBFChange}
-                trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
-                ios_backgroundColor={theme.colors.border}
+                theme={theme}
+                testID="rbf-toggle"
               />
             </LiquidGlassView>
 

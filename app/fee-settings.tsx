@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { feeEstimationService } from '@/services/fee-service';
@@ -21,15 +22,12 @@ import React, { useEffect, useState } from 'react';
 import {
     ActivityIndicator,
     Alert,
-    Platform,
-    Pressable,
     ScrollView,
     StyleSheet,
-    Switch,
     Text,
     TextInput,
     TouchableOpacity,
-    View,
+    View
 } from 'react-native';
 
 type FeePreset = 'economy' | 'standard' | 'priority' | 'custom';
@@ -237,43 +235,14 @@ export default function FeeSettingsScreen() {
           {subtitle}
         </Text>
       </View>
-      {Platform.OS === 'web' ? (
-        <Pressable
-          accessibilityRole="switch"
-          accessibilityState={{ checked: value }}
-          onPress={() => {
-            console.log(`🔧 Web switch pressed: ${title}, current value: ${value}, new value: ${!value}`);
-            onValueChange(!value);
-          }}
-          style={[
-            styles.webSwitch,
-            {
-              backgroundColor: value ? theme.colors.primary : theme.colors.border,
-            },
-          ]}
-        >
-          <View
-            style={[
-              styles.webSwitchThumb,
-              {
-                transform: [{ translateX: value ? 24 : 2 }],
-                backgroundColor: theme.colors.surface,
-              },
-            ]}
-          />
-        </Pressable>
-      ) : (
-        <Switch
-          value={value}
-          onValueChange={(newValue) => {
-            console.log(`🔧 Native switch pressed: ${title}, current value: ${value}, new value: ${newValue}`);
-            onValueChange(newValue);
-          }}
-          trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-          thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
-          ios_backgroundColor={theme.colors.border}
-        />
-      )}
+      <ThemedSwitch
+        value={value}
+        onValueChange={(newValue) => {
+          console.log(`🔧 Switch pressed: ${title}, current value: ${value}, new value: ${newValue}`);
+          onValueChange(newValue);
+        }}
+        theme={theme}
+      />
     </View>
   );
   };
@@ -987,19 +956,6 @@ const styles = StyleSheet.create({
   inputUnit: {
     fontSize: 12,
     fontWeight: '500',
-  },
-  webSwitch: {
-    width: 48,
-    height: 28,
-    borderRadius: 9999,
-    justifyContent: 'center',
-  },
-  webSwitchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 9999,
-    // backgroundColor will be set dynamically via theme.colors.surface
-    ...platformStyles.shadow,
   },
   networkCard: {
     marginHorizontal: 20,

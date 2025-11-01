@@ -1,5 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
+import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
@@ -12,47 +13,45 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import {
-  AlertTriangle,
-  Check,
-  ChevronRight,
-  Clock,
-  DollarSign,
-  Euro,
-  Eye,
-  EyeOff,
-  FileText,
-  FolderOpen,
-  Info,
-  Lock,
-  Moon,
-  PoundSterling,
-  Scale,
-  Settings,
-  Shield,
-  Sun,
-  UserX,
-  Wallet,
-  X
+    AlertTriangle,
+    Check,
+    ChevronRight,
+    Clock,
+    DollarSign,
+    Euro,
+    Eye,
+    EyeOff,
+    FileText,
+    FolderOpen,
+    Info,
+    Lock,
+    Moon,
+    PoundSterling,
+    Scale,
+    Settings,
+    Shield,
+    Sun,
+    UserX,
+    Wallet,
+    X
 } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  Alert,
-  Modal,
-  Platform,
-  Pressable,
-  Animated as RNAnimated,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TouchableOpacity,
-  View,
+    Alert,
+    Modal,
+    Platform,
+    Animated as RNAnimated,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 import ReanimatedAnimated, {
-  useAnimatedStyle,
-  useSharedValue,
-  withSpring,
+    useAnimatedStyle,
+    useSharedValue,
+    withSpring,
 } from 'react-native-reanimated';
 
 export default function SettingsScreen() {
@@ -290,39 +289,12 @@ export default function SettingsScreen() {
                 <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
                   {hideBalance ? 'Hidden' : 'Visible'}
                 </Text>
-                {Platform.OS === 'web' ? (
-                  <Pressable
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: hideBalance }}
-                    onPress={() => setHideBalanceSetting(!hideBalance)}
-                    style={[
-                      styles.webSwitch,
-                      {
-                        backgroundColor: hideBalance ? theme.colors.primary : theme.colors.border,
-                      },
-                    ]}
-                    testID="hide-balance-switch-web"
-                  >
-                    <View
-                      style={[
-                        styles.webSwitchThumb,
-                        {
-                          transform: [{ translateX: hideBalance ? 24 : 2 }],
-                          backgroundColor: theme.colors.surface,
-                        },
-                      ]}
-                    />
-                  </Pressable>
-                ) : (
-                  <Switch
-                    value={hideBalance}
-                    onValueChange={setHideBalanceSetting}
-                    trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={theme.colors.surface}
-                    ios_backgroundColor={theme.colors.border}
-                    testID="hide-balance-switch-native"
-                  />
-                )}
+                <ThemedSwitch
+                  value={hideBalance}
+                  onValueChange={setHideBalanceSetting}
+                  theme={theme}
+                  testID="hide-balance-switch"
+                />
               </View>
             }
             />
@@ -337,39 +309,12 @@ export default function SettingsScreen() {
                 <Text style={[styles.themeText, { color: theme.colors.textSecondary }]}>
                   {theme.isDark ? 'Dark' : 'Light'}
                 </Text>
-                {Platform.OS === 'web' ? (
-                  <Pressable
-                    accessibilityRole="switch"
-                    accessibilityState={{ checked: theme.isDark }}
-                    onPress={() => toggleTheme()}
-                    style={[
-                      styles.webSwitch,
-                      {
-                        backgroundColor: theme.isDark ? theme.colors.primary : theme.colors.border,
-                      },
-                    ]}
-                    testID="theme-switch-web"
-                  >
-                    <View
-                      style={[
-                        styles.webSwitchThumb,
-                        {
-                          transform: [{ translateX: theme.isDark ? 24 : 2 }],
-                          backgroundColor: theme.colors.surface,
-                        },
-                      ]}
-                    />
-                  </Pressable>
-                ) : (
-                  <Switch
-                    value={theme.isDark}
-                    onValueChange={toggleTheme}
-                    trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
-                    ios_backgroundColor={theme.colors.border}
-                    testID="theme-switch-native"
-                  />
-                )}
+                <ThemedSwitch
+                  value={theme.isDark}
+                  onValueChange={toggleTheme}
+                  theme={theme}
+                  testID="theme-switch"
+                />
               </View>
             }
             />
@@ -769,19 +714,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#FFFFFF', // Always white on colored logout button
     letterSpacing: 0.3,
-  },
-  webSwitch: {
-    width: 48,
-    height: 28,
-    borderRadius: 9999,
-    justifyContent: 'center',
-  },
-  webSwitchThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 9999,
-    // backgroundColor will be set dynamically via theme.colors.surface
-    ...platformStyles.shadow,
   },
   modalOverlay: {
     flex: 1,
