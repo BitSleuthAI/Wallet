@@ -59,11 +59,7 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
           padding: 24,
           width: '100%',
           maxWidth: 400,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: 4 },
-          shadowOpacity: 0.25,
-          shadowRadius: 8,
-          elevation: 8,
+          ...platformStyles.cardShadow,
         }}>
           {/* Header */}
           <View style={{

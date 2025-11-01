@@ -150,14 +150,20 @@ const styles = StyleSheet.create({
     marginBottom: 60,
     width: 180,
     height: 180,
-    shadowColor: 'rgba(0, 0, 0, 0.3)',
-    shadowOffset: {
-      width: 0,
-      height: 10,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
-    elevation: 15,
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+      },
+      android: {
+        elevation: 15,
+      },
+      web: {
+        boxShadow: '0 10px 20px rgba(0, 0, 0, 0.3)',
+      },
+    }),
   },
 
   appName: {
