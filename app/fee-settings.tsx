@@ -257,7 +257,7 @@ export default function FeeSettingsScreen() {
               styles.webSwitchThumb,
               {
                 transform: [{ translateX: value ? 24 : 2 }],
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               },
             ]}
           />
@@ -998,12 +998,8 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 1.5,
+    // backgroundColor will be set dynamically via theme.colors.surface
+    ...platformStyles.shadow,
   },
   networkCard: {
     marginHorizontal: 20,

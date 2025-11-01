@@ -214,6 +214,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             position: 'absolute',
             top: menuPosition.y,
             left: menuPosition.x,
+            backgroundColor: theme.colors.surface,
           }]}>
             <TouchableOpacity 
               style={styles.menuItem}
@@ -360,7 +361,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
+    // backgroundColor will be set dynamically via theme.colors.surface
     borderRadius: platformStyles.borderRadius.large,
     padding: platformStyles.spacing.sm,
     minWidth: 150,

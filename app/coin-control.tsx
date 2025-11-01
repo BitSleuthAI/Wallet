@@ -454,7 +454,7 @@ export default function CoinControlScreen() {
                 styles.webSwitchThumb,
                 {
                   transform: [{ translateX: hideSmallUtxos ? 24 : 2 }],
-                  backgroundColor: '#FFFFFF',
+                  backgroundColor: theme.colors.surface,
                 },
               ]}
             />
@@ -464,7 +464,7 @@ export default function CoinControlScreen() {
             value={hideSmallUtxos}
             onValueChange={setHideSmallUtxos}
             trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-            thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+            thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
             ios_backgroundColor={theme.colors.border}
           />
         )}
@@ -760,12 +760,8 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 1.5,
+    // backgroundColor will be set dynamically via theme.colors.surface
+    ...platformStyles.shadow,
   },
   actionBar: {
     flexDirection: 'row',

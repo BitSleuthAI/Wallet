@@ -1117,7 +1117,7 @@ export default function SendScreen() {
               styles.feeSection, 
               styles.glassCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <View style={styles.feeHeader}>
@@ -1367,7 +1367,7 @@ export default function SendScreen() {
               styles.rbfSection, 
               styles.glassCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <View style={styles.rbfInfo}>
@@ -1378,7 +1378,8 @@ export default function SendScreen() {
                 value={enableRBF}
                 onValueChange={handleRBFChange}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor="white"
+                thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
+                ios_backgroundColor={theme.colors.border}
               />
             </LiquidGlassView>
 
@@ -1386,7 +1387,7 @@ export default function SendScreen() {
             <LiquidGlassView variant="thin" intensity={75} style={[
               styles.coinControlCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <TouchableOpacity 
@@ -1430,7 +1431,7 @@ export default function SendScreen() {
               style={[
                 createButtonStyle(theme, 'primary'),
                 styles.reviewButton,
-                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonDisabled
+                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && { ...styles.reviewButtonDisabled, backgroundColor: theme.colors.border }
               ]}
               onPress={handleReviewTransaction}
               disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
@@ -1729,7 +1730,7 @@ const styles = StyleSheet.create({
     ...platformStyles.buttonShadow,
   },
   reviewButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    // backgroundColor will be set dynamically via theme.colors.border
     shadowOpacity: 0,
     elevation: 0,
   },

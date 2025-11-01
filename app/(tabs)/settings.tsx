@@ -189,7 +189,7 @@ export default function SettingsScreen() {
     <LiquidGlassView variant="thin" intensity={75} style={[
       styles.sectionCard,
       Platform.OS === 'android' && {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.surface,
       }
     ]}>
       {children}
@@ -297,7 +297,7 @@ export default function SettingsScreen() {
                         styles.webSwitchThumb,
                         {
                           transform: [{ translateX: hideBalance ? 24 : 2 }],
-                          backgroundColor: '#FFFFFF',
+                          backgroundColor: theme.colors.surface,
                         },
                       ]}
                     />
@@ -307,7 +307,7 @@ export default function SettingsScreen() {
                     value={hideBalance}
                     onValueChange={setHideBalanceSetting}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
                     ios_backgroundColor={theme.colors.border}
                     testID="hide-balance-switch-native"
                   />
@@ -344,7 +344,7 @@ export default function SettingsScreen() {
                         styles.webSwitchThumb,
                         {
                           transform: [{ translateX: theme.isDark ? 24 : 2 }],
-                          backgroundColor: '#FFFFFF',
+                          backgroundColor: theme.colors.surface,
                         },
                       ]}
                     />
@@ -354,7 +354,7 @@ export default function SettingsScreen() {
                     value={theme.isDark}
                     onValueChange={toggleTheme}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
                     ios_backgroundColor={theme.colors.border}
                     testID="theme-switch-native"
                   />
@@ -756,7 +756,7 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Always white on colored logout button
     letterSpacing: 0.3,
   },
   webSwitch: {
@@ -769,7 +769,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor will be set dynamically via theme.colors.surface
     ...platformStyles.shadow,
   },
   modalOverlay: {
