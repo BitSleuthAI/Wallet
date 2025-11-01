@@ -253,7 +253,7 @@ if (isInitialized && crashlytics && !isExpoGo) {
     crashlytics.setUserId('anonymous');
     crashlytics.setAttributes({
       platform: Platform.OS,
-      appVersion: '1.1.6',
+      appVersion: '1.2.0',
       buildType: __DEV__ ? 'debug' : 'release',
       environment: isExpoGo ? 'expo-go' : 'development-build',
     });

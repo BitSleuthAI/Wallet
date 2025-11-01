@@ -365,7 +365,7 @@ export default function SettingsScreen() {
             <SettingItem
               icon={Info}
               title="About BitSleuth Wallet"
-              subtitle="Version 1.1.6"
+              subtitle="Version 1.2.0"
               onPress={() => router.push('/about')}
             />
 

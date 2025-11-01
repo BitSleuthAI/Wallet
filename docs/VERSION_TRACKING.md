@@ -23,7 +23,7 @@ The app now tracks the installed version and automatically clears all cached dat
 
 The app stores the current version in AsyncStorage under the key `app_version`. On each app launch:
 
-1. **Retrieve Current Version**: Gets the version from `expo-constants` (e.g., "1.1.6")
+1. **Retrieve Current Version**: Gets the version from `expo-constants` (e.g., "1.2.0")
 2. **Retrieve Stored Version**: Gets the previously stored version from AsyncStorage
 3. **Compare Versions**: Determines if the app was updated
 4. **Update Stored Version**: Saves the current version for future comparisons
@@ -45,14 +45,14 @@ When an update is detected (stored version ≠ current version), the app perform
 - **Result**: Normal app initialization
 
 #### Same Version (Normal Launch)
-- **Stored Version**: "1.1.6"
-- **Current Version**: "1.1.6"
+- **Stored Version**: "1.2.0"
+- **Current Version**: "1.2.0"
 - **Action**: No cache clearing
 - **Result**: Use cached data for fast loading
 
 #### App Update
-- **Stored Version**: "1.1.5"
-- **Current Version**: "1.1.6"
+- **Stored Version**: "1.1.6"
+- **Current Version**: "1.2.0"
 - **Action**: Clear all caches, update stored version
 - **Result**: Fresh data fetched from blockchain
 
@@ -98,8 +98,8 @@ A comprehensive test suite is provided in `scripts/test-version-tracking.js` tha
 1. ✅ First launch detection
 2. ✅ Same version detection
 3. ✅ App update detection
-4. ✅ Patch version updates (1.1.6 → 1.1.7)
-5. ✅ Major version updates (1.1.6 → 2.0.0)
+4. ✅ Patch version updates (1.2.0 → 1.2.1)
+5. ✅ Major version updates (1.2.0 → 2.0.0)
 
 Run tests with:
 ```bash
@@ -125,16 +125,16 @@ node scripts/test-version-tracking.js
 The implementation includes detailed console logging for debugging:
 
 ```
-📱 Current app version: 1.1.6
-💾 Stored app version: 1.1.5
-🔄 App update detected! Old version: 1.1.5 → New version: 1.1.6
+📱 Current app version: 1.2.0
+💾 Stored app version: 1.1.6
+🔄 App update detected! Old version: 1.1.6 → New version: 1.2.0
 🧹 Clearing all cached wallet data to ensure fresh sync...
 🧹 Clearing cache for wallet: My Wallet
 ✅ Empty UTXO caches cleared
 ✅ Transaction cache cleared
 ✅ React Query caches cleared
 ✅ All wallet data caches cleared - fresh data will be loaded
-💾 Updated stored app version to: 1.1.6
+💾 Updated stored app version to: 1.2.0
 ```
 
 ## Future Enhancements
