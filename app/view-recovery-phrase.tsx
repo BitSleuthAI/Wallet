@@ -160,7 +160,7 @@ export default function ViewRecoveryPhrase() {
                 </Text>
               </View>
             ) : (
-              <View style={styles.blurredQR}>
+              <View style={[styles.blurredQR, { backgroundColor: theme.colors.border }]}>
                 <View style={styles.blurOverlay} />
               </View>
             )}
@@ -194,12 +194,15 @@ export default function ViewRecoveryPhrase() {
         )}
 
         {/* Warning Section */}
-        <View style={styles.warningContainer}>
+        <View style={[styles.warningContainer, { 
+          backgroundColor: theme.isDark ? 'rgba(239, 68, 68, 0.1)' : '#FEF2F2',
+          borderColor: theme.isDark ? 'rgba(239, 68, 68, 0.3)' : '#FECACA'
+        }]}>
           <View style={styles.warningHeader}>
-            <AlertTriangle size={20} color="#EF4444" />
-            <Text style={styles.warningTitle}>Extreme Caution: Do Not Share!</Text>
+            <AlertTriangle size={20} color={theme.colors.error} />
+            <Text style={[styles.warningTitle, { color: theme.colors.text }]}>Extreme Caution: Do Not Share!</Text>
           </View>
-          <Text style={styles.warningText}>
+          <Text style={[styles.warningText, { color: theme.colors.error }]}>
             Anyone with this phrase can steal your Bitcoin. Never share it with anyone. Store it in a secure, offline location separate from this device.
           </Text>
         </View>
@@ -213,28 +216,28 @@ export default function ViewRecoveryPhrase() {
         onRequestClose={handleCancelModal}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Security Warning</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Security Warning</Text>
               <TouchableOpacity onPress={handleCancelModal} style={styles.closeButton}>
-                <X size={24} color="#6B7280" />
+                <X size={24} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
-            <Text style={styles.modalMessage}>
+            <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
               Make sure no one is watching your screen. Your recovery phrase gives full access to your wallet.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#EF4444' }]}
+                style={[styles.modalButton, { backgroundColor: theme.colors.error }]}
                 onPress={handleConfirmModal}
               >
                 <Text style={styles.modalButtonText}>I Understand</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: '#6B7280' }]}
+                style={[styles.modalButton, { backgroundColor: theme.colors.border }]}
                 onPress={handleCancelModal}
               >
-                <Text style={styles.modalButtonText}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -301,7 +304,7 @@ const styles = StyleSheet.create({
   blurredQR: {
     width: 160,
     height: 160,
-    backgroundColor: '#F3F4F6',
+    // backgroundColor will be set dynamically via theme.colors.border
     borderRadius: 8,
     position: 'relative',
   },
@@ -360,8 +363,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   warningContainer: {
-    backgroundColor: '#FEF2F2',
-    borderColor: '#FECACA',
+    // backgroundColor and borderColor will be set dynamically via theme
     borderWidth: 1,
     borderRadius: 12,
     padding: 16,
@@ -375,12 +377,12 @@ const styles = StyleSheet.create({
   warningTitle: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#EF4444',
+    // color will be set dynamically via theme.colors.text
   },
   warningText: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#DC2626',
+    // color will be set dynamically via theme.colors.error
   },
   modalOverlay: {
     flex: 1,
@@ -405,7 +407,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    // color will be set dynamically via theme.colors.text
   },
   closeButton: {
     padding: 8,
