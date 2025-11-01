@@ -3,7 +3,7 @@
 ## 1. Overview
 **Product Name:** BitSleuth Wallet
 
-**Version:** 1.1.6
+**Version:** 1.2.0
 
 **Platforms:** iOS and Android (Mobile-Only)
 
@@ -834,7 +834,8 @@ Bitcoin adoption is growing rapidly, but security breaches and poor UX continue 
 - Blockstream Esplora API: https://github.com/Blockstream/esplora/blob/master/API.md
 
 ### Version History
-- **v1.1.6** (Current): Phase 2 completed - Full feature set with advanced capabilities
+- **v1.2.0** (Current): Continued enhancements and improvements
+- **v1.1.6**: Phase 2 completed - Full feature set with advanced capabilities
 - **v1.0.0**: Phase 1 completed - Core wallet functionality launched
 
 ### Document Metadata

@@ -26,7 +26,7 @@ async function testVersionTracking() {
     console.log('📋 Test Case 1: First Launch');
     console.log('─'.repeat(50));
     
-    const currentVersion = '1.1.6';
+    const currentVersion = '1.2.0';
     let storedVersion = await mockAsyncStorage.getItem('app_version');
     
     console.log('   Current version:', currentVersion);
@@ -59,9 +59,9 @@ async function testVersionTracking() {
     console.log('─'.repeat(50));
     
     // Simulate old version
-    await mockAsyncStorage.setItem('app_version', '1.1.5');
+    await mockAsyncStorage.setItem('app_version', '1.1.6');
     storedVersion = await mockAsyncStorage.getItem('app_version');
-    const newVersion = '1.1.6';
+    const newVersion = '1.2.0';
     isAppUpdate = storedVersion !== null && storedVersion !== newVersion;
     
     console.log('   Current version:', newVersion);
@@ -88,12 +88,12 @@ async function testVersionTracking() {
     console.log('   ✅ Matches current version?', updatedVersion === newVersion ? 'Yes ✅' : 'No ❌');
     
     // Test Case 4: Patch version update
-    console.log('\n📋 Test Case 4: Patch Version Update (1.1.6 → 1.1.7)');
+    console.log('\n📋 Test Case 4: Patch Version Update (1.2.0 → 1.2.1)');
     console.log('─'.repeat(50));
     
-    await mockAsyncStorage.setItem('app_version', '1.1.6');
+    await mockAsyncStorage.setItem('app_version', '1.2.0');
     storedVersion = await mockAsyncStorage.getItem('app_version');
-    const patchVersion = '1.1.7';
+    const patchVersion = '1.2.1';
     isAppUpdate = storedVersion !== null && storedVersion !== patchVersion;
     
     console.log('   Current version:', patchVersion);
@@ -102,10 +102,10 @@ async function testVersionTracking() {
     console.log('   Should clear cache?', isAppUpdate ? 'Yes ✅' : 'No');
     
     // Test Case 5: Major version update
-    console.log('\n📋 Test Case 5: Major Version Update (1.1.6 → 2.0.0)');
+    console.log('\n📋 Test Case 5: Major Version Update (1.2.0 → 2.0.0)');
     console.log('─'.repeat(50));
     
-    await mockAsyncStorage.setItem('app_version', '1.1.6');
+    await mockAsyncStorage.setItem('app_version', '1.2.0');
     storedVersion = await mockAsyncStorage.getItem('app_version');
     const majorVersion = '2.0.0';
     isAppUpdate = storedVersion !== null && storedVersion !== majorVersion;
