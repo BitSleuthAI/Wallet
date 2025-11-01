@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { platformStyles } from '@/constants/themes';
 import { Link, Stack } from "expo-router";
 import { ArrowLeft, Bot } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
@@ -76,14 +77,7 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformStyles.cardShadow,
   },
   iconContainer: {
     width: 100,

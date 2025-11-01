@@ -32,7 +32,18 @@ export default function SendScreen() {
     console.log('🔍 Send screen: Component mounted/rendered');
   }
   const { animatedStyle } = useTabAnimation(1);
-  const { refreshData } = useWallet(); // Send tab = index 1
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, show loading
+  if (!walletContext) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  const { refreshData } = walletContext; // Send tab = index 1
   const { 
     currentWallet, 
     balance, 
@@ -45,7 +56,7 @@ export default function SendScreen() {
     setFeeSettings,
     feeSettingsLoading,
     incrementUsageCount,
-  } = useWallet();
+  } = walletContext;
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -1067,7 +1078,8 @@ export default function SendScreen() {
                     value={!isAmountInBTC}
                     onValueChange={toggleCurrency}
                     trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
-                    thumbColor="white"
+                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
+                    ios_backgroundColor={theme.colors.border}
                   />
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>{selectedCurrency}</Text>
                 </View>
@@ -1117,7 +1129,7 @@ export default function SendScreen() {
               styles.feeSection, 
               styles.glassCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <View style={styles.feeHeader}>
@@ -1367,7 +1379,7 @@ export default function SendScreen() {
               styles.rbfSection, 
               styles.glassCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <View style={styles.rbfInfo}>
@@ -1378,7 +1390,8 @@ export default function SendScreen() {
                 value={enableRBF}
                 onValueChange={handleRBFChange}
                 trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                thumbColor="white"
+                thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
+                ios_backgroundColor={theme.colors.border}
               />
             </LiquidGlassView>
 
@@ -1386,7 +1399,7 @@ export default function SendScreen() {
             <LiquidGlassView variant="thin" intensity={75} style={[
               styles.coinControlCard,
               Platform.OS === 'android' && {
-                backgroundColor: '#FFFFFF',
+                backgroundColor: theme.colors.surface,
               }
             ]}>
               <TouchableOpacity 
@@ -1430,7 +1443,10 @@ export default function SendScreen() {
               style={[
                 createButtonStyle(theme, 'primary'),
                 styles.reviewButton,
-                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonDisabled
+                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && { 
+                  ...styles.reviewButtonDisabled, 
+                  backgroundColor: theme.isDark ? theme.colors.surfaceDark : theme.colors.border 
+                }
               ]}
               onPress={handleReviewTransaction}
               disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
@@ -1729,9 +1745,10 @@ const styles = StyleSheet.create({
     ...platformStyles.buttonShadow,
   },
   reviewButtonDisabled: {
-    backgroundColor: '#9CA3AF',
+    // backgroundColor will be set dynamically via theme.colors.border
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.5,
   },
   reviewButtonText: {
     color: 'white',
@@ -1739,7 +1756,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reviewButtonTextDisabled: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
   },
   emptyState: {
     flex: 1,

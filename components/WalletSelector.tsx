@@ -4,13 +4,13 @@ import { Wallet } from '@/types/wallet';
 import { Check, ChevronDown } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
-  FlatList,
-  Modal,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View,
+    FlatList,
+    Modal,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface WalletSelectorProps {
@@ -19,7 +19,14 @@ interface WalletSelectorProps {
 }
 
 export default function WalletSelector({ label, onWalletChange }: WalletSelectorProps) {
-  const { wallets, currentWallet, switchWallet, theme } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { wallets, currentWallet, switchWallet, theme } = walletContext;
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const handleWalletSelect = (wallet: Wallet) => {

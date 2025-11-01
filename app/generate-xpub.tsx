@@ -227,14 +227,7 @@ const styles = StyleSheet.create({
   qrWrapper: {
     padding: 20,
     borderRadius: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    ...platformStyles.buttonShadow,
   },
   xpubContainer: {
     width: '100%',

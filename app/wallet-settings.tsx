@@ -100,11 +100,11 @@ export default function WalletSettingsScreen() {
     );
   };
 
-const SettingSection: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+const SettingSection: React.FC<{ children: React.ReactNode; theme: any }> = ({ children, theme }) => (
     <LiquidGlassView
         style={[
             styles.sectionCard,
-            Platform.OS === 'android' && { backgroundColor: '#FFFFFF' },
+            Platform.OS === 'android' && { backgroundColor: theme.colors.surface },
         ]}
     >
         {children}
@@ -217,7 +217,7 @@ const SectionHeader = ({ title }: { title: string }) => (
         >
           {/* Wallet Info Section */}
           <SectionHeader title="Wallet Information" />
-          <SettingSection>
+          <SettingSection theme={theme}>
             <SettingItem
               icon={Wallet}
               title="Current Wallet"
@@ -228,7 +228,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
           {/* Security & Privacy Section */}
           <SectionHeader title="Security & Privacy" />
-          <SettingSection>
+          <SettingSection theme={theme}>
             <SettingItem
               icon={Key}
               title="View Recovery Phrase"
@@ -254,7 +254,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
           {/* Transaction Settings Section */}
           <SectionHeader title="Transaction Settings" />
-          <SettingSection>
+          <SettingSection theme={theme}>
             <SettingItem
               icon={Zap}
               title="Fee Settings"
@@ -280,7 +280,7 @@ const SectionHeader = ({ title }: { title: string }) => (
 
           {/* Danger Zone */}
           <SectionHeader title="Danger Zone" />
-          <SettingSection>
+          <SettingSection theme={theme}>
             <SettingItem
               icon={Trash2}
               title="Delete Wallet"
@@ -392,12 +392,8 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
-    elevation: 2,
-    shadowColor: '#000000',
-    shadowOpacity: 0.2,
-    shadowOffset: { width: 0, height: 1 },
-    shadowRadius: 1.5,
+    // backgroundColor will be set dynamically via theme.colors.surface
+    ...platformStyles.shadow,
   },
   bottomSpacing: {
     height: 40,

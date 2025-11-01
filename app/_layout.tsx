@@ -10,6 +10,7 @@ import { initializeNetworkingPolyfill } from '../services/networking-polyfill';
 import ActivityTracker from '@/components/ActivityTracker';
 import PinUnlockScreen from '@/components/PinUnlockScreen';
 import SplashScreen from '@/components/SplashScreen';
+import { platformStyles } from '@/constants/themes';
 import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { WalletProvider, useWallet } from '@/hooks/wallet-store';
@@ -178,14 +179,7 @@ const errorStyles = StyleSheet.create({
     borderRadius: 24,
     alignItems: 'center',
     borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 8,
+    ...platformStyles.cardShadow,
   },
   iconContainer: {
     width: 100,

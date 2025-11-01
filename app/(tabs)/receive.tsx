@@ -8,21 +8,32 @@ import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  Platform,
-  SafeAreaView,
-  Share,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  View
+    Alert,
+    Animated,
+    Platform,
+    SafeAreaView,
+    Share,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
 export default function ReceiveScreen() {
   const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
-  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, show loading
+  if (!walletContext) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = walletContext;
   const [currentAddress, setCurrentAddress] = useState<string>(
     currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
   );

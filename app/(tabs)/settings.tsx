@@ -57,7 +57,18 @@ import ReanimatedAnimated, {
 
 export default function SettingsScreen() {
   const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, show loading
+  if (!walletContext) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = walletContext;
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
   const [showAutoLockModal, setShowAutoLockModal] = useState<boolean>(false);
@@ -189,7 +200,7 @@ export default function SettingsScreen() {
     <LiquidGlassView variant="thin" intensity={75} style={[
       styles.sectionCard,
       Platform.OS === 'android' && {
-        backgroundColor: '#FFFFFF',
+        backgroundColor: theme.colors.surface,
       }
     ]}>
       {children}
@@ -297,7 +308,7 @@ export default function SettingsScreen() {
                         styles.webSwitchThumb,
                         {
                           transform: [{ translateX: hideBalance ? 24 : 2 }],
-                          backgroundColor: '#FFFFFF',
+                          backgroundColor: theme.colors.surface,
                         },
                       ]}
                     />
@@ -307,7 +318,7 @@ export default function SettingsScreen() {
                     value={hideBalance}
                     onValueChange={setHideBalanceSetting}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    thumbColor={theme.colors.surface}
                     ios_backgroundColor={theme.colors.border}
                     testID="hide-balance-switch-native"
                   />
@@ -344,7 +355,7 @@ export default function SettingsScreen() {
                         styles.webSwitchThumb,
                         {
                           transform: [{ translateX: theme.isDark ? 24 : 2 }],
-                          backgroundColor: '#FFFFFF',
+                          backgroundColor: theme.colors.surface,
                         },
                       ]}
                     />
@@ -354,7 +365,7 @@ export default function SettingsScreen() {
                     value={theme.isDark}
                     onValueChange={toggleTheme}
                     trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-                    thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
                     ios_backgroundColor={theme.colors.border}
                     testID="theme-switch-native"
                   />
@@ -756,7 +767,7 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: '#FFFFFF', // Always white on colored logout button
     letterSpacing: 0.3,
   },
   webSwitch: {
@@ -769,7 +780,7 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 9999,
-    backgroundColor: '#FFFFFF',
+    // backgroundColor will be set dynamically via theme.colors.surface
     ...platformStyles.shadow,
   },
   modalOverlay: {

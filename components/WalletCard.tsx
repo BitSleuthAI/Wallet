@@ -8,10 +8,10 @@ import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSequence,
-    withSpring
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring
 } from 'react-native-reanimated';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
@@ -25,7 +25,14 @@ interface WalletCardProps {
 }
 
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null or loading
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = walletContext;
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuButtonRef = useRef<View>(null);
@@ -214,6 +221,7 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
             position: 'absolute',
             top: menuPosition.y,
             left: menuPosition.x,
+            backgroundColor: theme.colors.surface,
           }]}>
             <TouchableOpacity 
               style={styles.menuItem}
@@ -360,7 +368,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   menuContainer: {
-    backgroundColor: '#FFFFFF',
+    // backgroundColor will be set dynamically via theme.colors.surface
     borderRadius: platformStyles.borderRadius.large,
     padding: platformStyles.spacing.sm,
     minWidth: 150,

@@ -52,7 +52,14 @@ export function LiquidGlassView({
   style,
   children,
 }: LiquidGlassViewProps) {
-  const { theme } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { theme } = walletContext;
   
   // Get the appropriate tint based on variant and theme
   const getTint = () => {
