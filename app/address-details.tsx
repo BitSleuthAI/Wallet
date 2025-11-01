@@ -574,11 +574,7 @@ const styles = StyleSheet.create({
     maxWidth: 320,
     borderRadius: 14,
     overflow: 'hidden',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
+    ...platformStyles.buttonShadow,
   },
   modalTitle: {
     fontSize: 20,
