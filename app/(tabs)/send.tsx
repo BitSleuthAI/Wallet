@@ -1067,7 +1067,8 @@ export default function SendScreen() {
                     value={!isAmountInBTC}
                     onValueChange={toggleCurrency}
                     trackColor={{ false: theme.colors.primary, true: theme.colors.textSecondary }}
-                    thumbColor="white"
+                    thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
+                    ios_backgroundColor={theme.colors.border}
                   />
                   <Text style={[styles.toggleLabel, { color: theme.colors.textSecondary }]}>{selectedCurrency}</Text>
                 </View>

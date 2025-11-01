@@ -270,7 +270,7 @@ export default function FeeSettingsScreen() {
             onValueChange(newValue);
           }}
           trackColor={{ false: theme.colors.border, true: theme.colors.primary }}
-          thumbColor={Platform.OS === 'android' ? '#FFFFFF' : undefined}
+          thumbColor={Platform.OS === 'android' ? theme.colors.surface : undefined}
           ios_backgroundColor={theme.colors.border}
         />
       )}
