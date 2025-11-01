@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import * as Haptics from 'expo-haptics';
@@ -6,14 +7,14 @@ import { router } from 'expo-router';
 import { Delete, Fingerprint, Lock, Shield } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  SafeAreaView,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Vibration,
-  View,
+    Alert,
+    Platform,
+    SafeAreaView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View,
 } from 'react-native';
 
 export default function PinUnlockScreen() {

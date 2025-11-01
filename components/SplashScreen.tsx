@@ -1,13 +1,14 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    StatusBar,
-    StyleSheet,
-    Text,
-    View,
+  Animated,
+  Platform,
+  StatusBar,
+  StyleSheet,
+  Text,
+  View,
 } from 'react-native';
-import Svg, { Path, Circle } from 'react-native-svg';
+import Svg, { Circle, Path } from 'react-native-svg';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;

@@ -1,15 +1,16 @@
+import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Delete } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
 import {
-  Platform,
-  StyleSheet,
-  Text,
-  TouchableOpacity,
-  Vibration,
-  View,
+    Platform,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    Vibration,
+    View,
 } from 'react-native';
 
 interface PinVerificationScreenProps {

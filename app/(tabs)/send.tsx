@@ -32,7 +32,18 @@ export default function SendScreen() {
     console.log('🔍 Send screen: Component mounted/rendered');
   }
   const { animatedStyle } = useTabAnimation(1);
-  const { refreshData } = useWallet(); // Send tab = index 1
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, show loading
+  if (!walletContext) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  const { refreshData } = walletContext; // Send tab = index 1
   const { 
     currentWallet, 
     balance, 
@@ -45,7 +56,7 @@ export default function SendScreen() {
     setFeeSettings,
     feeSettingsLoading,
     incrementUsageCount,
-  } = useWallet();
+  } = walletContext;
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
@@ -1432,7 +1443,10 @@ export default function SendScreen() {
               style={[
                 createButtonStyle(theme, 'primary'),
                 styles.reviewButton,
-                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && { ...styles.reviewButtonDisabled, backgroundColor: theme.colors.border }
+                (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && { 
+                  ...styles.reviewButtonDisabled, 
+                  backgroundColor: theme.isDark ? theme.colors.surfaceDark : theme.colors.border 
+                }
               ]}
               onPress={handleReviewTransaction}
               disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
@@ -1734,6 +1748,7 @@ const styles = StyleSheet.create({
     // backgroundColor will be set dynamically via theme.colors.border
     shadowOpacity: 0,
     elevation: 0,
+    opacity: 0.5,
   },
   reviewButtonText: {
     color: 'white',
@@ -1741,7 +1756,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   reviewButtonTextDisabled: {
-    color: 'rgba(255, 255, 255, 0.7)',
+    color: '#6B7280',
   },
   emptyState: {
     flex: 1,

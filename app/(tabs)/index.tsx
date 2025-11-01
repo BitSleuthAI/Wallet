@@ -15,19 +15,19 @@ import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Alert,
-  Animated,
-  FlatList,
-  Modal,
-  Platform,
-  RefreshControl,
-  SafeAreaView,
-  ScrollView,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Animated,
+    FlatList,
+    Modal,
+    Platform,
+    RefreshControl,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -38,6 +38,17 @@ type CarouselItem =
 
 export default function WalletScreen() {
   const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, show loading
+  if (!walletContext) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
+        <Text style={{ color: '#fff' }}>Loading...</Text>
+      </View>
+    );
+  }
+  
   const {
     wallets,
     currentWallet,
@@ -67,7 +78,7 @@ export default function WalletScreen() {
     markFeedbackPromptDismissed,
     markFeedbackSubmitted,
     incrementUsageCount,
-  } = useWallet();
+  } = walletContext;
 
   const [refreshing, setRefreshing] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);

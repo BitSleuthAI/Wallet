@@ -17,6 +17,7 @@ import {
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 
 // Wallet service import with platform detection
 let walletService: any;

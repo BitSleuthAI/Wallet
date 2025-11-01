@@ -1,11 +1,13 @@
-import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
-import { useWallet } from '@/hooks/wallet-store';
+import { darkTheme, lightTheme } from '@/constants/themes';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
 import React from 'react';
-import { Platform } from 'react-native';
+import { Platform, useColorScheme } from 'react-native';
 
 export default function TabLayout() {
-  const { theme } = useWallet();
+  // Use color scheme detection directly since we're outside WalletProvider context
+  const colorScheme = useColorScheme();
+  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
 
   return (
     <NativeTabs

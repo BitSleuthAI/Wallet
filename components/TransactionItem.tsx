@@ -21,7 +21,14 @@ interface TransactionItemProps {
 }
 
 export default function TransactionItem({ transaction }: TransactionItemProps) {
-  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = walletContext;
   
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;

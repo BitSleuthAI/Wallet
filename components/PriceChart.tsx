@@ -24,7 +24,14 @@ interface BalanceChartProps {
 }
 
 export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
-  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = walletContext;
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const tooltipOpacity = useRef(new Animated.Value(0)).current;

@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { platformStyles } from '@/constants/themes';
 import { Link, Stack } from "expo-router";
 import { ArrowLeft, Bot } from 'lucide-react-native';
 import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";

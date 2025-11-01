@@ -10,6 +10,7 @@ import { initializeNetworkingPolyfill } from '../services/networking-polyfill';
 import ActivityTracker from '@/components/ActivityTracker';
 import PinUnlockScreen from '@/components/PinUnlockScreen';
 import SplashScreen from '@/components/SplashScreen';
+import { platformStyles } from '@/constants/themes';
 import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
 import { WalletProvider, useWallet } from '@/hooks/wallet-store';

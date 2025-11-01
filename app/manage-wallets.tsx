@@ -1,5 +1,6 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';

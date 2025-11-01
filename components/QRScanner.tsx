@@ -4,13 +4,13 @@ import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
-  Alert,
-  Platform,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
+    Alert,
+    Platform,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
 
 interface QRScannerProps {
@@ -19,7 +19,14 @@ interface QRScannerProps {
 }
 
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
-  const { theme } = useWallet();
+  const walletContext = useWallet();
+  
+  // Safety check: if context is not available yet, return null
+  if (!walletContext) {
+    return null;
+  }
+  
+  const { theme } = walletContext;
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [playServicesAvailable, setPlayServicesAvailable] = useState<boolean | null>(null);

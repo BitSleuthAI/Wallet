@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -8,13 +9,12 @@ import { ArrowLeft, Delete } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
 import {
     Alert,
-    Platform,
     SafeAreaView,
     StyleSheet,
     Text,
     TouchableOpacity,
     Vibration,
-    View,
+    View
 } from 'react-native';
 
 export default function PinSetupScreen() {
