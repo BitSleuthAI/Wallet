@@ -1,4 +1,5 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
+import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_STALE_TIME, REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
@@ -266,7 +267,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         const timeSinceLastLaunch = lastLaunchTimestamp 
           ? Date.now() - parseInt(lastLaunchTimestamp, 10)
           : Infinity;
-        const isFreshLaunch = timeSinceLastLaunch > 5 * 60 * 1000; // More than 5 minutes since last launch
+        const isFreshLaunch = timeSinceLastLaunch > FRESH_LAUNCH_THRESHOLD_MS;
         
         // Clear caches on app update OR fresh launch to ensure data freshness
         if (isAppUpdate || isFreshLaunch) {
@@ -586,8 +587,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
-    staleTime: 2 * 60 * 1000, // 2 minutes - shorter stale time to fetch fresh data more frequently
-    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
+    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
@@ -631,8 +632,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
-    staleTime: 2 * 60 * 1000, // 2 minutes - shorter stale time to fetch fresh data more frequently
-    gcTime: 30 * 60 * 1000, // 30 minutes - retain data for smoother wallet switching
+    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
     refetchOnWindowFocus: false, // Don't refetch on window focus
     refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data

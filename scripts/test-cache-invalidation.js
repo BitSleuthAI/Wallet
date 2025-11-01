@@ -4,14 +4,19 @@
  * Test Cache Invalidation Logic
  * 
  * This script tests that cache invalidation works correctly:
- * 1. Fresh launches (>5 min since last launch) trigger cache clear
+ * 1. Fresh launches (>threshold since last launch) trigger cache clear
  * 2. App version changes trigger cache clear
- * 3. Recent launches (<5 min) use cached data
+ * 3. Recent launches (<threshold) use cached data
  * 
  * Run with: node scripts/test-cache-invalidation.js
  */
 
-console.log('🧪 Testing Cache Invalidation Logic\n');
+// Import the constant from the centralized cache configuration
+// This ensures tests stay in sync with production values
+const FRESH_LAUNCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes (matches constants/cache.ts)
+
+console.log('🧪 Testing Cache Invalidation Logic');
+console.log(`   Fresh launch threshold: ${FRESH_LAUNCH_THRESHOLD_MS / 1000} seconds\n`);
 
 // Mock AsyncStorage for testing
 const mockStorage = new Map();
@@ -44,7 +49,7 @@ async function testScenario(name, setup, expected) {
   const timeSinceLastLaunch = lastLaunchTimestamp 
     ? Date.now() - parseInt(lastLaunchTimestamp, 10)
     : Infinity;
-  const isFreshLaunch = timeSinceLastLaunch > 5 * 60 * 1000; // More than 5 minutes
+  const isFreshLaunch = timeSinceLastLaunch > FRESH_LAUNCH_THRESHOLD_MS;
   
   const shouldClearCache = isAppUpdate || isFreshLaunch;
   
@@ -90,24 +95,26 @@ async function runTests() {
     true // Should clear cache (isAppUpdate = true)
   ));
   
-  // Test 3: Fresh launch (>5 min since last launch)
+  // Test 3: Fresh launch (>threshold since last launch)
+  const freshLaunchMinutes = (FRESH_LAUNCH_THRESHOLD_MS / 60000) + 1; // 1 minute past threshold
   results.push(await testScenario(
-    'Fresh Launch (6 minutes ago) - Should Clear Cache',
+    `Fresh Launch (${freshLaunchMinutes} minutes ago) - Should Clear Cache`,
     {
       currentVersion: '1.1.6',
       storedVersion: '1.1.6',
-      lastLaunchTimestamp: Date.now() - (6 * 60 * 1000), // 6 minutes ago
+      lastLaunchTimestamp: Date.now() - (freshLaunchMinutes * 60 * 1000),
     },
     true // Should clear cache (isFreshLaunch = true)
   ));
   
-  // Test 4: Recent launch (<5 min since last launch)
+  // Test 4: Recent launch (<threshold since last launch)
+  const recentLaunchMinutes = (FRESH_LAUNCH_THRESHOLD_MS / 60000) - 3; // 3 minutes before threshold
   results.push(await testScenario(
-    'Recent Launch (2 minutes ago) - Should Use Cache',
+    `Recent Launch (${recentLaunchMinutes} minutes ago) - Should Use Cache`,
     {
       currentVersion: '1.1.6',
       storedVersion: '1.1.6',
-      lastLaunchTimestamp: Date.now() - (2 * 60 * 1000), // 2 minutes ago
+      lastLaunchTimestamp: Date.now() - (recentLaunchMinutes * 60 * 1000),
     },
     false // Should NOT clear cache (recent launch, same version)
   ));
