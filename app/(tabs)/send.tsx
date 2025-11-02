@@ -56,6 +56,9 @@ export default function SendScreen() {
     setFeeSettings,
     feeSettingsLoading,
     incrementUsageCount,
+    utxos: walletUtxos,
+    isLoadingUtxos,
+    isRefreshingUtxos,
   } = walletContext;
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   const [recipientAddress, setRecipientAddress] = useState('');
@@ -249,58 +252,45 @@ export default function SendScreen() {
     
   }, [feeEstimates, feeSettings, feeRate]);
 
-  // UTXO fetching useEffect - OPTIMIZED to prevent infinite loops
-  console.log('🔍 Send screen: About to define UTXO fetching useEffect');
-  console.log('🔍 Send screen: useEffect dependencies - currentWallet?.id:', currentWallet?.id, 'balance:', balance);
+  // Sync UTXOs from wallet store to local state with frozen status applied
+  // NOTE: UTXOs are now automatically fetched and updated by wallet-store.ts with 30s polling
+  console.log('🔍 Send screen: Setting up UTXO sync from wallet store');
+  console.log('🔍 Send screen: currentWallet?.id:', currentWallet?.id, 'walletUtxos:', walletUtxos?.length || 0);
   
   useEffect(() => {
-    console.log('🔍 Send screen: useEffect triggered - FORCED RUN');
+    console.log('🔍 Send screen: UTXO sync triggered');
     console.log('🔍 Send screen: currentWallet:', currentWallet ? currentWallet.name : 'null');
-    console.log('🔍 Send screen: currentWallet.xpub:', currentWallet?.xpub ? 'present' : 'missing');
-    console.log('🔍 Send screen: balance:', balance);
+    console.log('🔍 Send screen: walletUtxos count:', walletUtxos?.length || 0);
     
-    const fetchUtxos = async () => {
-      try {
-        if (!currentWallet || !currentWallet.xpub) {
-          console.log('🔍 Send screen: Early return - no wallet or xpub');
-          setAvailableUtxos([]);
-          return;
-        }
-        
-        console.log('🔍 Send screen: Starting UTXO fetch for wallet:', currentWallet.name);
-        console.log('🔍 Send screen: Wallet has', currentWallet.addresses.length, 'addresses');
-        
-        // Load UTXOs from wallet store in FAST MODE (first 3 addresses only)
-        console.log('🔍 Send screen: Loading UTXOs for wallet in FAST MODE:', currentWallet.id);
-        await coinControl.loadWalletUtxos(currentWallet.id, true); // true = fastMode
-        
-        // Get UTXOs from wallet store
-        const cachedUtxos = coinControl.getWalletUtxos(currentWallet.id);
-        console.log('🔍 Send screen: Got', cachedUtxos.length, 'UTXOs from wallet store');
-        console.log('🔍 Send screen: Cached UTXOs details:', cachedUtxos.map(u => ({
-          txid: u.txid?.substring(0, 10) + '...',
-          vout: u.vout,
-          value: u.value,
-          address: u.address?.substring(0, 10) + '...',
-          addressIndex: u.addressIndex,
-          frozen: u.frozen,
-          status: u.status
-        })));
-
-        setAvailableUtxos(cachedUtxos);
-      } catch (e) {
-        console.warn('Failed to fetch UTXOs', e);
-        setAvailableUtxos([]);
-      }
-    };
+    if (!currentWallet || !walletUtxos) {
+      console.log('🔍 Send screen: No wallet or UTXOs available, clearing availableUtxos');
+      setAvailableUtxos([]);
+      return;
+    }
     
-    fetchUtxos();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWallet?.id, balance]); // Only depend on wallet ID and balance, not coinControl methods
+    // Apply frozen status from coin control to wallet UTXOs
+    const frozenIds = new Set(coinControl.getFrozenUtxoIds());
+    const utxosWithFrozenStatus = walletUtxos.map((utxo: UTXO) => ({
+      ...utxo,
+      frozen: frozenIds.has(`${utxo.txid}:${utxo.vout}`)
+    }));
+    
+    console.log('🔍 Send screen: Synced', utxosWithFrozenStatus.length, 'UTXOs from wallet store');
+    console.log('🔍 Send screen: UTXOs details:', utxosWithFrozenStatus.slice(0, 5).map((u: UTXO) => ({
+      txid: u.txid?.substring(0, 10) + '...',
+      vout: u.vout,
+      value: u.value,
+      address: u.address?.substring(0, 10) + '...',
+      frozen: u.frozen,
+      status: u.status
+    })));
+    
+    setAvailableUtxos(utxosWithFrozenStatus);
+  }, [currentWallet?.id, walletUtxos, coinControl]);
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
-    const ids = coinControl.getSelectedUtxoIds().filter(id => !frozenIds.has(id));
+    const ids = coinControl.getSelectedUtxoIds().filter((id: string) => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWallet?.id]); // Only re-sync when wallet changes, not on every coinControl update

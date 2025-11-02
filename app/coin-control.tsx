@@ -32,7 +32,15 @@ type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 
 export default function CoinControlScreen() {
-  const { theme, currentWallet, coinControl } = useWallet();
+  const { 
+    theme, 
+    currentWallet, 
+    coinControl,
+    utxos: walletUtxos,
+    isLoadingUtxos,
+    isRefreshingUtxos,
+    refreshData,
+  } = useWallet();
   const router = useRouter();
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('value');
@@ -42,19 +50,20 @@ export default function CoinControlScreen() {
   const [hideSmallUtxos, setHideSmallUtxos] = useState<boolean>(false);
   const [refreshing, setRefreshing] = useState<boolean>(false);
 
-  const loadUtxos = useCallback(async () => {
-    if (!currentWallet) return;
-    
-    console.log('🔍 Coin control: Loading UTXOs for wallet in FAST MODE:', currentWallet.id);
-    await coinControl.loadWalletUtxos(currentWallet.id, true); // true = fastMode
-  }, [currentWallet?.id, coinControl]); // Include coinControl to avoid stale closures
-
-  // Get UTXOs from wallet store
+  // Get UTXOs from wallet store with frozen status applied
+  // NOTE: UTXOs are now automatically fetched and updated by wallet-store.ts with 30s polling
   const utxos = useMemo(() => {
-    if (!currentWallet) return [];
-    const retrievedUtxos = coinControl.getWalletUtxos(currentWallet.id);
-    console.log('🔍 Coin control: Retrieved UTXOs from wallet store:', retrievedUtxos.length);
-    console.log('🔍 Coin control: UTXO details:', retrievedUtxos.map(u => ({
+    if (!currentWallet || !walletUtxos) return [];
+    
+    // Apply frozen status from coin control to wallet UTXOs
+    const frozenIds = new Set(coinControl.getFrozenUtxoIds());
+    const utxosWithFrozenStatus = walletUtxos.map((utxo: UTXO) => ({
+      ...utxo,
+      frozen: frozenIds.has(`${utxo.txid}:${utxo.vout}`)
+    }));
+    
+    console.log('🔍 Coin control: Using UTXOs from wallet store:', utxosWithFrozenStatus.length);
+    console.log('🔍 Coin control: UTXO details:', utxosWithFrozenStatus.slice(0, 5).map((u: UTXO) => ({
       txid: u.txid?.substring(0, 10) + '...',
       vout: u.vout,
       value: u.value,
@@ -62,26 +71,19 @@ export default function CoinControlScreen() {
       frozen: u.frozen,
       address: u.address?.substring(0, 10) + '...'
     })));
-    return retrievedUtxos;
-  }, [currentWallet, coinControl]);
+    return utxosWithFrozenStatus;
+  }, [currentWallet, walletUtxos, coinControl]);
 
-  // Get loading state from wallet store
-  const isLoading = useMemo(() => {
-    if (!currentWallet) return false;
-    return coinControl.isUtxosLoading(currentWallet.id);
-  }, [currentWallet, coinControl]);
-
-  useEffect(() => {
-    loadUtxos();
-  }, [loadUtxos]);
+  // Use loading state from wallet store
+  const isLoading = isLoadingUtxos;
 
   const onRefresh = async () => {
     if (!currentWallet) return;
     
     setRefreshing(true);
     try {
-      console.log('🔄 Coin control: Refreshing UTXOs for wallet in COMPLETE MODE:', currentWallet.id);
-      await coinControl.loadWalletUtxos(currentWallet.id, false); // false = complete mode
+      console.log('🔄 Coin control: Refreshing wallet data');
+      await refreshData();
     } finally {
       setRefreshing(false);
     }

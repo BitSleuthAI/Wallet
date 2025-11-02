@@ -228,7 +228,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const getWalletQueryKeys = useCallback((wallet: Wallet | null | undefined) => {
     return {
       balance: ['wallet-balance-improved', wallet?.id, wallet?.xpub] as const,
-      transactions: ['transactions-improved', wallet?.id, wallet?.xpub] as const
+      transactions: ['transactions-improved', wallet?.id, wallet?.xpub] as const,
+      addresses: ['wallet-addresses-improved', wallet?.id, wallet?.xpub] as const,
+      utxos: ['wallet-utxos-improved', wallet?.id, wallet?.xpub] as const
     };
   }, []);
 
@@ -835,6 +837,101 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
 
+  // Wallet addresses query with metadata (used/unused status)
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
+  // - Underlying address metadata cache has 5-minute TTL to prevent excessive API calls
+  // - Result: React Query refetches every 30s, but cache layer prevents API spam
+  // - This ensures new addresses are discovered quickly after receiving transactions
+  const addressesQuery = useQuery({
+    // QueryKey intentionally includes only wallet id and xpub for proper cache invalidation
+    // Dependencies like cryptoReady are handled by the 'enabled' option
+    queryKey: ['wallet-addresses-improved', currentWallet?.id, currentWallet?.xpub],
+    queryFn: async () => {
+      // Guard against undefined wallet during state transitions
+      if (!currentWallet || !currentWallet.xpub) {
+        console.log('⏸️ Skipping address fetch - no current wallet');
+        return [];
+      }
+      
+      console.log('🔍 Fetching addresses for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
+      
+      try {
+        const { discoverUsedAddresses } = await import('@/services/wallet-service');
+        const metadata = await discoverUsedAddresses(currentWallet.xpub, true);
+        
+        console.log('✅ Addresses fetched for', currentWallet.name, ':', metadata.length, 'total addresses');
+        return metadata;
+      } catch (error) {
+        console.warn('❌ Address fetch failed for', currentWallet.name, ':', error);
+        return []; // Return empty array instead of throwing
+      }
+    },
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch new addresses
+    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    retry: 1, // Reduced retries to avoid hammering the API
+    retryDelay: 15000, // Fixed 15 second delay
+    staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
+    throwOnError: false, // Don't throw errors, handle them gracefully
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground
+    refetchOnMount: true, // Fetch fresh data when component mounts
+    refetchOnReconnect: true, // Refetch when network reconnects
+  });
+
+  // Wallet UTXOs query
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
+  // - Underlying UTXO caches have 10-minute TTL to prevent excessive API calls
+  // - Result: React Query refetches every 30s, but cache layer prevents API spam
+  // - This ensures UTXOs are updated quickly after send/receive for accurate balance
+  const utxosQuery = useQuery({
+    // QueryKey intentionally includes only wallet id and xpub for proper cache invalidation
+    // Dependencies like cryptoReady are handled by the 'enabled' option
+    queryKey: ['wallet-utxos-improved', currentWallet?.id, currentWallet?.xpub],
+    queryFn: async () => {
+      // Guard against undefined wallet during state transitions
+      if (!currentWallet || !currentWallet.xpub) {
+        console.log('⏸️ Skipping UTXO fetch - no current wallet');
+        return [];
+      }
+      
+      console.log('🔍 Fetching UTXOs for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
+      
+      try {
+        const result = await getWalletData(currentWallet.xpub);
+        
+        if (result.error) {
+          console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', result.error);
+          return [];
+        }
+        
+        if (!result.data) {
+          console.log('ℹ️ No wallet data returned for', currentWallet.name);
+          return [];
+        }
+        
+        console.log('✅ UTXOs fetched for', currentWallet.name, ':', result.data?.utxos?.length || 0, 'UTXOs');
+        return result.data?.utxos || [];
+      } catch (error) {
+        console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', error);
+        return []; // Return empty array instead of throwing
+      }
+    },
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
+    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    retry: 1, // Reduced retries to avoid hammering the API
+    retryDelay: 15000, // Fixed 15 second delay
+    staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
+    gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
+    throwOnError: false, // Don't throw errors, handle them gracefully
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground to catch new UTXOs
+    refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
+    refetchOnReconnect: true, // Refetch when network reconnects to get latest data
+  });
+
   // Save wallets mutation
   const saveWalletsMutation = useMutation({
     mutationFn: async (walletsToSave: Wallet[]) => {
@@ -884,6 +981,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         queryClient.invalidateQueries({ 
           queryKey: ['transactions-improved', context.oldWallet.id, context.oldWallet.xpub] 
         });
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-addresses-improved', context.oldWallet.id, context.oldWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-utxos-improved', context.oldWallet.id, context.oldWallet.xpub] 
+        });
       }
       
       // Invalidate new wallet queries with full key structure to force fresh fetch
@@ -895,6 +998,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         queryClient.invalidateQueries({ 
           queryKey: ['transactions-improved', newWallet.id, newWallet.xpub] 
         });
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-addresses-improved', newWallet.id, newWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-utxos-improved', newWallet.id, newWallet.xpub] 
+        });
         
         // CRITICAL FIX: Immediately refetch to ensure data loads
         // Use setTimeout to allow state to propagate through React
@@ -905,6 +1014,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
             await Promise.all([
               queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
               queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
+              queryClient.refetchQueries({ queryKey: queryKeys.addresses, type: 'active' }),
+              queryClient.refetchQueries({ queryKey: queryKeys.utxos, type: 'active' }),
             ]);
             console.log('✅ Data refetch completed for switched wallet');
           } catch (error) {
@@ -1561,6 +1672,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Use specific keys for wallet data, generic for price
       await queryClient.invalidateQueries({ queryKey: queryKeys.balance });
       await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.addresses });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.utxos });
       await queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
       
       // Explicitly refetch the queries to get fresh data immediately
@@ -1574,6 +1687,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           }),
           queryClient.refetchQueries({ 
             queryKey: queryKeys.transactions,
+            type: 'active'
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.addresses,
+            type: 'active'
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.utxos,
             type: 'active'
           })
         ]);
@@ -1913,6 +2034,40 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     transactionsError: transactionsQuery.error,
   }), [stableTransactions, transactionsQuery.isLoading, transactionsQuery.isFetching, transactionsQuery.error]);
 
+  // Addresses data - stable reference for addresses with usage metadata
+  const lastAddressesRef = useRef<Array<{ address: string; index: number; chain: number; isUsed: boolean }>>([]);
+  useEffect(() => {
+    if (addressesQuery.data) {
+      lastAddressesRef.current = addressesQuery.data;
+    }
+  }, [addressesQuery.data]);
+
+  const stableAddresses = addressesQuery.data ?? lastAddressesRef.current;
+  const addressesData = useMemo(() => ({
+    addresses: stableAddresses,
+    isLoadingAddresses: addressesQuery.isLoading && lastAddressesRef.current.length === 0,
+    isRefreshingAddresses: addressesQuery.isFetching && lastAddressesRef.current.length > 0,
+    hasAddressesError: !!addressesQuery.error && lastAddressesRef.current.length === 0,
+    addressesError: addressesQuery.error,
+  }), [stableAddresses, addressesQuery.isLoading, addressesQuery.isFetching, addressesQuery.error]);
+
+  // UTXOs data - stable reference for wallet UTXOs
+  const lastUtxosRef = useRef<UTXO[]>([]);
+  useEffect(() => {
+    if (utxosQuery.data) {
+      lastUtxosRef.current = utxosQuery.data;
+    }
+  }, [utxosQuery.data]);
+
+  const stableUtxos = utxosQuery.data ?? lastUtxosRef.current;
+  const utxosData = useMemo(() => ({
+    utxos: stableUtxos,
+    isLoadingUtxos: utxosQuery.isLoading && lastUtxosRef.current.length === 0,
+    isRefreshingUtxos: utxosQuery.isFetching && lastUtxosRef.current.length > 0,
+    hasUtxosError: !!utxosQuery.error && lastUtxosRef.current.length === 0,
+    utxosError: utxosQuery.error,
+  }), [stableUtxos, utxosQuery.isLoading, utxosQuery.isFetching, utxosQuery.error]);
+
   const settingsData = useMemo(() => ({
     theme,
     selectedCurrency,
@@ -2162,6 +2317,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     ...walletData,
     ...balanceData,
     ...transactionData,
+    ...addressesData,
+    ...utxosData,
     ...settingsData,
     ...actionsData,
     coinControl: coinControlData,
@@ -2173,6 +2330,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     walletData,
     balanceData,
     transactionData,
+    addressesData,
+    utxosData,
     settingsData,
     actionsData,
     coinControlData,

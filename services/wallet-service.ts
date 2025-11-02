@@ -404,6 +404,10 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
         }
       });
       
+      // Determine transaction type
+      const isSent = sentAmountSatoshis > 0;
+      const isReceived = receivedAmountSatoshis > 0 && sentAmountSatoshis === 0;
+      
       // Calculate change (amount returned to our addresses)
       // For sent transactions, exclude the primary recipient from change calculation
       let primaryRecipientAddress: string | null = null;
@@ -424,10 +428,6 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           changeAmountSatoshis += out.value;
         }
       });
-      
-      // Determine transaction type and display amount
-      const isSent = sentAmountSatoshis > 0;
-      const isReceived = receivedAmountSatoshis > 0 && sentAmountSatoshis === 0;
       
       // For sent transactions, show the amount sent to external addresses (excluding change)
       // For received transactions, show the amount received
@@ -541,6 +541,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       usedAddresses,
       addressCount: addressInfos.length,
       utxoCount: utxos.length,
+      utxos, // Include full UTXO array for automatic polling updates
     };
 
     console.log(`✅ Wallet data processed: ${transactions.length} transactions, ${balanceBTC.toFixed(8)} BTC balance`);
