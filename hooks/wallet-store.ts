@@ -215,11 +215,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
 
   // Helper function to create query keys for wallet data
-  const getWalletQueryKeys = useCallback((wallet: Wallet | null) => {
-    if (!wallet) return { balance: null, transactions: null };
+  // Returns keys that match the pattern used in query definitions with optional chaining
+  const getWalletQueryKeys = useCallback((wallet: Wallet | null | undefined) => {
     return {
-      balance: ['wallet-balance-improved', wallet.id, wallet.xpub] as const,
-      transactions: ['transactions-improved', wallet.id, wallet.xpub] as const
+      balance: ['wallet-balance-improved', wallet?.id, wallet?.xpub] as const,
+      transactions: ['transactions-improved', wallet?.id, wallet?.xpub] as const
     };
   }, []);
 
@@ -286,18 +286,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
             try {
               // Refetch queries without clearing caches (lighter refresh)
               const queryKeys = getWalletQueryKeys(currentWallet);
-              if (queryKeys.balance && queryKeys.transactions) {
-                await Promise.all([
-                  queryClient.refetchQueries({ 
-                    queryKey: queryKeys.balance,
-                    type: 'active'
-                  }),
-                  queryClient.refetchQueries({ 
-                    queryKey: queryKeys.transactions,
-                    type: 'active'
-                  })
-                ]);
-              }
+              await Promise.all([
+                queryClient.refetchQueries({ 
+                  queryKey: queryKeys.balance,
+                  type: 'active'
+                }),
+                queryClient.refetchQueries({ 
+                  queryKey: queryKeys.transactions,
+                  type: 'active'
+                })
+              ]);
               console.log('✅ Auto-refresh completed');
             } catch (error) {
               console.warn('⚠️ Auto-refresh failed:', error);
@@ -1506,28 +1504,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Invalidate and refetch React Query caches
       console.log('🔄 Invalidating and refetching React Query caches...');
       
+      // Get query keys for consistent invalidation and refetch
+      const queryKeys = getWalletQueryKeys(currentWallet);
+      
       // Invalidate queries to mark them as stale
-      await queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-      await queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      // Use specific keys for wallet data, generic for price
+      await queryClient.invalidateQueries({ queryKey: queryKeys.balance });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
       await queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
       
       // Explicitly refetch the queries to get fresh data immediately
       // This ensures data updates even if the component isn't actively observing
       if (currentWallet?.xpub) {
         console.log('🔄 Explicitly refetching wallet data queries...');
-        const queryKeys = getWalletQueryKeys(currentWallet);
-        if (queryKeys.balance && queryKeys.transactions) {
-          await Promise.all([
-            queryClient.refetchQueries({ 
-              queryKey: queryKeys.balance,
-              type: 'active' // Only refetch if query is actively being used
-            }),
-            queryClient.refetchQueries({ 
-              queryKey: queryKeys.transactions,
-              type: 'active'
-            })
-          ]);
-        }
+        await Promise.all([
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.balance,
+            type: 'active' // Only refetch if query is actively being used
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.transactions,
+            type: 'active'
+          })
+        ]);
         console.log('✅ Wallet data queries refetched');
       }
       
