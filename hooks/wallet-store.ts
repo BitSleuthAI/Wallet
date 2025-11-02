@@ -912,8 +912,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           return [];
         }
         
-        console.log('✅ UTXOs fetched for', currentWallet.name, ':', result.data.utxos?.length || 0, 'UTXOs');
-        return result.data.utxos || [];
+        console.log('✅ UTXOs fetched for', currentWallet.name, ':', result.data?.utxos?.length || 0, 'UTXOs');
+        return result.data?.utxos || [];
       } catch (error) {
         console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', error);
         return []; // Return empty array instead of throwing

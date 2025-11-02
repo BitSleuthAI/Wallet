@@ -541,7 +541,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       usedAddresses,
       addressCount: addressInfos.length,
       utxoCount: utxos.length,
-      utxos: utxos, // Include full UTXO array for automatic polling updates
+      utxos, // Include full UTXO array for automatic polling updates
     };
 
     console.log(`✅ Wallet data processed: ${transactions.length} transactions, ${balanceBTC.toFixed(8)} BTC balance`);
