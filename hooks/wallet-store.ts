@@ -844,7 +844,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   // - Result: React Query refetches every 30s, but cache layer prevents API spam
   // - This ensures new addresses are discovered quickly after receiving transactions
   const addressesQuery = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    // QueryKey intentionally includes only wallet id and xpub for proper cache invalidation
+    // Dependencies like cryptoReady are handled by the 'enabled' option
     queryKey: ['wallet-addresses-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
       // Guard against undefined wallet during state transitions
@@ -886,7 +887,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   // - Result: React Query refetches every 30s, but cache layer prevents API spam
   // - This ensures UTXOs are updated quickly after send/receive for accurate balance
   const utxosQuery = useQuery({
-    // eslint-disable-next-line @tanstack/query/exhaustive-deps
+    // QueryKey intentionally includes only wallet id and xpub for proper cache invalidation
+    // Dependencies like cryptoReady are handled by the 'enabled' option
     queryKey: ['wallet-utxos-improved', currentWallet?.id, currentWallet?.xpub],
     queryFn: async () => {
       // Guard against undefined wallet during state transitions
