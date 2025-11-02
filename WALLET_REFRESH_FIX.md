@@ -28,34 +28,65 @@ The wallet was not updating balance, addresses, transactions, and UTXOs after in
 
 ### Changes Made to `hooks/wallet-store.ts`
 
-#### 1. Added AppState Monitoring (Lines 253-300)
+#### 0. Created Query Key Helper Function (Lines 217-225)
+```typescript
+// Helper function to create query keys for wallet data
+const getWalletQueryKeys = useCallback((wallet: Wallet | null) => {
+  if (!wallet) return { balance: null, transactions: null };
+  return {
+    balance: ['wallet-balance-improved', wallet.id, wallet.xpub] as const,
+    transactions: ['transactions-improved', wallet.id, wallet.xpub] as const
+  };
+}, []);
+```
+
+**Why This Helps:**
+- **Eliminates duplication** - query keys defined once, used everywhere
+- **Type safety** - TypeScript ensures correct key structure with `as const`
+- **Consistency** - prevents typos and mismatched keys across codebase
+- **Maintainability** - change query keys in one place, updates everywhere
+- **Null safety** - handles missing wallet gracefully
+
+#### 1. Added AppState Monitoring (Lines 264-318)
 ```typescript
 // AppState listener to refresh data when app comes to foreground
 useEffect(() => {
   const appStateRef = { current: AppState.currentState };
   let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-  const handleAppStateChange = (nextAppState: AppStateStatus) => {
+  const handleAppStateChange = async (nextAppState: AppStateStatus) => {
     // App is coming to foreground from background
-    if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+    const isComingToForeground = 
+      (appStateRef.current === 'inactive' || appStateRef.current === 'background') && 
+      nextAppState === 'active';
+    
+    if (isComingToForeground) {
       console.log('📱 App came to foreground, refreshing wallet data...');
       
       // Debounce refresh to avoid rapid calls during app state transitions
-      refreshTimeoutId = setTimeout(() => {
+      refreshTimeoutId = setTimeout(async () => {
         if (currentWallet?.xpub && cryptoReady) {
           console.log('🔄 Auto-refreshing wallet data after foreground transition');
           
-          // Refetch queries without clearing caches (lighter refresh)
-          queryClient.refetchQueries({ 
-            queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
-            type: 'active'
-          });
-          queryClient.refetchQueries({ 
-            queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
-            type: 'active'
-          });
-          
-          console.log('✅ Auto-refresh completed');
+          try {
+            // Refetch queries without clearing caches (lighter refresh)
+            const queryKeys = getWalletQueryKeys(currentWallet);
+            if (queryKeys.balance && queryKeys.transactions) {
+              await Promise.all([
+                queryClient.refetchQueries({ 
+                  queryKey: queryKeys.balance,
+                  type: 'active'
+                }),
+                queryClient.refetchQueries({ 
+                  queryKey: queryKeys.transactions,
+                  type: 'active'
+                })
+              ]);
+            }
+            console.log('✅ Auto-refresh completed');
+          } catch (error) {
+            console.warn('⚠️ Auto-refresh failed:', error);
+          }
         }
         refreshTimeoutId = null;
       }, 1000); // 1 second debounce
@@ -72,15 +103,19 @@ useEffect(() => {
       clearTimeout(refreshTimeoutId);
     }
   };
-}, [queryClient, currentWallet?.xpub, currentWallet?.id, cryptoReady]);
+}, [queryClient, currentWallet, cryptoReady, getWalletQueryKeys]);
 ```
 
 **Why This Works:**
 - Listens for app state changes via React Native's `AppState` API
+- Uses **strict equality checks** (`===`) instead of regex for type-safe comparisons
 - Detects when app transitions from background/inactive to active (foreground)
 - Debounces the refresh with 1 second delay to avoid rapid successive calls
 - Only runs when wallet and crypto are ready to avoid errors
-- Uses lightweight `refetchQueries()` without clearing caches for better performance
+- Uses **async/await with try-catch** for proper error handling
+- Uses **getWalletQueryKeys() helper** for consistent query key generation
+- Uses **Promise.all** to refetch queries in parallel for better performance
+- Uses lightweight `refetchQueries()` without clearing caches
 - Properly cleans up subscription and timeouts on unmount
 
 #### 2. Enabled Automatic Polling (Lines 733, 778)
@@ -127,16 +162,19 @@ await queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
 // This ensures data updates even if the component isn't actively observing
 if (currentWallet?.xpub) {
   console.log('🔄 Explicitly refetching wallet data queries...');
-  await Promise.all([
-    queryClient.refetchQueries({ 
-      queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
-      type: 'active' // Only refetch if query is actively being used
-    }),
-    queryClient.refetchQueries({ 
-      queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
-      type: 'active'
-    })
-  ]);
+  const queryKeys = getWalletQueryKeys(currentWallet);
+  if (queryKeys.balance && queryKeys.transactions) {
+    await Promise.all([
+      queryClient.refetchQueries({ 
+        queryKey: queryKeys.balance,
+        type: 'active' // Only refetch if query is actively being used
+      }),
+      queryClient.refetchQueries({ 
+        queryKey: queryKeys.transactions,
+        type: 'active'
+      })
+    ]);
+  }
   console.log('✅ Wallet data queries refetched');
 }
 ```
@@ -144,9 +182,11 @@ if (currentWallet?.xpub) {
 **Why This Works:**
 - Invalidation marks queries as stale
 - Explicit refetch ensures immediate data update
+- **Uses getWalletQueryKeys() helper** for consistent query key generation across codebase
 - `type: 'active'` prevents fetching for unused queries
 - Parallel Promise.all for efficiency
 - Works even when component isn't actively observing the query
+- **Null-safe checks** ensure robust error handling
 
 ## How the Fix Works
 
