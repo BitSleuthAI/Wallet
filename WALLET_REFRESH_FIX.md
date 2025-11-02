@@ -28,24 +28,25 @@ The wallet was not updating balance, addresses, transactions, and UTXOs after in
 
 ### Changes Made to `hooks/wallet-store.ts`
 
-#### 0. Created Query Key Helper Function (Lines 217-225)
+#### 0. Created Query Key Helper Function (Lines 217-224)
 ```typescript
 // Helper function to create query keys for wallet data
-const getWalletQueryKeys = useCallback((wallet: Wallet | null) => {
-  if (!wallet) return { balance: null, transactions: null };
+// Returns keys that match the pattern used in query definitions with optional chaining
+const getWalletQueryKeys = useCallback((wallet: Wallet | null | undefined) => {
   return {
-    balance: ['wallet-balance-improved', wallet.id, wallet.xpub] as const,
-    transactions: ['transactions-improved', wallet.id, wallet.xpub] as const
+    balance: ['wallet-balance-improved', wallet?.id, wallet?.xpub] as const,
+    transactions: ['transactions-improved', wallet?.id, wallet?.xpub] as const
   };
 }, []);
 ```
 
 **Why This Helps:**
+- **Perfect consistency** - uses optional chaining (`wallet?.id`) matching query definitions exactly
 - **Eliminates duplication** - query keys defined once, used everywhere
 - **Type safety** - TypeScript ensures correct key structure with `as const`
-- **Consistency** - prevents typos and mismatched keys across codebase
+- **Flexible invalidation** - keys with undefined values work for broad invalidation
 - **Maintainability** - change query keys in one place, updates everywhere
-- **Null safety** - handles missing wallet gracefully
+- **Always returns keys** - no conditional logic, simpler usage
 
 #### 1. Added AppState Monitoring (Lines 264-318)
 ```typescript
@@ -111,7 +112,7 @@ useEffect(() => {
 - Uses **strict equality checks** (`===`) instead of regex for type-safe comparisons
 - Detects when app transitions from background/inactive to active (foreground)
 - Debounces the refresh with 1 second delay to avoid rapid successive calls
-- Only runs when wallet and crypto are ready to avoid errors
+- **Guards with `if (currentWallet?.xpub && cryptoReady)`** before refetching
 - Uses **async/await with try-catch** for proper error handling
 - Uses **getWalletQueryKeys() helper** for consistent query key generation
 - Uses **Promise.all** to refetch queries in parallel for better performance
@@ -180,13 +181,13 @@ if (currentWallet?.xpub) {
 ```
 
 **Why This Works:**
-- Invalidation marks queries as stale
+- **Uses getWalletQueryKeys() for invalidation AND refetch** - perfect consistency
+- Invalidation with partial keys (undefined values) invalidates all matching queries
 - Explicit refetch ensures immediate data update
-- **Uses getWalletQueryKeys() helper** for consistent query key generation across codebase
+- **Guards with `if (currentWallet?.xpub)`** before refetching specific keys
 - `type: 'active'` prevents fetching for unused queries
 - Parallel Promise.all for efficiency
 - Works even when component isn't actively observing the query
-- **Null-safe checks** ensure robust error handling
 
 ## How the Fix Works
 
