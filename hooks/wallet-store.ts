@@ -89,6 +89,15 @@ const FEE_SETTINGS_STORAGE_KEY = 'feeSettingsByWallet';
 const LEGACY_FEE_SETTINGS_STORAGE_KEY = 'feeSettings';
 const FALLBACK_WALLET_ID = '__global';
 
+// Timing constants for wallet operations
+// Initial data fetch delay: Allows React state updates to propagate through all components
+// before triggering data fetch. Ensures currentWallet is properly computed and queries are observing.
+const INITIAL_DATA_FETCH_DELAY = 500; // milliseconds
+
+// Wallet switch refetch delay: Allows state to settle after switching wallets
+// before refetching data. Shorter than initial fetch since wallet already exists.
+const WALLET_SWITCH_REFETCH_DELAY = 300; // milliseconds
+
 const defaultFeeSettings: FeeSettings = {
   defaultPreset: 'economy',
   customFeeRate: 10,
@@ -592,6 +601,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [currentWalletQuery.data]);
 
   // Keep currentWalletIdRef in sync with currentWalletId state
+  // We depend on both currentWalletId (for ref sync) and currentWallet (for logging the wallet name)
   useEffect(() => {
     currentWalletIdRef.current = currentWalletId;
     if (currentWalletId && currentWallet) {
@@ -888,7 +898,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           } catch (error) {
             console.warn('⚠️ Failed to refetch data for switched wallet:', error);
           }
-        }, 300);
+        }, WALLET_SWITCH_REFETCH_DELAY);
       } else {
         console.warn('⚠️ New wallet not found in wallets array:', context.newWalletId);
       }
@@ -1760,6 +1770,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient]);
 
+  // Helper function to trigger initial data fetch for a wallet
+  // This is used after wallet creation/import to ensure data loads immediately
+  const triggerInitialDataFetch = useCallback((wallet: Wallet, delay: number = INITIAL_DATA_FETCH_DELAY) => {
+    setTimeout(async () => {
+      console.log('🔄 Triggering initial data fetch for wallet:', wallet.name);
+      const queryKeys = getWalletQueryKeys(wallet);
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.balance }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+        ]);
+        // Force immediate refetch
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
+          queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
+        ]);
+        console.log('✅ Initial data fetch completed for wallet:', wallet.name);
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch initial data for wallet:', wallet.name, error);
+      }
+    }, delay);
+  }, [queryClient, getWalletQueryKeys]);
+
   // Create wallet function
   const createWallet = useCallback(async (name: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -1769,33 +1802,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
       
-      // CRITICAL FIX: Explicitly trigger data fetch for the new wallet
-      // Wait for state to update, then immediately fetch data
-      setTimeout(async () => {
-        console.log('🔄 Triggering initial data fetch for new wallet:', wallet.name);
-        const queryKeys = getWalletQueryKeys(wallet);
-        try {
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: queryKeys.balance }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
-          ]);
-          // Force immediate refetch
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
-            queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
-          ]);
-          console.log('✅ Initial data fetch completed for new wallet');
-        } catch (error) {
-          console.warn('⚠️ Failed to fetch initial data for new wallet:', error);
-        }
-      }, 500); // Wait for state updates to propagate
+      // Trigger initial data fetch after wallet creation
+      triggerInitialDataFetch(wallet);
       
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to create wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId, queryClient, getWalletQueryKeys]);
+  }, [wallets, saveWallets, saveCurrentWalletId, triggerInitialDataFetch]);
 
   // Import wallet function
   const importWallet = useCallback(async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
@@ -1806,33 +1821,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
       
-      // CRITICAL FIX: Explicitly trigger data fetch for the imported wallet
-      // Wait for state to update, then immediately fetch data
-      setTimeout(async () => {
-        console.log('🔄 Triggering initial data fetch for imported wallet:', wallet.name);
-        const queryKeys = getWalletQueryKeys(wallet);
-        try {
-          await Promise.all([
-            queryClient.invalidateQueries({ queryKey: queryKeys.balance }),
-            queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
-          ]);
-          // Force immediate refetch
-          await Promise.all([
-            queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
-            queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
-          ]);
-          console.log('✅ Initial data fetch completed for imported wallet');
-        } catch (error) {
-          console.warn('⚠️ Failed to fetch initial data for imported wallet:', error);
-        }
-      }, 500); // Wait for state updates to propagate
+      // Trigger initial data fetch after wallet import
+      triggerInitialDataFetch(wallet);
       
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to import wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId, queryClient, getWalletQueryKeys]);
+  }, [wallets, saveWallets, saveCurrentWalletId, triggerInitialDataFetch]);
 
   // Generate new address function
   const generateNewAddress = useCallback(async (wallet: Wallet): Promise<{ success: boolean; wallet?: Wallet; error?: string }> => {
