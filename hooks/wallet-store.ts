@@ -214,6 +214,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
 
+  // Helper function to create query keys for wallet data
+  const getWalletQueryKeys = useCallback((wallet: Wallet | null) => {
+    if (!wallet) return { balance: null, transactions: null };
+    return {
+      balance: ['wallet-balance-improved', wallet.id, wallet.xpub] as const,
+      transactions: ['transactions-improved', wallet.id, wallet.xpub] as const
+    };
+  }, []);
+
   // Monitor crypto initialization
   useEffect(() => {
     const checkCryptoReady = () => {
@@ -255,9 +264,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     const appStateRef = { current: AppState.currentState };
     let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
-    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
       // App is coming to foreground from background
-      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+      const isComingToForeground = 
+        (appStateRef.current === 'inactive' || appStateRef.current === 'background') && 
+        nextAppState === 'active';
+      
+      if (isComingToForeground) {
         console.log('📱 App came to foreground, refreshing wallet data...');
         
         // Clear any pending refresh timeout
@@ -266,21 +279,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         }
         
         // Debounce refresh to avoid rapid calls during app state transitions
-        refreshTimeoutId = setTimeout(() => {
+        refreshTimeoutId = setTimeout(async () => {
           if (currentWallet?.xpub && cryptoReady) {
             console.log('🔄 Auto-refreshing wallet data after foreground transition');
             
-            // Refetch queries without clearing caches (lighter refresh)
-            queryClient.refetchQueries({ 
-              queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
-              type: 'active'
-            });
-            queryClient.refetchQueries({ 
-              queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
-              type: 'active'
-            });
-            
-            console.log('✅ Auto-refresh completed');
+            try {
+              // Refetch queries without clearing caches (lighter refresh)
+              const queryKeys = getWalletQueryKeys(currentWallet);
+              if (queryKeys.balance && queryKeys.transactions) {
+                await Promise.all([
+                  queryClient.refetchQueries({ 
+                    queryKey: queryKeys.balance,
+                    type: 'active'
+                  }),
+                  queryClient.refetchQueries({ 
+                    queryKey: queryKeys.transactions,
+                    type: 'active'
+                  })
+                ]);
+              }
+              console.log('✅ Auto-refresh completed');
+            } catch (error) {
+              console.warn('⚠️ Auto-refresh failed:', error);
+            }
           }
           refreshTimeoutId = null;
         }, 1000); // 1 second debounce
@@ -297,7 +318,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         clearTimeout(refreshTimeoutId);
       }
     };
-  }, [queryClient, currentWallet?.xpub, currentWallet?.id, cryptoReady]);
+  }, [queryClient, currentWallet, cryptoReady, getWalletQueryKeys]);
 
   // Migration and initialization
   useEffect(() => {
@@ -1494,16 +1515,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // This ensures data updates even if the component isn't actively observing
       if (currentWallet?.xpub) {
         console.log('🔄 Explicitly refetching wallet data queries...');
-        await Promise.all([
-          queryClient.refetchQueries({ 
-            queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
-            type: 'active' // Only refetch if query is actively being used
-          }),
-          queryClient.refetchQueries({ 
-            queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
-            type: 'active'
-          })
-        ]);
+        const queryKeys = getWalletQueryKeys(currentWallet);
+        if (queryKeys.balance && queryKeys.transactions) {
+          await Promise.all([
+            queryClient.refetchQueries({ 
+              queryKey: queryKeys.balance,
+              type: 'active' // Only refetch if query is actively being used
+            }),
+            queryClient.refetchQueries({ 
+              queryKey: queryKeys.transactions,
+              type: 'active'
+            })
+          ]);
+        }
         console.log('✅ Wallet data queries refetched');
       }
       
@@ -1511,7 +1535,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     } catch (err) {
       console.warn('⚠️ Error during data refresh:', err);
     }
-  }, [queryClient, currentWallet?.xpub, currentWallet?.id]);
+  }, [queryClient, currentWallet, getWalletQueryKeys]);
 
   const debugTransactionFetching = useCallback(async () => {
     if (!currentWallet || !currentWallet.addresses.length) {
