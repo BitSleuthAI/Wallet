@@ -1,1 +1,7 @@
-<resources/>
+<resources>
+  <!-- Dark theme colors for Android -->
+  <color name="splashscreen_background">#0F172A</color>
+  <color name="iconBackground">#0F172A</color>
+  <color name="colorPrimary">#26F5FE</color>
+  <color name="colorPrimaryDark">#0F172A</color>
+</resources>

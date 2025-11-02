@@ -436,6 +436,70 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     gcTime: Infinity,
   });
 
+  // Load theme from storage
+  const themeQuery = useQuery({
+    queryKey: ['theme'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('theme');
+        return stored === 'dark' ? darkTheme : lightTheme;
+      } catch (err) {
+        console.warn('Failed to load theme:', err);
+        return lightTheme;
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  // Load currency from storage
+  const currencyQuery = useQuery({
+    queryKey: ['currency'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('currency');
+        return (stored as FiatCurrency) || 'USD';
+      } catch (err) {
+        console.warn('Failed to load currency:', err);
+        return 'USD';
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  // Load hideBalance from storage
+  const hideBalanceQuery = useQuery({
+    queryKey: ['hideBalance'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('hideBalance');
+        return stored === 'true';
+      } catch (err) {
+        console.warn('Failed to load hideBalance:', err);
+        return false;
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
+  // Load autoLockTimeout from storage
+  const autoLockTimeoutQuery = useQuery({
+    queryKey: ['autoLockTimeout'],
+    queryFn: async () => {
+      try {
+        const stored = await AsyncStorage.getItem('autoLockTimeout');
+        return stored ? parseInt(stored, 10) : 15;
+      } catch (err) {
+        console.warn('Failed to load autoLockTimeout:', err);
+        return 15;
+      }
+    },
+    staleTime: Infinity,
+    gcTime: Infinity,
+  });
+
   useEffect(() => {
     if (walletsQuery.data !== undefined) {
       setWallets(walletsQuery.data);
@@ -459,6 +523,30 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setCoinControlFrozenState(coinControlFrozenQuery.data);
     }
   }, [coinControlFrozenQuery.data]);
+
+  useEffect(() => {
+    if (themeQuery.data !== undefined) {
+      setTheme(themeQuery.data);
+    }
+  }, [themeQuery.data]);
+
+  useEffect(() => {
+    if (currencyQuery.data !== undefined) {
+      setSelectedCurrency(currencyQuery.data);
+    }
+  }, [currencyQuery.data]);
+
+  useEffect(() => {
+    if (hideBalanceQuery.data !== undefined) {
+      setHideBalance(hideBalanceQuery.data);
+    }
+  }, [hideBalanceQuery.data]);
+
+  useEffect(() => {
+    if (autoLockTimeoutQuery.data !== undefined) {
+      setAutoLockTimeout(autoLockTimeoutQuery.data);
+    }
+  }, [autoLockTimeoutQuery.data]);
 
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
