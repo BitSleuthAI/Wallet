@@ -89,6 +89,15 @@ const FEE_SETTINGS_STORAGE_KEY = 'feeSettingsByWallet';
 const LEGACY_FEE_SETTINGS_STORAGE_KEY = 'feeSettings';
 const FALLBACK_WALLET_ID = '__global';
 
+// Timing constants for wallet operations
+// Initial data fetch delay: Allows React state updates to propagate through all components
+// before triggering data fetch. Ensures currentWallet is properly computed and queries are observing.
+const INITIAL_DATA_FETCH_DELAY = 500; // milliseconds
+
+// Wallet switch refetch delay: Allows state to settle after switching wallets
+// before refetching data. Shorter than initial fetch since wallet already exists.
+const WALLET_SWITCH_REFETCH_DELAY = 300; // milliseconds
+
 const defaultFeeSettings: FeeSettings = {
   defaultPreset: 'economy',
   customFeeRate: 10,
@@ -591,6 +600,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [currentWalletQuery.data]);
 
+  // Keep currentWalletIdRef in sync with currentWalletId state
+  // We depend on both currentWalletId (for ref sync) and currentWallet (for logging the wallet name)
+  useEffect(() => {
+    currentWalletIdRef.current = currentWalletId;
+    if (currentWalletId && currentWallet) {
+      console.log('📍 Current wallet updated:', currentWallet.name, 'ID:', currentWalletId);
+    }
+  }, [currentWalletId, currentWallet]);
+
   useEffect(() => {
     if (coinControlSelectedQuery.data !== undefined) {
       setCoinControlSelectedState(coinControlSelectedQuery.data);
@@ -728,7 +746,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return 0;
       }
       try {
-        console.log('💰 Fetching wallet balance using improved service...');
+        console.log('💰 Fetching wallet balance for:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
         const result = await getWalletData(currentWallet.xpub);
         
         if (result.error) {
@@ -741,7 +759,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           return 0;
         }
         
-        console.log('✅ Wallet balance fetched:', result.data.balanceBTC, 'BTC');
+        console.log('✅ Wallet balance fetched for', currentWallet.name, ':', result.data.balanceBTC, 'BTC');
         return result.data.balanceBTC || 0;
       } catch (error) {
         console.warn('❌ Improved balance fetch failed:', error);
@@ -771,25 +789,25 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return [];
       }
       
-      console.log('🔍 Wallet store: Fetching transactions using address discovery for wallet:', currentWallet.name);
+      console.log('🔍 Fetching transactions for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
       
       try {
         const result = await getWalletData(currentWallet.xpub);
         
         if (result.error) {
-          console.warn('❌ Wallet data fetch failed:', result.error);
+          console.warn('❌ Transaction fetch failed for', currentWallet.name, ':', result.error);
           return [];
         }
         
         if (!result.data) {
-          console.log('ℹ️ No wallet data returned');
+          console.log('ℹ️ No wallet data returned for', currentWallet.name);
           return [];
         }
         
-        console.log('📊 Wallet store: Received improved transactions:', result.data.transactions?.length || 0);
+        console.log('✅ Transactions fetched for', currentWallet.name, ':', result.data.transactions?.length || 0, 'transactions');
         return result.data.transactions || [];
       } catch (error) {
-        console.warn('❌ Improved transaction history fetch failed:', error);
+        console.warn('❌ Transaction fetch failed for', currentWallet.name, ':', error);
         return []; // Return empty array instead of throwing
       }
     },
@@ -831,39 +849,59 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Capture the old wallet ID and wallet object BEFORE the mutation runs
       const oldWalletId = currentWalletIdRef.current;
       const oldWallet = oldWalletId ? wallets.find(w => w.id === oldWalletId) : null;
-      const newWallet = wallets.find(w => w.id === newWalletId);
       
-      // Return context with old and new wallet info
-      return { oldWalletId, oldWallet, newWallet };
+      // Return context with old wallet info and new wallet ID
+      // We'll look up the new wallet in onSuccess to ensure it exists
+      return { oldWalletId, oldWallet, newWalletId };
     },
     onSuccess: (walletId, _variables, context) => {
       setCurrentWalletId(walletId);
       
-      // Invalidate dependent queries after state updates
-      // Use proper query key structure that matches the actual query keys
-      setTimeout(() => {
-        queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      // Look up the new wallet NOW (after state updates) to ensure it exists in the wallets array
+      const newWallet = wallets.find(w => w.id === context.newWalletId);
+      
+      // CRITICAL FIX: Remove setTimeout and immediately invalidate/refetch
+      // The setTimeout was causing race conditions where queries wouldn't trigger
+      queryClient.invalidateQueries({ queryKey: ['currentWalletId'] });
+      
+      // Invalidate old wallet queries with full key structure
+      if (context?.oldWallet) {
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-balance-improved', context.oldWallet.id, context.oldWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['transactions-improved', context.oldWallet.id, context.oldWallet.xpub] 
+        });
+      }
+      
+      // Invalidate new wallet queries with full key structure to force fresh fetch
+      if (newWallet) {
+        console.log('🔄 Switching to wallet:', newWallet.name, 'ID:', newWallet.id);
+        queryClient.invalidateQueries({ 
+          queryKey: ['wallet-balance-improved', newWallet.id, newWallet.xpub] 
+        });
+        queryClient.invalidateQueries({ 
+          queryKey: ['transactions-improved', newWallet.id, newWallet.xpub] 
+        });
         
-        // Invalidate old wallet queries with full key structure
-        if (context?.oldWallet) {
-          queryClient.invalidateQueries({ 
-            queryKey: ['wallet-balance-improved', context.oldWallet.id, context.oldWallet.xpub] 
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ['transactions-improved', context.oldWallet.id, context.oldWallet.xpub] 
-          });
-        }
-        
-        // Invalidate new wallet queries with full key structure to force fresh fetch
-        if (context?.newWallet) {
-          queryClient.invalidateQueries({ 
-            queryKey: ['wallet-balance-improved', context.newWallet.id, context.newWallet.xpub] 
-          });
-          queryClient.invalidateQueries({ 
-            queryKey: ['transactions-improved', context.newWallet.id, context.newWallet.xpub] 
-          });
-        }
-      }, 150);
+        // CRITICAL FIX: Immediately refetch to ensure data loads
+        // Use setTimeout to allow state to propagate through React
+        setTimeout(async () => {
+          console.log('🔄 Refetching data for switched wallet:', newWallet.name);
+          const queryKeys = getWalletQueryKeys(newWallet);
+          try {
+            await Promise.all([
+              queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
+              queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
+            ]);
+            console.log('✅ Data refetch completed for switched wallet');
+          } catch (error) {
+            console.warn('⚠️ Failed to refetch data for switched wallet:', error);
+          }
+        }, WALLET_SWITCH_REFETCH_DELAY);
+      } else {
+        console.warn('⚠️ New wallet not found in wallets array:', context.newWalletId);
+      }
     },
   });
   const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
@@ -1732,6 +1770,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient]);
 
+  // Helper function to trigger initial data fetch for a wallet
+  // This is used after wallet creation/import to ensure data loads immediately
+  const triggerInitialDataFetch = useCallback((wallet: Wallet, delay: number = INITIAL_DATA_FETCH_DELAY) => {
+    setTimeout(async () => {
+      console.log('🔄 Triggering initial data fetch for wallet:', wallet.name);
+      const queryKeys = getWalletQueryKeys(wallet);
+      try {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: queryKeys.balance }),
+          queryClient.invalidateQueries({ queryKey: queryKeys.transactions }),
+        ]);
+        // Force immediate refetch
+        await Promise.all([
+          queryClient.refetchQueries({ queryKey: queryKeys.balance, type: 'active' }),
+          queryClient.refetchQueries({ queryKey: queryKeys.transactions, type: 'active' }),
+        ]);
+        console.log('✅ Initial data fetch completed for wallet:', wallet.name);
+      } catch (error) {
+        console.warn('⚠️ Failed to fetch initial data for wallet:', wallet.name, error);
+      }
+    }, delay);
+  }, [queryClient, getWalletQueryKeys]);
+
   // Create wallet function
   const createWallet = useCallback(async (name: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
     try {
@@ -1740,12 +1801,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
+      
+      // Trigger initial data fetch after wallet creation
+      triggerInitialDataFetch(wallet);
+      
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to create wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to create wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId]);
+  }, [wallets, saveWallets, saveCurrentWalletId, triggerInitialDataFetch]);
 
   // Import wallet function
   const importWallet = useCallback(async (name: string, mnemonic: string, color: string = '#8B5CF6'): Promise<{ success: boolean; error?: string }> => {
@@ -1755,12 +1820,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const updatedWallets = [...wallets, wallet];
       saveWallets(updatedWallets);
       saveCurrentWalletId(wallet.id);
+      
+      // Trigger initial data fetch after wallet import
+      triggerInitialDataFetch(wallet);
+      
       return { success: true };
     } catch (error) {
       console.error('❌ Failed to import wallet:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Failed to import wallet' };
     }
-  }, [wallets, saveWallets, saveCurrentWalletId]);
+  }, [wallets, saveWallets, saveCurrentWalletId, triggerInitialDataFetch]);
 
   // Generate new address function
   const generateNewAddress = useCallback(async (wallet: Wallet): Promise<{ success: boolean; wallet?: Wallet; error?: string }> => {
