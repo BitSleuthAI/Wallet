@@ -79,6 +79,11 @@ const CURRENCY_NAMES: Record<FiatCurrency, string> = {
   GBP: 'British Pound Sterling',
 };
 
+// Validator for FiatCurrency
+const isValidCurrency = (value: string | null): value is FiatCurrency => {
+  return value === 'USD' || value === 'EUR' || value === 'GBP';
+};
+
 const FEE_SETTINGS_STORAGE_KEY = 'feeSettingsByWallet';
 const LEGACY_FEE_SETTINGS_STORAGE_KEY = 'feeSettings';
 const FALLBACK_WALLET_ID = '__global';
@@ -458,7 +463,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem('currency');
-        return (stored as FiatCurrency) || 'USD';
+        return isValidCurrency(stored) ? stored : 'USD';
       } catch (err) {
         console.warn('Failed to load currency:', err);
         return 'USD';
