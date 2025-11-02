@@ -1670,6 +1670,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Use specific keys for wallet data, generic for price
       await queryClient.invalidateQueries({ queryKey: queryKeys.balance });
       await queryClient.invalidateQueries({ queryKey: queryKeys.transactions });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.addresses });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.utxos });
       await queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
       
       // Explicitly refetch the queries to get fresh data immediately
@@ -1683,6 +1685,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
           }),
           queryClient.refetchQueries({ 
             queryKey: queryKeys.transactions,
+            type: 'active'
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.addresses,
+            type: 'active'
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: queryKeys.utxos,
             type: 'active'
           })
         ]);
