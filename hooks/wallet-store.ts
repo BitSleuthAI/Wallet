@@ -736,6 +736,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
 
   // Wallet balance query using improved service
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
+  // - Underlying address/tx caches have 2-minute TTL to prevent excessive API calls
+  // - Result: React Query refetches every 30s, but cache layer prevents API spam
+  // - This ensures balance updates are visible quickly after send/receive
   const balanceQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['wallet-balance-improved', currentWallet?.id, currentWallet?.xpub],
@@ -767,18 +772,24 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes to catch incoming transactions
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
+    refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
-    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
     gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground to catch new transactions
     refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
     refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
 
   // Transaction history query
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
+  // - Underlying address/tx caches have 2-minute TTL to prevent excessive API calls
+  // - Result: React Query refetches every 30s, but cache layer prevents API spam
+  // - This ensures new transactions appear quickly after send/receive
   const transactionsQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['transactions-improved', currentWallet?.id, currentWallet?.xpub],
@@ -812,13 +823,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes to catch incoming transactions
+    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
+    refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
-    staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
+    staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
     gcTime: REACT_QUERY_GC_TIME, // Use centralized garbage collection time
     throwOnError: false, // Don't throw errors, handle them gracefully
-    refetchOnWindowFocus: false, // Don't refetch on window focus
+    refetchOnWindowFocus: true, // Refetch when app comes to foreground to catch new transactions
     refetchOnMount: true, // Fetch fresh data when component mounts to ensure current data
     refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
