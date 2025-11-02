@@ -36,10 +36,11 @@ export default function TabLayout() {
       // Android: always show labels
       labelVisibilityMode="labeled"
       // Blur effect for tab bar background (iOS) - adapts to theme
-      blurEffect={theme.isDark ? 'dark' : 'light'}
+      // Using 'extraLight' for light mode provides better contrast with warm coral gradient
+      blurEffect={theme.isDark ? 'dark' : 'extraLight'}
       // Background color with transparency for glass effect
       backgroundColor={Platform.select({
-        ios: theme.isDark ? '#00000066' : '#FFFFFF66',
+        ios: theme.isDark ? '#00000066' : '#FFFFFF99',
         android: theme.colors.background,
       })}
       // Disable transparent on scroll edge for consistent appearance
