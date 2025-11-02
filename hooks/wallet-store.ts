@@ -79,9 +79,10 @@ const CURRENCY_NAMES: Record<FiatCurrency, string> = {
   GBP: 'British Pound Sterling',
 };
 
-// Validator for FiatCurrency
+// Validator for FiatCurrency - uses CURRENCY_SYMBOLS keys to stay in sync
 const isValidCurrency = (value: string | null): value is FiatCurrency => {
-  return value === 'USD' || value === 'EUR' || value === 'GBP';
+  if (!value) return false;
+  return value in CURRENCY_SYMBOLS;
 };
 
 const FEE_SETTINGS_STORAGE_KEY = 'feeSettingsByWallet';
@@ -495,7 +496,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     queryFn: async () => {
       try {
         const stored = await AsyncStorage.getItem('autoLockTimeout');
-        return stored ? parseInt(stored, 10) : 15;
+        if (stored) {
+          const parsed = parseInt(stored, 10);
+          // Return parsed value if valid, otherwise default to 15
+          return !isNaN(parsed) && parsed > 0 ? parsed : 15;
+        }
+        return 15;
       } catch (err) {
         console.warn('Failed to load autoLockTimeout:', err);
         return 15;
