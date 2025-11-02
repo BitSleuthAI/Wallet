@@ -736,6 +736,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
 
   // Wallet balance query using improved service
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates
+  // - But underlying address/tx caches have 2-minute TTL
+  // - Result: UI updates every 30s, but API calls only every 2 minutes
+  // - This ensures balance updates are visible quickly after send/receive
   const balanceQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['wallet-balance-improved', currentWallet?.id, currentWallet?.xpub],
@@ -780,6 +785,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   });
 
   // Transaction history query
+  // NOTE: Polling strategy balances responsiveness with API usage:
+  // - Checks every 30 seconds for updates
+  // - But underlying address/tx caches have 2-minute TTL
+  // - Result: UI updates every 30s, but API calls only every 2 minutes
+  // - This ensures new transactions appear quickly after send/receive
   const transactionsQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['transactions-improved', currentWallet?.id, currentWallet?.xpub],
