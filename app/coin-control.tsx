@@ -57,13 +57,13 @@ export default function CoinControlScreen() {
     
     // Apply frozen status from coin control to wallet UTXOs
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
-    const utxosWithFrozenStatus = walletUtxos.map(utxo => ({
+    const utxosWithFrozenStatus = walletUtxos.map((utxo: UTXO) => ({
       ...utxo,
       frozen: frozenIds.has(`${utxo.txid}:${utxo.vout}`)
     }));
     
     console.log('🔍 Coin control: Using UTXOs from wallet store:', utxosWithFrozenStatus.length);
-    console.log('🔍 Coin control: UTXO details:', utxosWithFrozenStatus.slice(0, 5).map(u => ({
+    console.log('🔍 Coin control: UTXO details:', utxosWithFrozenStatus.slice(0, 5).map((u: UTXO) => ({
       txid: u.txid?.substring(0, 10) + '...',
       vout: u.vout,
       value: u.value,

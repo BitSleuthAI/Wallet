@@ -270,13 +270,13 @@ export default function SendScreen() {
     
     // Apply frozen status from coin control to wallet UTXOs
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
-    const utxosWithFrozenStatus = walletUtxos.map(utxo => ({
+    const utxosWithFrozenStatus = walletUtxos.map((utxo: UTXO) => ({
       ...utxo,
       frozen: frozenIds.has(`${utxo.txid}:${utxo.vout}`)
     }));
     
     console.log('🔍 Send screen: Synced', utxosWithFrozenStatus.length, 'UTXOs from wallet store');
-    console.log('🔍 Send screen: UTXOs details:', utxosWithFrozenStatus.slice(0, 5).map(u => ({
+    console.log('🔍 Send screen: UTXOs details:', utxosWithFrozenStatus.slice(0, 5).map((u: UTXO) => ({
       txid: u.txid?.substring(0, 10) + '...',
       vout: u.vout,
       value: u.value,
@@ -290,7 +290,7 @@ export default function SendScreen() {
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
-    const ids = coinControl.getSelectedUtxoIds().filter(id => !frozenIds.has(id));
+    const ids = coinControl.getSelectedUtxoIds().filter((id: string) => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWallet?.id]); // Only re-sync when wallet changes, not on every coinControl update
