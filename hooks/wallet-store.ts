@@ -9,7 +9,7 @@ import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Platform } from 'react-native';
+import { Platform, AppState, AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 
 // Wallet service imports with platform detection
@@ -249,6 +249,55 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   useEffect(() => {
     cryptoReadyRef.current = cryptoReady;
   }, [cryptoReady]);
+
+  // AppState listener to refresh data when app comes to foreground
+  useEffect(() => {
+    const appStateRef = { current: AppState.currentState };
+    let refreshTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const handleAppStateChange = (nextAppState: AppStateStatus) => {
+      // App is coming to foreground from background
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('📱 App came to foreground, refreshing wallet data...');
+        
+        // Clear any pending refresh timeout
+        if (refreshTimeoutId) {
+          clearTimeout(refreshTimeoutId);
+        }
+        
+        // Debounce refresh to avoid rapid calls during app state transitions
+        refreshTimeoutId = setTimeout(() => {
+          if (currentWallet?.xpub && cryptoReady) {
+            console.log('🔄 Auto-refreshing wallet data after foreground transition');
+            
+            // Refetch queries without clearing caches (lighter refresh)
+            queryClient.refetchQueries({ 
+              queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
+              type: 'active'
+            });
+            queryClient.refetchQueries({ 
+              queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
+              type: 'active'
+            });
+            
+            console.log('✅ Auto-refresh completed');
+          }
+          refreshTimeoutId = null;
+        }, 1000); // 1 second debounce
+      }
+      
+      appStateRef.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription.remove();
+      if (refreshTimeoutId) {
+        clearTimeout(refreshTimeoutId);
+      }
+    };
+  }, [queryClient, currentWallet?.xpub, currentWallet?.id, cryptoReady]);
 
   // Migration and initialization
   useEffect(() => {
@@ -681,7 +730,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes to catch incoming transactions
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
     staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
@@ -726,7 +775,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
-    refetchInterval: false, // Disable automatic refetching - use manual refresh instead to reduce API calls
+    refetchInterval: 5 * 60 * 1000, // Auto-refresh every 5 minutes to catch incoming transactions
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: REACT_QUERY_STALE_TIME, // Use centralized stale time configuration
@@ -1433,19 +1482,36 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         console.log('✅ Complete wallet data refresh prepared');
       }
 
-      // Completely clear and invalidate React Query caches
-      console.log('🔄 Clearing React Query caches...');
-      queryClient.clear(); // Clear ALL cached queries
-      queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
-      queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
-      queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
-      console.log('✅ React Query caches cleared');
+      // Invalidate and refetch React Query caches
+      console.log('🔄 Invalidating and refetching React Query caches...');
+      
+      // Invalidate queries to mark them as stale
+      await queryClient.invalidateQueries({ queryKey: ['wallet-balance-improved'] });
+      await queryClient.invalidateQueries({ queryKey: ['transactions-improved'] });
+      await queryClient.invalidateQueries({ queryKey: ['bitcoin-price-improved'] });
+      
+      // Explicitly refetch the queries to get fresh data immediately
+      // This ensures data updates even if the component isn't actively observing
+      if (currentWallet?.xpub) {
+        console.log('🔄 Explicitly refetching wallet data queries...');
+        await Promise.all([
+          queryClient.refetchQueries({ 
+            queryKey: ['wallet-balance-improved', currentWallet.id, currentWallet.xpub],
+            type: 'active' // Only refetch if query is actively being used
+          }),
+          queryClient.refetchQueries({ 
+            queryKey: ['transactions-improved', currentWallet.id, currentWallet.xpub],
+            type: 'active'
+          })
+        ]);
+        console.log('✅ Wallet data queries refetched');
+      }
       
       console.log('✅ Wallet data refresh completed');
     } catch (err) {
       console.warn('⚠️ Error during data refresh:', err);
     }
-  }, [queryClient, currentWallet?.xpub]);
+  }, [queryClient, currentWallet?.xpub, currentWallet?.id]);
 
   const debugTransactionFetching = useCallback(async () => {
     if (!currentWallet || !currentWallet.addresses.length) {
