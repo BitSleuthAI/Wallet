@@ -44,7 +44,7 @@ function ReceiveScreenContent() {
   
   // Initialize state hooks with current wallet's last address
   const [currentAddress, setCurrentAddress] = useState<string>(
-    () => currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
+    currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
   );
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
 

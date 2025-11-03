@@ -120,7 +120,8 @@ function WalletScreenContent() {
       setEditingWallet(null);
       setEditName('');
       setEditColor('');
-    } catch {
+    } catch (error) {
+      console.error('Failed to update wallet:', error);
       Alert.alert('Error', 'Failed to update wallet');
     }
   }, [editingWallet, editName, editColor, editWallet]);

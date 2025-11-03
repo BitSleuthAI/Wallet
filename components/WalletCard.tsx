@@ -66,7 +66,9 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
   const displayWallet = wallet || currentWallet;
   
   // Memoize gradient colors to prevent recalculation on every render
-  const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : DEFAULT_GRADIENT, [displayWallet]);
+  // Only depends on color property to avoid unnecessary recalculations
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : DEFAULT_GRADIENT, [displayWallet?.color]);
 
   // Update glow effect when active state changes
   React.useEffect(() => {
