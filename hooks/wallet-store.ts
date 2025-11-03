@@ -649,14 +649,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   // Track if wallet data has been loaded from storage (re-hydration complete)
   // Include error checks to ensure we don't treat failed loads as "hydrated"
   // Memoized to prevent unnecessary re-computations and potential infinite re-renders
-  const isWalletDataHydrated = useMemo(
-    () => 
-      !walletsQuery.isLoading && 
-      !currentWalletQuery.isLoading && 
-      !walletsQuery.error && 
-      !currentWalletQuery.error,
-    [walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]
-  );
+  const isWalletDataHydrated = useMemo(() => {
+    return !walletsQuery.isLoading && 
+           !currentWalletQuery.isLoading && 
+           !walletsQuery.error && 
+           !currentWalletQuery.error;
+  }, [walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]);
 
   // Log wallet data hydration status for debugging
   useEffect(() => {
