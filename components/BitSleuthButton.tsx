@@ -18,7 +18,7 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 
-interface MonzoButtonProps {
+interface BitSleuthButtonProps {
   title: string;
   onPress: () => void | Promise<void>;
   variant?: 'primary' | 'secondary' | 'accent' | 'success' | 'warning' | 'error' | 'ghost' | 'fun';
@@ -34,7 +34,7 @@ interface MonzoButtonProps {
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-export default function MonzoButton({
+export default function BitSleuthButton({
   title,
   onPress,
   variant = 'primary',
@@ -46,7 +46,7 @@ export default function MonzoButton({
   textStyle,
   hapticType = 'light',
   animated = true,
-}: MonzoButtonProps) {
+}: BitSleuthButtonProps) {
   // Animation values
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
