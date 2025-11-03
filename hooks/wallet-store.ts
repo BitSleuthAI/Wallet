@@ -647,7 +647,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   }, [autoLockTimeoutQuery.data]);
 
   // Track if wallet data has been loaded from storage (re-hydration complete)
-  const isWalletDataHydrated = !walletsQuery.isLoading && !currentWalletQuery.isLoading;
+  // Include error checks to ensure we don't treat failed loads as "hydrated"
+  const isWalletDataHydrated = 
+    !walletsQuery.isLoading && 
+    !currentWalletQuery.isLoading && 
+    !walletsQuery.error && 
+    !currentWalletQuery.error;
 
   // Log wallet data hydration status for debugging
   useEffect(() => {
@@ -655,9 +660,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.log('✅ Wallet data re-hydration complete. Wallets:', wallets.length, 'CurrentWalletId:', currentWalletId);
       console.log('📊 Re-hydration status - walletsQuery.isLoading:', walletsQuery.isLoading, 'currentWalletQuery.isLoading:', currentWalletQuery.isLoading);
     } else {
-      console.log('⏳ Wallet data still loading from AsyncStorage...');
+      if (walletsQuery.error || currentWalletQuery.error) {
+        console.error('❌ Wallet data re-hydration failed:', walletsQuery.error || currentWalletQuery.error);
+      } else {
+        console.log('⏳ Wallet data still loading from AsyncStorage...');
+      }
     }
-  }, [isWalletDataHydrated, wallets.length, currentWalletId]);
+  }, [isWalletDataHydrated, wallets.length, currentWalletId, walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]);
 
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
@@ -766,6 +775,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping balance fetch - wallet data not yet hydrated from storage');
         return 0;
@@ -822,6 +833,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping transaction fetch - wallet data not yet hydrated from storage');
         return [];
@@ -880,6 +893,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping address fetch - wallet data not yet hydrated from storage');
         return [];
@@ -929,6 +944,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
       
       // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping UTXO fetch - wallet data not yet hydrated from storage');
         return [];
