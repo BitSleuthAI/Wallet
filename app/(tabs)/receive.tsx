@@ -20,8 +20,8 @@ import {
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 
+// Wrapper component that checks for context availability
 export default function ReceiveScreen() {
-  const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
   const walletContext = useWallet();
   
   // Safety check: if context is not available yet, show loading
@@ -33,12 +33,18 @@ export default function ReceiveScreen() {
     );
   }
   
-  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = walletContext;
-  const [currentAddress, setCurrentAddress] = useState<string>(
-    currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
-  );
-  const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
+  return <ReceiveScreenContent />;
+}
+
+// Main component with all hooks
+function ReceiveScreenContent() {
+  const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
+  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const spinValue = useRef(new Animated.Value(0)).current;
+  
+  // Initialize state hooks
+  const [currentAddress, setCurrentAddress] = useState<string>('');
+  const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
 
   // Spin animation for the refresh icon
   useEffect(() => {

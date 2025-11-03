@@ -18,6 +18,7 @@ interface QRScannerProps {
   onClose: () => void;
 }
 
+// Wrapper component that checks for context availability
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
   const walletContext = useWallet();
   
@@ -26,7 +27,12 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
     return null;
   }
   
-  const { theme } = walletContext;
+  return <QRScannerContent onScan={onScan} onClose={onClose} />;
+}
+
+// Main component with all hooks
+function QRScannerContent({ onScan, onClose }: QRScannerProps) {
+  const { theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [playServicesAvailable, setPlayServicesAvailable] = useState<boolean | null>(null);
