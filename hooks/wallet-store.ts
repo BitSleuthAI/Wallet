@@ -219,20 +219,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
   const [utxosCompleteModeRan, setUtxosCompleteModeRan] = useState<Record<string, boolean>>({});
 
-
-  // Track if wallet data has been loaded from storage (re-hydration complete)
-  const isWalletDataHydrated = !walletsQuery.isLoading && !currentWalletQuery.isLoading;
-
-  // Log wallet data hydration status for debugging
-  useEffect(() => {
-    if (isWalletDataHydrated) {
-      console.log('✅ Wallet data re-hydration complete. Wallets:', wallets.length, 'CurrentWalletId:', currentWalletId);
-      console.log('📊 Re-hydration status - walletsQuery.isLoading:', walletsQuery.isLoading, 'currentWalletQuery.isLoading:', currentWalletQuery.isLoading);
-    } else {
-      console.log('⏳ Wallet data still loading from AsyncStorage...');
-    }
-  }, [isWalletDataHydrated, wallets.length, currentWalletId, walletsQuery.isLoading, currentWalletQuery.isLoading]);
-
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
 
@@ -659,6 +645,19 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setAutoLockTimeout(autoLockTimeoutQuery.data);
     }
   }, [autoLockTimeoutQuery.data]);
+
+  // Track if wallet data has been loaded from storage (re-hydration complete)
+  const isWalletDataHydrated = !walletsQuery.isLoading && !currentWalletQuery.isLoading;
+
+  // Log wallet data hydration status for debugging
+  useEffect(() => {
+    if (isWalletDataHydrated) {
+      console.log('✅ Wallet data re-hydration complete. Wallets:', wallets.length, 'CurrentWalletId:', currentWalletId);
+      console.log('📊 Re-hydration status - walletsQuery.isLoading:', walletsQuery.isLoading, 'currentWalletQuery.isLoading:', currentWalletQuery.isLoading);
+    } else {
+      console.log('⏳ Wallet data still loading from AsyncStorage...');
+    }
+  }, [isWalletDataHydrated, wallets.length, currentWalletId]);
 
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
