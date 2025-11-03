@@ -372,6 +372,7 @@ export default function RootLayout() {
         const isBridgeReady = async () => {
           try {
             // Test if React Native core is available
+            // eslint-disable-next-line @typescript-eslint/no-require-imports
             const testNative = require('react-native');
             if (!testNative || typeof testNative.Platform === 'undefined') {
               return false;

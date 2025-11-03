@@ -40,14 +40,14 @@ interface TransactionExplorerData {
   version: number;
   locktime: number;
   rbf: boolean;
-  inputs: Array<{
+  inputs: {
     address: string;
     value: number;
-  }>;
-  outputs: Array<{
+  }[];
+  outputs: {
     address: string;
     value: number;
-  }>;
+  }[];
 }
 
 export default function TransactionExplorerScreen() {
@@ -128,7 +128,7 @@ export default function TransactionExplorerScreen() {
     return () => {
       isMounted = false;
     };
-  }, [txid, transactions, bitcoinPrice?.usd, currentWallet]);
+  }, [txid, transactions, bitcoinPrice?.usd, bitcoinPrice, currentWallet]);
 
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
@@ -152,10 +152,7 @@ export default function TransactionExplorerScreen() {
     }
   };
 
-  const truncateAddress = (address: string) => {
-    if (address.length <= 20) return address;
-    return `${address.slice(0, 10)}...${address.slice(-10)}`;
-  };
+
 
   if (loading) {
     return (

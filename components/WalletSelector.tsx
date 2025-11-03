@@ -18,6 +18,7 @@ interface WalletSelectorProps {
   onWalletChange?: (wallet: Wallet) => void;
 }
 
+// Wrapper component that checks for context availability
 export default function WalletSelector({ label, onWalletChange }: WalletSelectorProps) {
   const walletContext = useWallet();
   
@@ -26,7 +27,14 @@ export default function WalletSelector({ label, onWalletChange }: WalletSelector
     return null;
   }
   
-  const { wallets, currentWallet, switchWallet, theme } = walletContext;
+  return <WalletSelectorContent label={label} onWalletChange={onWalletChange} />;
+}
+
+// Main component with all hooks
+function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
+  const { wallets, currentWallet, switchWallet, theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  
+  // Initialize state hooks
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const handleWalletSelect = (wallet: Wallet) => {

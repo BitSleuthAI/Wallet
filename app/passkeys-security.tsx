@@ -26,7 +26,7 @@ import {
 
 export default function PasskeysSecurityScreen() {
   const { theme } = useWallet();
-  const { biometricEnabled, biometricType, enableBiometric, disableBiometric } = useAutoLock();
+  const { biometricEnabled, enableBiometric, disableBiometric } = useAutoLock();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
   const [securitySettings, setSecuritySettings] = useState<SecuritySettings>({
@@ -35,7 +35,8 @@ export default function PasskeysSecurityScreen() {
 
   useEffect(() => {
     initializeScreen();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Only run on mount
 
   const initializeScreen = async () => {
     try {

@@ -5,7 +5,7 @@ import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
@@ -54,8 +54,8 @@ import ReanimatedAnimated, {
     withSpring,
 } from 'react-native-reanimated';
 
+// Wrapper component that checks for context availability
 export default function SettingsScreen() {
-  const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
   const walletContext = useWallet();
   
   // Safety check: if context is not available yet, show loading
@@ -67,20 +67,21 @@ export default function SettingsScreen() {
     );
   }
   
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = walletContext;
+  return <SettingsScreenContent />;
+}
+
+// Main component with all hooks
+function SettingsScreenContent() {
+  const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
+  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
+  
+  // Initialize all state hooks
   const [showCurrencyModal, setShowCurrencyModal] = useState<boolean>(false);
   const [showAutoLockModal, setShowAutoLockModal] = useState<boolean>(false);
   const [showWalletModal, setShowWalletModal] = useState<boolean>(false);
-
   const [isLoggingOut, setIsLoggingOut] = useState<boolean>(false);
-
-  // Logout button gradient colors (danger/error theme)
-  // Using fixed colors for consistency across themes while maintaining danger indication
-  const logoutGradientColors: readonly [string, string, ...string[]] = theme.isDark 
-    ? ['#FF5252', '#E91E63'] // Bright red to pink for dark mode
-    : ['#EF4444', '#DC2626']; // Red gradient for light mode
-
+  
   // Animation values for logout button
   const logoutScale = useSharedValue(1);
   const AnimatedTouchable = ReanimatedAnimated.createAnimatedComponent(TouchableOpacity);
@@ -88,6 +89,12 @@ export default function SettingsScreen() {
   const logoutAnimatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: logoutScale.value }],
   }));
+
+  // Logout button gradient colors (danger/error theme)
+  // Using fixed colors for consistency across themes while maintaining danger indication
+  const logoutGradientColors: readonly [string, string, ...string[]] = theme.isDark 
+    ? ['#FF5252', '#E91E63'] // Bright red to pink for dark mode
+    : ['#EF4444', '#DC2626']; // Red gradient for light mode
 
   const handleLogout = () => {
     if (isLoggingOut) return; // Prevent multiple logout attempts

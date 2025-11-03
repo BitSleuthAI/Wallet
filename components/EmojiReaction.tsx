@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {
     useAnimatedStyle,
@@ -86,13 +86,15 @@ export default function EmojiReaction({
 
   const config = getReactionConfig();
 
-  useEffect(() => {
-    if (action) {
-      showReaction();
-    }
-  }, [action]);
+  const hideReaction = useCallback(() => {
+    scale.value = withSpring(0, { damping: 8, stiffness: 100 });
+    opacity.value = withTiming(0, { duration: 200 }, () => {
+      setIsVisible(false);
+      onComplete?.();
+    });
+  }, [scale, opacity, onComplete]);
 
-  const showReaction = () => {
+  const showReaction = useCallback(() => {
     setIsVisible(true);
     
     // Animate in
@@ -103,15 +105,13 @@ export default function EmojiReaction({
     setTimeout(() => {
       hideReaction();
     }, duration);
-  };
+  }, [scale, opacity, duration, hideReaction]);
 
-  const hideReaction = () => {
-    scale.value = withSpring(0, { damping: 8, stiffness: 100 });
-    opacity.value = withTiming(0, { duration: 200 }, () => {
-      setIsVisible(false);
-      onComplete?.();
-    });
-  };
+  useEffect(() => {
+    if (action) {
+      showReaction();
+    }
+  }, [action, showReaction]);
 
   // Animated styles
   const animatedStyle = useAnimatedStyle(() => {

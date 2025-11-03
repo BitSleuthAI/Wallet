@@ -1,4 +1,4 @@
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextStyle, TouchableOpacity, ViewStyle } from 'react-native';
@@ -64,7 +64,8 @@ export default function PremiumButton({
         withSpring(1, { damping: 15, stiffness: 400 })
       );
       HapticService.success();
-    } catch (error) {
+    } catch (err) {
+      console.error('Premium button error:', err);
       // Error feedback animation
       opacity.value = withSequence(
         withTiming(0.6, { duration: 100 }),

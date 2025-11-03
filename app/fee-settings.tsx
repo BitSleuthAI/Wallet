@@ -276,7 +276,7 @@ export default function FeeSettingsScreen() {
       if (feeEstimates) {
         checkCongestion();
       }
-    }, [feeEstimates]);
+    }, []);
     
     const getCongestionColor = () => {
       switch (congestion) {

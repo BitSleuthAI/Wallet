@@ -27,11 +27,11 @@ import {
   View,
 } from 'react-native';
 
+// Wrapper component that checks for context availability
 export default function SendScreen() {
   if (__DEV__) {
     console.log('🔍 Send screen: Component mounted/rendered');
   }
-  const { animatedStyle } = useTabAnimation(1);
   const walletContext = useWallet();
   
   // Safety check: if context is not available yet, show loading
@@ -43,7 +43,12 @@ export default function SendScreen() {
     );
   }
   
-  const { refreshData } = walletContext; // Send tab = index 1
+  return <SendScreenContent />;
+}
+
+// Main component with all hooks
+function SendScreenContent() {
+  const { animatedStyle } = useTabAnimation(1);
   const { 
     currentWallet, 
     balance, 
@@ -57,10 +62,11 @@ export default function SendScreen() {
     feeSettingsLoading,
     incrementUsageCount,
     utxos: walletUtxos,
-    isLoadingUtxos,
-    isRefreshingUtxos,
-  } = walletContext;
+    refreshData,
+  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
+  
+  // Initialize all state hooks
   const [recipientAddress, setRecipientAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [isAmountInBTC, setIsAmountInBTC] = useState(true);
@@ -68,18 +74,6 @@ export default function SendScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [estimatedFee, setEstimatedFee] = useState<number | null>(null);
   const [showQRScanner, setShowQRScanner] = useState(false);
-  
-  // Memoize computed values from feeSettings to prevent unnecessary re-renders
-  const selectedFeeType = useMemo(() => 
-    feeSettings?.defaultPreset === 'economy' ? 'slow' : 
-    feeSettings?.defaultPreset === 'standard' ? 'normal' : 
-    feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom',
-    [feeSettings?.defaultPreset]
-  );
-  const enableRBF = useMemo(() => feeSettings?.enableRBF ?? true, [feeSettings?.enableRBF]);
-  const customFeeRate = useMemo(() => feeSettings?.customFeeRate?.toString() ?? '10', [feeSettings?.customFeeRate]);
-  // Use Bitcoin price from wallet store (already converted to selected currency)
-  const bitcoinPrice = useMemo(() => walletBitcoinPrice?.usd || null, [walletBitcoinPrice?.usd]);
   const [addressValidation, setAddressValidation] = useState<{
     isValid: boolean;
     message: string | null;
@@ -96,6 +90,18 @@ export default function SendScreen() {
     isValid: boolean;
     message: string | null;
   }>({ isValid: true, message: null });
+  
+  // Memoize computed values from feeSettings to prevent unnecessary re-renders
+  const selectedFeeType = useMemo(() => 
+    feeSettings?.defaultPreset === 'economy' ? 'slow' : 
+    feeSettings?.defaultPreset === 'standard' ? 'normal' : 
+    feeSettings?.defaultPreset === 'priority' ? 'fast' : 'custom',
+    [feeSettings?.defaultPreset]
+  );
+  const enableRBF = useMemo(() => feeSettings?.enableRBF ?? true, [feeSettings?.enableRBF]);
+  const customFeeRate = useMemo(() => feeSettings?.customFeeRate?.toString() ?? '10', [feeSettings?.customFeeRate]);
+  // Use Bitcoin price from wallet store (already converted to selected currency)
+  const bitcoinPrice = useMemo(() => walletBitcoinPrice?.usd || null, [walletBitcoinPrice?.usd]);
 
   // Memoize handlers to prevent recreation on every render
   const handleFeePresetChange = useCallback((preset: 'slow' | 'normal' | 'fast' | 'custom') => {
@@ -286,14 +292,13 @@ export default function SendScreen() {
     })));
     
     setAvailableUtxos(utxosWithFrozenStatus);
-  }, [currentWallet?.id, walletUtxos, coinControl]);
+  }, [currentWallet?.id, currentWallet, walletUtxos, coinControl]);
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
     const ids = coinControl.getSelectedUtxoIds().filter((id: string) => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWallet?.id]); // Only re-sync when wallet changes, not on every coinControl update
+  }, [currentWallet?.id, coinControl]); // Re-sync when wallet changes or coinControl updates
 
   // Validate Bitcoin address in real-time
   useEffect(() => {

@@ -23,6 +23,7 @@ import { platformStyles } from '@/constants/themes';
 let walletService: any;
 try {
   console.log('📦 Loading wallet service in wallet addresses for platform:', Platform.OS);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Wallet addresses imported service keys:', Object.keys(importedService));
@@ -133,7 +134,10 @@ export default function WalletAddressesScreen() {
     refetchOnWindowFocus: false,
   });
 
+  // Function reserved for future infinite scroll feature
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const loadMoreAddresses = async () => {
+    console.log('Load more addresses functionality to be implemented');
     if (isLoadingMore) return;
     
     setIsLoadingMore(true);
@@ -179,7 +183,7 @@ export default function WalletAddressesScreen() {
     
     console.log(`✅ Filtered ${filteredData.length} ${selectedTab} addresses`);
     return filteredData;
-  }, [addressesQuery.data, selectedTab]);
+  }, [addressesQuery.data, addressesQuery.error, addressesQuery.isLoading, selectedTab]);
 
   const copyToClipboard = async (address: string) => {
     try {

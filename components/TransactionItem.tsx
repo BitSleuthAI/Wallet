@@ -1,6 +1,6 @@
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
@@ -20,6 +20,7 @@ interface TransactionItemProps {
   transaction: Transaction;
 }
 
+// Wrapper component that checks for context availability
 export default function TransactionItem({ transaction }: TransactionItemProps) {
   const walletContext = useWallet();
   
@@ -28,7 +29,12 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
     return null;
   }
   
-  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = walletContext;
+  return <TransactionItemContent transaction={transaction} />;
+}
+
+// Main component with all hooks
+function TransactionItemContent({ transaction }: TransactionItemProps) {
+  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
