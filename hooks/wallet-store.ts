@@ -219,7 +219,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
   const [utxosCompleteModeRan, setUtxosCompleteModeRan] = useState<Record<string, boolean>>({});
 
-
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
 
@@ -647,6 +646,29 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [autoLockTimeoutQuery.data]);
 
+  // Track if wallet data has been loaded from storage (re-hydration complete)
+  // Include error checks to ensure we don't treat failed loads as "hydrated"
+  // Memoized to prevent unnecessary re-computations and potential infinite re-renders
+  const isWalletDataHydrated = useMemo(() => {
+    return !walletsQuery.isLoading && 
+           !currentWalletQuery.isLoading && 
+           !walletsQuery.error && 
+           !currentWalletQuery.error;
+  }, [walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]);
+
+  // Log wallet data hydration status for debugging
+  useEffect(() => {
+    if (isWalletDataHydrated) {
+      console.log('✅ Wallet data re-hydration complete. Wallets:', wallets.length, 'CurrentWalletId:', currentWalletId);
+    } else {
+      if (walletsQuery.error || currentWalletQuery.error) {
+        console.error('❌ Wallet data re-hydration failed:', walletsQuery.error || currentWalletQuery.error);
+      } else {
+        console.log('⏳ Wallet data still loading from AsyncStorage...');
+      }
+    }
+  }, [isWalletDataHydrated, wallets.length, currentWalletId, walletsQuery.error, currentWalletQuery.error]);
+
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
   // Bitcoin price query using Esplora service
@@ -726,7 +748,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         };
       }
     },
-    enabled: cryptoReady,
+    enabled: cryptoReady && isWalletDataHydrated,
     refetchInterval: false, // Disable automatic refetching - price doesn't change that rapidly
     retry: 1, // Reduced retries
     retryDelay: 15000, // Longer delay between retries
@@ -752,6 +774,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         console.log('⏸️ Skipping balance fetch - no current wallet');
         return 0;
       }
+      
+      // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
+      if (!isWalletDataHydrated) {
+        console.log('⏸️ Skipping balance fetch - wallet data not yet hydrated from storage');
+        return 0;
+      }
+      
       try {
         console.log('💰 Fetching wallet balance for:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
         const result = await getWalletData(currentWallet.xpub);
@@ -773,7 +804,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return 0; // Return 0 instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduce retries to avoid hammering the API on iOS
@@ -802,6 +833,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return [];
       }
       
+      // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
+      if (!isWalletDataHydrated) {
+        console.log('⏸️ Skipping transaction fetch - wallet data not yet hydrated from storage');
+        return [];
+      }
+      
       console.log('🔍 Fetching transactions for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
       
       try {
@@ -824,7 +863,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduced retries to avoid hammering the API on iOS
@@ -854,6 +893,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return [];
       }
       
+      // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
+      if (!isWalletDataHydrated) {
+        console.log('⏸️ Skipping address fetch - wallet data not yet hydrated from storage');
+        return [];
+      }
+      
       console.log('🔍 Fetching addresses for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
       
       try {
@@ -867,7 +914,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch new addresses
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduced retries to avoid hammering the API
@@ -897,6 +944,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return [];
       }
       
+      // Additional safety check - ensure wallet data is hydrated
+      // While the query's 'enabled' condition should prevent this, we add this defensive check
+      // to protect against edge cases during rapid state transitions or React Query timing issues
+      if (!isWalletDataHydrated) {
+        console.log('⏸️ Skipping UTXO fetch - wallet data not yet hydrated from storage');
+        return [];
+      }
+      
       console.log('🔍 Fetching UTXOs for wallet:', currentWallet.name, 'xpub:', currentWallet.xpub.substring(0, 20) + '...');
       
       try {
@@ -919,7 +974,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady,
+    enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
     retry: 1, // Reduced retries to avoid hammering the API
