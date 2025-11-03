@@ -1,7 +1,7 @@
 import { createCardShadow, createCardStyle } from '@/constants/themes';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React from 'react';
 import {
     StyleSheet,
     TouchableOpacity,
@@ -37,8 +37,6 @@ export default function MonzoCard({
   hapticFeedback = true,
   shadowElevation = 'medium',
 }: MonzoCardProps) {
-  const [isPressed, setIsPressed] = useState(false);
-  
   // Animation values
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
@@ -148,7 +146,3 @@ export default function MonzoCard({
     </Animated.View>
   );
 }
-
-const styles = StyleSheet.create({
-  // Additional styles can be added here if needed
-});

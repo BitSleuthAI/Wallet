@@ -1,4 +1,4 @@
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, View } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';

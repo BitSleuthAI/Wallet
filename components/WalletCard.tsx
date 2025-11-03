@@ -1,7 +1,7 @@
 import { platformStyles } from '@/constants/themes';
 import { getWalletGradient } from '@/constants/wallet-colors';
 import { useWallet } from '@/hooks/wallet-store';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
@@ -17,6 +17,9 @@ import Animated, {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
+// Default gradient colors for fallback
+const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const; // Indigo gradient
+
 interface WalletCardProps {
   wallet?: Wallet;
   isActive?: boolean;
@@ -24,6 +27,7 @@ interface WalletCardProps {
   onEdit?: (wallet: Wallet) => void;
 }
 
+// Wrapper component that checks for context availability
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
   const walletContext = useWallet();
   
@@ -32,7 +36,14 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
     return null;
   }
   
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = walletContext;
+  return <WalletCardContent wallet={wallet} isActive={isActive} onPress={onPress} onEdit={onEdit} />;
+}
+
+// Main component with all hooks
+function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  
+  // Initialize all hooks
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuButtonRef = useRef<View>(null);
@@ -54,10 +65,10 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
   // Use provided wallet or fall back to current wallet
   const displayWallet = wallet || currentWallet;
   
-  if (!displayWallet) return null;
-
   // Memoize gradient colors to prevent recalculation on every render
-  const gradientColors = useMemo(() => getWalletGradient(displayWallet.color), [displayWallet.color]);
+  // Only depends on color property to avoid unnecessary recalculations
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : DEFAULT_GRADIENT, [displayWallet?.color]);
 
   // Update glow effect when active state changes
   React.useEffect(() => {
@@ -129,6 +140,8 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
       onPress();
     }
   }, [onPress, scale]);
+  
+  if (!displayWallet) return null;
 
   return (
     <AnimatedTouchable 

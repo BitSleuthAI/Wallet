@@ -34,6 +34,7 @@ import ConfettiCannon from 'react-native-confetti-cannon';
 let walletService: any;
 try {
   console.log('📦 Loading wallet service for platform:', Platform.OS);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
   const importedService = require('@/services/wallet-service');
   
   console.log('📦 Imported service keys:', Object.keys(importedService));
@@ -67,7 +68,7 @@ try {
 }
 
 export default function WalletSetupScreen() {
-  const { theme, importWallet, wallets } = useWallet();
+  const { theme, importWallet } = useWallet();
   const { hasPin, biometricEnabled } = useAutoLock();
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');

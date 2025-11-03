@@ -2,7 +2,7 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useWallet } from '@/hooks/wallet-store';
 import { router, Stack } from 'expo-router';
-import { AlertTriangle, ArrowLeft, CheckCircle, TestTube } from 'lucide-react-native';
+import { AlertTriangle, ArrowLeft, CheckCircle, Lock, TestTube } from 'lucide-react-native';
 import React, { useState } from 'react';
 import {
     ScrollView,
@@ -201,7 +201,7 @@ export default function MFATestScreen() {
                             </Text>
                         </View>
                         
-                        <Text style={[styles.statusDescription, { color: theme.colors.textSecondary }]}>Biometric prompts during sends are controlled entirely by the "Require Biometric for Transactions" toggle.</Text>
+                        <Text style={[styles.statusDescription, { color: theme.colors.textSecondary }]}>Biometric prompts during sends are controlled entirely by the &quot;Require Biometric for Transactions&quot; toggle.</Text>
                     </View>
 
                     <View style={styles.bottomSpacing} />

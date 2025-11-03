@@ -78,7 +78,7 @@ export default function LegalDisclaimerScreen() {
           </View>
 
           <Text style={[styles.introText, { color: theme.colors.text }]}>
-            Bitsleuth Wallet ("the App") is provided by Bitsleuth as a non-custodial, privacy-first Bitcoin wallet. By using the App, you acknowledge and agree to the following:
+            Bitsleuth Wallet (&quot;the App&quot;) is provided by Bitsleuth as a non-custodial, privacy-first Bitcoin wallet. By using the App, you acknowledge and agree to the following:
           </Text>
 
           <Section title="1. No Custody or Recovery">
@@ -109,7 +109,7 @@ export default function LegalDisclaimerScreen() {
 
           <Section title="5. No Warranty">
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
-              The App is provided on an "as is" and "as available" basis without any warranties, express or implied. We do not guarantee that the App will always function without errors, bugs, or interruptions.
+              The App is provided on an &quot;as is&quot; and &quot;as available&quot; basis without any warranties, express or implied. We do not guarantee that the App will always function without errors, bugs, or interruptions.
             </Text>
           </Section>
 

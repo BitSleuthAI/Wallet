@@ -36,8 +36,8 @@ type CarouselItem =
   | { type: 'wallet'; wallet: Wallet }
   | { type: 'add' };
 
+// Wrapper component that checks for context availability
 export default function WalletScreen() {
-  const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
   const walletContext = useWallet();
   
   // Safety check: if context is not available yet, show loading
@@ -49,6 +49,12 @@ export default function WalletScreen() {
     );
   }
   
+  return <WalletScreenContent />;
+}
+
+// Main component with all hooks
+function WalletScreenContent() {
+  const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
   const {
     wallets,
     currentWallet,
@@ -65,12 +71,7 @@ export default function WalletScreen() {
     hasTransactionsError,
     hasPriceError,
     isLoading,
-    isLoadingBalance,
-    isLoadingTransactions,
-    isLoadingPrice,
     formatCurrency,
-    getCurrencySymbol,
-    selectedCurrency,
     hideBalance,
     setHideBalanceSetting,
     shouldShowFeedbackPrompt,
@@ -78,8 +79,9 @@ export default function WalletScreen() {
     markFeedbackPromptDismissed,
     markFeedbackSubmitted,
     incrementUsageCount,
-  } = walletContext;
-
+  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  
+  // Initialize all state hooks
   const [refreshing, setRefreshing] = useState(false);
   const [editingWallet, setEditingWallet] = useState<Wallet | null>(null);
   const [editName, setEditName] = useState<string>('');
@@ -114,6 +116,7 @@ export default function WalletScreen() {
       setEditName('');
       setEditColor('');
     } catch (error) {
+      console.error('Failed to update wallet:', error);
       Alert.alert('Error', 'Failed to update wallet');
     }
   }, [editingWallet, editName, editColor, editWallet]);

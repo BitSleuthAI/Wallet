@@ -23,6 +23,7 @@ interface BalanceChartProps {
   selectedPeriod: TimePeriod;
 }
 
+// Wrapper component that checks for context availability
 export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
   const walletContext = useWallet();
   
@@ -31,7 +32,12 @@ export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
     return null;
   }
   
-  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = walletContext;
+  return <BalanceChartContent selectedPeriod={selectedPeriod} />;
+}
+
+// Main component with all hooks
+function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
+  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
