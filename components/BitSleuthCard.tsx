@@ -14,7 +14,7 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 
-interface MonzoCardProps {
+interface BitSleuthCardProps {
   children: React.ReactNode;
   variant?: 'default' | 'elevated' | 'fun' | 'gradient';
   color?: 'purple' | 'yellow' | 'pink' | 'orange' | 'lime';
@@ -27,7 +27,7 @@ interface MonzoCardProps {
 
 const AnimatedTouchableOpacity = Animated.createAnimatedComponent(TouchableOpacity);
 
-export default function MonzoCard({
+export default function BitSleuthCard({
   children,
   variant = 'default',
   color = 'purple',
@@ -36,7 +36,7 @@ export default function MonzoCard({
   animated = true,
   hapticFeedback = true,
   shadowElevation = 'medium',
-}: MonzoCardProps) {
+}: BitSleuthCardProps) {
   // Animation values
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
