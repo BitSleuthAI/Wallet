@@ -71,12 +71,12 @@ function WalletScreenContent() {
     hasTransactionsError,
     hasPriceError,
     isLoading,
-    isLoadingBalance,
-    isLoadingTransactions,
-    isLoadingPrice,
+    isLoadingBalance: _isLoadingBalance,
+    isLoadingTransactions: _isLoadingTransactions,
+    isLoadingPrice: _isLoadingPrice,
     formatCurrency,
-    getCurrencySymbol,
-    selectedCurrency,
+    getCurrencySymbol: _getCurrencySymbol,
+    selectedCurrency: _selectedCurrency,
     hideBalance,
     setHideBalanceSetting,
     shouldShowFeedbackPrompt,
@@ -120,7 +120,7 @@ function WalletScreenContent() {
       setEditingWallet(null);
       setEditName('');
       setEditColor('');
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to update wallet');
     }
   }, [editingWallet, editName, editColor, editWallet]);

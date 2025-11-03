@@ -17,7 +17,7 @@ import {
     Snowflake,
     Zap,
 } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
     Platform,
     RefreshControl,
@@ -38,7 +38,7 @@ export default function CoinControlScreen() {
     coinControl,
     utxos: walletUtxos,
     isLoadingUtxos,
-    isRefreshingUtxos,
+    isRefreshingUtxos: _isRefreshingUtxos,
     refreshData,
   } = useWallet();
   const router = useRouter();

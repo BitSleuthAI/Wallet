@@ -62,8 +62,8 @@ function SendScreenContent() {
     feeSettingsLoading,
     incrementUsageCount,
     utxos: walletUtxos,
-    isLoadingUtxos,
-    isRefreshingUtxos,
+    isLoadingUtxos: _isLoadingUtxos,
+    isRefreshingUtxos: _isRefreshingUtxos,
     refreshData,
   } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();

@@ -17,6 +17,9 @@ import Animated, {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
+// Default gradient colors for fallback
+const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const; // Indigo gradient
+
 interface WalletCardProps {
   wallet?: Wallet;
   isActive?: boolean;
@@ -61,9 +64,9 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
 
   // Use provided wallet or fall back to current wallet
   const displayWallet = wallet || currentWallet;
-
+  
   // Memoize gradient colors to prevent recalculation on every render
-  const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : ['#6366F1', '#8B5CF6'], [displayWallet?.color]);
+  const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : DEFAULT_GRADIENT, [displayWallet]);
 
   // Update glow effect when active state changes
   React.useEffect(() => {

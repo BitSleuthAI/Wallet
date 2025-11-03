@@ -42,8 +42,10 @@ function ReceiveScreenContent() {
   const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const spinValue = useRef(new Animated.Value(0)).current;
   
-  // Initialize state hooks
-  const [currentAddress, setCurrentAddress] = useState<string>('');
+  // Initialize state hooks with current wallet's last address
+  const [currentAddress, setCurrentAddress] = useState<string>(
+    () => currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
+  );
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
 
   // Spin animation for the refresh icon
