@@ -622,7 +622,7 @@ export default function CoinControlScreen() {
               </Text>
               <View style={styles.educationFeatures}>
                 <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate "coin" that can be spent
+                  • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate &quot;coin&quot; that can be spent
                 </Text>
                 <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
                   • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction

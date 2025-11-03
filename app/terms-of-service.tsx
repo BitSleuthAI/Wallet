@@ -79,7 +79,7 @@ export default function TermsOfServiceScreen() {
           </View>
 
           <Text style={[styles.introText, { color: theme.colors.text }]}>
-            Welcome to Bitsleuth Wallet. These Terms of Service ("Terms") govern your use of the Bitsleuth Wallet mobile application (the "App"). Please read these Terms carefully before using the App. By downloading, installing, or using the App, you agree to these Terms. If you do not agree, you must not use the App.
+            Welcome to Bitsleuth Wallet. These Terms of Service (&quot;Terms&quot;) govern your use of the Bitsleuth Wallet mobile application (the &quot;App&quot;). Please read these Terms carefully before using the App. By downloading, installing, or using the App, you agree to these Terms. If you do not agree, you must not use the App.
           </Text>
 
           <Section title="1. Who We Are">
@@ -151,7 +151,7 @@ export default function TermsOfServiceScreen() {
 
           <Section title="8. Disclaimers">
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
-              The App is provided "as is" and "as available." We do not guarantee that:
+              The App is provided &quot;as is&quot; and &quot;as available.&quot; We do not guarantee that:
             </Text>
             <BulletPoint text="The App will always function without bugs, downtime, or interruptions." />
             <BulletPoint text="The App or any features will meet your specific needs." />
