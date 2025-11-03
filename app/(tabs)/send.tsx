@@ -62,8 +62,6 @@ function SendScreenContent() {
     feeSettingsLoading,
     incrementUsageCount,
     utxos: walletUtxos,
-    isLoadingUtxos: _isLoadingUtxos,
-    isRefreshingUtxos: _isRefreshingUtxos,
     refreshData,
   } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
@@ -294,14 +292,13 @@ function SendScreenContent() {
     })));
     
     setAvailableUtxos(utxosWithFrozenStatus);
-  }, [currentWallet?.id, walletUtxos, coinControl]);
+  }, [currentWallet?.id, currentWallet, walletUtxos, coinControl]);
 
   useEffect(() => {
     const frozenIds = new Set(coinControl.getFrozenUtxoIds());
     const ids = coinControl.getSelectedUtxoIds().filter((id: string) => !frozenIds.has(id));
     setSelectedUtxoIds(ids);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWallet?.id]); // Only re-sync when wallet changes, not on every coinControl update
+  }, [currentWallet?.id, coinControl]); // Re-sync when wallet changes or coinControl updates
 
   // Validate Bitcoin address in real-time
   useEffect(() => {

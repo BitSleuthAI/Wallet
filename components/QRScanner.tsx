@@ -1,5 +1,5 @@
 import { useWallet } from '@/hooks/wallet-store';
-import googlePlayServicesService from '@/services/google-play-services';
+import { googlePlayServicesService } from '@/services/google-play-services';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';

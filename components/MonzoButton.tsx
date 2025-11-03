@@ -1,7 +1,7 @@
 import { createButtonStyle } from '@/constants/themes';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React from 'react';
 import {
     ActivityIndicator,
     StyleSheet,
@@ -47,8 +47,6 @@ export default function MonzoButton({
   hapticType = 'light',
   animated = true,
 }: MonzoButtonProps) {
-  const [isPressed, setIsPressed] = useState(false);
-  
   // Animation values
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -118,7 +116,8 @@ export default function MonzoButton({
     
     try {
       await onPress();
-    } catch (error) {
+    } catch (err) {
+      console.error('Button press error:', err);
       // Error animation
       if (animated) {
         opacity.value = withSequence(

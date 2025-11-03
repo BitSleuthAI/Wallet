@@ -1,7 +1,7 @@
 import { platformStyles } from '@/constants/themes';
 import { getWalletGradient } from '@/constants/wallet-colors';
 import { useWallet } from '@/hooks/wallet-store';
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';

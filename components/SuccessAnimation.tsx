@@ -1,4 +1,4 @@
-import HapticService from '@/services/haptic-service';
+import { HapticService } from '@/services/haptic-service';
 import { Check } from 'lucide-react-native';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
@@ -72,6 +72,7 @@ export default function SuccessAnimation({
         clearTimeout(completeTimeout);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array - animation should only run once on mount
 
   const circleStyle = useAnimatedStyle(() => ({

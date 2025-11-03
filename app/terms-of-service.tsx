@@ -6,7 +6,6 @@ import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
 import {
     Linking,
-    Platform,
     ScrollView,
     StyleSheet,
     Text,

@@ -38,7 +38,6 @@ export default function CoinControlScreen() {
     coinControl,
     utxos: walletUtxos,
     isLoadingUtxos,
-    isRefreshingUtxos: _isRefreshingUtxos,
     refreshData,
   } = useWallet();
   const router = useRouter();
