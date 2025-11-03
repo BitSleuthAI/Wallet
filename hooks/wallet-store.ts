@@ -648,17 +648,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
   // Track if wallet data has been loaded from storage (re-hydration complete)
   // Include error checks to ensure we don't treat failed loads as "hydrated"
-  const isWalletDataHydrated = 
-    !walletsQuery.isLoading && 
-    !currentWalletQuery.isLoading && 
-    !walletsQuery.error && 
-    !currentWalletQuery.error;
+  // Memoized to prevent unnecessary re-computations and potential infinite re-renders
+  const isWalletDataHydrated = useMemo(
+    () => 
+      !walletsQuery.isLoading && 
+      !currentWalletQuery.isLoading && 
+      !walletsQuery.error && 
+      !currentWalletQuery.error,
+    [walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]
+  );
 
   // Log wallet data hydration status for debugging
   useEffect(() => {
     if (isWalletDataHydrated) {
       console.log('✅ Wallet data re-hydration complete. Wallets:', wallets.length, 'CurrentWalletId:', currentWalletId);
-      console.log('📊 Re-hydration status - walletsQuery.isLoading:', walletsQuery.isLoading, 'currentWalletQuery.isLoading:', currentWalletQuery.isLoading);
     } else {
       if (walletsQuery.error || currentWalletQuery.error) {
         console.error('❌ Wallet data re-hydration failed:', walletsQuery.error || currentWalletQuery.error);
@@ -666,7 +669,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         console.log('⏳ Wallet data still loading from AsyncStorage...');
       }
     }
-  }, [isWalletDataHydrated, wallets.length, currentWalletId, walletsQuery.isLoading, currentWalletQuery.isLoading, walletsQuery.error, currentWalletQuery.error]);
+  }, [isWalletDataHydrated, wallets.length, currentWalletId, walletsQuery.error, currentWalletQuery.error]);
 
   const feeSettingsLoading = feeSettingsByWalletQuery.isLoading || walletsQuery.isLoading;
 
