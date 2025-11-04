@@ -1,4 +1,6 @@
 import { useWallet } from '@/hooks/wallet-store';
+import { transformAddressDataForUI, type AddressInfo } from '@/utils/address-transform';
+import { loadWalletService } from '@/utils/wallet-service-loader';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useRouter } from 'expo-router';
@@ -19,55 +21,12 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 
-// Wallet service import with platform detection
-let walletService: any;
-try {
-  console.log('📦 Loading wallet service in wallet addresses for platform:', Platform.OS);
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const importedService = require('@/services/wallet-service');
-  
-  console.log('📦 Wallet addresses imported service keys:', Object.keys(importedService));
-  
-  // Ensure functions are properly bound and accessible
-  walletService = {
-    generateAddressFromXpub: importedService.generateAddressFromXpub,
-    generateNewAddress: importedService.generateNewAddress,
-    generateAddressesForView: importedService.generateAddressesForView,
-    generateAddressBatchForView: importedService.generateAddressBatchForView,
-    clearAddressCache: importedService.clearAddressCache
-  };
-  
-  // Verify required functions are available
-  const requiredFunctions = ['generateAddressFromXpub', 'generateNewAddress', 'generateAddressesForView'];
-  const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
-  
-  if (missingFunctions.length > 0) {
-    throw new Error(`Missing wallet service functions in addresses: ${missingFunctions.join(', ')}`);
-  }
-  
-  console.log('✅ Wallet service loaded successfully in wallet addresses for', Platform.OS);
-} catch (error) {
-  console.error('❌ Failed to load wallet service in wallet addresses for', Platform.OS, ':', error);
-  // Provide a minimal fallback
-  walletService = {
-    generateAddressFromXpub: async () => { throw new Error('Wallet service not available'); },
-    generateNewAddress: async () => { throw new Error('Wallet service not available'); },
-    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
-    clearAddressCache: () => { console.warn('Wallet service not available'); }
-  };
-}
-
-interface AddressInfo {
-  address: string;
-  index: number;
-  balance: number;
-  txCount: number;
-  receivedCount: number;
-  sentCount: number;
-  isUsed: boolean;
-  type: 'receiving' | 'change';
-  derivationPath: string;
-}
+// Load wallet service using shared utility
+const walletService = loadWalletService([
+  'generateAddressFromXpub',
+  'generateNewAddress',
+  'generateAddressesForView',
+]);
 
 export default function WalletAddressesScreen() {
   const {
@@ -81,9 +40,9 @@ export default function WalletAddressesScreen() {
 
   // Generate addresses following gap limit logic
   // OPTIMIZED: Fetch both chains at once to leverage shared caching from discoverUsedAddresses
-  const addressesQuery = useQuery({
+  const addressesQuery = useQuery<AddressInfo[]>({
     queryKey: ['wallet-addresses-all-chains', currentWallet?.id, currentWallet?.xpub],
-    queryFn: async () => {
+    queryFn: async (): Promise<AddressInfo[]> => {
       if (!currentWallet?.xpub) {
         console.log('❌ No current wallet or xpub available');
         return [];
@@ -103,17 +62,8 @@ export default function WalletAddressesScreen() {
         const changeData = await walletService.generateAddressesForView(currentWallet.xpub, 'change');
         console.log(`✅ Received ${changeData.length} change addresses`);
         
-        const allAddresses: AddressInfo[] = [...receivingData, ...changeData].map((addrData) => ({
-          address: addrData.address,
-          index: addrData.index,
-          balance: addrData.balance,
-          txCount: addrData.txCount,
-          receivedCount: 0, // Will be calculated separately if needed
-          sentCount: 0, // Will be calculated separately if needed
-          isUsed: addrData.isUsed,
-          type: addrData.type,
-          derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
-        }));
+        // Use shared utility to transform address data
+        const allAddresses = transformAddressDataForUI(receivingData, changeData);
         
         console.log(`✅ Generated ${allAddresses.length} addresses total (${receivingData.length} receiving, ${changeData.length} change)`);
         console.log(`🔍 Address breakdown:`, {
@@ -391,7 +341,7 @@ export default function WalletAddressesScreen() {
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {(addressesQuery.isLoading && !addressesQuery.data?.length) ? (
+        {addressesQuery.isLoading && (!addressesQuery.data || addressesQuery.data.length === 0) ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
