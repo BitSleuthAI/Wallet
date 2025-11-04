@@ -740,7 +740,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     // Add sufficient bottom padding to prevent content from going under tab bar
     // iOS tab bar height (~49pt) + safe area (~34pt) + spacing = ~100pt
-    paddingBottom: Platform.OS === 'ios' ? 100 : 100,
+    paddingBottom: 100,
   },
   header: {
     flexDirection: 'row',
