@@ -4,6 +4,7 @@ import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/addres
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
 import { clearAddressCache, getWalletData } from '@/services/wallet-service';
+import { getPersistedBalance, getPersistedTransactions, getPersistedUTXOs, persistWalletData, clearPersistedWalletData, clearAllPersistedWalletData } from '@/services/wallet-persistence-service';
 import { FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -759,12 +760,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnMount: false, // Don't refetch on mount - price is not wallet-specific
   });
 
-  // Wallet balance query using improved service
-  // NOTE: Polling strategy balances responsiveness with API usage:
-  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
-  // - Underlying address/tx caches have 2-minute TTL to prevent excessive API calls
-  // - Result: React Query refetches every 30s, but cache layer prevents API spam
-  // - This ensures balance updates are visible quickly after send/receive
+  // Wallet balance query using improved service with persistent caching
+  // NOTE: Uses "stale-while-revalidate" pattern:
+  // 1. Load persisted data immediately (fast startup, never blank)
+  // 2. Fetch fresh data in background
+  // 3. Update with fresh data when available
+  // 4. Persist fresh data for next app start
+  // This ensures users never see blank balance after data was previously loaded
   const balanceQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['wallet-balance-improved', currentWallet?.id, currentWallet?.xpub],
@@ -772,6 +774,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Guard against undefined wallet during state transitions
       if (!currentWallet || !currentWallet.xpub) {
         console.log('⏸️ Skipping balance fetch - no current wallet');
+        // Try to load persisted balance if available
+        if (currentWallet?.id) {
+          const persistedBalance = await getPersistedBalance(currentWallet.id);
+          if (persistedBalance !== null) {
+            console.log('📦 Using persisted balance while wallet loads:', persistedBalance, 'BTC');
+            return persistedBalance;
+          }
+        }
         return 0;
       }
       
@@ -780,6 +790,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping balance fetch - wallet data not yet hydrated from storage');
+        // Try to load persisted balance as fallback
+        const persistedBalance = await getPersistedBalance(currentWallet.id);
+        if (persistedBalance !== null) {
+          console.log('📦 Using persisted balance while hydrating:', persistedBalance, 'BTC');
+          return persistedBalance;
+        }
         return 0;
       }
       
@@ -789,20 +805,65 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         
         if (result.error) {
           console.warn('❌ Wallet balance fetch failed:', result.error);
+          // On error, try to return persisted balance if available
+          const persistedBalance = await getPersistedBalance(currentWallet.id);
+          if (persistedBalance !== null) {
+            console.log('📦 Using persisted balance after fetch error:', persistedBalance, 'BTC');
+            return persistedBalance;
+          }
           return 0;
         }
         
         if (!result.data) {
           console.log('ℹ️ No wallet data returned for balance');
+          // Try persisted balance
+          const persistedBalance = await getPersistedBalance(currentWallet.id);
+          if (persistedBalance !== null) {
+            console.log('📦 Using persisted balance (no fresh data):', persistedBalance, 'BTC');
+            return persistedBalance;
+          }
           return 0;
         }
         
-        console.log('✅ Wallet balance fetched for', currentWallet.name, ':', result.data.balanceBTC, 'BTC');
-        return result.data.balanceBTC || 0;
+        const freshBalance = result.data.balanceBTC || 0;
+        console.log('✅ Wallet balance fetched for', currentWallet.name, ':', freshBalance, 'BTC');
+        
+        // Persist the fresh data for next app start
+        // This includes balance, transactions, and UTXOs for complete wallet state
+        try {
+          await persistWalletData(
+            currentWallet.id,
+            currentWallet.xpub,
+            freshBalance,
+            result.data.transactions || [],
+            result.data.utxos || []
+          );
+        } catch (persistError) {
+          console.warn('⚠️ Failed to persist wallet data:', persistError);
+          // Continue with fresh data even if persistence fails
+        }
+        
+        return freshBalance;
       } catch (error) {
         console.warn('❌ Improved balance fetch failed:', error);
+        // On error, try to return persisted balance if available
+        const persistedBalance = await getPersistedBalance(currentWallet.id);
+        if (persistedBalance !== null) {
+          console.log('📦 Using persisted balance after fetch exception:', persistedBalance, 'BTC');
+          return persistedBalance;
+        }
         return 0; // Return 0 instead of throwing
       }
+    },
+    // IMPORTANT: Set initialData from persisted cache for instant display
+    initialData: async () => {
+      if (!currentWallet?.id) return 0;
+      const persisted = await getPersistedBalance(currentWallet.id);
+      if (persisted !== null) {
+        console.log('📦 Initial data loaded from persistence:', persisted, 'BTC');
+        return persisted;
+      }
+      return 0;
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
@@ -817,12 +878,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnReconnect: true, // Refetch when network reconnects to get latest data
   });
 
-  // Transaction history query
-  // NOTE: Polling strategy balances responsiveness with API usage:
-  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
-  // - Underlying address/tx caches have 2-minute TTL to prevent excessive API calls
-  // - Result: React Query refetches every 30s, but cache layer prevents API spam
-  // - This ensures new transactions appear quickly after send/receive
+  // Transaction history query with persistent caching
+  // NOTE: Uses "stale-while-revalidate" pattern for transaction history:
+  // 1. Load persisted transactions immediately (fast startup, never blank)
+  // 2. Fetch fresh data in background
+  // 3. Merge fresh data with persisted data (confirmed txs are immutable)
+  // 4. Persist combined data for next app start
+  // This ensures users never see blank transaction list after data was previously loaded
   const transactionsQuery = useQuery({
     // eslint-disable-next-line @tanstack/query/exhaustive-deps
     queryKey: ['transactions-improved', currentWallet?.id, currentWallet?.xpub],
@@ -830,6 +892,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Guard against undefined wallet during state transitions
       if (!currentWallet || !currentWallet.xpub) {
         console.log('⏸️ Skipping transaction fetch - no current wallet');
+        // Try to load persisted transactions if available
+        if (currentWallet?.id) {
+          const persistedTxs = await getPersistedTransactions(currentWallet.id);
+          if (persistedTxs && persistedTxs.length > 0) {
+            console.log('📦 Using persisted transactions while wallet loads:', persistedTxs.length, 'txs');
+            return persistedTxs;
+          }
+        }
         return [];
       }
       
@@ -838,6 +908,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping transaction fetch - wallet data not yet hydrated from storage');
+        // Try to load persisted transactions as fallback
+        const persistedTxs = await getPersistedTransactions(currentWallet.id);
+        if (persistedTxs && persistedTxs.length > 0) {
+          console.log('📦 Using persisted transactions while hydrating:', persistedTxs.length, 'txs');
+          return persistedTxs;
+        }
         return [];
       }
       
@@ -848,20 +924,53 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         
         if (result.error) {
           console.warn('❌ Transaction fetch failed for', currentWallet.name, ':', result.error);
+          // On error, try to return persisted transactions if available
+          const persistedTxs = await getPersistedTransactions(currentWallet.id);
+          if (persistedTxs && persistedTxs.length > 0) {
+            console.log('📦 Using persisted transactions after fetch error:', persistedTxs.length, 'txs');
+            return persistedTxs;
+          }
           return [];
         }
         
         if (!result.data) {
           console.log('ℹ️ No wallet data returned for', currentWallet.name);
+          // Try persisted transactions
+          const persistedTxs = await getPersistedTransactions(currentWallet.id);
+          if (persistedTxs && persistedTxs.length > 0) {
+            console.log('📦 Using persisted transactions (no fresh data):', persistedTxs.length, 'txs');
+            return persistedTxs;
+          }
           return [];
         }
         
-        console.log('✅ Transactions fetched for', currentWallet.name, ':', result.data.transactions?.length || 0, 'transactions');
-        return result.data.transactions || [];
+        const freshTransactions = result.data.transactions || [];
+        console.log('✅ Transactions fetched for', currentWallet.name, ':', freshTransactions.length, 'transactions');
+        
+        // Note: persistWalletData is already called in balanceQuery, so we don't need to call it again here
+        // to avoid race conditions. The balance query persists all wallet data including transactions.
+        
+        return freshTransactions;
       } catch (error) {
         console.warn('❌ Transaction fetch failed for', currentWallet.name, ':', error);
+        // On error, try to return persisted transactions if available
+        const persistedTxs = await getPersistedTransactions(currentWallet.id);
+        if (persistedTxs && persistedTxs.length > 0) {
+          console.log('📦 Using persisted transactions after fetch exception:', persistedTxs.length, 'txs');
+          return persistedTxs;
+        }
         return []; // Return empty array instead of throwing
       }
+    },
+    // IMPORTANT: Set initialData from persisted cache for instant display
+    initialData: async () => {
+      if (!currentWallet?.id) return [];
+      const persisted = await getPersistedTransactions(currentWallet.id);
+      if (persisted && persisted.length > 0) {
+        console.log('📦 Initial transaction data loaded from persistence:', persisted.length, 'txs');
+        return persisted;
+      }
+      return [];
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
@@ -927,12 +1036,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     refetchOnReconnect: true, // Refetch when network reconnects
   });
 
-  // Wallet UTXOs query
-  // NOTE: Polling strategy balances responsiveness with API usage:
-  // - Checks every 30 seconds for updates (staleTime: 0 ensures data is always stale)
-  // - Underlying UTXO caches have 10-minute TTL to prevent excessive API calls
-  // - Result: React Query refetches every 30s, but cache layer prevents API spam
-  // - This ensures UTXOs are updated quickly after send/receive for accurate balance
+  // Wallet UTXOs query with persistent caching
+  // NOTE: Uses "stale-while-revalidate" pattern for UTXOs:
+  // 1. Load persisted UTXOs immediately (fast startup, never blank)
+  // 2. Fetch fresh data in background
+  // 3. Update with fresh data when available
+  // 4. Persist fresh data for next app start
+  // This ensures users never see blank UTXO list after data was previously loaded
   const utxosQuery = useQuery({
     // QueryKey intentionally includes only wallet id and xpub for proper cache invalidation
     // Dependencies like cryptoReady are handled by the 'enabled' option
@@ -941,6 +1051,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Guard against undefined wallet during state transitions
       if (!currentWallet || !currentWallet.xpub) {
         console.log('⏸️ Skipping UTXO fetch - no current wallet');
+        // Try to load persisted UTXOs if available
+        if (currentWallet?.id) {
+          const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
+          if (persistedUtxos && persistedUtxos.length > 0) {
+            console.log('📦 Using persisted UTXOs while wallet loads:', persistedUtxos.length, 'UTXOs');
+            return persistedUtxos;
+          }
+        }
         return [];
       }
       
@@ -949,6 +1067,12 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // to protect against edge cases during rapid state transitions or React Query timing issues
       if (!isWalletDataHydrated) {
         console.log('⏸️ Skipping UTXO fetch - wallet data not yet hydrated from storage');
+        // Try to load persisted UTXOs as fallback
+        const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
+        if (persistedUtxos && persistedUtxos.length > 0) {
+          console.log('📦 Using persisted UTXOs while hydrating:', persistedUtxos.length, 'UTXOs');
+          return persistedUtxos;
+        }
         return [];
       }
       
@@ -959,20 +1083,53 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         
         if (result.error) {
           console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', result.error);
+          // On error, try to return persisted UTXOs if available
+          const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
+          if (persistedUtxos && persistedUtxos.length > 0) {
+            console.log('📦 Using persisted UTXOs after fetch error:', persistedUtxos.length, 'UTXOs');
+            return persistedUtxos;
+          }
           return [];
         }
         
         if (!result.data) {
           console.log('ℹ️ No wallet data returned for', currentWallet.name);
+          // Try persisted UTXOs
+          const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
+          if (persistedUtxos && persistedUtxos.length > 0) {
+            console.log('📦 Using persisted UTXOs (no fresh data):', persistedUtxos.length, 'UTXOs');
+            return persistedUtxos;
+          }
           return [];
         }
         
-        console.log('✅ UTXOs fetched for', currentWallet.name, ':', result.data?.utxos?.length || 0, 'UTXOs');
-        return result.data?.utxos || [];
+        const freshUtxos = result.data?.utxos || [];
+        console.log('✅ UTXOs fetched for', currentWallet.name, ':', freshUtxos.length, 'UTXOs');
+        
+        // Note: persistWalletData is already called in balanceQuery, so we don't need to call it again here
+        // to avoid race conditions. The balance query persists all wallet data including UTXOs.
+        
+        return freshUtxos;
       } catch (error) {
         console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', error);
+        // On error, try to return persisted UTXOs if available
+        const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
+        if (persistedUtxos && persistedUtxos.length > 0) {
+          console.log('📦 Using persisted UTXOs after fetch exception:', persistedUtxos.length, 'UTXOs');
+          return persistedUtxos;
+        }
         return []; // Return empty array instead of throwing
       }
+    },
+    // IMPORTANT: Set initialData from persisted cache for instant display
+    initialData: async () => {
+      if (!currentWallet?.id) return [];
+      const persisted = await getPersistedUTXOs(currentWallet.id);
+      if (persisted && persisted.length > 0) {
+        console.log('📦 Initial UTXO data loaded from persistence:', persisted.length, 'UTXOs');
+        return persisted;
+      }
+      return [];
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
@@ -1891,6 +2048,14 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         } catch (e) {
           console.warn('Failed to clear cache for deleted wallet:', e);
         }
+        
+        // Clear persisted wallet data (balance, transactions, UTXOs)
+        try {
+          console.log('🧹 Clearing persisted wallet data for deleted wallet');
+          await clearPersistedWalletData(walletId);
+        } catch (e) {
+          console.warn('Failed to clear persisted wallet data:', e);
+        }
       }
       
       // Wait for state to settle before invalidating queries
@@ -1923,6 +2088,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const allKeys = await AsyncStorage.getAllKeys();
       console.log('📋 Found AsyncStorage keys:', allKeys);
 
+      // Clear all persisted wallet data before clearing AsyncStorage
+      await clearAllPersistedWalletData();
+      
       await AsyncStorage.clear();
 
       setWallets([]);
