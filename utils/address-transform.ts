@@ -22,6 +22,8 @@ export interface AddressServiceData {
   isUsed: boolean;
   balance: number;
   txCount: number;
+  receivedCount: number;
+  sentCount: number;
   type: 'receiving' | 'change';
 }
 
@@ -40,8 +42,8 @@ export function transformAddressDataForUI(
     index: addrData.index,
     balance: addrData.balance,
     txCount: addrData.txCount,
-    receivedCount: 0, // Will be calculated separately if needed
-    sentCount: 0, // Will be calculated separately if needed
+    receivedCount: addrData.receivedCount,
+    sentCount: addrData.sentCount,
     isUsed: addrData.isUsed,
     type: addrData.type,
     derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
