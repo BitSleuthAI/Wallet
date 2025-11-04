@@ -4,6 +4,7 @@ import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
+import { useQueryClient } from '@tanstack/react-query';
 import { Stack, router } from 'expo-router';
 import {
   ArrowLeft,
@@ -16,7 +17,7 @@ import {
   Wallet,
   Zap,
 } from 'lucide-react-native';
-import React from 'react';
+import React, { useEffect } from 'react';
 import {
   Alert,
   Platform,
@@ -27,9 +28,37 @@ import {
   View,
 } from 'react-native';
 
+// Wallet service import with platform detection
+let walletService: any;
+try {
+  console.log('📦 Loading wallet service in wallet settings for platform:', Platform.OS);
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const importedService = require('@/services/wallet-service');
+  
+  console.log('📦 Wallet settings imported service keys:', Object.keys(importedService));
+  
+  // Ensure functions are properly bound and accessible
+  walletService = {
+    generateAddressesForView: importedService.generateAddressesForView,
+  };
+  
+  // Verify required functions are available
+  if (typeof walletService.generateAddressesForView !== 'function') {
+    throw new Error('Missing generateAddressesForView function in wallet service');
+  }
+  
+  console.log('✅ Wallet service loaded successfully in wallet settings for', Platform.OS);
+} catch (error) {
+  console.error('❌ Failed to load wallet service in wallet settings for', Platform.OS, ':', error);
+  // Provide a minimal fallback
+  walletService = {
+    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
+  };
+}
 
 export default function WalletSettingsScreen() {
   const walletContext = useWallet();
+  const queryClient = useQueryClient();
   
   // Safely destructure with fallbacks to prevent crashes
   const { 
@@ -38,6 +67,64 @@ export default function WalletSettingsScreen() {
     deleteWallet,
     wallets = []
   } = walletContext || {};
+
+  // Prefetch address data in the background when this screen loads
+  // This ensures instant loading when user navigates to "View Addresses"
+  // Following industry best practices from Electrum, BlueWallet, Trust Wallet
+  useEffect(() => {
+    if (!currentWallet?.xpub) {
+      return;
+    }
+
+    const prefetchAddressData = async () => {
+      try {
+        console.log('🚀 Prefetching address data in background...');
+        
+        // Use queryClient.prefetchQuery to load data without triggering UI updates
+        // This matches the exact query key used in wallet-addresses.tsx
+        await queryClient.prefetchQuery({
+          queryKey: ['wallet-addresses-all-chains', currentWallet.id, currentWallet.xpub],
+          queryFn: async () => {
+            console.log(`🔍 Background prefetch: Generating addresses for both chains...`);
+            
+            // Fetch both receiving and change addresses in parallel
+            const [receivingData, changeData] = await Promise.all([
+              walletService.generateAddressesForView(currentWallet.xpub, 'receiving'),
+              walletService.generateAddressesForView(currentWallet.xpub, 'change'),
+            ]);
+            
+            console.log(`✅ Background prefetch complete: ${receivingData.length} receiving, ${changeData.length} change addresses`);
+            
+            // Combine into the same format as wallet-addresses.tsx
+            const allAddresses = [...receivingData, ...changeData].map((addrData) => ({
+              address: addrData.address,
+              index: addrData.index,
+              balance: addrData.balance,
+              txCount: addrData.txCount,
+              receivedCount: 0,
+              sentCount: 0,
+              isUsed: addrData.isUsed,
+              type: addrData.type,
+              derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
+            }));
+            
+            return allAddresses;
+          },
+          staleTime: 300000, // 5 minutes - same as wallet-addresses.tsx
+        });
+        
+        console.log('✅ Address data prefetched successfully');
+      } catch (error) {
+        // Silently fail - this is just a prefetch optimization
+        console.log('⚠️ Background address prefetch failed (non-critical):', error);
+      }
+    };
+
+    // Start prefetch after a small delay to avoid blocking the UI
+    const timeoutId = setTimeout(prefetchAddressData, 500);
+    
+    return () => clearTimeout(timeoutId);
+  }, [currentWallet?.id, currentWallet?.xpub, queryClient]);
 
   const handleDeleteWallet = () => {
     // Check if there's no current wallet
