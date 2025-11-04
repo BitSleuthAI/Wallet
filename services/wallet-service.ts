@@ -1051,22 +1051,30 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
             txCount = txsResult.length;
             
             // Calculate received and sent counts for this specific address
+            // Optimized: Use for loop instead of nested .some() for better performance
+            // Note: tx data comes from Esplora API - types are checked at runtime
             for (const tx of txsResult) {
               let hasReceived = false;
               let hasSent = false;
               
               // Check if this address received funds (appears in outputs)
               if (tx.vout && Array.isArray(tx.vout)) {
-                hasReceived = tx.vout.some((output: any) => 
-                  output.scriptpubkey_address === addrMeta.address
-                );
+                for (const output of tx.vout) {
+                  if (output.scriptpubkey_address === addrMeta.address) {
+                    hasReceived = true;
+                    break; // Early exit once found
+                  }
+                }
               }
               
               // Check if this address sent funds (appears in inputs)
               if (tx.vin && Array.isArray(tx.vin)) {
-                hasSent = tx.vin.some((input: any) => 
-                  input.prevout?.scriptpubkey_address === addrMeta.address
-                );
+                for (const input of tx.vin) {
+                  if (input.prevout?.scriptpubkey_address === addrMeta.address) {
+                    hasSent = true;
+                    break; // Early exit once found
+                  }
+                }
               }
               
               // Count the transaction appropriately

@@ -79,7 +79,7 @@ function ReceiveScreenContent() {
         }
       } catch (error) {
         console.error('❌ Failed to load first unused address:', error);
-        // Fallback to last wallet address
+        // Use same fallback logic as above
         const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
         setCurrentAddress(fallbackAddress);
       } finally {
@@ -137,19 +137,16 @@ function ReceiveScreenContent() {
       if (result.success && result.wallet) {
         console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
         
+        // Fallback address in case first unused lookup fails
+        const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
+        
         // Reload the first unused address after generating a new one
         try {
           const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
-          if (unusedAddress) {
-            setCurrentAddress(unusedAddress);
-          } else {
-            // Fallback to newly generated address
-            setCurrentAddress(result.wallet.addresses[result.wallet.addresses.length - 1]);
-          }
+          setCurrentAddress(unusedAddress || newlyGeneratedAddress);
         } catch (error) {
           console.error('❌ Failed to reload first unused address:', error);
-          // Fallback to newly generated address
-          setCurrentAddress(result.wallet.addresses[result.wallet.addresses.length - 1]);
+          setCurrentAddress(newlyGeneratedAddress);
         }
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
