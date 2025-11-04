@@ -219,6 +219,11 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const [walletUtxos, setWalletUtxos] = useState<Record<string, UTXO[]>>({});
   const [utxosCacheTimestamp, setUtxosCacheTimestamp] = useState<Record<string, number>>({});
   const [utxosCompleteModeRan, setUtxosCompleteModeRan] = useState<Record<string, boolean>>({});
+  
+  // Persisted wallet data state (eagerly loaded for instant display)
+  const [persistedBalances, setPersistedBalances] = useState<Record<string, number>>({});
+  const [persistedTransactions, setPersistedTransactions] = useState<Record<string, Transaction[]>>({});
+  const [persistedUtxos, setPersistedUtxos] = useState<Record<string, UTXO[]>>({});
 
   // Computed current wallet
   const currentWallet = wallets.find(w => w.id === currentWalletId) || wallets[0] || null;
@@ -610,6 +615,35 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.log('📍 Current wallet updated:', currentWallet.name, 'ID:', currentWalletId);
     }
   }, [currentWalletId, currentWallet]);
+  
+  // Load persisted data eagerly when wallet changes (for instant display in queries)
+  useEffect(() => {
+    if (!currentWallet?.id) return;
+    
+    const loadPersistedData = async () => {
+      try {
+        const [balance, transactions, utxos] = await Promise.all([
+          getPersistedBalance(currentWallet.id),
+          getPersistedTransactions(currentWallet.id),
+          getPersistedUTXOs(currentWallet.id),
+        ]);
+        
+        if (balance !== null) {
+          setPersistedBalances(prev => ({ ...prev, [currentWallet.id]: balance }));
+        }
+        if (transactions !== null) {
+          setPersistedTransactions(prev => ({ ...prev, [currentWallet.id]: transactions }));
+        }
+        if (utxos !== null) {
+          setPersistedUtxos(prev => ({ ...prev, [currentWallet.id]: utxos }));
+        }
+      } catch (error) {
+        console.warn('⚠️ Failed to load persisted data for wallet:', currentWallet.id, error);
+      }
+    };
+    
+    loadPersistedData();
+  }, [currentWallet?.id]);
 
   useEffect(() => {
     if (coinControlSelectedQuery.data !== undefined) {
@@ -855,16 +889,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return 0; // Return 0 instead of throwing
       }
     },
-    // IMPORTANT: Set initialData from persisted cache for instant display
-    initialData: async () => {
-      if (!currentWallet?.id) return 0;
-      const persisted = await getPersistedBalance(currentWallet.id);
-      if (persisted !== null) {
-        console.log('📦 Initial data loaded from persistence:', persisted, 'BTC');
-        return persisted;
-      }
-      return 0;
-    },
+    // IMPORTANT: Use placeholderData from eagerly-loaded persisted cache for instant display
+    placeholderData: currentWallet?.id ? persistedBalances[currentWallet.id] || 0 : 0,
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
@@ -962,16 +988,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         return []; // Return empty array instead of throwing
       }
     },
-    // IMPORTANT: Set initialData from persisted cache for instant display
-    initialData: async () => {
-      if (!currentWallet?.id) return [];
-      const persisted = await getPersistedTransactions(currentWallet.id);
-      if (persisted && persisted.length > 0) {
-        console.log('📦 Initial transaction data loaded from persistence:', persisted.length, 'txs');
-        return persisted;
-      }
-      return [];
-    },
+    // IMPORTANT: Use placeholderData from eagerly-loaded persisted cache for instant display
+    placeholderData: currentWallet?.id ? persistedTransactions[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
     refetchIntervalInBackground: true, // Continue polling even when component is not focused
@@ -1113,24 +1131,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       } catch (error) {
         console.warn('❌ UTXO fetch failed for', currentWallet.name, ':', error);
         // On error, try to return persisted UTXOs if available
-        const persistedUtxos = await getPersistedUTXOs(currentWallet.id);
-        if (persistedUtxos && persistedUtxos.length > 0) {
-          console.log('📦 Using persisted UTXOs after fetch exception:', persistedUtxos.length, 'UTXOs');
-          return persistedUtxos;
+        const persistedUtxosData = await getPersistedUTXOs(currentWallet.id);
+        if (persistedUtxosData && persistedUtxosData.length > 0) {
+          console.log('📦 Using persisted UTXOs after fetch exception:', persistedUtxosData.length, 'UTXOs');
+          return persistedUtxosData;
         }
         return []; // Return empty array instead of throwing
       }
     },
-    // IMPORTANT: Set initialData from persisted cache for instant display
-    initialData: async () => {
-      if (!currentWallet?.id) return [];
-      const persisted = await getPersistedUTXOs(currentWallet.id);
-      if (persisted && persisted.length > 0) {
-        console.log('📦 Initial UTXO data loaded from persistence:', persisted.length, 'UTXOs');
-        return persisted;
-      }
-      return [];
-    },
+    // IMPORTANT: Use placeholderData from eagerly-loaded persisted cache for instant display
+    placeholderData: currentWallet?.id ? persistedUtxos[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
     refetchIntervalInBackground: true, // Continue polling even when component is not focused

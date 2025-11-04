@@ -20,6 +20,9 @@ const WALLET_BALANCE_PREFIX = 'wallet_balance_';
 const WALLET_TRANSACTIONS_PREFIX = 'wallet_transactions_';
 const WALLET_UTXOS_PREFIX = 'wallet_utxos_';
 
+// Persistence version for future data migration
+const PERSISTENCE_VERSION = '1.0.0';
+
 interface PersistedWalletData {
   walletId: string;
   xpub: string;
@@ -139,7 +142,6 @@ export async function persistWalletData(
 ): Promise<void> {
   try {
     const now = Date.now();
-    const version = '1.0.0'; // For future data migration
     
     // Persist full wallet data bundle
     const walletData: PersistedWalletData = {
@@ -149,7 +151,7 @@ export async function persistWalletData(
       transactions,
       utxos,
       lastUpdated: now,
-      version,
+      version: PERSISTENCE_VERSION,
     };
     
     // Store the full data
