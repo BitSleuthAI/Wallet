@@ -1078,6 +1078,9 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
               }
               
               // Count the transaction appropriately
+              // Note: A transaction can be counted in both received and sent if the address
+              // appears in both inputs and outputs (e.g., change addresses, consolidation)
+              // This is correct behavior as it represents both sending from and receiving to the same address
               if (hasReceived) receivedCount++;
               if (hasSent) sentCount++;
             }
