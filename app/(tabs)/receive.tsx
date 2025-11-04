@@ -3,6 +3,7 @@ import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
@@ -19,6 +20,11 @@ import {
     View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+
+// Load wallet service using shared utility
+const walletService = loadWalletService([
+  'getFirstUnusedReceivingAddress',
+]);
 
 // Wrapper component that checks for context availability
 export default function ReceiveScreen() {
@@ -42,11 +48,50 @@ function ReceiveScreenContent() {
   const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const spinValue = useRef(new Animated.Value(0)).current;
   
-  // Initialize state hooks with current wallet's last address
-  const [currentAddress, setCurrentAddress] = useState<string>(
-    currentWallet?.addresses?.[currentWallet.addresses.length - 1] || ''
-  );
+  // Initialize state hooks with empty string, will be loaded async
+  const [currentAddress, setCurrentAddress] = useState<string>('');
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
+  const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
+
+  // Load first unused address when wallet changes
+  // Note: We track the xpub to detect wallet switches. The effect will also run when
+  // addresses change, which is acceptable because the getFirstUnusedReceivingAddress
+  // function uses cached discovery data, making subsequent calls efficient.
+  useEffect(() => {
+    const loadFirstUnusedAddress = async () => {
+      if (!currentWallet?.xpub) {
+        setIsLoadingAddress(false);
+        return;
+      }
+
+      try {
+        setIsLoadingAddress(true);
+        console.log('🔍 Loading first unused receiving address...');
+        
+        // Get first unused address within gap limit
+        const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
+        
+        if (unusedAddress) {
+          console.log('✅ Found first unused address:', unusedAddress.substring(0, 20) + '...');
+          setCurrentAddress(unusedAddress);
+        } else {
+          // Fallback to last wallet address if no unused found
+          console.log('⚠️ No unused address found, using last wallet address');
+          const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
+          setCurrentAddress(fallbackAddress);
+        }
+      } catch (error) {
+        console.error('❌ Failed to load first unused address:', error);
+        // Use same fallback logic as above
+        const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
+        setCurrentAddress(fallbackAddress);
+      } finally {
+        setIsLoadingAddress(false);
+      }
+    };
+
+    loadFirstUnusedAddress();
+  }, [currentWallet]);
 
   // Spin animation for the refresh icon
   useEffect(() => {
@@ -78,16 +123,6 @@ function ReceiveScreenContent() {
     outputRange: ['0deg', '360deg'],
   });
 
-  // Update current address when wallet changes
-  React.useEffect(() => {
-    if (currentWallet?.addresses?.length) {
-      const latestAddress = currentWallet.addresses[currentWallet.addresses.length - 1];
-      if (latestAddress && latestAddress !== currentAddress) {
-        setCurrentAddress(latestAddress);
-      }
-    }
-  }, [currentWallet?.addresses, currentAddress]);
-
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
@@ -103,9 +138,18 @@ function ReceiveScreenContent() {
       const result = await generateNewAddress(currentWallet);
       if (result.success && result.wallet) {
         console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
-        setCurrentAddress(result.wallet.addresses[result.wallet.addresses.length - 1]);
-        // Remove the success alert for faster UX
-        // Alert.alert('Success', 'New address generated successfully');
+        
+        // Fallback address in case first unused lookup fails
+        const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
+        
+        // Reload the first unused address after generating a new one
+        try {
+          const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
+          setCurrentAddress(unusedAddress || newlyGeneratedAddress);
+        } catch (error) {
+          console.error('❌ Failed to reload first unused address:', error);
+          setCurrentAddress(newlyGeneratedAddress);
+        }
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
         Alert.alert('Warning', result.error || 'Address generation failed');
@@ -210,7 +254,13 @@ function ReceiveScreenContent() {
 
           {/* QR Code */}
           <View style={styles.qrContainer}>
-            {currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
+            {isLoadingAddress ? (
+              <View style={styles.qrPlaceholder}>
+                <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
+                  Loading address...
+                </Text>
+              </View>
+            ) : currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
               <QRCode
                 value={currentAddress}
                 size={220}
@@ -227,7 +277,7 @@ function ReceiveScreenContent() {
             ) : (
               <View style={styles.qrPlaceholder}>
                 <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
-                  {currentWallet ? 'Generating address...' : 'No address available'}
+                  {currentWallet ? 'No address available' : 'No wallet selected'}
                 </Text>
               </View>
             )}

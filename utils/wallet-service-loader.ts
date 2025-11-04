@@ -20,6 +20,8 @@ export interface WalletService {
     isUsed: boolean;
     balance: number;
     txCount: number;
+    receivedCount: number;
+    sentCount: number;
     type: 'receiving' | 'change';
   }>>;
   generateAddressBatchForView?: (
@@ -32,7 +34,10 @@ export interface WalletService {
     isUsed: boolean;
     balance: number;
     txCount: number;
+    receivedCount: number;
+    sentCount: number;
   }>>;
+  getFirstUnusedReceivingAddress?: (xpub: string) => Promise<string | null>;
   clearAddressCache?: (xpub?: string) => void;
 }
 
@@ -58,6 +63,7 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
       'generateNewAddress',
       'generateAddressesForView',
       'generateAddressBatchForView',
+      'getFirstUnusedReceivingAddress',
       'clearAddressCache',
     ];
     
@@ -95,6 +101,9 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
         throw new Error('Wallet service not available');
       },
       generateAddressesForView: async () => {
+        throw new Error('Wallet service not available');
+      },
+      getFirstUnusedReceivingAddress: async () => {
         throw new Error('Wallet service not available');
       },
       clearAddressCache: () => {

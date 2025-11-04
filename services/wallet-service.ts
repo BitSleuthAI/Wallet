@@ -973,12 +973,46 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 };
 
 /**
+ * Get the first unused address within gap limit for receiving funds
+ * This ensures that used addresses are not displayed as QR codes
+ * Returns the address string or null if none found
+ */
+export async function getFirstUnusedReceivingAddress(xpub: string): Promise<string | null> {
+  try {
+    console.log('🔍 Finding first unused receiving address within gap limit...');
+    
+    // Discover all addresses with metadata
+    const addressMetadata = await discoverUsedAddresses(xpub, true);
+    
+    // Filter to only external chain (0) addresses for receiving
+    const externalAddresses = addressMetadata.filter(a => a.chain === 0);
+    
+    // Sort by index to ensure we get the first one
+    externalAddresses.sort((a, b) => a.index - b.index);
+    
+    // Find the first unused address
+    const firstUnused = externalAddresses.find(a => !a.isUsed);
+    
+    if (firstUnused) {
+      console.log(`✅ Found first unused address at index ${firstUnused.index}: ${firstUnused.address.substring(0, 20)}...`);
+      return firstUnused.address;
+    }
+    
+    console.log('⚠️ No unused address found in discovered addresses');
+    return null;
+  } catch (error) {
+    console.error('❌ Failed to find first unused receiving address:', error);
+    return null;
+  }
+}
+
+/**
  * Generate addresses for view addresses screen following gap limit logic
  * Returns addresses with their usage status following BIP44 gap limit rules
  * OPTIMIZED: Uses cached metadata from discoverUsedAddresses to avoid redundant blockchain queries
  * This is the same caching strategy used for new address generation
  */
-export async function generateAddressesForView(xpub: string, chainType: 'receiving' | 'change' = 'receiving'): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}>> {
+export async function generateAddressesForView(xpub: string, chainType: 'receiving' | 'change' = 'receiving'): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number, type: 'receiving' | 'change'}>> {
   console.log(`🔍 Generating addresses for view: ${chainType} chain (using cached metadata)`);
   
   try {
@@ -996,13 +1030,15 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
     
     // Now fetch balance and transaction count for each address
     // This is still necessary, but we're reusing the address discovery cache
-    const result: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, type: 'receiving' | 'change'}> = [];
+    const result: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number, type: 'receiving' | 'change'}> = [];
     
     for (const addrMeta of chainAddresses) {
       try {
         // Only fetch stats if the address is used (optimization)
         let balance = 0;
         let txCount = 0;
+        let receivedCount = 0;
+        let sentCount = 0;
         
         if (addrMeta.isUsed) {
           const [txsResult, statsResult] = await Promise.all([
@@ -1010,7 +1046,46 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
             getAddressStats(addrMeta.address)
           ]);
           
-          txCount = txsResult && Array.isArray(txsResult) ? txsResult.length : 0;
+          // Calculate transaction counts
+          if (txsResult && Array.isArray(txsResult)) {
+            txCount = txsResult.length;
+            
+            // Calculate received and sent counts for this specific address
+            // Optimized: Use for loop instead of nested .some() for better performance
+            // Note: tx data comes from Esplora API - types are checked at runtime
+            for (const tx of txsResult) {
+              let hasReceived = false;
+              let hasSent = false;
+              
+              // Check if this address received funds (appears in outputs)
+              if (tx.vout && Array.isArray(tx.vout)) {
+                for (const output of tx.vout) {
+                  if (output.scriptpubkey_address === addrMeta.address) {
+                    hasReceived = true;
+                    break; // Early exit once found
+                  }
+                }
+              }
+              
+              // Check if this address sent funds (appears in inputs)
+              if (tx.vin && Array.isArray(tx.vin)) {
+                for (const input of tx.vin) {
+                  if (input.prevout?.scriptpubkey_address === addrMeta.address) {
+                    hasSent = true;
+                    break; // Early exit once found
+                  }
+                }
+              }
+              
+              // Count the transaction appropriately
+              // Note: A transaction can be counted in both received and sent if the address
+              // appears in both inputs and outputs (e.g., change addresses, consolidation)
+              // This is correct behavior as it represents both sending from and receiving to the same address
+              if (hasReceived) receivedCount++;
+              if (hasSent) sentCount++;
+            }
+          }
+          
           balance = statsResult.data?.chain_stats ? 
             (statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum) / 1e8 : 0;
         }
@@ -1021,11 +1096,13 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
           isUsed: addrMeta.isUsed,
           balance,
           txCount,
+          receivedCount,
+          sentCount,
           type: chainType
         });
         
         if (addrMeta.isUsed) {
-          console.log(`✅ ${chainType} address ${addrMeta.index}: ${txCount} txs, ${balance.toFixed(8)} BTC`);
+          console.log(`✅ ${chainType} address ${addrMeta.index}: ${txCount} txs (${receivedCount} received, ${sentCount} sent), ${balance.toFixed(8)} BTC`);
         }
         
         // Small delay to avoid rate limiting (only for used addresses)
@@ -1041,6 +1118,8 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
           isUsed: addrMeta.isUsed,
           balance: 0,
           txCount: 0,
+          receivedCount: 0,
+          sentCount: 0,
           type: chainType
         });
       }
@@ -1057,8 +1136,10 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
 /**
  * Generate addresses in batches for view addresses screen (DEPRECATED - use generateAddressesForView instead)
  * Returns addresses with their usage status
+ * Note: This function returns receivedCount and sentCount as 0 for backward compatibility
+ * Use generateAddressesForView instead for accurate transaction counts
  */
-export async function generateAddressBatchForView(xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}>> {
+export async function generateAddressBatchForView(xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number}>> {
   console.log(`🔍 Generating address batch for view: start=${startIndex}, size=${batchSize}`);
   
   try {
@@ -1077,7 +1158,7 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
     const node = bip32Instance.fromBase58(xpub);
     const batch = await deriveAddressBatch(node, 0, startIndex, startIndex + batchSize);
     
-    const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}> = [];
+    const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number}> = [];
     
     // Check each address in the batch
     for (let i = 0; i < batch.length; i++) {
@@ -1103,7 +1184,9 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
           index,
           isUsed: hasTransactions || balance > 0,
           balance,
-          txCount
+          txCount,
+          receivedCount: 0, // Deprecated function doesn't calculate this for performance
+          sentCount: 0, // Deprecated function doesn't calculate this for performance
         });
         
         console.log(`✅ Address ${index}: ${hasTransactions ? 'used' : 'unused'}, ${txCount} txs, ${balance.toFixed(8)} BTC`);
@@ -1116,7 +1199,9 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
           index,
           isUsed: false,
           balance: 0,
-          txCount: 0
+          txCount: 0,
+          receivedCount: 0,
+          sentCount: 0,
         });
       }
       
