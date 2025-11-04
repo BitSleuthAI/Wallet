@@ -35,18 +35,19 @@ export default function TabLayout() {
       minimizeBehavior={Platform.OS === 'ios' ? 'automatic' : undefined}
       // Android: always show labels
       labelVisibilityMode="labeled"
-      // Blur effect for tab bar background (iOS) - adapts to theme
-      // Using 'extraLight' for light mode provides better contrast with warm coral gradient
-      blurEffect={theme.isDark ? 'dark' : 'extraLight'}
-      // Background color with transparency for glass effect
+      // Blur effect for tab bar background (iOS) - consistent across all screens
+      // Using consistent blur effect to prevent color shifts between tabs
+      blurEffect={theme.isDark ? 'dark' : 'light'}
+      // Background color with consistent opacity for stable glass effect
+      // Increased opacity to prevent screen content from bleeding through
       backgroundColor={Platform.select({
-        ios: theme.isDark ? '#00000066' : '#FFFFFF99',
+        ios: theme.isDark ? '#0F172AE6' : '#FFFFFFE6',
         android: theme.colors.background,
       })}
-      // Disable transparent on scroll edge for consistent appearance
-      disableTransparentOnScrollEdge={false}
-      // Shadow color for depth
-      shadowColor={Platform.OS === 'ios' ? '#00000033' : undefined}
+      // Enable transparent on scroll edge for better iOS glass effect
+      disableTransparentOnScrollEdge={true}
+      // Shadow color for depth - consistent across themes
+      shadowColor={Platform.OS === 'ios' ? (theme.isDark ? '#00000066' : '#00000033') : undefined}
     >
       <NativeTabs.Trigger name="index">
         <Icon
