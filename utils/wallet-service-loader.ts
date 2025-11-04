@@ -6,10 +6,11 @@
  */
 
 import { Platform } from 'react-native';
+import type { Wallet } from '@/types/wallet';
 
 export interface WalletService {
   generateAddressFromXpub: (xpub: string, index: number) => Promise<string>;
-  generateNewAddress: (xpub: string) => Promise<string>;
+  generateNewAddress: (wallet: Wallet) => Promise<Wallet>;
   generateAddressesForView: (
     xpub: string,
     chainType: 'receiving' | 'change'
@@ -49,10 +50,10 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
     
     console.log('📦 Imported service keys:', Object.keys(importedService));
     
-    // Create wallet service object with only the requested functions
-    const walletService: any = {};
+    // Create wallet service object with proper typing
+    const walletService: Partial<WalletService> = {};
     
-    const allFunctions = [
+    const allFunctions: Array<keyof WalletService> = [
       'generateAddressFromXpub',
       'generateNewAddress',
       'generateAddressesForView',
@@ -63,14 +64,14 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
     // Include all available functions
     allFunctions.forEach(funcName => {
       if (typeof importedService[funcName] === 'function') {
-        walletService[funcName] = importedService[funcName];
+        (walletService as any)[funcName] = importedService[funcName];
       }
     });
     
     // Verify required functions are available
     if (requiredFunctions.length > 0) {
       const missingFunctions = requiredFunctions.filter(
-        func => typeof walletService[func] !== 'function'
+        func => typeof (walletService as any)[func] !== 'function'
       );
       
       if (missingFunctions.length > 0) {
@@ -85,8 +86,8 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
   } catch (error) {
     console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
     
-    // Provide a minimal fallback
-    const fallback: any = {
+    // Provide a minimal fallback with proper typing
+    const fallback: WalletService = {
       generateAddressFromXpub: async () => {
         throw new Error('Wallet service not available');
       },
@@ -101,6 +102,6 @@ export function loadWalletService(requiredFunctions: string[] = []): WalletServi
       },
     };
     
-    return fallback as WalletService;
+    return fallback;
   }
 }
