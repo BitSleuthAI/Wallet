@@ -40,10 +40,11 @@ export default function TabLayout() {
       // Blur effect for tab bar background (iOS) - consistent across all screens
       // Using consistent blur effect to prevent color shifts between tabs
       blurEffect={theme.isDark ? 'dark' : 'light'}
-      // Background color with consistent opacity for stable glass effect
-      // Increased opacity to prevent screen content from bleeding through
+      // Background color with high opacity for stable glass effect
+      // High opacity (F5 = 96%) prevents content color bleeding and ensures consistent tab colors
+      // This matches the actual background color of each theme to maintain visual consistency
       backgroundColor={Platform.select({
-        ios: theme.isDark ? '#0F172AE6' : '#FFFFFFE6',
+        ios: theme.isDark ? '#0F172AF5' : '#FFFFFFF5',
         android: theme.colors.background,
       })}
       // Disable transparent on scroll edge for consistent glass effect
