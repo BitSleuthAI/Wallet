@@ -34,6 +34,8 @@ export interface WalletService {
     isUsed: boolean;
     balance: number;
     txCount: number;
+    receivedCount: number;
+    sentCount: number;
   }>>;
   getFirstUnusedReceivingAddress?: (xpub: string) => Promise<string | null>;
   clearAddressCache?: (xpub?: string) => void;

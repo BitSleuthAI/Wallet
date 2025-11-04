@@ -54,12 +54,19 @@ function ReceiveScreenContent() {
   const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
 
   // Load first unused address when wallet changes
+  // We only want to reload when xpub changes (wallet switch), not when addresses array changes
+  // The addresses array changes frequently as new addresses are generated, but we handle
+  // that explicitly in handleNewAddress to avoid unnecessary re-renders and API calls
   useEffect(() => {
     const loadFirstUnusedAddress = async () => {
       if (!currentWallet?.xpub) {
         setIsLoadingAddress(false);
         return;
       }
+
+      // Get fallback address once at the start
+      const getFallbackAddress = () => 
+        currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
 
       try {
         setIsLoadingAddress(true);
@@ -74,22 +81,19 @@ function ReceiveScreenContent() {
         } else {
           // Fallback to last wallet address if no unused found
           console.log('⚠️ No unused address found, using last wallet address');
-          const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
-          setCurrentAddress(fallbackAddress);
+          setCurrentAddress(getFallbackAddress());
         }
       } catch (error) {
         console.error('❌ Failed to load first unused address:', error);
         // Use same fallback logic as above
-        const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
-        setCurrentAddress(fallbackAddress);
+        setCurrentAddress(getFallbackAddress());
       } finally {
         setIsLoadingAddress(false);
       }
     };
 
     loadFirstUnusedAddress();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWallet?.xpub]);
+  }, [currentWallet?.xpub, currentWallet?.addresses]);
 
   // Spin animation for the refresh icon
   useEffect(() => {

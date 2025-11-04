@@ -1133,8 +1133,10 @@ export async function generateAddressesForView(xpub: string, chainType: 'receivi
 /**
  * Generate addresses in batches for view addresses screen (DEPRECATED - use generateAddressesForView instead)
  * Returns addresses with their usage status
+ * Note: This function returns receivedCount and sentCount as 0 for backward compatibility
+ * Use generateAddressesForView instead for accurate transaction counts
  */
-export async function generateAddressBatchForView(xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}>> {
+export async function generateAddressBatchForView(xpub: string, startIndex: number, batchSize: number = 20): Promise<Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number}>> {
   console.log(`🔍 Generating address batch for view: start=${startIndex}, size=${batchSize}`);
   
   try {
@@ -1153,7 +1155,7 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
     const node = bip32Instance.fromBase58(xpub);
     const batch = await deriveAddressBatch(node, 0, startIndex, startIndex + batchSize);
     
-    const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number}> = [];
+    const addressData: Array<{address: string, index: number, isUsed: boolean, balance: number, txCount: number, receivedCount: number, sentCount: number}> = [];
     
     // Check each address in the batch
     for (let i = 0; i < batch.length; i++) {
@@ -1179,7 +1181,9 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
           index,
           isUsed: hasTransactions || balance > 0,
           balance,
-          txCount
+          txCount,
+          receivedCount: 0, // Deprecated function doesn't calculate this for performance
+          sentCount: 0, // Deprecated function doesn't calculate this for performance
         });
         
         console.log(`✅ Address ${index}: ${hasTransactions ? 'used' : 'unused'}, ${txCount} txs, ${balance.toFixed(8)} BTC`);
@@ -1192,7 +1196,9 @@ export async function generateAddressBatchForView(xpub: string, startIndex: numb
           index,
           isUsed: false,
           balance: 0,
-          txCount: 0
+          txCount: 0,
+          receivedCount: 0,
+          sentCount: 0,
         });
       }
       
