@@ -628,7 +628,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     // Add sufficient bottom padding to prevent content from going under tab bar
     // iOS tab bar height (~49pt) + safe area (~34pt) + spacing = ~100pt
-    paddingBottom: 100,
+    paddingBottom: platformStyles.tabBarBottomPadding,
   },
   sectionHeader: {
     fontSize: 15,

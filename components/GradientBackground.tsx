@@ -83,7 +83,7 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
           return ['#FFE5DB', '#FFD4C4', '#FFFFFF'];
       }
     }
-  }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowAccent, theme.colors.glowSecondary, variant]);
+  }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowSecondary, variant]);
 
   const getGradientLocations = useMemo((): readonly [number, number, ...number[]] | undefined => {
     switch (intensity) {
