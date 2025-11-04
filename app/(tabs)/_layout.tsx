@@ -21,8 +21,10 @@ export default function TabLayout() {
       // Tint color for active tabs
       tintColor={theme.colors.primary}
       // Icon colors for default and selected states
+      // In light mode, use darker color (almost black) for better visibility
+      // In dark mode, use textSecondary for softer appearance
       iconColor={{
-        default: theme.colors.textSecondary,
+        default: theme.isDark ? theme.colors.textSecondary : '#1F2937',
         selected: theme.colors.primary,
       }}
       // Label styling - unselected state uses textSecondary, selected uses tintColor
