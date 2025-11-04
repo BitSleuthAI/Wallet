@@ -4,6 +4,8 @@ import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getWalletTypeDisplayName } from '@/types/wallet';
+import { transformAddressDataForUI } from '@/utils/address-transform';
+import { loadWalletService } from '@/utils/wallet-service-loader';
 import { useQueryClient } from '@tanstack/react-query';
 import { Stack, router } from 'expo-router';
 import {
@@ -28,33 +30,8 @@ import {
   View,
 } from 'react-native';
 
-// Wallet service import with platform detection
-let walletService: any;
-try {
-  console.log('📦 Loading wallet service in wallet settings for platform:', Platform.OS);
-  // eslint-disable-next-line @typescript-eslint/no-require-imports
-  const importedService = require('@/services/wallet-service');
-  
-  console.log('📦 Wallet settings imported service keys:', Object.keys(importedService));
-  
-  // Ensure functions are properly bound and accessible
-  walletService = {
-    generateAddressesForView: importedService.generateAddressesForView,
-  };
-  
-  // Verify required functions are available
-  if (typeof walletService.generateAddressesForView !== 'function') {
-    throw new Error('Missing generateAddressesForView function in wallet service');
-  }
-  
-  console.log('✅ Wallet service loaded successfully in wallet settings for', Platform.OS);
-} catch (error) {
-  console.error('❌ Failed to load wallet service in wallet settings for', Platform.OS, ':', error);
-  // Provide a minimal fallback
-  walletService = {
-    generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
-  };
-}
+// Load wallet service using shared utility
+const walletService = loadWalletService(['generateAddressesForView']);
 
 export default function WalletSettingsScreen() {
   const walletContext = useWallet();
@@ -95,18 +72,8 @@ export default function WalletSettingsScreen() {
             
             console.log(`✅ Background prefetch complete: ${receivingData.length} receiving, ${changeData.length} change addresses`);
             
-            // Combine into the same format as wallet-addresses.tsx
-            const allAddresses = [...receivingData, ...changeData].map((addrData) => ({
-              address: addrData.address,
-              index: addrData.index,
-              balance: addrData.balance,
-              txCount: addrData.txCount,
-              receivedCount: 0,
-              sentCount: 0,
-              isUsed: addrData.isUsed,
-              type: addrData.type,
-              derivationPath: `m/84'/0'/0'/${addrData.type === 'receiving' ? '0' : '1'}/${addrData.index}`
-            }));
+            // Use shared utility to transform address data
+            const allAddresses = transformAddressDataForUI(receivingData, changeData);
             
             return allAddresses;
           },
