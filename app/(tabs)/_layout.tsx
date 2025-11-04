@@ -44,7 +44,7 @@ export default function TabLayout() {
         ios: theme.isDark ? '#0F172AE6' : '#FFFFFFE6',
         android: theme.colors.background,
       })}
-      // Enable transparent on scroll edge for better iOS glass effect
+      // Disable transparent on scroll edge for consistent glass effect
       disableTransparentOnScrollEdge={true}
       // Shadow color for depth - consistent across themes
       shadowColor={Platform.OS === 'ios' ? (theme.isDark ? '#00000066' : '#00000033') : undefined}
