@@ -5,9 +5,9 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -24,6 +24,7 @@ import QRCode from 'react-native-qrcode-svg';
 // Load wallet service using shared utility
 const walletService = loadWalletService([
   'getFirstUnusedReceivingAddress',
+  'clearAddressCache',
 ]);
 
 // Wrapper component that checks for context availability
@@ -52,6 +53,17 @@ function ReceiveScreenContent() {
   const [currentAddress, setCurrentAddress] = useState<string>('');
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
   const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
+
+  // Clear address cache when screen becomes focused to ensure fresh data
+  // This prevents showing used addresses after receiving funds
+  useFocusEffect(
+    useCallback(() => {
+      if (currentWallet?.xpub) {
+        console.log('🔄 Receive screen focused - clearing address cache for fresh data');
+        walletService.clearAddressCache(currentWallet.xpub);
+      }
+    }, [currentWallet?.xpub])
+  );
 
   // Load first unused address when wallet changes
   // Note: We track the xpub to detect wallet switches. The effect will also run when

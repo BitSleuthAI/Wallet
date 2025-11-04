@@ -30,8 +30,9 @@ const addressMetadataCache: Map<string, {
   timestamp: number 
 }> = new Map();
 
-// Cache TTL: 5 minutes (same as the UI query cache)
-const METADATA_CACHE_TTL = 5 * 60 * 1000;
+// Cache TTL: 30 seconds for production - ensures quick updates when receiving funds
+// This is intentionally short to prevent showing used addresses after receiving funds
+const METADATA_CACHE_TTL = 30 * 1000;
 
 /**
  * Clear the address metadata cache for a specific xpub or all xpubs
@@ -973,6 +974,42 @@ export const generateNewAddress = async (wallet: Wallet): Promise<Wallet> => {
 };
 
 /**
+ * Verify that a specific address has not been used on the blockchain
+ * This is a production safeguard to prevent address reuse
+ * Returns true if address is safe to use (unused), false if it has been used
+ */
+export async function verifyAddressUnused(address: string, xpub: string): Promise<boolean> {
+  try {
+    console.log('🔍 Verifying address is unused:', address.substring(0, 20) + '...');
+    
+    // Check if address has any transactions
+    const txsResult = await esploraGet(`/address/${address}/txs`, 30000, xpub);
+    const hasTransactions = txsResult && Array.isArray(txsResult) && txsResult.length > 0;
+    
+    if (hasTransactions) {
+      console.warn('⚠️ Address has been used - has transactions:', txsResult.length);
+      return false;
+    }
+    
+    // Also check address stats for additional confirmation
+    const statsResult = await getAddressStats(address, xpub);
+    const hasTxCount = statsResult.data?.chain_stats?.tx_count > 0;
+    
+    if (hasTxCount) {
+      console.warn('⚠️ Address has been used - tx count:', statsResult.data.chain_stats.tx_count);
+      return false;
+    }
+    
+    console.log('✅ Address verified as unused');
+    return true;
+  } catch (error) {
+    console.error('❌ Failed to verify address:', error);
+    // On error, assume address might be used (safer default)
+    return false;
+  }
+}
+
+/**
  * Get the first unused address within gap limit for receiving funds
  * This ensures that used addresses are not displayed as QR codes
  * Returns the address string or null if none found
@@ -995,6 +1032,31 @@ export async function getFirstUnusedReceivingAddress(xpub: string): Promise<stri
     
     if (firstUnused) {
       console.log(`✅ Found first unused address at index ${firstUnused.index}: ${firstUnused.address.substring(0, 20)}...`);
+      
+      // Production safeguard: Double-check the address is truly unused
+      // This catches any cache-related race conditions
+      const isReallyUnused = await verifyAddressUnused(firstUnused.address, xpub);
+      
+      if (!isReallyUnused) {
+        console.error('🚨 CRITICAL: Address marked as unused but verification failed!');
+        console.error('🚨 Clearing cache and retrying...');
+        
+        // Clear cache and retry once
+        clearAddressCache(xpub);
+        const retryMetadata = await discoverUsedAddresses(xpub, true);
+        const retryExternal = retryMetadata.filter(a => a.chain === 0);
+        retryExternal.sort((a, b) => a.index - b.index);
+        const retryUnused = retryExternal.find(a => !a.isUsed);
+        
+        if (retryUnused) {
+          console.log(`✅ Retry found unused address at index ${retryUnused.index}`);
+          return retryUnused.address;
+        }
+        
+        console.error('🚨 CRITICAL: No unused address found after retry!');
+        return null;
+      }
+      
       return firstUnused.address;
     }
     
