@@ -64,16 +64,15 @@ function ReceiveScreenContent() {
         return;
       }
 
-      // Get fallback address once at the start
-      const getFallbackAddress = () => 
-        currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
+      // Capture the current wallet at the time of the effect
+      const wallet = currentWallet;
 
       try {
         setIsLoadingAddress(true);
         console.log('🔍 Loading first unused receiving address...');
         
         // Get first unused address within gap limit
-        const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
+        const unusedAddress = await walletService.getFirstUnusedReceivingAddress(wallet.xpub);
         
         if (unusedAddress) {
           console.log('✅ Found first unused address:', unusedAddress.substring(0, 20) + '...');
@@ -81,19 +80,22 @@ function ReceiveScreenContent() {
         } else {
           // Fallback to last wallet address if no unused found
           console.log('⚠️ No unused address found, using last wallet address');
-          setCurrentAddress(getFallbackAddress());
+          const fallbackAddress = wallet.addresses?.[wallet.addresses.length - 1] || '';
+          setCurrentAddress(fallbackAddress);
         }
       } catch (error) {
         console.error('❌ Failed to load first unused address:', error);
         // Use same fallback logic as above
-        setCurrentAddress(getFallbackAddress());
+        const fallbackAddress = wallet.addresses?.[wallet.addresses.length - 1] || '';
+        setCurrentAddress(fallbackAddress);
       } finally {
         setIsLoadingAddress(false);
       }
     };
 
     loadFirstUnusedAddress();
-  }, [currentWallet?.xpub, currentWallet?.addresses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWallet?.xpub]);
 
   // Spin animation for the refresh icon
   useEffect(() => {
