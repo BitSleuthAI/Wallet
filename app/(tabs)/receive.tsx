@@ -53,6 +53,7 @@ function ReceiveScreenContent() {
   const [currentAddress, setCurrentAddress] = useState<string>('');
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
   const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
+  const [lastGenTime, setLastGenTime] = useState<number>(0);
 
   // Clear address cache when screen becomes focused to ensure fresh data
   // This prevents showing used addresses after receiving funds
@@ -138,6 +139,18 @@ function ReceiveScreenContent() {
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
+    // Rate limiting: Prevent spam and API abuse
+    const MIN_GEN_INTERVAL = 3000; // 3 seconds between generations
+    const now = Date.now();
+    if (now - lastGenTime < MIN_GEN_INTERVAL) {
+      const waitTime = Math.ceil((MIN_GEN_INTERVAL - (now - lastGenTime)) / 1000);
+      Alert.alert(
+        'Please Wait', 
+        `Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address.`
+      );
+      return;
+    }
+    
     if (!currentWallet) {
       console.error('❌ No current wallet available');
       Alert.alert('Error', 'No wallet selected');
@@ -146,10 +159,23 @@ function ReceiveScreenContent() {
     
     try {
       setIsGeneratingAddress(true);
+      setLastGenTime(now); // Update timestamp at start of generation
       console.log('🔄 Generating new address...');
       const result = await generateNewAddress(currentWallet);
       if (result.success && result.wallet) {
         console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
+        
+        // Check if user has generated many unused addresses (gap limit warning)
+        const addressCount = result.wallet.addresses.length;
+        const GAP_LIMIT_WARNING = 15;
+        
+        if (addressCount >= GAP_LIMIT_WARNING) {
+          Alert.alert(
+            'Address Limit Warning',
+            `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,
+            [{ text: 'OK', style: 'default' }]
+          );
+        }
         
         // Fallback address in case first unused lookup fails
         const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
