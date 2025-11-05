@@ -51,6 +51,7 @@ export default function BitSleuthButton({
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
   const opacity = useSharedValue(1);
+  const [isPressed, setIsPressed] = React.useState(false);
 
   // Size configurations
   const sizeConfig = {
