@@ -4,9 +4,7 @@ import expo.modules.splashscreen.SplashScreenManager
 import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
-import android.view.WindowManager
 import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsControllerCompat
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -16,6 +14,12 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 import expo.modules.ReactActivityDelegateWrapper
 
 class MainActivity : ReactActivity() {
+  companion object {
+    // Android 15 (Vanilla Ice Cream) - API Level 35
+    // Using numeric value for compatibility with SDK versions that may not have the constant yet
+    private const val ANDROID_15_API_LEVEL = 35
+  }
+  
   override fun onCreate(savedInstanceState: Bundle?) {
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.
@@ -36,7 +40,7 @@ class MainActivity : ReactActivity() {
    * - Android 14 and below: Traditional layout with colored system bars
    */
   private fun configureEdgeToEdge() {
-    if (Build.VERSION.SDK_INT >= 35) { // Android 15+
+    if (Build.VERSION.SDK_INT >= ANDROID_15_API_LEVEL) { // Android 15+
       // Enable edge-to-edge - app draws behind system bars
       WindowCompat.setDecorFitsSystemWindows(window, false)
       
@@ -73,7 +77,7 @@ class MainActivity : ReactActivity() {
     super.onConfigurationChanged(newConfig)
     
     // Reconfigure edge-to-edge when theme changes (dark/light mode)
-    if (Build.VERSION.SDK_INT >= 35) {
+    if (Build.VERSION.SDK_INT >= ANDROID_15_API_LEVEL) {
       configureEdgeToEdge()
     }
   }
