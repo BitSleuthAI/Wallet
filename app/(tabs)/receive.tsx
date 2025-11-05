@@ -1,5 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import WalletSelector from '@/components/WalletSelector';
+import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
@@ -140,10 +141,9 @@ function ReceiveScreenContent() {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
     // Rate limiting: Prevent spam and API abuse
-    const MIN_GEN_INTERVAL = 3000; // 3 seconds between generations
     const now = Date.now();
-    if (now - lastGenTime < MIN_GEN_INTERVAL) {
-      const waitTime = Math.ceil((MIN_GEN_INTERVAL - (now - lastGenTime)) / 1000);
+    if (now - lastGenTime < ADDRESS_GENERATION_COOLDOWN_MS) {
+      const waitTime = Math.ceil((ADDRESS_GENERATION_COOLDOWN_MS - (now - lastGenTime)) / 1000);
       Alert.alert(
         'Please Wait', 
         `Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address.`
@@ -167,9 +167,8 @@ function ReceiveScreenContent() {
         
         // Check if user has generated many unused addresses (gap limit warning)
         const addressCount = result.wallet.addresses.length;
-        const GAP_LIMIT_WARNING = 15;
         
-        if (addressCount >= GAP_LIMIT_WARNING) {
+        if (addressCount >= GAP_LIMIT_WARNING_THRESHOLD) {
           Alert.alert(
             'Address Limit Warning',
             `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,

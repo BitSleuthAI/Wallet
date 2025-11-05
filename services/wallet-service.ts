@@ -4,6 +4,7 @@
  */
 
 import type { Transaction, Wallet } from '../types/wallet';
+import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD } from '../constants/cache';
 import { recordWalletAssociationsXpub } from './address-cache-service';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
@@ -30,9 +31,8 @@ const addressMetadataCache: Map<string, {
   timestamp: number 
 }> = new Map();
 
-// Cache TTL: 30 seconds for production - ensures quick updates when receiving funds
-// This is intentionally short to prevent showing used addresses after receiving funds
-const METADATA_CACHE_TTL = 30 * 1000;
+// Use centralized cache configuration
+const METADATA_CACHE_TTL = ADDRESS_METADATA_CACHE_TTL_MS;
 
 /**
  * Clear the address metadata cache for a specific xpub or all xpubs
@@ -983,7 +983,7 @@ export async function verifyAddressUnused(address: string, xpub: string): Promis
     console.log('🔍 Verifying address is unused:', address.substring(0, 20) + '...');
     
     // Check if address has any transactions
-    const txsResult = await esploraGet(`/address/${address}/txs`, 30000, xpub);
+    const txsResult = await esploraGet(`/address/${address}/txs`, ADDRESS_VERIFICATION_TIMEOUT_MS, xpub);
     const hasTransactions = txsResult && Array.isArray(txsResult) && txsResult.length > 0;
     
     if (hasTransactions) {
@@ -1033,8 +1033,13 @@ export async function getFirstUnusedReceivingAddress(xpub: string): Promise<stri
     if (firstUnused) {
       console.log(`✅ Found first unused address at index ${firstUnused.index}: ${firstUnused.address.substring(0, 20)}...`);
       
-      // Production safeguard: Double-check the address is truly unused
-      // This catches any cache-related race conditions
+      // Production safeguard: Double-check the address is truly unused (if enabled)
+      // This catches any cache-related race conditions but adds an extra API call
+      // Can be disabled in development via ENABLE_ADDRESS_VERIFICATION_SAFEGUARD constant
+      if (!ENABLE_ADDRESS_VERIFICATION_SAFEGUARD) {
+        return firstUnused.address;
+      }
+      
       const isReallyUnused = await verifyAddressUnused(firstUnused.address, xpub);
       
       if (!isReallyUnused) {
