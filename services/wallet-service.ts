@@ -172,8 +172,9 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
         
         // OPTIMIZED: Use concurrent requests with sub-batching to reduce total time
-        // Process 5 addresses concurrently instead of sequentially
-        const CONCURRENT_BATCH_SIZE = 5;
+        // Reduced to 3 addresses concurrently to respect Blockstream API rate limits
+        // Combined with 250ms per-request delay in esplora-service for optimal throughput
+        const CONCURRENT_BATCH_SIZE = 3;
         const addressTxs: any[] = new Array(batch.length);
         
         for (let i = 0; i < batch.length; i += CONCURRENT_BATCH_SIZE) {
@@ -202,10 +203,8 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
             addressTxs[batchIndices[idx]] = result;
           });
           
-          // Add small delay between concurrent batches to avoid rate limiting
-          if (i + CONCURRENT_BATCH_SIZE < batch.length) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+          // No additional delay needed here - rate limiting is handled in esplora-service
+          // The request queue enforces 250ms between requests automatically
         }
         
         // Process addresses in order and track gap correctly
@@ -308,8 +307,8 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     const latestBlockHeight = Number(blockHeightResult.data);
 
     // Fetch data for all used addresses with controlled concurrency
-    const concurrency = 1; // Very low concurrency to avoid rate limiting
-    const perAddressDelayMs = 1500; // Additional delay between addresses
+    // Reduced concurrency to 2 workers - rate limiting is now handled by request queue in esplora-service
+    const concurrency = 2;
     let idx = 0;
     const allTxs = new Map<string, any>();
     const utxos: any[] = [];
@@ -321,6 +320,8 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
         try {
           console.log(`📊 Processing address ${idx}/${usedAddresses.length}: ${address.substring(0, 10)}...`);
           
+          // Fetch all data for this address in parallel
+          // Rate limiting is handled automatically by the request queue (250ms between requests)
           const [txsResult, utxosResult, statsResult] = await Promise.all([
             getAddressTransactions(address, xpub),
             getAddressUTXOs(address, xpub),
@@ -365,8 +366,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
             });
           }
 
-          // Small delay to avoid rate limiting (increased for heavy loops)
-          await new Promise(resolve => setTimeout(resolve, perAddressDelayMs));
+          // No additional delay needed - rate limiting handled by request queue
           
         } catch (error) {
           console.warn(`⚠️ Failed to process address ${address}:`, error);
