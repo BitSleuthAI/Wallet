@@ -262,10 +262,10 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: platformStyles.borderRadius.xxl,
-    padding: platformStyles.spacing.xl,
-    width: 320,
-    height: 180,
+    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
+    padding: platformStyles.spacing.xxl, // Increased from xl
+    width: 340, // Increased from 320 for better content space
+    height: 200, // Increased from 180 for better proportions
     justifyContent: 'space-between',
     position: 'relative',
     overflow: 'hidden',
@@ -312,23 +312,25 @@ const styles = StyleSheet.create({
   },
   walletName: {
     color: 'white',
-    fontSize: 20,
-    fontWeight: '700',
-    maxWidth: 200,
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    fontSize: 22, // Increased from 20
+    fontWeight: '800', // Increased from 700
+    maxWidth: 220, // Increased from 200
+    textShadowColor: 'rgba(0, 0, 0, 0.4)', // Slightly stronger shadow
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4, // Increased from 3
+    letterSpacing: 0.2,
   },
   walletTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: platformStyles.spacing.xs,
-    gap: 6,
+    marginTop: platformStyles.spacing.sm, // Increased from xs
+    gap: 8, // Increased from 6
   },
   walletType: {
-    color: 'rgba(255, 255, 255, 0.85)',
-    fontSize: 13,
-    fontWeight: '500',
+    color: 'rgba(255, 255, 255, 0.9)', // Increased opacity from 0.85
+    fontSize: 14, // Increased from 13
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.3,
   },
   menuButton: {
     padding: 6,
@@ -343,20 +345,22 @@ const styles = StyleSheet.create({
   },
   balance: {
     color: 'white',
-    fontSize: 26,
+    fontSize: 30, // Increased from 26
     fontWeight: '800',
-    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowColor: 'rgba(0, 0, 0, 0.4)', // Slightly stronger
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowRadius: 4, // Increased from 3
+    letterSpacing: -0.3, // Better readability for numbers
   },
   balanceUSD: {
-    color: 'rgba(255, 255, 255, 0.9)',
-    fontSize: 17,
+    color: 'rgba(255, 255, 255, 0.95)', // Increased opacity from 0.9
+    fontSize: 18, // Increased from 17
     fontWeight: '600',
-    marginTop: platformStyles.spacing.xs,
-    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    marginTop: platformStyles.spacing.sm, // Increased from xs
+    textShadowColor: 'rgba(0, 0, 0, 0.3)', // Slightly stronger
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    textShadowRadius: 3, // Increased from 2
+    letterSpacing: 0.2,
   },
   footer: {
     alignItems: 'flex-end',
@@ -365,16 +369,17 @@ const styles = StyleSheet.create({
   activeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    paddingHorizontal: platformStyles.spacing.md,
-    paddingVertical: platformStyles.spacing.xs + 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Increased opacity from 0.2
+    paddingHorizontal: platformStyles.spacing.md + 2, // Increased
+    paddingVertical: platformStyles.spacing.xs + 3, // Increased
     borderRadius: platformStyles.borderRadius.round,
-    gap: 4,
+    gap: 5, // Increased from 4
   },
   activeText: {
     color: 'white',
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: 14, // Increased from 13
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.3,
   },
   modalOverlay: {
     flex: 1,

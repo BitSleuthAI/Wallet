@@ -200,23 +200,24 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20, // Increased from 16
+    paddingVertical: 16, // Increased from 12
     borderBottomWidth: 0,
   },
   backButton: {
-    padding: 8,
-    marginLeft: -8,
+    padding: 10, // Increased from 8
+    marginLeft: -10, // Adjusted
   },
   headerTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20, // Increased from 18
+    fontWeight: '700', // More specific than 'bold'
     flex: 1,
     textAlign: 'center',
-    marginRight: 32,
+    marginRight: 36, // Increased from 32
+    letterSpacing: 0.1,
   },
   headerSpacer: {
-    width: 32,
+    width: 36, // Increased from 32
   },
   scrollView: {
     flex: 1,
@@ -225,60 +226,65 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   contentHeader: {
-    paddingHorizontal: 20,
-    paddingVertical: 20,
+    paddingHorizontal: 24, // Increased from 20
+    paddingVertical: 24, // Increased from 20
     alignItems: 'center',
   },
   appTitle: {
-    fontSize: 24,
-    fontWeight: '700',
-    marginBottom: 8,
+    fontSize: 28, // Increased from 24
+    fontWeight: '800', // Increased from 700
+    marginBottom: 10, // Increased from 8
+    letterSpacing: -0.3,
   },
   version: {
-    fontSize: 16,
-    fontWeight: '500',
+    fontSize: 17, // Increased from 16
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.2,
   },
   dropdownContainer: {
     marginHorizontal: 20,
-    marginVertical: 4,
-    borderRadius: 12,
+    marginVertical: 6, // Increased from 4
+    borderRadius: 16, // Increased from 12
     overflow: 'hidden',
   },
   dropdownHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20, // Increased from 16
+    paddingVertical: 18, // Increased from 16
   },
   dropdownTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 18, // Increased from 16
+    fontWeight: '700', // Increased from 600
     flex: 1,
+    letterSpacing: 0.1,
   },
   dropdownContent: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: 20, // Increased from 16
+    paddingBottom: 20, // Increased from 16
   },
   bulletContainer: {
     flexDirection: 'row',
-    marginBottom: 8,
+    marginBottom: 12, // Increased from 8
     alignItems: 'flex-start',
   },
   bullet: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginRight: 8,
+    fontSize: 18, // Increased from 16
+    fontWeight: '700', // Increased from 600
+    marginRight: 10, // Increased from 8
     marginTop: 2,
   },
   bulletText: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 16, // Increased from 14
+    lineHeight: 24, // Increased from 20
     flex: 1,
+    letterSpacing: 0.2,
   },
   missionText: {
-    fontSize: 14,
-    lineHeight: 22,
+    fontSize: 16, // Increased from 14
+    lineHeight: 26, // Increased from 22
     textAlign: 'left',
+    letterSpacing: 0.2,
   },
 });
