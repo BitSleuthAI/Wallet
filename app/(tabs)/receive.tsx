@@ -1,13 +1,14 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import WalletSelector from '@/components/WalletSelector';
+import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -24,6 +25,7 @@ import QRCode from 'react-native-qrcode-svg';
 // Load wallet service using shared utility
 const walletService = loadWalletService([
   'getFirstUnusedReceivingAddress',
+  'clearAddressCache',
 ]);
 
 // Wrapper component that checks for context availability
@@ -52,6 +54,18 @@ function ReceiveScreenContent() {
   const [currentAddress, setCurrentAddress] = useState<string>('');
   const [isGeneratingAddress, setIsGeneratingAddress] = useState<boolean>(false);
   const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
+  const [lastGenTime, setLastGenTime] = useState<number>(0);
+
+  // Clear address cache when screen becomes focused to ensure fresh data
+  // This prevents showing used addresses after receiving funds
+  useFocusEffect(
+    useCallback(() => {
+      if (currentWallet?.xpub) {
+        console.log('🔄 Receive screen focused - clearing address cache for fresh data');
+        walletService.clearAddressCache(currentWallet.xpub);
+      }
+    }, [currentWallet?.xpub])
+  );
 
   // Load first unused address when wallet changes
   // Note: We track the xpub to detect wallet switches. The effect will also run when
@@ -126,6 +140,17 @@ function ReceiveScreenContent() {
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
+    // Rate limiting: Prevent spam and API abuse
+    const now = Date.now();
+    if (now - lastGenTime < ADDRESS_GENERATION_COOLDOWN_MS) {
+      const waitTime = Math.ceil((ADDRESS_GENERATION_COOLDOWN_MS - (now - lastGenTime)) / 1000);
+      Alert.alert(
+        'Please Wait', 
+        `Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address.`
+      );
+      return;
+    }
+    
     if (!currentWallet) {
       console.error('❌ No current wallet available');
       Alert.alert('Error', 'No wallet selected');
@@ -134,10 +159,22 @@ function ReceiveScreenContent() {
     
     try {
       setIsGeneratingAddress(true);
+      setLastGenTime(now); // Update timestamp at start of generation
       console.log('🔄 Generating new address...');
       const result = await generateNewAddress(currentWallet);
       if (result.success && result.wallet) {
         console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
+        
+        // Check if user has generated many unused addresses (gap limit warning)
+        const addressCount = result.wallet.addresses.length;
+        
+        if (addressCount >= GAP_LIMIT_WARNING_THRESHOLD) {
+          Alert.alert(
+            'Address Limit Warning',
+            `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,
+            [{ text: 'OK', style: 'default' }]
+          );
+        }
         
         // Fallback address in case first unused lookup fails
         const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
