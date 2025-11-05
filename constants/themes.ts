@@ -311,6 +311,11 @@ export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 
     padding: platformStyles.spacing.xl, // Increased from lg
   };
   
+  // Define card border colors in theme context
+  const elevatedBorderColor = theme.isDark 
+    ? theme.colors.border + '66' // 40% opacity
+    : theme.colors.border + '33'; // 20% opacity
+  
   switch (variant) {
     case 'default':
       return {
@@ -323,7 +328,7 @@ export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 
         ...platformStyles.cardShadow,
         // Add subtle border for better definition
         borderWidth: 1,
-        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
+        borderColor: elevatedBorderColor,
       };
     case 'fun':
       return {

@@ -41,7 +41,6 @@ export default function BitSleuthCard({
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
   const shadowOpacity = useSharedValue(0.15);
-  const [isPressed, setIsPressed] = React.useState(false);
 
   // Color mapping for fun variants
   const funColors = {
@@ -67,7 +66,6 @@ export default function BitSleuthCard({
   const handlePressIn = () => {
     if (!animated) return;
     
-    setIsPressed(true);
     scale.value = withSpring(0.98, { damping: 15, stiffness: 300 });
     translateY.value = withSpring(2, { damping: 15, stiffness: 300 });
     shadowOpacity.value = withTiming(0.05, { duration: 150 });
@@ -80,7 +78,6 @@ export default function BitSleuthCard({
   const handlePressOut = () => {
     if (!animated) return;
     
-    setIsPressed(false);
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
     translateY.value = withSpring(0, { damping: 15, stiffness: 300 });
     shadowOpacity.value = withTiming(0.15, { duration: 150 });

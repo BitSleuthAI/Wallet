@@ -36,6 +36,11 @@ type CarouselItem =
   | { type: 'wallet'; wallet: Wallet }
   | { type: 'add' };
 
+// Carousel constants
+const WALLET_CARD_WIDTH = 340;
+const WALLET_CARD_MARGIN = 16;
+const CARD_SNAP_INTERVAL = WALLET_CARD_WIDTH + WALLET_CARD_MARGIN; // 356px
+
 // Wrapper component that checks for context availability
 export default function WalletScreen() {
   const walletContext = useWallet();
@@ -345,7 +350,7 @@ function WalletScreenContent() {
             showsHorizontalScrollIndicator={false}
             pagingEnabled={false}
             decelerationRate="fast"
-            snapToInterval={356} // 340 (new card width) + 16 (margin)
+            snapToInterval={CARD_SNAP_INTERVAL}
             snapToAlignment="start"
             data={walletDataForList}
             keyExtractor={(item, index) => `${item.type}-${index}`}
@@ -368,7 +373,7 @@ function WalletScreenContent() {
                 } catch (error) {
                   // If retry fails, fall back to scrollToOffset for more reliable positioning
                   console.warn('Failed to scroll to wallet index after retry:', error);
-                  const offset = info.index * 356; // 340 (new card width) + 16 (margin)
+                  const offset = info.index * CARD_SNAP_INTERVAL;
                   carouselRef.current?.scrollToOffset({ offset, animated: true });
                 }
               });

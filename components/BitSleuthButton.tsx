@@ -51,7 +51,6 @@ export default function BitSleuthButton({
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
   const opacity = useSharedValue(1);
-  const [isPressed, setIsPressed] = React.useState(false);
 
   // Size configurations
   const sizeConfig = {
@@ -77,7 +76,6 @@ export default function BitSleuthButton({
   const handlePressIn = () => {
     if (!animated || disabled || loading) return;
     
-    setIsPressed(true);
     scale.value = withSpring(0.95, { damping: 15, stiffness: 300 });
     
     // Trigger haptic feedback
@@ -87,7 +85,6 @@ export default function BitSleuthButton({
   const handlePressOut = () => {
     if (!animated || disabled || loading) return;
     
-    setIsPressed(false);
     scale.value = withSpring(1, { damping: 15, stiffness: 300 });
   };
 
