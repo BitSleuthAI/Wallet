@@ -3,65 +3,83 @@ import { Platform } from 'react-native';
 
 // Platform-specific constants for consistent styling
 export const platformStyles = {
-  // Shadow styles that work consistently across platforms
+  // Shadow styles that work consistently across platforms - Enhanced for better depth
   shadow: Platform.select({
     ios: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.08,
-      shadowRadius: 8,
+      shadowOpacity: 0.1, // Increased from 0.08 for better visibility
+      shadowRadius: 10, // Increased from 8 for softer shadows
     },
     android: {
-      elevation: 2,
+      elevation: 3, // Increased from 2
     },
     web: {
-      boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
+      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)',
     },
   }),
   
-  // Card shadow for elevated components
+  // Card shadow for elevated components - Enhanced depth
   cardShadow: Platform.select({
     ios: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 8 },
-      shadowOpacity: 0.12,
-      shadowRadius: 16,
+      shadowOpacity: 0.15, // Increased from 0.12
+      shadowRadius: 20, // Increased from 16
     },
     android: {
-      elevation: 8,
+      elevation: 10, // Increased from 8
     },
     web: {
-      boxShadow: '0 8px 16px rgba(0, 0, 0, 0.12)',
+      boxShadow: '0 8px 20px rgba(0, 0, 0, 0.15)',
     },
   }),
   
-  // Button shadow for interactive elements
+  // Button shadow for interactive elements - Enhanced
   buttonShadow: Platform.select({
     ios: {
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.1,
-      shadowRadius: 8,
+      shadowOpacity: 0.12, // Increased from 0.1
+      shadowRadius: 10, // Increased from 8
     },
     android: {
-      elevation: 4,
+      elevation: 5, // Increased from 4
     },
     web: {
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      boxShadow: '0 4px 10px rgba(0, 0, 0, 0.12)',
     },
   }),
   
-  // Border radius values for consistency
+  // New - Subtle shadow for minimal elevation
+  subtleShadow: Platform.select({
+    ios: {
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+    },
+    android: {
+      elevation: 1,
+    },
+    web: {
+      boxShadow: '0 1px 4px rgba(0, 0, 0, 0.05)',
+    },
+  }),
+  
+  // Border radius values for consistency - Enhanced for modern aesthetics
   borderRadius: {
+    xs: 8, // New - for small elements
     small: 12,
     medium: 16,
     large: 20,
     xl: 24,
     xxl: 28,
+    xxxl: 32, // New - for extra large cards
     round: 999,
   },
   
-  // Spacing values
+  // Spacing values - Enhanced for better breathing room
   spacing: {
     xs: 4,
     sm: 8,
@@ -71,6 +89,8 @@ export const platformStyles = {
     xxl: 24,
     xxxl: 32,
     huge: 40,
+    massive: 48, // New spacing for extra breathing room
+    colossal: 64, // New spacing for major sections
   },
   
   // Tab bar spacing for iOS Liquid Glass tabs
@@ -78,39 +98,49 @@ export const platformStyles = {
   // Calculation: tab bar height (~49pt) + safe area (~34pt) + buffer (~17pt) = ~100pt
   tabBarBottomPadding: 100,
   
-  // Typography scale
+  // Typography scale - Enhanced for better readability and hierarchy
   typography: {
     caption: {
       fontSize: 12,
-      lineHeight: 16,
+      lineHeight: 18, // Increased from 16 for better readability
+      letterSpacing: 0.3,
+      fontWeight: '500' as const,
     },
     body: {
-      fontSize: 14,
-      lineHeight: 20,
+      fontSize: 15, // Increased from 14 for better readability
+      lineHeight: 22, // Increased from 20
+      letterSpacing: 0.2,
+      fontWeight: '400' as const,
     },
     bodyLarge: {
-      fontSize: 16,
-      lineHeight: 24,
+      fontSize: 17, // Increased from 16
+      lineHeight: 26, // Increased from 24
+      letterSpacing: 0.1,
+      fontWeight: '400' as const,
     },
     subtitle: {
-      fontSize: 18,
-      lineHeight: 24,
+      fontSize: 19, // Increased from 18
+      lineHeight: 26, // Increased from 24
+      letterSpacing: 0.15,
       fontWeight: '600' as const,
     },
     title: {
-      fontSize: 20,
-      lineHeight: 28,
+      fontSize: 22, // Increased from 20
+      lineHeight: 30, // Increased from 28
+      letterSpacing: 0.1,
       fontWeight: 'bold' as const,
     },
     heading: {
-      fontSize: 24,
-      lineHeight: 32,
-      fontWeight: 'bold' as const,
+      fontSize: 28, // Increased from 24
+      lineHeight: 36, // Increased from 32
+      letterSpacing: -0.2, // Negative for large text
+      fontWeight: '700' as const,
     },
     display: {
-      fontSize: 32,
-      lineHeight: 40,
-      fontWeight: 'bold' as const,
+      fontSize: 36, // Increased from 32
+      lineHeight: 44, // Increased from 40
+      letterSpacing: -0.5, // Negative for large text
+      fontWeight: '800' as const,
     },
   },
 };
@@ -118,18 +148,18 @@ export const platformStyles = {
 export const lightTheme: Theme = {
   isDark: false,
   colors: {
-    // Base colors with gradient-inspired tones
+    // Base colors with gradient-inspired tones - Enhanced for better contrast
     background: '#FFFFFF',
-    surface: '#FAFAFA',
+    surface: '#F9FAFB', // Slightly warmer from #FAFAFA
     primary: '#FF8A65', // Coral orange inspired by gradient
     secondary: '#FF6B6B', // Warm red-orange
     accent: '#FFB74D', // Golden orange
     success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
-    text: '#1F2937',
+    text: '#111827', // Darker from #1F2937 for better contrast
     textSecondary: '#6B7280',
-    border: '#F3F4F6',
+    border: '#E5E7EB', // Slightly darker from #F3F4F6 for better visibility
     // Gradient colors - inspired by the orange/coral gradient image
     gradientStart: '#FF8A65', // Coral orange
     gradientEnd: '#FF6B6B', // Warm red-orange
@@ -157,18 +187,18 @@ export const lightTheme: Theme = {
 export const darkTheme: Theme = {
   isDark: true,
   colors: {
-    // Deep dark background with cool undertones - complementary to warm coral
-    background: '#0F172A',
-    surface: '#1E293B',
+    // Deep dark background with cool undertones - Enhanced contrast
+    background: '#0A0E1A', // Darker from #0F172A for deeper blacks
+    surface: '#1A2332', // Adjusted from #1E293B for better hierarchy
     primary: '#26F5FE', // Bright cyan - perfect complement to coral orange
     secondary: '#00BCD4', // Teal - creates beautiful gradient with cyan
     accent: '#40E0D0', // Turquoise accent - bridges cyan and teal
     success: '#00E676', // Bright emerald - complements the cool theme
     warning: '#FFB74D', // Keep warm amber for contrast
     error: '#FF5252', // Bright red - maintains energy
-    text: '#F1F5F9',
-    textSecondary: '#94A3B8',
-    border: '#334155',
+    text: '#F8FAFC', // Brighter from #F1F5F9 for better readability
+    textSecondary: '#9CA3AF', // Adjusted from #94A3B8 for better contrast
+    border: '#2D3748', // Adjusted from #334155 for better visibility
     // Gradient colors - cool cyan theme (opposite energy to warm coral)
     gradientStart: '#26F5FE', // Bright cyan
     gradientEnd: '#00BCD4', // Teal
@@ -193,15 +223,15 @@ export const darkTheme: Theme = {
   },
 };
 
-// Enhanced button styles with gradients and fun effects
+// Enhanced button styles with gradients and fun effects - Improved for 2025
 export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary' | 'outline' | 'gradient' | 'fun' = 'primary') => {
   const baseStyle = {
-    paddingVertical: platformStyles.spacing.lg,
-    paddingHorizontal: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingVertical: platformStyles.spacing.lg + 2, // Slightly increased from 16 to 18
+    paddingHorizontal: platformStyles.spacing.xl + 4, // Increased from 20 to 24
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large to xl
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
-    minHeight: 52,
+    minHeight: 56, // Increased from 52 for better touch targets
     ...platformStyles.buttonShadow,
   };
   
@@ -210,13 +240,15 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
       return {
         ...baseStyle,
         backgroundColor: theme.colors.primary,
+        // Add a subtle scale on press for better feedback
       };
     case 'secondary':
       return {
         ...baseStyle,
         backgroundColor: theme.colors.surface,
-        borderWidth: 1.5,
+        borderWidth: 2, // Increased from 1.5 for better visibility
         borderColor: theme.colors.border,
+        ...platformStyles.shadow, // Lighter shadow for secondary
       };
     case 'outline':
       return {
@@ -224,6 +256,7 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
         backgroundColor: 'transparent',
         borderWidth: 2,
         borderColor: theme.colors.primary,
+        ...platformStyles.subtleShadow, // Even lighter shadow
       };
     case 'gradient':
       return {
@@ -235,26 +268,27 @@ export const createButtonStyle = (theme: Theme, variant: 'primary' | 'secondary'
       return {
         ...baseStyle,
         backgroundColor: theme.colors.accent,
-        borderRadius: platformStyles.borderRadius.xl,
+        borderRadius: platformStyles.borderRadius.xxl, // More rounded
       };
     default:
       return baseStyle;
   }
 };
 
-// Enhanced input styles with better visual feedback
+// Enhanced input styles with better visual feedback - Improved for 2025
 export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'default') => {
   const baseStyle = {
-    borderWidth: 1.5,
+    borderWidth: 2, // Increased from 1.5 for better visibility
     borderColor: theme.colors.border,
-    borderRadius: platformStyles.borderRadius.large,
-    paddingVertical: platformStyles.spacing.lg,
-    paddingHorizontal: platformStyles.spacing.lg,
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
+    paddingVertical: platformStyles.spacing.lg + 2, // Increased from 16 to 18
+    paddingHorizontal: platformStyles.spacing.lg + 4, // Increased from 16 to 20
     fontSize: platformStyles.typography.bodyLarge.fontSize,
     lineHeight: platformStyles.typography.bodyLarge.lineHeight,
     backgroundColor: theme.colors.surface,
     color: theme.colors.text,
-    minHeight: 52,
+    minHeight: 56, // Increased from 52 for better touch targets
+    ...platformStyles.subtleShadow, // Add subtle shadow for depth
   };
   
   if (variant === 'fun') {
@@ -262,19 +296,19 @@ export const createInputStyle = (theme: Theme, variant: 'default' | 'fun' = 'def
       ...baseStyle,
       borderColor: theme.colors.accent,
       borderWidth: 2,
-      borderRadius: platformStyles.borderRadius.xl,
+      borderRadius: platformStyles.borderRadius.xxl,
     };
   }
   
   return baseStyle;
 };
 
-// Enhanced card styles with better shadows and fun variants
+// Enhanced card styles with better shadows and fun variants - Improved for 2025
 export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 'fun' = 'default') => {
   const baseStyle = {
     backgroundColor: theme.colors.surface,
-    borderRadius: platformStyles.borderRadius.xl,
-    padding: platformStyles.spacing.lg,
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
+    padding: platformStyles.spacing.xl, // Increased from lg
   };
   
   switch (variant) {
@@ -287,13 +321,16 @@ export const createCardStyle = (theme: Theme, variant: 'default' | 'elevated' | 
       return {
         ...baseStyle,
         ...platformStyles.cardShadow,
+        // Add subtle border for better definition
+        borderWidth: 1,
+        borderColor: theme.isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.05)',
       };
     case 'fun':
       return {
         ...baseStyle,
         borderWidth: 2,
         borderColor: theme.colors.accent,
-        borderRadius: platformStyles.borderRadius.xxl,
+        borderRadius: platformStyles.borderRadius.xxxl, // Use new xxxl radius
         ...platformStyles.cardShadow,
       };
     default:

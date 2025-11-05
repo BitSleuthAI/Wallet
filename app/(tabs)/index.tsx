@@ -345,7 +345,7 @@ function WalletScreenContent() {
             showsHorizontalScrollIndicator={false}
             pagingEnabled={false}
             decelerationRate="fast"
-            snapToInterval={336} // 320 (card width) + 16 (margin)
+            snapToInterval={356} // 340 (new card width) + 16 (margin)
             snapToAlignment="start"
             data={walletDataForList}
             keyExtractor={(item, index) => `${item.type}-${index}`}
@@ -368,7 +368,7 @@ function WalletScreenContent() {
                 } catch (error) {
                   // If retry fails, fall back to scrollToOffset for more reliable positioning
                   console.warn('Failed to scroll to wallet index after retry:', error);
-                  const offset = info.index * 336; // 320 (card width) + 16 (margin)
+                  const offset = info.index * 356; // 340 (new card width) + 16 (margin)
                   carouselRef.current?.scrollToOffset({ offset, animated: true });
                 }
               });
@@ -747,16 +747,18 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingTop: platformStyles.spacing.xl,
-    paddingBottom: platformStyles.spacing.md,
+    paddingTop: platformStyles.spacing.xxl, // Increased breathing room
+    paddingBottom: platformStyles.spacing.lg, // Increased from md
   },
   greeting: {
-    fontSize: 26,
-    fontWeight: 'bold',
+    fontSize: 30, // Increased from 26 for better hierarchy
+    fontWeight: '800', // Increased weight
+    letterSpacing: -0.3, // Improved readability
   },
   subtitle: {
-    fontSize: 15,
-    marginTop: 4,
+    fontSize: 16, // Increased from 15
+    marginTop: 6, // Increased from 4
+    letterSpacing: 0.2,
   },
   priceContainer: {
     alignItems: 'flex-end',
@@ -766,95 +768,102 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   bitcoinIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 40, // Increased from 36 for better visibility
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#F7931A',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 10,
+    marginRight: 12, // Increased from 10
     ...platformStyles.shadow,
   },
   bitcoinSymbol: {
     color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 20, // Increased from 18
+    fontWeight: '700', // More specific weight
   },
   bitcoinLabel: {
-    fontSize: 13,
+    fontSize: 14, // Increased from 13
+    letterSpacing: 0.2,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   bitcoinPrice: {
-    fontSize: 15,
+    fontSize: 16, // Increased from 15
     fontWeight: '600',
-    marginRight: 4,
+    marginRight: 6, // Increased from 4
+    letterSpacing: 0.1,
   },
   priceChange: {
-    fontSize: 13,
-    fontWeight: '500',
+    fontSize: 14, // Increased from 13
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.1,
   },
   balanceSection: {
     marginHorizontal: platformStyles.spacing.xl,
-    marginTop: platformStyles.spacing.xl,
+    marginTop: platformStyles.spacing.xxl, // Increased from xl
   },
   balanceContainer: {
     position: 'relative',
-    marginBottom: 10,
+    marginBottom: 14, // Increased from 10
   },
   mainBalance: {
-    fontSize: 36,
+    fontSize: 42, // Increased from 36 for better prominence
     fontWeight: '800',
     textAlign: 'center',
     paddingRight: 50,
+    letterSpacing: -0.5, // Improved readability for large numbers
   },
   eyeButton: {
     position: 'absolute',
     top: 0,
     right: 0,
-    padding: 10,
+    padding: 12, // Increased from 10 for better touch target
     borderRadius: platformStyles.borderRadius.xl,
     zIndex: 1,
   },
   btcBalance: {
-    fontSize: 17,
-    fontWeight: '500',
-    marginBottom: 12,
+    fontSize: 18, // Increased from 17
+    fontWeight: '600', // Increased from 500
+    marginBottom: 16, // Increased from 12
+    letterSpacing: 0.2,
   },
   changeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8, // Increased from 6
   },
   changeText: {
-    fontSize: 15,
+    fontSize: 16, // Increased from 15
     fontWeight: '600',
+    letterSpacing: 0.1,
   },
   periodSelector: {
     marginHorizontal: platformStyles.spacing.xl,
-    marginTop: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.xl,
+    marginTop: platformStyles.spacing.xxl, // Increased from xl
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
     ...platformStyles.shadow,
   },
   periodButton: {
     flex: 1,
-    paddingVertical: platformStyles.spacing.md,
-    paddingHorizontal: platformStyles.spacing.sm,
-    borderRadius: platformStyles.borderRadius.medium,
+    paddingVertical: platformStyles.spacing.md + 2, // Increased from md
+    paddingHorizontal: platformStyles.spacing.sm + 2, // Increased from sm
+    borderRadius: platformStyles.borderRadius.large, // Increased from medium
     alignItems: 'center',
     marginHorizontal: 4,
     backgroundColor: 'transparent',
   },
   periodText: {
-    fontSize: 15,
+    fontSize: 16, // Increased from 15
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
   actionButtons: {
     flexDirection: 'row',
     marginHorizontal: platformStyles.spacing.xl,
-    marginTop: platformStyles.spacing.xxl,
+    marginTop: platformStyles.spacing.xxxl, // Increased from xxl
     gap: platformStyles.spacing.lg,
   },
   sendButton: {
@@ -862,8 +871,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.xl,
+    paddingVertical: platformStyles.spacing.lg + 2, // Increased
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
     ...platformStyles.buttonShadow,
   },
   receiveButton: {
@@ -871,34 +880,36 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.xl,
+    paddingVertical: platformStyles.spacing.lg + 2, // Increased
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
     ...platformStyles.shadow,
   },
   actionButtonText: {
     color: 'white',
-    fontSize: 17,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    marginLeft: 10, // Increased from 8
+    letterSpacing: 0.2,
   },
   receiveButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    marginLeft: 10, // Increased from 8
+    letterSpacing: 0.2,
   },
   transactionsSection: {
-    marginTop: platformStyles.spacing.xxxl,
+    marginTop: platformStyles.spacing.huge, // Increased from xxxl for more space
     paddingBottom: platformStyles.spacing.xl,
     marginHorizontal: platformStyles.spacing.xl,
-    padding: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.xxl,
+    padding: platformStyles.spacing.xxl, // Increased from xl
+    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
     ...platformStyles.cardShadow,
   },
   transactionsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.xl,
+    marginBottom: platformStyles.spacing.xxl, // Increased from xl
   },
   transactionsHeaderActions: {
     flexDirection: 'row',
@@ -906,12 +917,14 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionTitle: {
-    fontSize: 22,
-    fontWeight: 'bold',
+    fontSize: 24, // Increased from 22
+    fontWeight: '700', // More specific weight
+    letterSpacing: -0.2,
   },
   viewAllText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16, // Increased from 15
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.2,
   },
   emptyState: {
     flex: 1,
@@ -920,25 +933,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: platformStyles.spacing.huge,
   },
   emptyTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 30, // Increased from 26
+    fontWeight: '800', // Increased weight
+    marginBottom: 12, // Increased from 10
+    letterSpacing: -0.3,
   },
   emptyText: {
-    fontSize: 17,
+    fontSize: 18, // Increased from 17
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: platformStyles.spacing.xxxl,
+    lineHeight: 28, // Increased from 26
+    marginBottom: platformStyles.spacing.huge, // Increased from xxxl
+    letterSpacing: 0.2,
   },
   setupButton: {
-    paddingHorizontal: platformStyles.spacing.xxxl,
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingHorizontal: platformStyles.spacing.huge, // Increased from xxxl
+    paddingVertical: platformStyles.spacing.lg + 4, // Increased
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
   },
   setupButtonText: {
     color: 'white',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.3,
   },
   errorContainer: {
     flexDirection: 'row',
@@ -998,9 +1014,9 @@ const styles = StyleSheet.create({
     marginRight: platformStyles.spacing.lg,
   },
   addWalletCard: {
-    width: 200,
-    height: 140,
-    borderRadius: platformStyles.borderRadius.xl,
+    width: 220, // Increased from 200
+    height: 160, // Increased from 140
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
     borderWidth: 2,
     borderStyle: 'dashed',
     justifyContent: 'center',
@@ -1009,29 +1025,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.02)',
   },
   addWalletIcon: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 56, // Increased from 52
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.sm,
+    marginBottom: platformStyles.spacing.md, // Increased from sm
     ...platformStyles.shadow,
   },
   addWalletText: {
-    fontSize: 15,
-    fontWeight: '500',
+    fontSize: 16, // Increased from 15
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.2,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased opacity from 0.5 for better focus
     justifyContent: 'center',
     alignItems: 'center',
-    padding: platformStyles.spacing.xl,
+    padding: platformStyles.spacing.xxl, // Increased from xl
   },
   editModal: {
     width: '100%',
-    maxWidth: 400,
-    borderRadius: platformStyles.borderRadius.xxl,
+    maxWidth: 420, // Increased from 400
+    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
     padding: 0,
     ...platformStyles.cardShadow,
   },
@@ -1039,41 +1056,44 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: platformStyles.spacing.xl,
+    padding: platformStyles.spacing.xxl, // Increased from xl
     borderBottomWidth: 1,
     borderBottomColor: '#E5E7EB',
   },
   editModalTitle: {
-    fontSize: 19,
-    fontWeight: '600',
+    fontSize: 22, // Increased from 19
+    fontWeight: '700', // Increased from 600
+    letterSpacing: -0.2,
   },
   editModalContent: {
-    padding: platformStyles.spacing.xl,
+    padding: platformStyles.spacing.xxl, // Increased from xl
   },
   editLabel: {
-    fontSize: 15,
-    fontWeight: '500',
-    marginBottom: platformStyles.spacing.sm,
-    marginTop: platformStyles.spacing.lg,
+    fontSize: 16, // Increased from 15
+    fontWeight: '600', // Increased from 500
+    marginBottom: platformStyles.spacing.md, // Increased from sm
+    marginTop: platformStyles.spacing.xl, // Increased from lg
+    letterSpacing: 0.2,
   },
   editInput: {
-    borderWidth: 1.5,
-    borderRadius: platformStyles.borderRadius.large,
-    paddingHorizontal: platformStyles.spacing.lg,
-    paddingVertical: platformStyles.spacing.md,
-    fontSize: 17,
+    borderWidth: 2, // Increased from 1.5
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
+    paddingHorizontal: platformStyles.spacing.lg + 4, // Increased
+    paddingVertical: platformStyles.spacing.md + 4, // Increased
+    fontSize: 18, // Increased from 17
+    letterSpacing: 0.2,
     // borderColor will be set dynamically via theme.colors.border
   },
   colorPicker: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: platformStyles.spacing.md,
-    marginTop: platformStyles.spacing.sm,
+    gap: platformStyles.spacing.lg, // Increased from md
+    marginTop: platformStyles.spacing.md, // Increased from sm
   },
   colorOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 52, // Increased from 48
+    height: 52,
+    borderRadius: 26,
     borderWidth: 2,
     borderColor: 'transparent',
     overflow: 'hidden',
@@ -1083,7 +1103,7 @@ const styles = StyleSheet.create({
   },
   selectedColor: {
     // borderColor will be set dynamically via theme.colors.primary
-    borderWidth: 3,
+    borderWidth: 4, // Increased from 3 for better visibility
   },
   colorGradient: {
     position: 'absolute',
@@ -1098,34 +1118,36 @@ const styles = StyleSheet.create({
   },
   editModalActions: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.xl,
-    gap: platformStyles.spacing.md,
+    padding: platformStyles.spacing.xxl, // Increased from xl
+    gap: platformStyles.spacing.lg, // Increased from md
   },
   editCancelButton: {
     flex: 1,
-    paddingVertical: platformStyles.spacing.md,
-    borderRadius: platformStyles.borderRadius.large,
-    borderWidth: 1.5,
+    paddingVertical: platformStyles.spacing.md + 4, // Increased
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
+    borderWidth: 2, // Increased from 1.5
     alignItems: 'center',
     // borderColor will be set dynamically via theme.colors.border
   },
   editCancelText: {
-    fontSize: 17,
-    fontWeight: '500',
+    fontSize: 18, // Increased from 17
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.2,
     // color will be set dynamically via theme.colors.textSecondary
   },
   editSaveButton: {
     flex: 1,
-    paddingVertical: platformStyles.spacing.md,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingVertical: platformStyles.spacing.md + 4, // Increased
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
     // backgroundColor will be set dynamically via theme.colors.primary
     alignItems: 'center',
     ...platformStyles.buttonShadow,
   },
   editSaveText: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
     color: 'white',
+    letterSpacing: 0.3,
   },
   chartContainer: {
     marginTop: platformStyles.spacing.xl,
