@@ -25,64 +25,65 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
     if (theme.isDark) {
       switch (variant) {
         case 'primary':
-          return [theme.colors.background, theme.colors.surface, theme.colors.surfaceDark];
+          // Gradient fades to solid background at bottom for tab bar consistency
+          return [theme.colors.background, theme.colors.surface, theme.colors.background];
         case 'secondary':
           return [theme.colors.surfaceDark, theme.colors.surface, theme.colors.background];
         case 'accent':
           return [
             `${theme.colors.glowPrimary}`,
             theme.colors.background,
-            `${theme.colors.glowAccent}`,
+            theme.colors.background, // End with solid background for tab bar
           ];
         case 'subtle':
-          return [theme.colors.background, theme.colors.surface];
+          return [theme.colors.background, theme.colors.surface, theme.colors.background];
         case 'glow':
           return [
             theme.colors.background,
             `${theme.colors.glowPrimary}`,
             `${theme.colors.glowSecondary}`,
-            theme.colors.background,
+            theme.colors.background, // End with solid background for tab bar
           ];
         default:
-          return [theme.colors.background, theme.colors.surface];
+          return [theme.colors.background, theme.colors.surface, theme.colors.background];
       }
     } else {
-      // Light mode with vibrant coral gradient (unchanged - perfect as is)
+      // Light mode - ensure gradients end with solid white at bottom for tab bar consistency
       switch (variant) {
         case 'primary':
-          // Beautiful coral gradient for light mode
+          // Beautiful coral gradient that fades to solid white at bottom
           return [
             '#FFE5DB',  // Light peach
             '#FFD4C4',  // Soft coral
-            '#FFC3AD',  // Warm peach
-            '#FFB296',  // Light orange
+            '#FFF5F0',  // Very light peach
+            '#FFFFFF',  // Pure white at bottom for tab bar
           ];
         case 'secondary':
           return [
             '#FFE5DB',
             '#FFDDD2',
-            '#FFE5DB',
+            '#FFFFFF', // Pure white at bottom
           ];
         case 'accent':
           return [
             '#FFC3AD',
             '#FFD4C4',
-            '#FFB296',
+            '#FFFFFF', // Pure white at bottom
           ];
         case 'subtle':
-          return ['#FFF5F0', '#FFE5DB'];
+          return ['#FFF5F0', '#FFE5DB', '#FFFFFF'];
         case 'glow':
           return [
             '#FFE5DB',
             '#FFC3AD',
-            '#FFB296',
-            '#FFE5DB',
+            '#FFF5F0',
+            '#FFFFFF', // Pure white at bottom
           ];
         default:
-          return ['#FFE5DB', '#FFD4C4'];
+          return ['#FFE5DB', '#FFD4C4', '#FFFFFF'];
       }
     }
-  }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowAccent, theme.colors.glowSecondary, variant]);
+  }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowSecondary, variant]);
 
   const getGradientLocations = useMemo((): readonly [number, number, ...number[]] | undefined => {
     switch (intensity) {
