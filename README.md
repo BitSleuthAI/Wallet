@@ -439,11 +439,11 @@ This is proprietary software owned by BitSleuth. Contributions are limited to au
 ### Quick Guidelines
 - Follow TypeScript best practices
 - Write clean, documented code
+- **Store all markdown documentation in the `docs/` folder** (see [CONTRIBUTING.md](CONTRIBUTING.md) for details)
 - Test thoroughly before submitting changes
 - Ensure all linting passes before commits
 - Never add Google Analytics or user tracking
 - Always prioritize security and privacy
-- **Store all markdown documentation in the `docs/` folder** (see [CONTRIBUTING.md](CONTRIBUTING.md) for details)
 
 ---
 

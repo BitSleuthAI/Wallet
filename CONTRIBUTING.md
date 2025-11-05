@@ -13,7 +13,7 @@ These files should remain in the root directory:
 - `README.md` - Project overview and getting started guide
 - `CONTRIBUTING.md` - This file; contribution guidelines
 - `LICENSE.md` or `LICENSE` - License information
-- `CHANGELOG.md` - Version history (if present)
+- `CHANGELOG.md` - Version history (for future use, if created)
 - `AGENTS.md` - Agent configuration and guidelines
 - `.github/copilot-instructions.md` - GitHub Copilot instructions
 
