@@ -41,6 +41,7 @@ export default function BitSleuthCard({
   const scale = useSharedValue(1);
   const translateY = useSharedValue(0);
   const shadowOpacity = useSharedValue(0.15);
+  const [isPressed, setIsPressed] = React.useState(false);
 
   // Color mapping for fun variants
   const funColors = {
