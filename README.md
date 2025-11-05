@@ -434,20 +434,16 @@ eas submit --platform android
 
 This is proprietary software owned by BitSleuth. Contributions are limited to authorized BitSleuth personnel only.
 
-### Development Guidelines
+**For detailed contribution guidelines, including documentation organization and code style, see [CONTRIBUTING.md](CONTRIBUTING.md).**
+
+### Quick Guidelines
 - Follow TypeScript best practices
 - Write clean, documented code
+- **Store all markdown documentation in the `docs/` folder** (see [CONTRIBUTING.md](CONTRIBUTING.md) for details)
 - Test thoroughly before submitting changes
 - Ensure all linting passes before commits
 - Never add Google Analytics or user tracking
 - Always prioritize security and privacy
-
-### Code Style
-- Use TypeScript for all new code
-- Follow existing naming conventions
-- Use functional components with hooks
-- Keep components small and focused
-- Document complex logic with comments
 
 ---
 
