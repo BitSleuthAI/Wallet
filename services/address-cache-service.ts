@@ -150,16 +150,47 @@ export async function getCachedAddressUTXOs(address: string): Promise<any[] | nu
       await AsyncStorage.removeItem(KEY_UTXOS(address));
       return null;
     }
-    // Don't return empty cached UTXOs - they might be stale
-    if (Array.isArray(data) && data.length === 0) {
-      console.log(`🚫 Empty UTXO cache found for ${safeAddressLog(address)}, returning null to fetch fresh data`);
-      await AsyncStorage.removeItem(KEY_UTXOS(address));
-      return null;
-    }
+    // Always return the cached data if present and not expired (including empty arrays)
+    // The caller should handle empty arrays appropriately
     return Array.isArray(data) ? data : null;
   } catch (error) {
     console.warn('Failed to read cached address UTXOs:', error);
     return null;
+  }
+}
+
+/**
+ * Check if a cached address entry is stale (past TTL)
+ * Used to determine if empty results should be refreshed
+ */
+export async function isAddressCacheStale(address: string, type: 'txids' | 'stats' | 'utxos'): Promise<boolean> {
+  try {
+    let key: string;
+    let ttl: number;
+    
+    switch (type) {
+      case 'txids':
+        key = KEY_TXIDS(address);
+        ttl = TXIDS_TTL_MS;
+        break;
+      case 'stats':
+        key = KEY_STATS(address);
+        ttl = STATS_TTL_MS;
+        break;
+      case 'utxos':
+        key = KEY_UTXOS(address);
+        ttl = UTXOS_TTL_MS;
+        break;
+    }
+    
+    const raw = await AsyncStorage.getItem(key);
+    if (!raw) return true; // No cache = stale
+    
+    const { expired } = hydrateCacheEntry<any>(raw, ttl);
+    return expired;
+  } catch (error) {
+    console.warn('Failed to check cache staleness:', error);
+    return true; // Assume stale on error
   }
 }
 
