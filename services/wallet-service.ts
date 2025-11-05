@@ -195,7 +195,7 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
           }
           
           // No additional delay needed - rate limiting is handled in esplora-service
-          // The request queue enforces 1000ms+ between requests automatically
+          // The request queue enforces 1000-1200ms between requests automatically (1000ms base + 0-200ms jitter)
         }
         
         // Process addresses in order and track gap correctly
@@ -231,7 +231,7 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         index += GAP_LIMIT;
 
         // No additional delay needed between batches
-        // The request queue in esplora-service handles all rate limiting (1000ms+ per request)
+        // The request queue in esplora-service handles all rate limiting (1000-1200ms per request)
       }
     }
     
@@ -355,7 +355,7 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           });
         }
 
-        // No additional delay needed - rate limiting handled by request queue (1000ms+ per request)
+        // No additional delay needed - rate limiting handled by request queue (1000-1200ms per request)
         
       } catch (error) {
         console.warn(`⚠️ Failed to process address ${address}:`, error);

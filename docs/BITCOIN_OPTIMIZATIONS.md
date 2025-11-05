@@ -83,15 +83,19 @@ const MAX_CONCURRENT_REQUESTS = 1;
 
 **Solutions Implemented**:
 
-#### a. Empty UTXO Cache Prevention
+#### a. Smart Empty UTXO Handling
 ```typescript
-// Don't cache empty UTXO results - always fetch fresh
-if (!utxos || utxos.length === 0) {
-  console.log('🚫 Not caching empty UTXO result');
-  return; // Don't cache
+// Check cache staleness for empty UTXO results
+if (cachedUtxos && cachedUtxos.length === 0) {
+  const isStale = await isAddressCacheStale(address, 'utxos');
+  if (isStale) {
+    // Fetch fresh data instead of using stale empty cache
+  } else {
+    return cachedUtxos; // Return fresh empty result
+  }
 }
 ```
-**Rationale**: Empty results could be due to temporary API issues. Always fetch fresh data for empty responses.
+**Rationale**: Empty results are only trusted if cache is fresh. Stale empty results could mask actual funds, so we fetch fresh data.
 
 #### b. Cache Staleness Detection
 ```typescript
