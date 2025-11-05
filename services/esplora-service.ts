@@ -4,12 +4,12 @@
  */
 
 import {
-    getCachedAddressStats,
-    getCachedAddressTransactions,
-    getCachedAddressUTXOs,
-    setCachedAddressStats,
-    setCachedAddressTxIds,
-    setCachedAddressUTXOs
+  getCachedAddressStats,
+  getCachedAddressTransactions,
+  getCachedAddressUTXOs,
+  setCachedAddressStats,
+  setCachedAddressTxIds,
+  setCachedAddressUTXOs
 } from './address-cache-service';
 import { reliableFetch } from './networking-polyfill';
 import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
@@ -448,6 +448,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   // Cache miss - will make API request
   apiStats.cacheMisses++;
 
+  // Log cached transaction IDs for debugging
+  if (addressTxMatch) {
     const cachedTxIds = getCachedTransactionIds();
     if (cachedTxIds.size > 0) {
       console.log(`📦 Found ${cachedTxIds.size} cached transactions, will merge with fresh data`);
