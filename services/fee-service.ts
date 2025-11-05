@@ -8,6 +8,23 @@ const MEMPOOL_API = 'https://mempool.space/api';
 const MEMPOOL_RECOMMENDED_API = 'https://mempool.space/api/v1/fees/recommended';
 const MEMPOOL_ESTIMATES_API = 'https://mempool.space/api/v1/fees/mempool-blocks';
 
+// Rate limiting for fee API calls (250ms as per Blockstream docs)
+const FEE_API_DELAY_MS = 250;
+let lastFeeApiCallTime = 0;
+
+async function rateLimitedFetch(url: string, options?: RequestInit): Promise<Response> {
+  // Enforce minimum delay between fee API calls
+  const now = Date.now();
+  const timeSinceLastCall = now - lastFeeApiCallTime;
+  if (timeSinceLastCall < FEE_API_DELAY_MS) {
+    const delayNeeded = FEE_API_DELAY_MS - timeSinceLastCall;
+    await new Promise(resolve => setTimeout(resolve, delayNeeded));
+  }
+  
+  lastFeeApiCallTime = Date.now();
+  return fetch(url, options);
+}
+
 // Fee estimation service
 export class FeeEstimationService {
   private static instance: FeeEstimationService;
@@ -68,7 +85,7 @@ export class FeeEstimationService {
     try {
       console.log('📊 Fetching recommended fees from Mempool.space...');
       
-      const response = await fetch(MEMPOOL_RECOMMENDED_API, {
+      const response = await rateLimitedFetch(MEMPOOL_RECOMMENDED_API, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -107,7 +124,7 @@ export class FeeEstimationService {
     try {
       console.log('📊 Fetching mempool block estimates from Mempool.space...');
       
-      const response = await fetch(MEMPOOL_ESTIMATES_API, {
+      const response = await rateLimitedFetch(MEMPOOL_ESTIMATES_API, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
@@ -172,7 +189,7 @@ export class FeeEstimationService {
     try {
       console.log('📊 Fetching fee estimates from Blockstream (fallback)...');
       
-      const response = await fetch(`${BLOCKSTREAM_API}/fee-estimates`, {
+      const response = await rateLimitedFetch(`${BLOCKSTREAM_API}/fee-estimates`, {
         method: 'GET',
         headers: {
           'Accept': 'application/json',

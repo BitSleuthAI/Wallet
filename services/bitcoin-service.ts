@@ -191,15 +191,15 @@ export const getAddressUTXOs = async (address: string, addressIndex?: number): P
   }
 };
 
-// Direct API call bypassing all caching
+// Direct API call bypassing caching but respecting rate limits
 async function fetchDirectUTXOs(address: string): Promise<any[]> {
   try {
-    console.log('🌐 Direct API call for UTXOs:', address.substring(0, 10) + '...');
-    const response = await fetch(`https://blockstream.info/api/address/${address}/utxo`);
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-    const data = await response.json();
+    console.log('🌐 Direct API call for UTXOs (bypassing cache):', address.substring(0, 10) + '...');
+    
+    // Use esplora service to respect rate limiting, but with minimal cache TTL
+    const { esploraGet } = await import('./esplora-service');
+    const data = await esploraGet(`/address/${address}/utxo`, 1000); // 1 second TTL for "direct" calls
+    
     console.log('🌐 Direct API response:', Array.isArray(data) ? data.length : 'not array');
     return Array.isArray(data) ? data : [];
   } catch (error) {
@@ -880,6 +880,11 @@ async function broadcastTransaction(txHex: string): Promise<string> {
               console.error('❌ Failed to parse broadcast response:', parseError);
               reject(new Error('Failed to parse broadcast response'));
             }
+          } else if (xhr.status === 429) {
+            // Rate limited - wait and try next provider
+            console.warn('⚠️ Broadcast rate limited, switching to next provider...');
+            urlIndex++;
+            setTimeout(tryNextUrl, 2000); // 2 second delay before trying next provider
           } else if (xhr.status >= 500 || xhr.status === 0) {
             // Server error or network issue, try next URL
             console.warn('⚠️ Broadcast endpoint failed, trying next...');
