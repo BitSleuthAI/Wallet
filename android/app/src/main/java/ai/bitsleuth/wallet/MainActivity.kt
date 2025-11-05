@@ -3,6 +3,9 @@ import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
@@ -21,6 +24,28 @@ class MainActivity : ReactActivity() {
     SplashScreenManager.registerOnActivity(this)
     // @generated end expo-splashscreen
     super.onCreate(null)
+    
+    // Enable edge-to-edge display for Android 15+ (API 35+)
+    // This allows the app to draw behind system bars for an immersive experience
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) { // API 35
+      WindowCompat.setDecorFitsSystemWindows(window, false)
+      
+      // Make system bars transparent
+      window.statusBarColor = android.graphics.Color.TRANSPARENT
+      window.navigationBarColor = android.graphics.Color.TRANSPARENT
+      
+      // Configure system bar appearance for proper contrast
+      val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+      windowInsetsController?.let { controller ->
+        // Enable contrast enforcement to ensure system bar icons are visible
+        controller.isAppearanceLightStatusBars = false
+        controller.isAppearanceLightNavigationBars = false
+      }
+    } else {
+      // For Android 14 and below, keep the traditional behavior
+      // The system bars will use colors defined in styles.xml
+      WindowCompat.setDecorFitsSystemWindows(window, true)
+    }
   }
 
   /**
