@@ -94,7 +94,9 @@ const FEE_API_DELAY_MS = 250;
 
 ### 5. Monitoring and Debugging
 
-Export `getRequestQueueStats()` for monitoring:
+#### Request Queue Statistics
+
+Monitor request queue health:
 
 ```typescript
 import { getRequestQueueStats } from './services/esplora-service';
@@ -102,6 +104,33 @@ import { getRequestQueueStats } from './services/esplora-service';
 const stats = getRequestQueueStats();
 console.log(`Queue: ${stats.queueLength}, Active: ${stats.activeRequests}`);
 ```
+
+#### API Usage Statistics
+
+Track API performance and cache efficiency:
+
+```typescript
+import { getApiStats, resetApiStats } from './services/esplora-service';
+
+// Get current statistics
+const stats = getApiStats();
+console.log(`Total requests: ${stats.totalRequests}`);
+console.log(`Cache hits: ${stats.cacheHits} (${(stats.cacheHits / stats.totalRequests * 100).toFixed(1)}%)`);
+console.log(`Rate limit hits: ${stats.rateLimitHits}`);
+console.log(`Errors: ${stats.errors}`);
+console.log(`Uptime: ${(stats.uptime / 1000).toFixed(0)}s`);
+
+// Reset statistics (e.g., after wallet sync)
+resetApiStats();
+```
+
+**Statistics tracked:**
+- `totalRequests` - Total API requests made
+- `cacheHits` - Requests served from cache
+- `cacheMisses` - Requests that required API call
+- `rateLimitHits` - Times we hit 429 rate limit
+- `errors` - Failed requests
+- `uptime` - Time since last reset (ms)
 
 ## API Endpoints Coverage
 

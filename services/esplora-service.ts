@@ -91,6 +91,34 @@ class RequestQueue {
 // Global request queue instance
 const requestQueue = new RequestQueue();
 
+// Track API statistics for debugging and monitoring
+let apiStats = {
+  totalRequests: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  rateLimitHits: 0,
+  errors: 0,
+  lastResetTime: Date.now(),
+};
+
+export function getApiStats() {
+  return {
+    ...apiStats,
+    uptime: Date.now() - apiStats.lastResetTime,
+  };
+}
+
+export function resetApiStats() {
+  apiStats = {
+    totalRequests: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    rateLimitHits: 0,
+    errors: 0,
+    lastResetTime: Date.now(),
+  };
+}
+
 type CacheEntry = { data: any; timestamp: number; ttl: number };
 
 // Cache for API responses (for non-transaction data like block height, prices, etc.)
@@ -389,12 +417,16 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   const addressStatsMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})$/);
   const addressUtxoMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/utxo$/);
   
+  // Track API request
+  apiStats.totalRequests++;
+  
   // For individual transaction requests, check cache first
   if (txMatch) {
     const txid = txMatch[1];
     const { getCachedTransaction } = require('./transaction-cache-service');
     const cachedTx = getCachedTransaction(txid);
     if (cachedTx) {
+      apiStats.cacheHits++;
       // Return cached transaction immediately - it's immutable once confirmed
       // For unconfirmed, we trust the cache within its TTL
       return cachedTx;
@@ -407,9 +439,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     const address = addressTxMatch[1];
     const cachedAddressTxs = await getCachedAddressTransactions(address);
     if (cachedAddressTxs !== null) {
+      apiStats.cacheHits++;
       console.log(`📦 Address txs cache hit for ${address}: ${cachedAddressTxs.length} txs`);
       return cachedAddressTxs;
     }
+  }
+  
+  // Cache miss - will make API request
+  apiStats.cacheMisses++;
 
     const cachedTxIds = getCachedTransactionIds();
     if (cachedTxIds.size > 0) {
@@ -593,11 +630,13 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
         
       } catch (e: any) {
         lastError = e;
+        apiStats.errors++;
         console.log(`❌ Attempt ${attempt + 1} failed for ${base}:`, e.message);
 
         // If capped by rate limit, implement aggressive backoff before switching providers
         if (e?.message?.includes('Rate limited')) {
-          console.log(`⚠️ Rate limited by ${base}`);
+          apiStats.rateLimitHits++;
+          console.log(`⚠️ Rate limited by ${base} (total: ${apiStats.rateLimitHits})`);
 
           // First, check if we have cached data to return immediately
           const cached = getCachedData(cacheKey);

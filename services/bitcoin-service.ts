@@ -880,6 +880,11 @@ async function broadcastTransaction(txHex: string): Promise<string> {
               console.error('❌ Failed to parse broadcast response:', parseError);
               reject(new Error('Failed to parse broadcast response'));
             }
+          } else if (xhr.status === 429) {
+            // Rate limited - wait and try next provider
+            console.warn('⚠️ Broadcast rate limited, switching to next provider...');
+            urlIndex++;
+            setTimeout(tryNextUrl, 2000); // 2 second delay before trying next provider
           } else if (xhr.status >= 500 || xhr.status === 0) {
             // Server error or network issue, try next URL
             console.warn('⚠️ Broadcast endpoint failed, trying next...');
