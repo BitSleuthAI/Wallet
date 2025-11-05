@@ -21,7 +21,8 @@ export interface Wallet {
   color: string;
   type: WalletType;
   addressType: AddressType;
-  mnemonic: string;
+  // mnemonic is now stored securely in Expo SecureStore, not in the wallet object
+  // Use services/secure-mnemonic-service.ts to access mnemonics
   xpub: string;
   addresses: string[];
   currentAddressIndex: number;

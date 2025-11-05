@@ -17,10 +17,12 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ViewRecoveryPhrase() {
-  const { currentWallet, theme } = useWallet();
+  const { currentWallet, theme, getMnemonic } = useWallet();
   const [isRevealed, setIsRevealed] = useState(false);
   const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [mnemonic, setMnemonic] = useState<string | null>(null);
+  const [isLoadingMnemonic, setIsLoadingMnemonic] = useState(false);
 
   // Debug logging for state changes
   useEffect(() => {
@@ -30,6 +32,47 @@ export default function ViewRecoveryPhrase() {
   useEffect(() => {
     console.log('ViewRecoveryPhrase: isPinVerified changed to:', isPinVerified);
   }, [isPinVerified]);
+
+  // SECURITY FIX: Load mnemonic from secure storage after PIN verification
+  useEffect(() => {
+    if (isPinVerified && currentWallet && !mnemonic && !isLoadingMnemonic) {
+      setIsLoadingMnemonic(true);
+      getMnemonic(currentWallet.id)
+        .then((retrievedMnemonic) => {
+          if (retrievedMnemonic) {
+            setMnemonic(retrievedMnemonic);
+          } else {
+            console.error('❌ Failed to retrieve mnemonic from secure storage');
+            Alert.alert(
+              'Error',
+              'Failed to retrieve recovery phrase. Please try again.',
+              [{ text: 'OK', onPress: () => router.back() }]
+            );
+          }
+        })
+        .catch((error) => {
+          console.error('❌ Error loading mnemonic:', error);
+          Alert.alert(
+            'Error',
+            'Failed to load recovery phrase. Please try again.',
+            [{ text: 'OK', onPress: () => router.back() }]
+          );
+        })
+        .finally(() => {
+          setIsLoadingMnemonic(false);
+        });
+    }
+  }, [isPinVerified, currentWallet, mnemonic, isLoadingMnemonic, getMnemonic]);
+
+  // Clear mnemonic from memory when component unmounts (security best practice)
+  useEffect(() => {
+    return () => {
+      if (mnemonic) {
+        setMnemonic(null);
+        console.log('🔐 Cleared mnemonic from memory');
+      }
+    };
+  }, [mnemonic]);
 
   const handleReveal = () => {
     // Try the Alert approach first
@@ -112,7 +155,27 @@ export default function ViewRecoveryPhrase() {
     );
   }
 
-  const mnemonicWords = currentWallet.mnemonic.split(' ');
+  // SECURITY FIX: Use mnemonic from secure storage, not from wallet object
+  if (isLoadingMnemonic || !mnemonic) {
+    return (
+      <GradientBackground theme={theme} variant="primary">
+        <AndroidSafeContainer style={styles.container} enableBottomPadding={false}>
+          <Stack.Screen
+            options={{
+              headerShown: false,
+            }}
+          />
+          <View style={styles.errorContainer}>
+            <Text style={[styles.errorText, { color: theme.colors.text }]}>
+              {isLoadingMnemonic ? 'Loading recovery phrase...' : 'Failed to load recovery phrase.'}
+            </Text>
+          </View>
+        </AndroidSafeContainer>
+      </GradientBackground>
+    );
+  }
+
+  const mnemonicWords = mnemonic.split(' ');
 
   return (
     <GradientBackground theme={theme} variant="primary">
@@ -149,14 +212,14 @@ export default function ViewRecoveryPhrase() {
             {isRevealed ? (
               <View style={styles.qrContent}>
                 <QRCode
-                  value={currentWallet.mnemonic}
+                  value={mnemonic}
                   size={160}
                   backgroundColor="white"
                   color="black"
                   testID="recovery-phrase-qr"
                 />
                 <Text style={[styles.qrFallbackText, { color: theme.colors.textSecondary }]}>
-                  QR Code: {currentWallet.mnemonic.substring(0, 20)}...
+                  QR Code: {mnemonic.substring(0, 20)}...
                 </Text>
               </View>
             ) : (

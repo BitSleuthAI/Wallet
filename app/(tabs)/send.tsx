@@ -63,6 +63,7 @@ function SendScreenContent() {
     incrementUsageCount,
     utxos: walletUtxos,
     refreshData,
+    getMnemonic,
   } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
   
@@ -564,10 +565,14 @@ function SendScreenContent() {
         throw new Error('Invalid current address index');
       }
       
-      if (!currentWallet.mnemonic || currentWallet.mnemonic.trim() === '') {
-        console.error('❌ Wallet mnemonic is missing');
-        throw new Error('Wallet mnemonic is required for transaction signing');
+      // SECURITY FIX: Retrieve mnemonic from secure storage
+      console.log('🔐 Retrieving mnemonic from secure storage...');
+      const mnemonic = await getMnemonic(currentWallet.id);
+      if (!mnemonic || mnemonic.trim() === '') {
+        console.error('❌ Failed to retrieve wallet mnemonic from secure storage');
+        throw new Error('Failed to retrieve wallet mnemonic. Please try again.');
       }
+      console.log('✅ Mnemonic retrieved from secure storage');
       
       // Get the current address and its index for signing
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
@@ -687,7 +692,7 @@ function SendScreenContent() {
         recipientAddress.trim(),
         amountInBTC,
         feeRate,
-        currentWallet.mnemonic,
+        mnemonic,
         addressIndex,
         enableRBF,
         utxosToUse.length > 0 ? utxosToUse : undefined,
