@@ -451,6 +451,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
             console.log('✅ Migrated wallet types from hd to segwit-native');
           }
         }
+        
+        // SECURITY FIX: Migrate mnemonics from plaintext to secure storage
+        console.log('🔐 Checking for mnemonic migration to secure storage...');
+        const { migrateWalletMnemonics } = await import('@/services/secure-mnemonic-service');
+        const migrationResult = await migrateWalletMnemonics();
+        if (migrationResult.success) {
+          console.log(`✅ Mnemonic migration completed: ${migrationResult.migratedCount} wallets migrated`);
+        } else {
+          console.error('❌ Mnemonic migration had errors:', migrationResult.errors);
+        }
       } catch (error) {
         console.warn('⚠️ Error during wallet initialization:', error);
       }
@@ -2066,6 +2076,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         } catch (e) {
           console.warn('Failed to clear persisted wallet data:', e);
         }
+        
+        // SECURITY FIX: Delete mnemonic from secure storage
+        try {
+          console.log('🔐 Deleting mnemonic from secure storage for deleted wallet');
+          const { deleteMnemonic } = await import('@/services/secure-mnemonic-service');
+          await deleteMnemonic(walletId);
+        } catch (e) {
+          console.warn('Failed to delete mnemonic from secure storage:', e);
+        }
       }
       
       // Wait for state to settle before invalidating queries
@@ -2101,6 +2120,16 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       // Clear all persisted wallet data before clearing AsyncStorage
       await clearAllPersistedWalletData();
       
+      // SECURITY FIX: Delete all mnemonics from secure storage
+      try {
+        console.log('🔐 Deleting all mnemonics from secure storage');
+        const walletIds = wallets.map(w => w.id);
+        const { deleteAllMnemonics } = await import('@/services/secure-mnemonic-service');
+        await deleteAllMnemonics(walletIds);
+      } catch (e) {
+        console.warn('Failed to delete mnemonics from secure storage:', e);
+      }
+      
       await AsyncStorage.clear();
 
       setWallets([]);
@@ -2134,7 +2163,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       console.error('❌ Error clearing wallet data:', err);
       throw new Error('Failed to clear wallet data. Please try again.');
     }
-  }, [queryClient]);
+  }, [queryClient, wallets]);
 
   // Helper function to trigger initial data fetch for a wallet
   // This is used after wallet creation/import to ensure data loads immediately
@@ -2545,6 +2574,17 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     incrementUsageCount,
   }), [shouldShowFeedbackPrompt, markFeedbackPromptShown, markFeedbackPromptDismissed, markFeedbackSubmitted, incrementUsageCount]);
 
+  // Helper function to safely retrieve mnemonic from secure storage
+  const getMnemonic = useCallback(async (walletId: string): Promise<string | null> => {
+    try {
+      const { getMnemonic: getSecureMnemonic } = await import('@/services/secure-mnemonic-service');
+      return await getSecureMnemonic(walletId);
+    } catch (error) {
+      console.error('❌ Failed to retrieve mnemonic:', error);
+      return null;
+    }
+  }, []);
+
   // Memoize the final returned object to prevent unnecessary re-renders
   const walletStoreData = useMemo(() => ({
     ...walletData,
@@ -2559,6 +2599,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     isCreatingWallet: saveWalletsMutation.isPending,
     setAddressStatsCache,
     getAddressStatsCacheValue,
+    getMnemonic, // Helper to retrieve mnemonic from secure storage
   }), [
     walletData,
     balanceData,
@@ -2572,6 +2613,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     saveWalletsMutation.isPending,
     setAddressStatsCache,
     getAddressStatsCacheValue,
+    getMnemonic,
   ]);
 
   return walletStoreData;
