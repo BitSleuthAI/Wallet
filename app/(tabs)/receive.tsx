@@ -300,7 +300,7 @@ function ReceiveScreenContent() {
             ) : currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
               <QRCode
                 value={currentAddress}
-                size={220}
+                size={240}
                 backgroundColor="white"
                 color="black"
                 logo={undefined}
@@ -308,7 +308,7 @@ function ReceiveScreenContent() {
                 logoBackgroundColor="transparent"
                 logoMargin={0}
                 logoBorderRadius={0}
-                quietZone={12}
+                quietZone={16}
                 enableLinearGradient={false}
               />
             ) : (
@@ -418,65 +418,73 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingTop: platformStyles.spacing.xl,
+    paddingTop: platformStyles.spacing.xxl, // Increased from xl
   },
 
   qrContainer: {
-    marginBottom: platformStyles.spacing.xxxl,
+    marginBottom: platformStyles.spacing.huge, // Increased from xxxl
     alignItems: 'center',
     alignSelf: 'center',
+    padding: platformStyles.spacing.xxl, // Added padding
+    backgroundColor: 'white', // Ensure QR has white background
+    borderRadius: platformStyles.borderRadius.xxl, // Rounded corners
+    ...platformStyles.cardShadow, // Add shadow
   },
   addressSection: {
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.xxxl,
-    paddingHorizontal: platformStyles.spacing.xl,
+    marginBottom: platformStyles.spacing.huge, // Increased from xxxl
+    paddingHorizontal: platformStyles.spacing.xxl, // Increased from xl
   },
   addressLabel: {
-    fontSize: 17,
-    fontWeight: '500',
-    marginBottom: platformStyles.spacing.md,
+    fontSize: 18, // Increased from 17
+    fontWeight: '600', // Increased from 500
+    marginBottom: platformStyles.spacing.lg, // Increased from md
+    letterSpacing: 0.2,
   },
   address: {
-    fontSize: 15,
+    fontSize: 16, // Increased from 15
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 24, // Increased from 22
     fontFamily: 'monospace',
+    letterSpacing: 0.5,
   },
   newAddressButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xxl,
-    paddingVertical: platformStyles.spacing.md,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingHorizontal: platformStyles.spacing.xxxl, // Increased from xxl
+    paddingVertical: platformStyles.spacing.lg, // Increased from md
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
     marginBottom: platformStyles.spacing.xxxl,
     ...platformStyles.buttonShadow,
   },
   newAddressText: {
     color: 'white',
-    fontSize: 17,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    marginLeft: 10, // Increased from 8
+    letterSpacing: 0.3,
   },
   bottomActionButtons: {
     flexDirection: 'row',
     gap: platformStyles.spacing.lg,
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingBottom: Platform.OS === 'android' ? 120 : platformStyles.spacing.xl,
-    paddingTop: platformStyles.spacing.md,
+    paddingBottom: Platform.OS === 'android' ? 120 : platformStyles.spacing.xxl, // Increased from xl
+    paddingTop: platformStyles.spacing.lg, // Increased from md
   },
   actionButton: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingVertical: platformStyles.spacing.lg + 2, // Increased
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
     ...platformStyles.shadow,
   },
   actionButtonText: {
-    fontSize: 17,
-    fontWeight: '600',
-    marginLeft: 8,
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    marginLeft: 10, // Increased from 8
+    letterSpacing: 0.2,
   },
   emptyState: {
     flex: 1,
@@ -485,36 +493,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: platformStyles.spacing.huge,
   },
   emptyTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 10,
+    fontSize: 30, // Increased from 26
+    fontWeight: '800', // Increased weight
+    marginBottom: 12, // Increased from 10
+    letterSpacing: -0.3,
   },
   emptyText: {
-    fontSize: 17,
+    fontSize: 18, // Increased from 17
     textAlign: 'center',
-    lineHeight: 26,
-    marginBottom: platformStyles.spacing.xxxl,
+    lineHeight: 28, // Increased from 26
+    marginBottom: platformStyles.spacing.huge, // Increased from xxxl
+    letterSpacing: 0.2,
   },
   setupButton: {
-    paddingHorizontal: platformStyles.spacing.xxxl,
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.large,
+    paddingHorizontal: platformStyles.spacing.huge, // Increased from xxxl
+    paddingVertical: platformStyles.spacing.lg + 4, // Increased
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
   },
   setupButtonText: {
     color: 'white',
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.3,
   },
   qrPlaceholder: {
-    width: 220,
-    height: 220,
+    width: 240, // Increased from 220
+    height: 240,
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'white',
-    borderRadius: 8,
+    borderRadius: platformStyles.borderRadius.xl, // Increased from 8
   },
   qrPlaceholderText: {
-    fontSize: 17,
+    fontSize: 18, // Increased from 17
     textAlign: 'center',
+    letterSpacing: 0.2,
   },
 });

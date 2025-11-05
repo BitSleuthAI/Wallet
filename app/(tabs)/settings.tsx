@@ -631,122 +631,128 @@ const styles = StyleSheet.create({
     paddingBottom: platformStyles.tabBarBottomPadding,
   },
   sectionHeader: {
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: 16, // Increased from 15
+    fontWeight: '700', // Increased from 600
     textTransform: 'uppercase' as const,
-    letterSpacing: 0.5,
-    marginTop: platformStyles.spacing.xxxl,
-    marginBottom: platformStyles.spacing.md,
+    letterSpacing: 1, // Increased from 0.5
+    marginTop: platformStyles.spacing.huge, // Increased from xxxl
+    marginBottom: platformStyles.spacing.lg, // Increased from md
     marginHorizontal: platformStyles.spacing.xl,
-    opacity: 0.6,
+    opacity: 0.7, // Increased from 0.6 for better visibility
   },
   sectionCard: {
     marginHorizontal: platformStyles.spacing.xl,
-    marginBottom: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.xxl,
+    marginBottom: platformStyles.spacing.xxl, // Increased from xl
+    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
     overflow: 'hidden',
     ...platformStyles.cardShadow,
   },
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xl,
-    paddingVertical: platformStyles.spacing.lg,
+    paddingHorizontal: platformStyles.spacing.xxl, // Increased from xl
+    paddingVertical: platformStyles.spacing.lg + 4, // Increased
   },
   divider: {
     height: StyleSheet.hairlineWidth,
-    marginLeft: 76, // Align with text after icon (44px icon + 16px margin + 16px padding)
+    marginLeft: 84, // Updated: 48px icon + 20px margin + 24px padding (increased from 76)
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: platformStyles.borderRadius.medium,
+    width: 48, // Increased from 44
+    height: 48,
+    borderRadius: platformStyles.borderRadius.large, // Increased from medium
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: platformStyles.spacing.lg,
+    marginRight: platformStyles.spacing.xl, // Increased from lg
   },
   settingContent: {
     flex: 1,
   },
   settingTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18, // Increased from 17
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.1,
   },
   settingSubtitle: {
-    fontSize: 15,
-    marginTop: 3,
-    lineHeight: 20,
+    fontSize: 16, // Increased from 15
+    marginTop: 4, // Increased from 3
+    lineHeight: 22, // Increased from 20
+    letterSpacing: 0.2,
   },
   currencyContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 160,
-    minWidth: 120,
+    maxWidth: 180, // Increased from 160
+    minWidth: 140, // Increased from 120
   },
   currencyText: {
-    fontSize: 15,
-    marginRight: 8,
+    fontSize: 16, // Increased from 15
+    marginRight: 10, // Increased from 8
     flex: 1,
     textAlign: 'right',
+    letterSpacing: 0.2,
   },
   themeToggle: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   themeText: {
-    fontSize: 15,
-    marginRight: platformStyles.spacing.md,
+    fontSize: 16, // Increased from 15
+    marginRight: platformStyles.spacing.lg, // Increased from md
+    letterSpacing: 0.2,
   },
   timeoutText: {
-    fontSize: 15,
+    fontSize: 16, // Increased from 15
+    letterSpacing: 0.2,
   },
   logoutButton: {
     marginHorizontal: platformStyles.spacing.xl,
-    marginTop: platformStyles.spacing.huge,
-    marginBottom: platformStyles.spacing.huge,
-    paddingVertical: platformStyles.spacing.lg,
-    borderRadius: platformStyles.borderRadius.xl,
+    marginTop: platformStyles.spacing.massive, // Increased from huge (new spacing value)
+    marginBottom: platformStyles.spacing.massive, // Increased from huge
+    paddingVertical: platformStyles.spacing.lg + 4, // Increased
+    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
-    minHeight: 56,
+    minHeight: 60, // Increased from 56
     ...platformStyles.buttonShadow,
   },
   logoutButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 10,
+    gap: 12, // Increased from 10
   },
   logoutText: {
-    fontSize: 18,
-    fontWeight: '700',
+    fontSize: 19, // Increased from 18
+    fontWeight: '800', // Increased from 700
     color: '#FFFFFF', // Always white on colored logout button
-    letterSpacing: 0.3,
+    letterSpacing: 0.5, // Increased from 0.3
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased from 0.5
     justifyContent: 'flex-end',
   },
   modalContent: {
-    borderTopLeftRadius: platformStyles.borderRadius.xxl,
-    borderTopRightRadius: platformStyles.borderRadius.xxl,
-    paddingTop: platformStyles.spacing.xl,
+    borderTopLeftRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
+    borderTopRightRadius: platformStyles.borderRadius.xxxl,
+    paddingTop: platformStyles.spacing.xxl, // Increased from xl
     maxHeight: '70%',
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xl,
-    paddingBottom: platformStyles.spacing.xl,
+    paddingHorizontal: platformStyles.spacing.xxl, // Increased from xl
+    paddingBottom: platformStyles.spacing.xxl, // Increased from xl
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalTitle: {
-    fontSize: 21,
-    fontWeight: '600',
+    fontSize: 24, // Increased from 21
+    fontWeight: '700', // Increased from 600
+    letterSpacing: -0.2,
   },
   modalCloseButton: {
     padding: 4,

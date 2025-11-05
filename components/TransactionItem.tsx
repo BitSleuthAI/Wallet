@@ -215,22 +215,22 @@ function TransactionItemContent({ transaction }: TransactionItemProps) {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.lg,
-    marginVertical: platformStyles.spacing.xs,
+    padding: platformStyles.spacing.xl, // Increased from lg
+    marginVertical: platformStyles.spacing.sm, // Increased from xs
     marginHorizontal: platformStyles.spacing.xs,
-    borderRadius: platformStyles.borderRadius.large,
+    borderRadius: platformStyles.borderRadius.xl, // Increased from large
     alignItems: 'flex-start',
     ...platformStyles.shadow,
     position: 'relative',
     overflow: 'hidden',
   },
   iconContainer: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 48, // Increased from 44
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: platformStyles.spacing.md,
+    marginRight: platformStyles.spacing.lg, // Increased from md
     ...platformStyles.shadow,
   },
   content: {
@@ -240,80 +240,87 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.xs,
+    marginBottom: platformStyles.spacing.sm, // Increased from xs
   },
   typeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8, // Increased from 6
   },
   type: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '600',
+    fontSize: 17, // Increased from 16
+    lineHeight: 22, // Increased from 20
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.1,
   },
   amount: {
-    fontSize: 16,
-    lineHeight: 20,
-    fontWeight: '600',
+    fontSize: 17, // Increased from 16
+    lineHeight: 22, // Increased from 20
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.1,
   },
   details: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.sm,
+    marginBottom: platformStyles.spacing.md, // Increased from sm
   },
   date: {
-    fontSize: 13,
-    lineHeight: 16,
+    fontSize: 14, // Increased from 13
+    lineHeight: 18, // Increased from 16
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
   amountUSD: {
-    fontSize: 13,
-    lineHeight: 16,
-    fontWeight: '500',
+    fontSize: 14, // Increased from 13
+    lineHeight: 18, // Increased from 16
+    fontWeight: '600', // Increased from 500
+    letterSpacing: 0.2,
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.xs,
+    marginBottom: platformStyles.spacing.sm, // Increased from xs
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.md,
-    paddingVertical: platformStyles.spacing.xs + 2,
-    borderRadius: platformStyles.borderRadius.medium,
-    gap: 4,
+    paddingHorizontal: platformStyles.spacing.md + 2, // Increased
+    paddingVertical: platformStyles.spacing.xs + 3, // Increased
+    borderRadius: platformStyles.borderRadius.large, // Increased from medium
+    gap: 5, // Increased from 4
   },
   statusText: {
     color: 'white',
-    fontSize: 12,
+    fontSize: 13, // Increased from 12
     lineHeight: 16,
-    fontWeight: '600',
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.3,
   },
   featureIndicators: {
     flexDirection: 'row',
-    gap: 4,
+    gap: 6, // Increased from 4
   },
   featureBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 8,
-    gap: 2,
+    paddingHorizontal: 8, // Increased from 6
+    paddingVertical: 4, // Increased from 3
+    borderRadius: 10, // Increased from 8
+    gap: 3, // Increased from 2
   },
   featureText: {
-    fontSize: 10,
-    lineHeight: 12,
-    fontWeight: '600',
+    fontSize: 11, // Increased from 10
+    lineHeight: 14, // Increased from 12
+    fontWeight: '700', // Increased from 600
+    letterSpacing: 0.2,
   },
   address: {
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: platformStyles.spacing.xs,
+    fontSize: 13, // Increased from 12
+    lineHeight: 18, // Increased from 16
+    marginTop: platformStyles.spacing.sm, // Increased from xs
     fontWeight: '500',
+    letterSpacing: 0.2,
   },
 });
