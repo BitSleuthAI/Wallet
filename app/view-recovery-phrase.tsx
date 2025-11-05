@@ -64,6 +64,16 @@ export default function ViewRecoveryPhrase() {
     }
   }, [isPinVerified, currentWallet, mnemonic, isLoadingMnemonic, getMnemonic]);
 
+  // Clear mnemonic from memory when component unmounts (security best practice)
+  useEffect(() => {
+    return () => {
+      if (mnemonic) {
+        setMnemonic(null);
+        console.log('🔐 Cleared mnemonic from memory');
+      }
+    };
+  }, [mnemonic]);
+
   const handleReveal = () => {
     // Try the Alert approach first
     try {

@@ -27,13 +27,22 @@ const MIGRATED_WALLETS_KEY = 'migrated_wallet_ids';
  * Store a mnemonic securely for a wallet
  */
 export async function storeMnemonic(walletId: string, mnemonic: string): Promise<void> {
+  // Input validation
+  if (!walletId || walletId.trim() === '') {
+    throw new Error('Wallet ID is required');
+  }
+  if (!mnemonic || mnemonic.trim() === '') {
+    throw new Error('Mnemonic is required');
+  }
+  
   try {
     const key = `${MNEMONIC_KEY_PREFIX}${walletId}`;
     await SecureStore.setItemAsync(key, mnemonic);
     console.log(`🔐 Mnemonic securely stored for wallet: ${walletId}`);
   } catch (error) {
     console.error(`❌ Failed to store mnemonic for wallet ${walletId}:`, error);
-    throw new Error('Failed to securely store mnemonic. Please try again.');
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    throw new Error(`Failed to securely store mnemonic: ${errorMsg}`);
   }
 }
 
@@ -122,7 +131,16 @@ export async function migrateWalletMnemonics(): Promise<{
       return { success: true, migratedCount: 0, errors: [] };
     }
 
-    const wallets = JSON.parse(walletsData);
+    let wallets: any[];
+    try {
+      wallets = JSON.parse(walletsData);
+    } catch (parseError) {
+      const errorMsg = 'Failed to parse wallet data - data may be corrupted';
+      console.error(`❌ ${errorMsg}`, parseError);
+      errors.push(errorMsg);
+      return { success: false, migratedCount: 0, errors };
+    }
+
     const migratedWalletIds: string[] = [];
 
     // Track which wallets we've already migrated to prevent double-migration
