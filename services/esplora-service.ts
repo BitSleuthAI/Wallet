@@ -26,6 +26,99 @@ const FALLBACK_PROVIDERS = [
   // No additional fallback providers are needed since we already have the main ones
 ];
 
+// Rate limiting configuration based on Blockstream documentation
+// Recommended: sleep_time = .25 (250ms) between requests to avoid rate limits
+const RATE_LIMIT_DELAY_MS = 250; // 250ms delay between requests as per Blockstream docs
+const MAX_CONCURRENT_REQUESTS = 5; // Limit concurrent requests to avoid overwhelming the API
+
+// Request queue for rate limiting
+class RequestQueue {
+  private queue: Array<() => Promise<void>> = [];
+  private activeRequests = 0;
+  private lastRequestTime = 0;
+
+  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
+    return new Promise((resolve, reject) => {
+      const wrappedFn = async () => {
+        try {
+          // Enforce minimum delay between requests (250ms as per Blockstream docs)
+          const now = Date.now();
+          const timeSinceLastRequest = now - this.lastRequestTime;
+          if (timeSinceLastRequest < RATE_LIMIT_DELAY_MS) {
+            const delayNeeded = RATE_LIMIT_DELAY_MS - timeSinceLastRequest;
+            console.log(`⏱️ Rate limiting: waiting ${delayNeeded}ms before next request`);
+            await sleep(delayNeeded);
+          }
+
+          this.lastRequestTime = Date.now();
+          this.activeRequests++;
+          
+          const result = await fn();
+          resolve(result);
+        } catch (error) {
+          reject(error);
+        } finally {
+          this.activeRequests--;
+          this.processQueue();
+        }
+      };
+
+      this.queue.push(wrappedFn);
+      this.processQueue();
+    });
+  }
+
+  private processQueue() {
+    if (this.activeRequests >= MAX_CONCURRENT_REQUESTS) {
+      return;
+    }
+
+    const next = this.queue.shift();
+    if (next) {
+      next();
+    }
+  }
+
+  getQueueLength(): number {
+    return this.queue.length;
+  }
+
+  getActiveRequests(): number {
+    return this.activeRequests;
+  }
+}
+
+// Global request queue instance
+const requestQueue = new RequestQueue();
+
+// Track API statistics for debugging and monitoring
+let apiStats = {
+  totalRequests: 0,
+  cacheHits: 0,
+  cacheMisses: 0,
+  rateLimitHits: 0,
+  errors: 0,
+  lastResetTime: Date.now(),
+};
+
+export function getApiStats() {
+  return {
+    ...apiStats,
+    uptime: Date.now() - apiStats.lastResetTime,
+  };
+}
+
+export function resetApiStats() {
+  apiStats = {
+    totalRequests: 0,
+    cacheHits: 0,
+    cacheMisses: 0,
+    rateLimitHits: 0,
+    errors: 0,
+    lastResetTime: Date.now(),
+  };
+}
+
 type CacheEntry = { data: any; timestamp: number; ttl: number };
 
 // Cache for API responses (for non-transaction data like block height, prices, etc.)
@@ -324,12 +417,16 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   const addressStatsMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})$/);
   const addressUtxoMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/utxo$/);
   
+  // Track API request
+  apiStats.totalRequests++;
+  
   // For individual transaction requests, check cache first
   if (txMatch) {
     const txid = txMatch[1];
     const { getCachedTransaction } = require('./transaction-cache-service');
     const cachedTx = getCachedTransaction(txid);
     if (cachedTx) {
+      apiStats.cacheHits++;
       // Return cached transaction immediately - it's immutable once confirmed
       // For unconfirmed, we trust the cache within its TTL
       return cachedTx;
@@ -342,9 +439,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     const address = addressTxMatch[1];
     const cachedAddressTxs = await getCachedAddressTransactions(address);
     if (cachedAddressTxs !== null) {
+      apiStats.cacheHits++;
       console.log(`📦 Address txs cache hit for ${address}: ${cachedAddressTxs.length} txs`);
       return cachedAddressTxs;
     }
+  }
+  
+  // Cache miss - will make API request
+  apiStats.cacheMisses++;
 
     const cachedTxIds = getCachedTransactionIds();
     if (cachedTxIds.size > 0) {
@@ -404,7 +506,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   
   for (const base of allProviders) {
     const url = `${base}${path}`;
-    console.log(`🔄 Trying ${base} for ${path}`);
+    console.log(`🔄 Trying ${base} for ${path} (queue: ${requestQueue.getQueueLength()}, active: ${requestQueue.getActiveRequests()})`);
     
     for (let attempt = 0; attempt < attemptsPerProvider; attempt++) {
       try {
@@ -415,7 +517,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
           await sleep(backoffDelay);
         }
         
-        const data = await fetchJson(url, {}, 20000);
+        // Use request queue to enforce rate limiting (250ms between requests as per Blockstream docs)
+        const data = await requestQueue.enqueue(() => fetchJson(url, {}, 20000));
         
         console.log(`✅ Success from ${base} for ${path}`);
         
@@ -527,13 +630,15 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
         
       } catch (e: any) {
         lastError = e;
+        apiStats.errors++;
         console.log(`❌ Attempt ${attempt + 1} failed for ${base}:`, e.message);
 
-        // If capped by rate limit, break out quickly and, if we have stale data,
-        // prefer to surface that instead of hammering the provider.
+        // If capped by rate limit, implement aggressive backoff before switching providers
         if (e?.message?.includes('Rate limited')) {
-          console.log(`⚠️ Rate limited by ${base}, switching to next provider immediately`);
+          apiStats.rateLimitHits++;
+          console.log(`⚠️ Rate limited by ${base} (total: ${apiStats.rateLimitHits})`);
 
+          // First, check if we have cached data to return immediately
           const cached = getCachedData(cacheKey);
           if (cached) {
             const age = Date.now() - cached.timestamp;
@@ -541,6 +646,16 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
             return cached.data;
           }
 
+          // If this is not the last attempt, wait longer before retrying
+          if (attempt < attemptsPerProvider - 1) {
+            const rateLimitBackoff = Math.min(5000, 2000 * Math.pow(2, attempt)); // 2s, 4s, then cap at 5s
+            console.log(`⏱️ Rate limit backoff: waiting ${rateLimitBackoff}ms before retry`);
+            await sleep(rateLimitBackoff);
+            continue;
+          }
+
+          // On last attempt, switch to next provider
+          console.log(`⚠️ Rate limited on final attempt, switching to next provider`);
           break;
         }
         
@@ -874,4 +989,15 @@ export async function testBasicConnectivity(): Promise<{ data: boolean; error: s
   
   console.error(`❌ All connectivity tests failed`);
   return { data: false, error: 'No network connectivity detected' };
+}
+
+/**
+ * Get request queue statistics for debugging
+ * Shows current queue length and active requests
+ */
+export function getRequestQueueStats(): { queueLength: number; activeRequests: number } {
+  return {
+    queueLength: requestQueue.getQueueLength(),
+    activeRequests: requestQueue.getActiveRequests(),
+  };
 }
