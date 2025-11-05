@@ -26,10 +26,10 @@ const FALLBACK_PROVIDERS = [
   // No additional fallback providers are needed since we already have the main ones
 ];
 
-// Rate limiting configuration based on Blockstream documentation
-// Recommended: sleep_time = .25 (250ms) between requests to avoid rate limits
-const RATE_LIMIT_DELAY_MS = 250; // 250ms delay between requests as per Blockstream docs
-const MAX_CONCURRENT_REQUESTS = 5; // Limit concurrent requests to avoid overwhelming the API
+// Rate limiting configuration - AGGRESSIVE to avoid 429 errors
+// Blockstream recommends 250ms, but we're using 400ms to be extra safe
+const RATE_LIMIT_DELAY_MS = 400; // Increased from 250ms to avoid rate limiting
+const MAX_CONCURRENT_REQUESTS = 2; // Reduced from 5 to 2 to avoid overwhelming the API
 
 // Request queue for rate limiting
 class RequestQueue {
@@ -90,6 +90,12 @@ class RequestQueue {
 
 // Global request queue instance
 const requestQueue = new RequestQueue();
+
+// Circuit breaker for rate limiting
+let circuitBreakerTripped = false;
+let circuitBreakerUntil = 0;
+const CIRCUIT_BREAKER_THRESHOLD = 5; // Trip after 5 rate limit errors
+const CIRCUIT_BREAKER_DURATION = 10000; // Wait 10 seconds when tripped
 
 // Track API statistics for debugging and monitoring
 let apiStats = {
@@ -499,6 +505,14 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
+  // Check circuit breaker
+  if (circuitBreakerTripped && Date.now() < circuitBreakerUntil) {
+    const waitTime = circuitBreakerUntil - Date.now();
+    console.log(`⚠️ Circuit breaker active, waiting ${waitTime}ms before making requests`);
+    await sleep(waitTime);
+    circuitBreakerTripped = false;
+  }
+
   const attemptsPerProvider = 3; // Increased attempts per provider
   let lastError: any = null;
   let providerIndex = 0;
@@ -640,6 +654,13 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
           apiStats.rateLimitHits++;
           console.log(`⚠️ Rate limited by ${base} (total: ${apiStats.rateLimitHits})`);
 
+          // Trip circuit breaker if too many rate limits
+          if (apiStats.rateLimitHits >= CIRCUIT_BREAKER_THRESHOLD) {
+            circuitBreakerTripped = true;
+            circuitBreakerUntil = Date.now() + CIRCUIT_BREAKER_DURATION;
+            console.log(`🚨 Circuit breaker tripped! Pausing requests for ${CIRCUIT_BREAKER_DURATION}ms`);
+          }
+
           // First, check if we have cached data to return immediately
           const cached = getCachedData(cacheKey);
           if (cached) {
@@ -650,7 +671,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
 
           // If this is not the last attempt, wait longer before retrying
           if (attempt < attemptsPerProvider - 1) {
-            const rateLimitBackoff = Math.min(5000, 2000 * Math.pow(2, attempt)); // 2s, 4s, then cap at 5s
+            const rateLimitBackoff = Math.min(8000, 3000 * Math.pow(2, attempt)); // 3s, 6s, then cap at 8s
             console.log(`⏱️ Rate limit backoff: waiting ${rateLimitBackoff}ms before retry`);
             await sleep(rateLimitBackoff);
             continue;

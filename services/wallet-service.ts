@@ -3,8 +3,8 @@
  * Uses BIP32 derivation and gap limit for proper address discovery
  */
 
-import type { Transaction, Wallet } from '../types/wallet';
 import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD } from '../constants/cache';
+import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
@@ -172,9 +172,9 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
         
         // OPTIMIZED: Use concurrent requests with sub-batching to reduce total time
-        // Reduced to 3 addresses concurrently to respect Blockstream API rate limits
-        // Combined with 250ms per-request delay in esplora-service for optimal throughput
-        const CONCURRENT_BATCH_SIZE = 3;
+        // Reduced to 1 address at a time to avoid 429 errors
+        // Combined with 400ms per-request delay in esplora-service for optimal throughput
+        const CONCURRENT_BATCH_SIZE = 1; // Changed from 3 to 1 to avoid rate limiting
         const addressTxs: any[] = new Array(batch.length);
         
         for (let i = 0; i < batch.length; i += CONCURRENT_BATCH_SIZE) {
@@ -240,7 +240,8 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
         index += GAP_LIMIT;
 
         // Delay between main batches to avoid hitting provider rate limits
-        await new Promise(resolve => setTimeout(resolve, 500));
+        // Increased from 500ms to 2000ms to be more conservative
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     }
     
