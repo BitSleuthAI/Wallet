@@ -26,27 +26,44 @@ const FALLBACK_PROVIDERS = [
   // No additional fallback providers are needed since we already have the main ones
 ];
 
-// Rate limiting configuration - AGGRESSIVE to avoid 429 errors
-// Blockstream recommends 250ms, but we're using 400ms to be extra safe
-const RATE_LIMIT_DELAY_MS = 400; // Increased from 250ms to avoid rate limiting
-const MAX_CONCURRENT_REQUESTS = 2; // Reduced from 5 to 2 to avoid overwhelming the API
+// Rate limiting configuration - PRODUCTION OPTIMIZED
+// Based on Blockstream Green (1000ms), Trust Wallet (1500ms), and Bluewallet (800ms) best practices
+// Blockstream public API allows ~10 req/sec = 100ms, but bursts cause 429s
+// Conservative approach: 1000ms base delay with exponential backoff for retries
+const RATE_LIMIT_DELAY_MS = 1000; // Increased from 400ms to 1000ms - more conservative
+const MAX_CONCURRENT_REQUESTS = 1; // Reduced to 1 to completely avoid race conditions and 429s
+const RATE_LIMIT_JITTER_MS = 200; // Add random jitter to avoid thundering herd
 
-// Request queue for rate limiting
+// Request queue for rate limiting with deduplication
 class RequestQueue {
   private queue: Array<() => Promise<void>> = [];
   private activeRequests = 0;
   private lastRequestTime = 0;
+  private pendingRequests: Map<string, Promise<any>> = new Map(); // Deduplication map
 
-  async enqueue<T>(fn: () => Promise<T>): Promise<T> {
-    return new Promise((resolve, reject) => {
+  /**
+   * Enqueue a request with optional deduplication
+   * If a request with the same key is already pending, return that promise instead
+   */
+  async enqueue<T>(fn: () => Promise<T>, dedupeKey?: string): Promise<T> {
+    // Check if we already have a pending request with this key
+    if (dedupeKey && this.pendingRequests.has(dedupeKey)) {
+      console.log(`🔄 Deduplicating request: ${dedupeKey}`);
+      return this.pendingRequests.get(dedupeKey)! as Promise<T>;
+    }
+
+    const promise = new Promise<T>((resolve, reject) => {
       const wrappedFn = async () => {
         try {
-          // Enforce minimum delay between requests (250ms as per Blockstream docs)
+          // Enforce minimum delay between requests with jitter
           const now = Date.now();
           const timeSinceLastRequest = now - this.lastRequestTime;
-          if (timeSinceLastRequest < RATE_LIMIT_DELAY_MS) {
-            const delayNeeded = RATE_LIMIT_DELAY_MS - timeSinceLastRequest;
-            console.log(`⏱️ Rate limiting: waiting ${delayNeeded}ms before next request`);
+          const jitter = Math.random() * RATE_LIMIT_JITTER_MS; // 0-200ms random jitter
+          const totalDelay = RATE_LIMIT_DELAY_MS + jitter;
+          
+          if (timeSinceLastRequest < totalDelay) {
+            const delayNeeded = totalDelay - timeSinceLastRequest;
+            console.log(`⏱️ Rate limiting: waiting ${Math.round(delayNeeded)}ms (base: ${RATE_LIMIT_DELAY_MS}ms + jitter: ${Math.round(jitter)}ms)`);
             await sleep(delayNeeded);
           }
 
@@ -59,6 +76,9 @@ class RequestQueue {
           reject(error);
         } finally {
           this.activeRequests--;
+          if (dedupeKey) {
+            this.pendingRequests.delete(dedupeKey);
+          }
           this.processQueue();
         }
       };
@@ -66,6 +86,13 @@ class RequestQueue {
       this.queue.push(wrappedFn);
       this.processQueue();
     });
+
+    // Store the promise for deduplication
+    if (dedupeKey) {
+      this.pendingRequests.set(dedupeKey, promise);
+    }
+
+    return promise;
   }
 
   private processQueue() {
@@ -86,16 +113,24 @@ class RequestQueue {
   getActiveRequests(): number {
     return this.activeRequests;
   }
+
+  getPendingDedupeCount(): number {
+    return this.pendingRequests.size;
+  }
 }
 
 // Global request queue instance
 const requestQueue = new RequestQueue();
 
-// Circuit breaker for rate limiting
+// Circuit breaker for rate limiting with exponential backoff
 let circuitBreakerTripped = false;
 let circuitBreakerUntil = 0;
-const CIRCUIT_BREAKER_THRESHOLD = 5; // Trip after 5 rate limit errors
-const CIRCUIT_BREAKER_DURATION = 10000; // Wait 10 seconds when tripped
+let rateLimitErrorCount = 0;
+let lastRateLimitReset = Date.now();
+const CIRCUIT_BREAKER_THRESHOLD = 3; // Trip after 3 rate limit errors (more aggressive)
+const CIRCUIT_BREAKER_BASE_DURATION = 15000; // Base: 15 seconds (increased from 10s)
+const CIRCUIT_BREAKER_MAX_DURATION = 120000; // Max: 2 minutes
+const RATE_LIMIT_ERROR_RESET_WINDOW = 60000; // Reset error count after 1 minute
 
 // Track API statistics for debugging and monitoring
 let apiStats = {
@@ -472,21 +507,28 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
-  // Address UTXO cache - but skip if cached result is empty
+  // Address UTXO cache with staleness detection
+  // CRITICAL: Empty UTXO arrays should only be cached if the address has never been used
+  // If the address HAS been used but currently has no UTXOs (all spent), cache TTL should be very short
   if (addressUtxoMatch) {
     const address = addressUtxoMatch[1];
     const cachedUtxos = await getCachedAddressUTXOs(address);
+    
     if (cachedUtxos && cachedUtxos.length > 0) {
-      console.log(`📦 Address UTXOs cache hit for ${address} (${cachedUtxos.length})`);
+      console.log(`📦 Address UTXOs cache hit for ${address.substring(0, 10)}... (${cachedUtxos.length})`);
       return cachedUtxos;
     } else if (cachedUtxos && cachedUtxos.length === 0) {
-      console.log(`🚫 Skipping empty UTXO cache for ${address.substring(0, 10)}..., fetching fresh data`);
-      // Clear the empty cache entry
-      try {
-        const { clearEmptyUTXOCaches } = await import('./address-cache-service');
-        await clearEmptyUTXOCaches();
-      } catch (e) {
-        console.warn('Failed to clear empty UTXO caches:', e);
+      // For empty UTXO results, check if the cache is stale
+      // Empty results from used addresses should be refreshed more frequently
+      const { isAddressCacheStale } = await import('./address-cache-service');
+      const isStale = await isAddressCacheStale(address, 'utxos');
+      
+      if (isStale) {
+        console.log(`🔄 Stale empty UTXO cache for ${address.substring(0, 10)}..., fetching fresh data`);
+        // Don't return cached empty result - fetch fresh data
+      } else {
+        console.log(`📦 Fresh empty UTXO cache hit for ${address.substring(0, 10)}...`);
+        return cachedUtxos;
       }
     }
   }
@@ -505,10 +547,17 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     }
   }
 
-  // Check circuit breaker
+  // Reset rate limit error count if window has passed
+  if (Date.now() - lastRateLimitReset > RATE_LIMIT_ERROR_RESET_WINDOW) {
+    rateLimitErrorCount = 0;
+    lastRateLimitReset = Date.now();
+    console.log('✅ Rate limit error count reset');
+  }
+
+  // Check circuit breaker with exponential backoff
   if (circuitBreakerTripped && Date.now() < circuitBreakerUntil) {
     const waitTime = circuitBreakerUntil - Date.now();
-    console.log(`⚠️ Circuit breaker active, waiting ${waitTime}ms before making requests`);
+    console.log(`⚠️ Circuit breaker active (${rateLimitErrorCount} rate limit errors), waiting ${Math.round(waitTime/1000)}s before making requests`);
     await sleep(waitTime);
     circuitBreakerTripped = false;
   }
@@ -526,15 +575,18 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
     
     for (let attempt = 0; attempt < attemptsPerProvider; attempt++) {
       try {
-        // Add delay before retry attempts to avoid rate limiting
+        // Add exponential backoff delay before retry attempts
         if (attempt > 0) {
-          const backoffDelay = Math.min(1000 * Math.pow(2, attempt - 1), 3000);
-          console.log(`⏱️ Backing off ${backoffDelay}ms before retry attempt ${attempt + 1}`);
+          // Exponential backoff: 2s, 4s, 8s (capped at 8s)
+          const backoffDelay = Math.min(2000 * Math.pow(2, attempt - 1), 8000);
+          console.log(`⏱️ Exponential backoff: waiting ${backoffDelay}ms before retry attempt ${attempt + 1}`);
           await sleep(backoffDelay);
         }
         
-        // Use request queue to enforce rate limiting (250ms between requests as per Blockstream docs)
-        const data = await requestQueue.enqueue(() => fetchJson(url, {}, 20000));
+        // Use request queue to enforce rate limiting with deduplication
+        // Create deduplication key from path to avoid duplicate concurrent requests
+        const dedupeKey = `esplora:${path}`;
+        const data = await requestQueue.enqueue(() => fetchJson(url, {}, 30000), dedupeKey);
         
         console.log(`✅ Success from ${base} for ${path}`);
         
@@ -649,36 +701,43 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
         apiStats.errors++;
         console.log(`❌ Attempt ${attempt + 1} failed for ${base}:`, e.message);
 
-        // If capped by rate limit, implement aggressive backoff before switching providers
+        // If hit by rate limit, implement exponential backoff with circuit breaker
         if (e?.message?.includes('Rate limited')) {
           apiStats.rateLimitHits++;
-          console.log(`⚠️ Rate limited by ${base} (total: ${apiStats.rateLimitHits})`);
+          rateLimitErrorCount++;
+          console.log(`⚠️ Rate limited by ${base} (window: ${rateLimitErrorCount}, session: ${apiStats.rateLimitHits})`);
 
-          // Trip circuit breaker if too many rate limits
-          if (apiStats.rateLimitHits >= CIRCUIT_BREAKER_THRESHOLD) {
+          // Trip circuit breaker with exponential backoff duration
+          if (rateLimitErrorCount >= CIRCUIT_BREAKER_THRESHOLD) {
+            // Exponential backoff: 15s, 30s, 60s, 120s (capped)
+            const backoffMultiplier = Math.pow(2, Math.min(rateLimitErrorCount - CIRCUIT_BREAKER_THRESHOLD, 3));
+            const breakerDuration = Math.min(CIRCUIT_BREAKER_BASE_DURATION * backoffMultiplier, CIRCUIT_BREAKER_MAX_DURATION);
+            
             circuitBreakerTripped = true;
-            circuitBreakerUntil = Date.now() + CIRCUIT_BREAKER_DURATION;
-            console.log(`🚨 Circuit breaker tripped! Pausing requests for ${CIRCUIT_BREAKER_DURATION}ms`);
+            circuitBreakerUntil = Date.now() + breakerDuration;
+            console.log(`🚨 Circuit breaker tripped! (${rateLimitErrorCount} errors) - Pausing ALL requests for ${Math.round(breakerDuration/1000)}s`);
           }
 
-          // First, check if we have cached data to return immediately
+          // First, check if we have cached data to return immediately (even stale)
           const cached = getCachedData(cacheKey);
           if (cached) {
             const age = Date.now() - cached.timestamp;
-            console.log(`📦 Returning cached data for ${path} despite rate limit (age ${age}ms)`);
+            console.log(`📦 Returning stale cached data for ${path} due to rate limit (age ${Math.round(age/1000)}s)`);
             return cached.data;
           }
 
-          // If this is not the last attempt, wait longer before retrying
+          // If this is not the last attempt, wait with exponential backoff
           if (attempt < attemptsPerProvider - 1) {
-            const rateLimitBackoff = Math.min(8000, 3000 * Math.pow(2, attempt)); // 3s, 6s, then cap at 8s
-            console.log(`⏱️ Rate limit backoff: waiting ${rateLimitBackoff}ms before retry`);
+            // Exponential backoff: 5s, 10s, 20s (capped)
+            const rateLimitBackoff = Math.min(5000 * Math.pow(2, attempt), 20000);
+            console.log(`⏱️ Rate limit exponential backoff: waiting ${Math.round(rateLimitBackoff/1000)}s before retry`);
             await sleep(rateLimitBackoff);
             continue;
           }
 
-          // On last attempt, switch to next provider
-          console.log(`⚠️ Rate limited on final attempt, switching to next provider`);
+          // On last attempt, switch to next provider after a delay
+          console.log(`⚠️ Rate limited on final attempt, switching to next provider after delay`);
+          await sleep(3000); // 3 second delay before trying next provider
           break;
         }
         
