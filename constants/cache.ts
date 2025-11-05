@@ -22,12 +22,18 @@ export const FRESH_LAUNCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
  * Address Cache TTLs
  * 
  * How long to cache blockchain data for addresses before fetching fresh data.
- * Shorter TTLs = fresher data but more API calls
- * Longer TTLs = less API calls but potentially stale data
+ * Based on best practices from Blockstream Green, Trust Wallet, and Bluewallet:
+ * - Confirmed data (txids, stats): 5 minutes (rarely changes)
+ * - UTXOs: 2 minutes (can change with incoming transactions)
+ * 
+ * Rationale:
+ * - Transaction IDs and stats for confirmed transactions are immutable
+ * - UTXOs need more frequent updates to catch incoming payments
+ * - Balances between API calls to prevent 429 errors
  */
-export const TXIDS_TTL_MS = 2 * 60 * 1000; // 2 minutes
-export const STATS_TTL_MS = 2 * 60 * 1000; // 2 minutes  
-export const UTXOS_TTL_MS = 2 * 60 * 1000; // 2 minutes
+export const TXIDS_TTL_MS = 5 * 60 * 1000; // 5 minutes (increased from 2 for confirmed data)
+export const STATS_TTL_MS = 5 * 60 * 1000; // 5 minutes (increased from 2 for confirmed data)  
+export const UTXOS_TTL_MS = 2 * 60 * 1000; // 2 minutes (keep short for balance updates)
 
 /**
  * Address Metadata Cache TTL
@@ -36,10 +42,10 @@ export const UTXOS_TTL_MS = 2 * 60 * 1000; // 2 minutes
  * This is intentionally shorter than other caches to ensure we don't show
  * used addresses after receiving funds (address reuse prevention).
  * 
- * 30 seconds ensures quick response to incoming transactions while still
- * providing reasonable caching to avoid excessive API calls.
+ * Increased to 2 minutes to reduce API load while still being responsive.
+ * The receive screen clears cache on focus to ensure fresh data when actively receiving.
  */
-export const ADDRESS_METADATA_CACHE_TTL_MS = 30 * 1000; // 30 seconds
+export const ADDRESS_METADATA_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes (increased from 30s)
 
 /**
  * React Query Cache Configuration
