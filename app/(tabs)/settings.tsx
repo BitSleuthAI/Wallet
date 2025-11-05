@@ -626,7 +626,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: Platform.OS === 'android' ? 100 : platformStyles.spacing.xl,
+    // Add sufficient bottom padding to prevent content from going under tab bar
+    // iOS tab bar height (~49pt) + safe area (~34pt) + spacing = ~100pt
+    paddingBottom: platformStyles.tabBarBottomPadding,
   },
   sectionHeader: {
     fontSize: 15,

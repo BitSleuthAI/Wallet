@@ -73,6 +73,11 @@ export const platformStyles = {
     huge: 40,
   },
   
+  // Tab bar spacing for iOS Liquid Glass tabs
+  // Ensures content doesn't scroll under translucent tab bar
+  // Calculation: tab bar height (~49pt) + safe area (~34pt) + buffer (~17pt) = ~100pt
+  tabBarBottomPadding: 100,
+  
   // Typography scale
   typography: {
     caption: {
