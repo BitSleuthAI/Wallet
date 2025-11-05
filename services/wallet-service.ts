@@ -777,12 +777,20 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       addresses.push(address);
     }
     
+    // Generate unique wallet ID
+    const walletId = Date.now().toString();
+    
+    // SECURITY FIX: Store mnemonic securely using Expo SecureStore
+    const { storeMnemonic } = await import('./secure-mnemonic-service');
+    await storeMnemonic(walletId, mnemonic);
+    console.log('🔐 Mnemonic stored securely in SecureStore');
+    
+    // Create wallet object WITHOUT mnemonic (mnemonic is now in SecureStore)
     const wallet: Wallet = {
-      id: Date.now().toString(),
+      id: walletId,
       name,
       color,
       addressType: 'p2wpkh',
-      mnemonic,
       xpub: zpub, // Store zpub instead of xpub
       addresses,
       currentAddressIndex: 0,
@@ -794,7 +802,7 @@ export const importWallet = async (name: string, mnemonic: string, color: string
       type: 'segwit-native',
     };
     
-    console.log('✅ Wallet imported successfully');
+    console.log('✅ Wallet imported successfully (mnemonic stored securely)');
     return wallet;
   } catch (error) {
     console.error('❌ Failed to import wallet:', error);

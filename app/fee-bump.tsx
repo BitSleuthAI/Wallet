@@ -28,7 +28,7 @@ type FeeOption = {
 
 export default function FeeBumpScreen() {
   const { txid, mode } = useLocalSearchParams<{ txid: string; mode?: 'rbf' | 'cpfp' }>();
-  const { theme, transactions, currentWallet, feeSettings } = useWallet();
+  const { theme, transactions, currentWallet, feeSettings, getMnemonic } = useWallet();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
@@ -285,11 +285,19 @@ export default function FeeBumpScreen() {
       console.log('Original TXID:', transaction?.txid);
       console.log('New fee rate:', newFeeRate, 'sat/vB');
 
+      // SECURITY FIX: Retrieve mnemonic from secure storage
+      console.log('🔐 Retrieving mnemonic from secure storage...');
+      const mnemonic = await getMnemonic(currentWallet.id);
+      if (!mnemonic) {
+        throw new Error('Failed to retrieve wallet mnemonic');
+      }
+      console.log('✅ Mnemonic retrieved from secure storage');
+
       if (isCPFPMode) {
         const { performCPFP } = await import('@/services/cpfp-service');
         const result = await performCPFP(
           transaction!.txid,
-          currentWallet.mnemonic,
+          mnemonic,
           currentWallet.addresses,
           {
             targetFeeRate: newFeeRate,
@@ -315,7 +323,7 @@ export default function FeeBumpScreen() {
         const result = await performRBF(
           transaction!.txid,
           newFeeRate,
-          currentWallet.mnemonic,
+          mnemonic,
           currentWallet.addresses
         );
         if (result.success) {
@@ -369,9 +377,17 @@ export default function FeeBumpScreen() {
               console.log('Starting transaction cancellation...');
               console.log('Original TXID:', transaction?.txid);
               
+              // SECURITY FIX: Retrieve mnemonic from secure storage
+              console.log('🔐 Retrieving mnemonic from secure storage...');
+              const mnemonic = await getMnemonic(currentWallet.id);
+              if (!mnemonic) {
+                throw new Error('Failed to retrieve wallet mnemonic');
+              }
+              console.log('✅ Mnemonic retrieved from secure storage');
+              
               const result = await cancelTransaction(
                 transaction!.txid,
-                currentWallet.mnemonic,
+                mnemonic,
                 currentWallet.addresses
               );
               
