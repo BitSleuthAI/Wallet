@@ -15,8 +15,9 @@
 import { getApiStats, getRequestQueueStats, testNetworkConnectivity } from '../services/esplora-service';
 
 // Test xpub from Blockstream Green (public testnet wallet)
-// This is a public test wallet - DO NOT use for real funds
-const TEST_XPUB = 'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
+// This is a PUBLIC test wallet from public documentation - NO real funds, safe to commit
+// If you want to use a different test wallet, set TEST_XPUB environment variable
+const TEST_XPUB = process.env.TEST_XPUB || 'xpub6CUGRUonZSQ4TWtTMmzXdrXDtypWKiKrhko4egpiMZbpiaQL2jkwSB1icqYh2cfDfVxdx4df189oLKnC5fSwqPfgyP3hooxujYzAu3fDVmz';
 
 interface TestResult {
   name: string;

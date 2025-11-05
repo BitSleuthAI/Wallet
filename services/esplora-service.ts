@@ -113,6 +113,10 @@ class RequestQueue {
   getActiveRequests(): number {
     return this.activeRequests;
   }
+
+  getPendingDedupeCount(): number {
+    return this.pendingRequests.size;
+  }
 }
 
 // Global request queue instance
@@ -581,7 +585,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
         
         // Use request queue to enforce rate limiting with deduplication
         // Create deduplication key from path to avoid duplicate concurrent requests
-        // Timeout increased to 30s (from 20s) to handle slow network conditions and large responses
+        // Timeout: 30s for slow networks/large responses (balance of reliability vs UX)
+        // Note: UI should show loading states for operations >5s
         const dedupeKey = `esplora:${path}`;
         const data = await requestQueue.enqueue(() => fetchJson(url, {}, 30000), dedupeKey);
         
@@ -1078,6 +1083,6 @@ export function getRequestQueueStats(): { queueLength: number; activeRequests: n
   return {
     queueLength: requestQueue.getQueueLength(),
     activeRequests: requestQueue.getActiveRequests(),
-    pendingDedupeCount: requestQueue['pendingRequests'].size, // Access private member for stats
+    pendingDedupeCount: requestQueue.getPendingDedupeCount(),
   };
 }
