@@ -30,12 +30,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 #### 🎨 iOS Liquid Glass Tabs (iOS 18+)
 - **Migrated to Expo Router NativeTabs** for native iOS liquid glass effect
-- iOS 26+ features:
+- Advanced iOS features:
   - Automatic tab bar minimize behavior on scroll
   - System material blur effects (`systemMaterial`)
   - Native liquid glass translucent tab bar
 - Theme-aware tab bar with automatic color adaptation
-- Graceful fallback for iOS 18-25 (blur without minimize)
+- Graceful fallback for older iOS versions (blur without minimize)
 - See [LIQUID_GLASS_TABS.md](docs/LIQUID_GLASS_TABS.md) for details
 
 #### ⚡ Bitcoin Operations Optimization (Production Ready)
@@ -213,8 +213,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Platform Support
 
 #### 📱 iOS Support
-- iOS 18+ with liquid glass tabs
-- iOS 26+ with automatic tab minimize behavior
+- iOS 18+ with liquid glass tabs and advanced blur effects
+- Automatic tab minimize behavior support
 - Face ID and Touch ID support
 - Native SegWit address support
 - Hermes JavaScript engine
