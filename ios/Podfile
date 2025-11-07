@@ -61,6 +61,13 @@ target 'BitSleuthWallet' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
     
+    # Header paths required for React Native Firebase with New Architecture
+    react_native_headers = [
+      '"${PODS_ROOT}/Headers/Public/React-Core"',
+      '"${PODS_ROOT}/Headers/Public/React-RCTFabric"',
+      '"${PODS_ROOT}/Headers/Public/ReactCommon"'
+    ]
+    
     # Fix for React Native Firebase with New Architecture and static frameworks
     # This ensures proper module definitions and header visibility
     installer.pods_project.targets.each do |target|
@@ -75,14 +82,7 @@ target 'BitSleuthWallet' do
           
           # Ensure proper header search paths for React Native headers
           config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
-          react_native_headers = [
-            '"${PODS_ROOT}/Headers/Public/React-Core"',
-            '"${PODS_ROOT}/Headers/Public/React-RCTFabric"',
-            '"${PODS_ROOT}/Headers/Public/ReactCommon"'
-          ]
-          react_native_headers.each do |path|
-            config.build_settings['HEADER_SEARCH_PATHS'] << path
-          end
+          config.build_settings['HEADER_SEARCH_PATHS'] += react_native_headers
           
           # Allow non-modular includes in framework modules for compatibility
           config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
