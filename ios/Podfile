@@ -61,13 +61,26 @@ target 'BitSleuthWallet' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
     
-    # Fix for React Native Firebase non-modular header includes
-    # Required when using static frameworks with New Architecture
+    # Fix for React Native Firebase with New Architecture and static frameworks
+    # This ensures proper module definitions and header visibility
     installer.pods_project.targets.each do |target|
       if target.name.start_with?('RNFB')
         target.build_configurations.each do |config|
+          # Suppress non-modular include warnings
           config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
           config.build_settings['OTHER_CFLAGS'] << '-Wno-non-modular-include-in-framework-module'
+          
+          # Enable module definitions for proper header imports
+          config.build_settings['DEFINES_MODULE'] = 'YES'
+          
+          # Ensure proper header search paths for React Native headers
+          config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Core"'
+          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-RCTFabric"'
+          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/ReactCommon"'
+          
+          # Allow non-modular includes in framework modules for compatibility
+          config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
         end
       end
     end
