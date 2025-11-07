@@ -75,9 +75,14 @@ target 'BitSleuthWallet' do
           
           # Ensure proper header search paths for React Native headers
           config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Core"'
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-RCTFabric"'
-          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/ReactCommon"'
+          react_native_headers = [
+            '"${PODS_ROOT}/Headers/Public/React-Core"',
+            '"${PODS_ROOT}/Headers/Public/React-RCTFabric"',
+            '"${PODS_ROOT}/Headers/Public/ReactCommon"'
+          ]
+          react_native_headers.each do |path|
+            config.build_settings['HEADER_SEARCH_PATHS'] << path
+          end
           
           # Allow non-modular includes in framework modules for compatibility
           config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
