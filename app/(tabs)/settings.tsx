@@ -372,7 +372,7 @@ function SettingsScreenContent() {
             <SettingItem
               icon={Info}
               title="About BitSleuth Wallet"
-              subtitle="Version 1.2.0"
+              subtitle="Version 1.2.1"
               onPress={() => router.push('/about')}
             />
 

@@ -26,7 +26,7 @@ async function testVersionTracking() {
     console.log('📋 Test Case 1: First Launch');
     console.log('─'.repeat(50));
     
-    const currentVersion = '1.2.0';
+    const currentVersion = '1.2.1';
     let storedVersion = await mockAsyncStorage.getItem('app_version');
     
     console.log('   Current version:', currentVersion);
@@ -61,7 +61,7 @@ async function testVersionTracking() {
     // Simulate old version
     await mockAsyncStorage.setItem('app_version', '1.1.6');
     storedVersion = await mockAsyncStorage.getItem('app_version');
-    const newVersion = '1.2.0';
+    const newVersion = '1.2.1';
     isAppUpdate = storedVersion !== null && storedVersion !== newVersion;
     
     console.log('   Current version:', newVersion);
