@@ -13,7 +13,7 @@
   <supports-screens
     android:smallScreens="true"
     android:normalScreens="true"
-    android:largeScreens="false"
+    android:largeScreens="true"
     android:xlargeScreens="false"
     android:requiresSmallestWidthDp="320" />
   <queries>
