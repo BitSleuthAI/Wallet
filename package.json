@@ -1,7 +1,7 @@
 {
   "name": "expo-app",
   "main": "index.js",
-  "version": "1.0.0",
+  "version": "1.2.1",
   "packageManager": "npm@10.2.4",
   "scripts": {
     "start": "expo start",

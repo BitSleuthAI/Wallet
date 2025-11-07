@@ -122,7 +122,7 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
 
           {/* Version and description */}
           <Animated.View style={[styles.versionContainer, { opacity: textOpacity }]}>
-            <Text style={styles.versionText}>v1.2.0</Text>
+            <Text style={styles.versionText}>v1.2.1</Text>
             <Text style={styles.walletText}>Bitcoin Wallet</Text>
           </Animated.View>
         </View>
