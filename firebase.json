@@ -16,6 +16,7 @@
     "in_app_messaging_auto_collection_enabled": false,
     "app_check_token_auto_refresh": true,
     "crashlytics_disable_auto_disabler": true,
-    "crashlytics_collection_enabled": false
+    "crashlytics_collection_enabled": false,
+    "crashlytics_debug_enabled": true
   }
 }
