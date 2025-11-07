@@ -69,7 +69,8 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
