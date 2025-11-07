@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed
+- **iOS Build Error**: Fixed build failure caused by non-modular header includes in React Native Firebase
+  - Removed `use_modular_headers!` from Podfile which was causing RNFBApp to fail when importing React-Core headers
+  - Firebase works correctly with static frameworks without requiring modular headers
+  - Resolves Xcode build errors: "include of non-modular header inside framework module"
+
 ## [1.2.0] - 2025-11-05
 
 ### Major Features & Improvements
