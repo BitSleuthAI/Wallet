@@ -2,7 +2,7 @@
   "expo": {
     "name": "BitSleuth Wallet",
     "slug": "bitsleuth-wallet",
-    "version": "1.2.0",
+    "version": "1.2.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "myapp",
@@ -14,7 +14,7 @@
       "backgroundColor": "#0F172A"
     },
     "ios": {
-      "supportsTablet": true,
+      "supportsTablet": false,
       "bundleIdentifier": "ai.bitsleuth.wallet",
       "buildNumber": "1",
       "googleServicesFile": "./GoogleService-Info.plist",
