@@ -60,5 +60,16 @@ target 'BitSleuthWallet' do
       :mac_catalyst_enabled => false,
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
+    
+    # Fix for React Native Firebase non-modular header includes
+    # Required when using static frameworks with New Architecture
+    installer.pods_project.targets.each do |target|
+      if target.name.start_with?('RNFB')
+        target.build_configurations.each do |config|
+          config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
+          config.build_settings['OTHER_CFLAGS'] << '-Wno-non-modular-include-in-framework-module'
+        end
+      end
+    end
   end
 end
