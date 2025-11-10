@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Test script to verify Firebase Performance Monitoring and App Distribution
+ * Test script to verify Firebase Performance Monitoring
  * This script helps debug Firebase integration
  */
 
@@ -9,7 +9,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔥 Testing Firebase Performance Monitoring & App Distribution Integration...\n');
+console.log('🔥 Testing Firebase Performance Monitoring Integration...\n');
 
 // Check package.json dependencies
 console.log('📦 Checking Firebase Dependencies...');
@@ -19,8 +19,7 @@ const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
 const firebaseDeps = [
   '@react-native-firebase/app',
   '@react-native-firebase/crashlytics',
-  '@react-native-firebase/perf',
-  '@react-native-firebase/app-distribution'
+  '@react-native-firebase/perf'
 ];
 
 firebaseDeps.forEach(dep => {
@@ -52,10 +51,6 @@ if (fs.existsSync(appJsonPath)) {
         plugin === '@react-native-firebase/perf'
       );
 
-      const hasAppDistributionPlugin = appJson.expo.plugins.some(plugin => 
-        plugin === '@react-native-firebase/app-distribution'
-      );
-
       if (hasFirebaseAppPlugin) {
         console.log('✅ @react-native-firebase/app plugin configured');
       } else {
@@ -72,12 +67,6 @@ if (fs.existsSync(appJsonPath)) {
         console.log('✅ @react-native-firebase/perf plugin configured');
       } else {
         console.log('❌ @react-native-firebase/perf plugin not found');
-      }
-
-      if (hasAppDistributionPlugin) {
-        console.log('✅ @react-native-firebase/app-distribution plugin configured');
-      } else {
-        console.log('❌ @react-native-firebase/app-distribution plugin not found');
       }
     } else {
       console.log('❌ Invalid app.json structure - missing expo.plugins array');
@@ -140,12 +129,6 @@ if (fs.existsSync(androidBuildGradlePath)) {
     console.log('❌ Firebase Performance Gradle plugin not found');
   }
   
-  if (buildGradleContent.includes('firebase-appdistribution-gradle')) {
-    console.log('✅ Firebase App Distribution Gradle plugin found');
-  } else {
-    console.log('❌ Firebase App Distribution Gradle plugin not found');
-  }
-  
   if (buildGradleContent.includes('google-services')) {
     console.log('✅ Google Services Gradle plugin found');
   } else {
@@ -176,12 +159,6 @@ if (fs.existsSync(androidAppBuildGradlePath)) {
   } else {
     console.log('❌ Performance plugin not applied');
   }
-  
-  if (appBuildGradleContent.includes("apply plugin: 'com.google.firebase.appdistribution'")) {
-    console.log('✅ App Distribution plugin applied');
-  } else {
-    console.log('❌ App Distribution plugin not applied');
-  }
 } else {
   console.log('❌ android/app/build.gradle not found');
 }
@@ -209,7 +186,6 @@ console.log('\n🔧 Checking Service Files...');
 const serviceFiles = [
   'services/crashlytics-service.ts',
   'services/performance-service.ts',
-  'services/app-distribution-service.ts',
   'services/firebase-service.ts'
 ];
 
@@ -225,28 +201,27 @@ serviceFiles.forEach(file => {
 // Summary and recommendations
 console.log('\n🎯 Summary and Recommendations:');
 console.log('=====================================');
-console.log('✅ Firebase Performance Monitoring and App Distribution have been integrated!');
+console.log('✅ Firebase Performance Monitoring has been integrated!');
 console.log('');
 console.log('📋 Features:');
-console.log('  1. Firebase Crashlytics - Error reporting ✅');
+console.log('  1. Firebase Crashlytics - Error reporting with Release Monitoring ✅');
 console.log('  2. Firebase Performance Monitoring - App performance tracking ✅');
-console.log('  3. Firebase App Distribution - Release management ✅');
 console.log('');
 console.log('📱 Next Steps:');
 console.log('1. Run `npx expo prebuild --clean` to regenerate native projects');
 console.log('2. For iOS: Run `cd ios && pod install` to install Firebase pods');
 console.log('3. Build and test your app: `npx expo run:ios` or `npx expo run:android`');
-console.log('4. Check Firebase Console for Performance and App Distribution data');
+console.log('4. Check Firebase Console for Performance and Crashlytics data');
 console.log('');
 console.log('🔗 Firebase Console:');
+console.log('  - Crashlytics (with Release Monitoring): https://console.firebase.google.com/project/_/crashlytics');
 console.log('  - Performance: https://console.firebase.google.com/project/_/performance');
-console.log('  - App Distribution: https://console.firebase.google.com/project/_/appdistribution');
 console.log('  - Crashlytics: https://console.firebase.google.com/project/_/crashlytics');
 console.log('');
 console.log('💡 Usage:');
 console.log('  - Import services: `import firebaseService from "@/services/firebase-service"`');
 console.log('  - Track performance: `await firebaseService.performance.trackWalletOperation("create")`');
-console.log('  - Check for updates: `await firebaseService.checkForUpdates()`');
 console.log('  - Log errors: `firebaseService.crashlytics.recordError(error)`');
+console.log('  - Release monitoring is automatic via Crashlytics');
 
 console.log('\n✨ Firebase integration test completed!');

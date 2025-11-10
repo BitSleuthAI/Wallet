@@ -32,7 +32,6 @@
     "@noble/secp256k1": "^2.3.0",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-native-firebase/app": "^23.5.0",
-    "@react-native-firebase/app-distribution": "^23.5.0",
     "@react-native-firebase/crashlytics": "^23.5.0",
     "@react-native-firebase/perf": "^23.5.0",
     "@react-navigation/native": "^7.1.6",

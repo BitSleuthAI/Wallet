@@ -1,14 +1,13 @@
 # Firebase Integration Guide
 
-BitSleuth Wallet integrates with Firebase to provide comprehensive monitoring, error reporting, and release management capabilities. This guide covers all Firebase features integrated into the app.
+BitSleuth Wallet integrates with Firebase to provide comprehensive monitoring, error reporting, and release tracking capabilities. This guide covers all Firebase features integrated into the app.
 
 ## Overview
 
-The app uses three Firebase services:
+The app uses two Firebase services:
 
-1. **Firebase Crashlytics** - Real-time error reporting and crash analytics
+1. **Firebase Crashlytics** - Real-time error reporting, crash analytics, and release monitoring
 2. **Firebase Performance Monitoring** - App performance tracking and optimization
-3. **Firebase App Distribution** - Beta testing and release management
 
 ## Architecture
 
@@ -16,9 +15,8 @@ All Firebase services are managed through a unified service layer:
 
 ```
 services/
-├── crashlytics-service.ts       # Error reporting and crash tracking
+├── crashlytics-service.ts       # Error reporting, crash tracking, and release monitoring
 ├── performance-service.ts       # Performance monitoring and metrics
-├── app-distribution-service.ts  # Release management and updates
 └── firebase-service.ts          # Unified Firebase service wrapper
 ```
 
@@ -28,6 +26,7 @@ services/
 
 - **Crash Reporting**: Automatic crash detection and reporting
 - **Error Logging**: Manual error reporting with custom context
+- **Release Monitoring**: Automatic tracking of crash-free statistics per app version
 - **Custom Attributes**: Tag errors with wallet/transaction metadata
 - **User Identification**: Track errors per user (anonymized)
 
@@ -142,65 +141,6 @@ apply plugin: 'com.google.firebase.firebase-perf'
 
 Performance Monitoring pods are automatically linked via CocoaPods autolinking.
 
-## Firebase App Distribution
-
-### Features
-
-- **Update Checking**: Check for new app versions
-- **Tester Authentication**: Sign in beta testers
-- **Release Notes**: Display release notes for updates
-- **Critical Updates**: Flag critical updates that require immediate installation
-
-### Usage
-
-```typescript
-import appDistributionService from '@/services/app-distribution-service';
-
-// Check for updates
-const updateInfo = await appDistributionService.checkForUpdate();
-if (updateInfo) {
-  console.log('New version available:', updateInfo.displayVersion);
-  console.log('Release notes:', updateInfo.releaseNotes);
-  
-  if (updateInfo.isCritical) {
-    // Show critical update dialog
-  }
-}
-
-// Check for updates with automatic tester sign-in
-const update = await appDistributionService.checkForUpdateWithAuth();
-
-// Get installed version
-const version = appDistributionService.getInstalledVersion();
-console.log('Current version:', version.version);
-console.log('Build number:', version.buildNumber);
-
-// Enable automatic update checks on app startup
-await appDistributionService.enableAutoUpdateCheck();
-```
-
-### Configuration
-
-App Distribution is automatically configured via the React Native Firebase plugin in `app.json`:
-
-```json
-{
-  "expo": {
-    "plugins": [
-      "@react-native-firebase/app-distribution"
-    ]
-  }
-}
-```
-
-### Android Configuration
-
-The App Distribution plugin is automatically applied in `android/app/build.gradle`:
-
-```gradle
-apply plugin: 'com.google.firebase.appdistribution'
-```
-
 ## Unified Firebase Service
 
 For convenience, all Firebase services are accessible through a single unified service:
@@ -215,7 +155,6 @@ await firebaseService.initialize();
 const status = firebaseService.getStatus();
 console.log('Crashlytics:', status.crashlytics);
 console.log('Performance:', status.performance);
-console.log('App Distribution:', status.appDistribution);
 
 // Track wallet operation (combined performance + crashlytics)
 await firebaseService.trackWalletOperation('create', walletId, async () => {
@@ -231,9 +170,6 @@ await firebaseService.trackTransactionOperation('send', amount, async () => {
 const stopTrace = await firebaseService.trackScreenView('HomeScreen');
 // Screen renders...
 await stopTrace();
-
-// Check for updates
-const update = await firebaseService.checkForUpdates();
 ```
 
 ## Build Configuration
@@ -247,7 +183,6 @@ buildscript {
   dependencies {
     classpath 'com.google.firebase:firebase-crashlytics-gradle:3.0.6'
     classpath 'com.google.firebase:perf-plugin:2.0.1'
-    classpath 'com.google.firebase:firebase-appdistribution-gradle:5.1.1'
     classpath 'com.google.gms:google-services:4.4.1'
   }
 }
@@ -257,7 +192,6 @@ And applied in `android/app/build.gradle`:
 
 ```gradle
 apply plugin: 'com.google.gms.google-services'
-apply plugin: 'com.google.firebase.appdistribution'
 apply plugin: 'com.google.firebase.firebase-perf'
 apply plugin: 'com.google.firebase.crashlytics'
 ```
@@ -297,9 +231,8 @@ Firebase pods are automatically linked via CocoaPods autolinking. The `GoogleSer
 ```
 
 Only the following Firebase services are used:
-- **Crashlytics**: For error reporting (no user tracking)
+- **Crashlytics**: For error reporting and release monitoring (no user tracking)
 - **Performance Monitoring**: For app performance metrics (no user tracking)
-- **App Distribution**: For beta testing and release management
 
 ## Testing
 
@@ -328,18 +261,12 @@ This script checks:
    - Perform wallet operations
    - Check Firebase Console for performance data
 
-3. **App Distribution**:
-   - Build and distribute via Firebase App Distribution
-   - Test update checking in the app
-   - Verify release notes display
-
 ## Firebase Console
 
 Access your Firebase project console at:
 - **Project Overview**: https://console.firebase.google.com/project/YOUR_PROJECT_ID
-- **Crashlytics**: https://console.firebase.google.com/project/YOUR_PROJECT_ID/crashlytics
+- **Crashlytics**: https://console.firebase.google.com/project/YOUR_PROJECT_ID/crashlytics (includes Release Monitoring)
 - **Performance**: https://console.firebase.google.com/project/YOUR_PROJECT_ID/performance
-- **App Distribution**: https://console.firebase.google.com/project/YOUR_PROJECT_ID/appdistribution
 
 ## Troubleshooting
 
@@ -357,20 +284,13 @@ Access your Firebase project console at:
 3. Test with release builds for more accurate data
 4. Check Firebase Console for any configuration errors
 
-### App Distribution Not Working
-
-1. Verify testers are added in Firebase Console
-2. Ensure the app is distributed via Firebase App Distribution (not other channels)
-3. Check that the Firebase App Distribution plugin is properly applied
-4. Test tester sign-in before checking for updates
-
 ## Best Practices
 
 1. **Error Handling**: Always use try-catch blocks and report errors to Crashlytics
 2. **Performance Tracking**: Track long-running operations and API calls
-3. **Update Checking**: Check for updates on app startup (non-blocking)
-4. **Privacy**: Never log sensitive information (private keys, mnemonics, addresses)
-5. **Testing**: Test Firebase integration in development builds before production
+3. **Privacy**: Never log sensitive information (private keys, mnemonics, addresses)
+4. **Testing**: Test Firebase integration in development builds before production
+5. **Release Monitoring**: Monitor crash-free statistics in Crashlytics for each app version
 
 ## Expo Go Limitations
 
@@ -391,4 +311,3 @@ eas build --profile development --platform all
 - [React Native Firebase Documentation](https://rnfirebase.io/)
 - [Firebase Crashlytics](https://firebase.google.com/docs/crashlytics)
 - [Firebase Performance Monitoring](https://firebase.google.com/docs/perf-mon)
-- [Firebase App Distribution](https://firebase.google.com/docs/app-distribution)

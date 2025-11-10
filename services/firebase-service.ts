@@ -2,14 +2,12 @@
  * Unified Firebase Service
  * 
  * Provides a single entry point for all Firebase features:
- * - Crashlytics (error reporting)
+ * - Crashlytics (error reporting with release monitoring)
  * - Performance Monitoring (app performance)
- * - App Distribution (release management)
  */
 
 import crashlyticsService from './crashlytics-service';
 import performanceService from './performance-service';
-import appDistributionService from './app-distribution-service';
 import { Platform } from 'react-native';
 
 class FirebaseService {
@@ -23,11 +21,6 @@ class FirebaseService {
     return performanceService;
   }
 
-  // App Distribution methods
-  get appDistribution() {
-    return appDistributionService;
-  }
-
   /**
    * Initialize all Firebase services
    */
@@ -37,12 +30,10 @@ class FirebaseService {
     // Check availability of each service
     const crashlyticsAvailable = crashlyticsService.isAvailable();
     const performanceAvailable = performanceService.isAvailable();
-    const appDistributionAvailable = appDistributionService.isAvailable();
     
     console.log('📊 Firebase Services Status:');
-    console.log(`  - Crashlytics: ${crashlyticsAvailable ? '✅' : '❌'}`);
+    console.log(`  - Crashlytics (with Release Monitoring): ${crashlyticsAvailable ? '✅' : '❌'}`);
     console.log(`  - Performance Monitoring: ${performanceAvailable ? '✅' : '❌'}`);
-    console.log(`  - App Distribution: ${appDistributionAvailable ? '✅' : '❌'}`);
     
     // Enable performance monitoring if available
     if (performanceAvailable) {
@@ -73,22 +64,13 @@ class FirebaseService {
   getStatus(): {
     crashlytics: boolean;
     performance: boolean;
-    appDistribution: boolean;
     platform: string;
   } {
     return {
       crashlytics: crashlyticsService.isAvailable(),
       performance: performanceService.isAvailable(),
-      appDistribution: appDistributionService.isAvailable(),
       platform: Platform.OS,
     };
-  }
-
-  /**
-   * Check for app updates (convenience method)
-   */
-  async checkForUpdates() {
-    return await appDistributionService.checkForUpdateWithAuth();
   }
 
   /**
