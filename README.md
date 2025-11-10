@@ -84,7 +84,10 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
   - Recovery phrase backup and verification
   - Secure local storage with encryption
   - No user tracking or analytics
-  - Firebase Crashlytics ONLY for error reporting
+  - Firebase integration for monitoring (no analytics):
+    - Crashlytics for error reporting
+    - Performance Monitoring for app optimization
+    - App Distribution for beta testing
 
 ### User Experience
 - 🎨 **Beautiful Design**
@@ -137,7 +140,10 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - **Expo Camera** - QR code scanning
 - **Expo Haptics** - Tactile feedback
 - **React Native Biometrics** - Advanced biometric features
-- **Firebase Crashlytics** - Error tracking (NO analytics)
+- **Firebase Services** (NO analytics):
+  - **Firebase Crashlytics** - Error tracking and crash reporting
+  - **Firebase Performance Monitoring** - App performance optimization
+  - **Firebase App Distribution** - Beta testing and release management
 
 ### External APIs
 - **Blockstream Esplora API** - Transaction data, UTXOs, and network fees
@@ -161,7 +167,8 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - Firebase project with iOS and Android apps configured
 - `google-services.json` (Android) in `android/app/`
 - `GoogleService-Info.plist` (iOS) in `ios/BitSleuthWallet/`
-- **ONLY Firebase Crashlytics enabled** (Analytics must be disabled)
+- **Firebase Services enabled**: Crashlytics, Performance Monitoring, App Distribution
+- **Firebase Analytics DISABLED** for privacy (explicitly configured)
 
 ---
 
@@ -192,7 +199,7 @@ Ensure you have the required Firebase configuration files:
 - **Android**: Place `google-services.json` in `android/app/`
 - **iOS**: Place `GoogleService-Info.plist` in `ios/BitSleuthWallet/`
 
-⚠️ **Important**: Only Firebase Crashlytics is permitted. Google Analytics is **prohibited** for privacy reasons.
+⚠️ **Important**: Firebase Analytics is **prohibited** for privacy reasons. Only Crashlytics, Performance Monitoring, and App Distribution are enabled. See [docs/FIREBASE_INTEGRATION.md](docs/FIREBASE_INTEGRATION.md) for details.
 
 ### 3. Development
 
