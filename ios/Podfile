@@ -20,8 +20,9 @@ platform :ios, podfile_properties['ios.deploymentTarget'] || '15.1'
 
 prepare_react_native_project!
 
-# Configure Firebase to use static frameworks
+# Configure Firebase to use static frameworks with modular headers
 use_frameworks! :linkage => :static
+use_modular_headers!
 $RNFirebaseAsStaticFramework = true
 
 target 'BitSleuthWallet' do
@@ -61,6 +62,31 @@ target 'BitSleuthWallet' do
       :ccache_enabled => ccache_enabled?(podfile_properties),
     )
     
+    # CRITICAL: Allow non-modular includes for React Native Firebase with New Architecture
+    # This must be set at the project level, not just per-target
+    installer.pods_project.build_configurations.each do |config|
+      config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+    end
+    
+    # Suppress "Run script build phase will be run during every build" warnings
+    installer.pods_project.targets.each do |target|
+      target.build_phases.each do |build_phase|
+        if build_phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+          build_phase.always_out_of_date = "1"
+        end
+      end
+      
+      # Fix header search paths for all targets to properly find React headers
+      target.build_configurations.each do |config|
+        config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
+        
+        # Ensure React Core headers are accessible
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-Core/React_Core.framework/Headers"'
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-RCTFabric/RCTFabric.framework/Headers"'
+        config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Core"'
+      end
+    end
+    
     # Header paths required for React Native Firebase with New Architecture
     react_native_headers = [
       '"${PODS_ROOT}/Headers/Public/React-Core"',
@@ -84,8 +110,16 @@ target 'BitSleuthWallet' do
           config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
           config.build_settings['HEADER_SEARCH_PATHS'] += react_native_headers
           
+          # Add specific paths for React Native core headers
+          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Codegen/react/renderer/components/rncore"'
+          config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-Codegen/React_Codegen.framework/Headers"'
+          
           # Allow non-modular includes in framework modules for compatibility
           config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
+          
+          # Disable strict module context checking for Firebase modules
+          config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
+          config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
         end
       end
     end
