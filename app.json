@@ -75,6 +75,7 @@
       ],
       "@react-native-firebase/app",
       "@react-native-firebase/crashlytics",
+      "@react-native-firebase/perf",
       "expo-asset",
       "expo-secure-store",
       "expo-web-browser"
