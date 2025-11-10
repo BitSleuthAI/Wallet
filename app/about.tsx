@@ -6,12 +6,15 @@ import {
   TouchableOpacity,
   ScrollView,
   Linking,
+  Alert,
+  Platform,
 } from 'react-native';
 import { Stack, router } from 'expo-router';
-import { ChevronDown, ChevronRight, ArrowLeft } from 'lucide-react-native';
+import { ChevronDown, ChevronRight, ArrowLeft, AlertTriangle, Bug } from 'lucide-react-native';
 import { useWallet } from '@/hooks/wallet-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import crashlyticsService from '@/services/crashlytics-service';
 
 interface DropdownSectionProps {
   title: string;
@@ -156,6 +159,95 @@ export default function AboutScreen() {
           </Text>
         </DropdownSection>
 
+        {/* Developer Tools Section - Only show in development builds */}
+        {__DEV__ && (
+          <DropdownSection title="🔧 Developer Tools">
+            <View style={styles.developerSection}>
+              <Text style={[styles.developerWarning, { color: theme.colors.textSecondary }]}>
+                These tools are for testing crash reporting. Use only for development purposes.
+              </Text>
+              
+              {/* Test Non-Fatal Error */}
+              <TouchableOpacity
+                style={[styles.testButton, { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Test Non-Fatal Error',
+                    'This will log a non-fatal error to Firebase Crashlytics.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Send Error',
+                        onPress: () => {
+                          const testError = new Error('Test non-fatal error from BitSleuth Wallet');
+                          crashlyticsService.recordError(testError, {
+                            source: 'about_screen',
+                            action: 'test_non_fatal_error',
+                            platform: Platform.OS,
+                            timestamp: new Date().toISOString(),
+                          });
+                          Alert.alert('Success', 'Non-fatal error sent to Crashlytics. Check Firebase Console.');
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <Bug color={theme.colors.primary} size={20} />
+                <Text style={[styles.testButtonText, { color: theme.colors.primary }]}>
+                  Test Non-Fatal Error
+                </Text>
+              </TouchableOpacity>
+
+              {/* Test Fatal Crash */}
+              <TouchableOpacity
+                style={[styles.testButton, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
+                onPress={() => {
+                  Alert.alert(
+                    'Test Fatal Crash',
+                    'This will force the app to crash. The crash report will be sent on next app launch.',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Crash App',
+                        style: 'destructive',
+                        onPress: () => {
+                          setTimeout(() => {
+                            crashlyticsService.crash();
+                          }, 1000);
+                        },
+                      },
+                    ]
+                  );
+                }}
+              >
+                <AlertTriangle color="#EF4444" size={20} />
+                <Text style={[styles.testButtonText, { color: '#EF4444' }]}>
+                  Test Fatal Crash
+                </Text>
+              </TouchableOpacity>
+
+              {/* Crashlytics Status */}
+              <View style={[styles.statusContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
+                <Text style={[styles.statusTitle, { color: theme.colors.text }]}>
+                  Crashlytics Status
+                </Text>
+                <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
+                  {crashlyticsService.isAvailable() 
+                    ? '✅ Enabled and ready' 
+                    : '❌ Not available (use dev build)'}
+                </Text>
+                <Text style={[styles.statusText, { color: theme.colors.textSecondary }]}>
+                  Platform: {Platform.OS}
+                </Text>
+                <Text style={[styles.statusText, { color: theme.colors.textSecondary, fontSize: 12, marginTop: 8 }]}>
+                  Note: Crashlytics does not work in Expo Go. Build with `npx expo run:ios` or `npx expo run:android`.
+                </Text>
+              </View>
+            </View>
+          </DropdownSection>
+        )}
+
         <DropdownSection title="Contact & Support">
           <View style={styles.bulletContainer}>
             <Text style={[styles.bullet, { color: theme.colors.primary }]}>•</Text>
@@ -282,5 +374,45 @@ const styles = StyleSheet.create({
     lineHeight: 26, // Increased from 22
     textAlign: 'left',
     letterSpacing: 0.2,
+  },
+  // Developer Tools Styles
+  developerSection: {
+    padding: 16,
+    gap: 12,
+  },
+  developerWarning: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 8,
+    fontStyle: 'italic',
+  },
+  testButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    gap: 8,
+  },
+  testButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  statusContainer: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 8,
+  },
+  statusTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  statusText: {
+    fontSize: 14,
+    lineHeight: 20,
   },
 });
