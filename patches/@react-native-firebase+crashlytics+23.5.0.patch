@@ -1,0 +1,38 @@
+diff --git a/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.h b/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.h
+index c7b1739..bc8d61a 100644
+--- a/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.h
++++ b/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.h
+@@ -17,7 +17,13 @@
+ 
+ #import <Foundation/Foundation.h>
+ 
++@import RNFBApp;
++
++#if __has_include(<React-Core/RCTBridgeModule.h>)
++#import <React-Core/RCTBridgeModule.h>
++#else
+ #import <React/RCTBridgeModule.h>
++#endif
+ 
+ @interface RNFBCrashlyticsModule : NSObject <RCTBridgeModule>
+ 
+diff --git a/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.m b/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.m
+index ada982b..3bd1a0d 100644
+--- a/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.m
++++ b/node_modules/@react-native-firebase/crashlytics/ios/RNFBCrashlytics/RNFBCrashlyticsModule.m
+@@ -18,9 +18,15 @@
+ #include <Foundation/Foundation.h>
+ #include <sys/sysctl.h>
+ 
++#if __has_include(<React-Core/RCTConvert.h>)
++#import <React-Core/RCTConvert.h>
++#import <React-Core/RCTLog.h>
++#import <React-Core/RCTUtils.h>
++#else
+ #import <React/RCTConvert.h>
+ #import <React/RCTLog.h>
+ #import <React/RCTUtils.h>
++#endif
+ 
+ #import <Firebase/Firebase.h>
+ #import "RNFBApp/RNFBSharedUtils.h"

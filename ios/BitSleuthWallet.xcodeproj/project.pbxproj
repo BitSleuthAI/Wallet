@@ -8,12 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB51A68108700A75B9A /* Images.xcassets */; };
-		365AF233ED44D03187EE4CF0 /* Pods_BitSleuthWallet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = EA1A983606EFE6B8A388944A /* Pods_BitSleuthWallet.framework */; };
-		37251D555D52E59F0A02D68F /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 78B84070D456DFF17255CF77 /* PrivacyInfo.xcprivacy */; };
 		3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */; };
-		5DCBC695445C47F1B4C3DCE3 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 6C338BA5E7474997BBD3F309 /* GoogleService-Info.plist */; };
+		4C72E4DAD6B61AA65A9ECFBA /* Pods_BitSleuthWallet.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 4D8EF61C94E08960AFD44C33 /* Pods_BitSleuthWallet.framework */; };
+		AE89449779A0F1837FCA3181 /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = CFC8468DD98CFFED0F79E90C /* ExpoModulesProvider.swift */; };
+		B5CB8A7998C6FBA6C23D5EAC /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = DE79A4C2C5ECFAF4349EA7D6 /* PrivacyInfo.xcprivacy */; };
 		BB2F792D24A3F905000567C9 /* Expo.plist in Resources */ = {isa = PBXBuildFile; fileRef = BB2F792C24A3F905000567C9 /* Expo.plist */; };
-		C845330FE09332DDD71EC49D /* ExpoModulesProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 948FCF5000BA30570ABD98A3 /* ExpoModulesProvider.swift */; };
+		CAE2A72BD2F04286A7553AAB /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 557A9E6395194BE995DD44CD /* GoogleService-Info.plist */; };
 		F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = F11748412D0307B40044C1D9 /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -21,17 +21,17 @@
 		13B07F961A680F5B00A75B9A /* BitSleuthWallet.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BitSleuthWallet.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		13B07FB51A68108700A75B9A /* Images.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Images.xcassets; path = BitSleuthWallet/Images.xcassets; sourceTree = "<group>"; };
 		13B07FB61A68108700A75B9A /* Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; name = Info.plist; path = BitSleuthWallet/Info.plist; sourceTree = "<group>"; };
-		6C338BA5E7474997BBD3F309 /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "BitSleuthWallet/GoogleService-Info.plist"; sourceTree = "<group>"; };
-		78B84070D456DFF17255CF77 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = BitSleuthWallet/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
-		948FCF5000BA30570ABD98A3 /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BitSleuthWallet/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		4D8EF61C94E08960AFD44C33 /* Pods_BitSleuthWallet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BitSleuthWallet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		557A9E6395194BE995DD44CD /* GoogleService-Info.plist */ = {isa = PBXFileReference; explicitFileType = undefined; fileEncoding = 4; includeInIndex = 0; lastKnownFileType = text.plist.xml; name = "GoogleService-Info.plist"; path = "BitSleuthWallet/GoogleService-Info.plist"; sourceTree = "<group>"; };
+		786BF3E10CE53EC8ADDC6E8C /* Pods-BitSleuthWallet.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BitSleuthWallet.release.xcconfig"; path = "Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet.release.xcconfig"; sourceTree = "<group>"; };
+		9B501304725F39261E125216 /* Pods-BitSleuthWallet.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BitSleuthWallet.debug.xcconfig"; path = "Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet.debug.xcconfig"; sourceTree = "<group>"; };
 		AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = SplashScreen.storyboard; path = BitSleuthWallet/SplashScreen.storyboard; sourceTree = "<group>"; };
 		BB2F792C24A3F905000567C9 /* Expo.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = Expo.plist; sourceTree = "<group>"; };
-		E14FEC93AC28FDA1FFA5D30F /* Pods-BitSleuthWallet.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BitSleuthWallet.debug.xcconfig"; path = "Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet.debug.xcconfig"; sourceTree = "<group>"; };
-		EA1A983606EFE6B8A388944A /* Pods_BitSleuthWallet.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_BitSleuthWallet.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		CFC8468DD98CFFED0F79E90C /* ExpoModulesProvider.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; name = ExpoModulesProvider.swift; path = "Pods/Target Support Files/Pods-BitSleuthWallet/ExpoModulesProvider.swift"; sourceTree = "<group>"; };
+		DE79A4C2C5ECFAF4349EA7D6 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; includeInIndex = 1; name = PrivacyInfo.xcprivacy; path = BitSleuthWallet/PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 		F11748412D0307B40044C1D9 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = BitSleuthWallet/AppDelegate.swift; sourceTree = "<group>"; };
 		F11748442D0722820044C1D9 /* BitSleuthWallet-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "BitSleuthWallet-Bridging-Header.h"; path = "BitSleuthWallet/BitSleuthWallet-Bridging-Header.h"; sourceTree = "<group>"; };
-		F1C907029DCA241C4DBDF9FE /* Pods-BitSleuthWallet.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-BitSleuthWallet.release.xcconfig"; path = "Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet.release.xcconfig"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -39,7 +39,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				365AF233ED44D03187EE4CF0 /* Pods_BitSleuthWallet.framework in Frameworks */,
+				4C72E4DAD6B61AA65A9ECFBA /* Pods_BitSleuthWallet.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -55,27 +55,17 @@
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				AA286B85B6C04FC6940260E9 /* SplashScreen.storyboard */,
-				6C338BA5E7474997BBD3F309 /* GoogleService-Info.plist */,
-				78B84070D456DFF17255CF77 /* PrivacyInfo.xcprivacy */,
+				557A9E6395194BE995DD44CD /* GoogleService-Info.plist */,
+				DE79A4C2C5ECFAF4349EA7D6 /* PrivacyInfo.xcprivacy */,
 			);
 			name = BitSleuthWallet;
-			sourceTree = "<group>";
-		};
-		17BFD1FA7DA0CE3777C615AA /* Pods */ = {
-			isa = PBXGroup;
-			children = (
-				E14FEC93AC28FDA1FFA5D30F /* Pods-BitSleuthWallet.debug.xcconfig */,
-				F1C907029DCA241C4DBDF9FE /* Pods-BitSleuthWallet.release.xcconfig */,
-			);
-			name = Pods;
-			path = Pods;
 			sourceTree = "<group>";
 		};
 		2D16E6871FA4F8E400B85C8A /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
 				ED297162215061F000B7C4FE /* JavaScriptCore.framework */,
-				EA1A983606EFE6B8A388944A /* Pods_BitSleuthWallet.framework */,
+				4D8EF61C94E08960AFD44C33 /* Pods_BitSleuthWallet.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -94,8 +84,8 @@
 				832341AE1AAA6A7D00B99B32 /* Libraries */,
 				83CBBA001A601CBA00E9B192 /* Products */,
 				2D16E6871FA4F8E400B85C8A /* Frameworks */,
-				17BFD1FA7DA0CE3777C615AA /* Pods */,
-				FCF32995C4B3E2AA23094A1B /* ExpoModulesProviders */,
+				8E2D86B321307183C6B50CF0 /* Pods */,
+				E45638001B61238E4A12575F /* ExpoModulesProviders */,
 			);
 			indentWidth = 2;
 			sourceTree = "<group>";
@@ -110,6 +100,24 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		8E2D86B321307183C6B50CF0 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				9B501304725F39261E125216 /* Pods-BitSleuthWallet.debug.xcconfig */,
+				786BF3E10CE53EC8ADDC6E8C /* Pods-BitSleuthWallet.release.xcconfig */,
+			);
+			name = Pods;
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		9BAFB74205FFE5B225F414F7 /* BitSleuthWallet */ = {
+			isa = PBXGroup;
+			children = (
+				CFC8468DD98CFFED0F79E90C /* ExpoModulesProvider.swift */,
+			);
+			name = BitSleuthWallet;
+			sourceTree = "<group>";
+		};
 		BB2F792B24A3F905000567C9 /* Supporting */ = {
 			isa = PBXGroup;
 			children = (
@@ -119,18 +127,10 @@
 			path = BitSleuthWallet/Supporting;
 			sourceTree = "<group>";
 		};
-		DB4909C3233723601D6C86FD /* BitSleuthWallet */ = {
+		E45638001B61238E4A12575F /* ExpoModulesProviders */ = {
 			isa = PBXGroup;
 			children = (
-				948FCF5000BA30570ABD98A3 /* ExpoModulesProvider.swift */,
-			);
-			name = BitSleuthWallet;
-			sourceTree = "<group>";
-		};
-		FCF32995C4B3E2AA23094A1B /* ExpoModulesProviders */ = {
-			isa = PBXGroup;
-			children = (
-				DB4909C3233723601D6C86FD /* BitSleuthWallet */,
+				9BAFB74205FFE5B225F414F7 /* BitSleuthWallet */,
 			);
 			name = ExpoModulesProviders;
 			sourceTree = "<group>";
@@ -143,15 +143,15 @@
 			buildConfigurationList = 13B07F931A680F5B00A75B9A /* Build configuration list for PBXNativeTarget "BitSleuthWallet" */;
 			buildPhases = (
 				08A4A3CD28434E44B6B9DE2E /* [CP] Check Pods Manifest.lock */,
-				914E3246E2618D3272CBE4E7 /* [Expo] Configure project */,
+				B700C389DE0CB1DEC23C5ED2 /* [Expo] Configure project */,
 				13B07F871A680F5B00A75B9A /* Sources */,
 				13B07F8C1A680F5B00A75B9A /* Frameworks */,
 				13B07F8E1A680F5B00A75B9A /* Resources */,
 				00DD1BFF1BD5951E006B06BC /* Bundle React Native code and images */,
 				800E24972A6A228C8D4807E9 /* [CP] Copy Pods Resources */,
-				95442E76ED84FC20E15A8489 /* [CP] Embed Pods Frameworks */,
-				546C42FA6C17A2009C18F5E4 /* [CP-User] [RNFB] Core Configuration */,
-				E5047A943464322FA8E381A9 /* [CP-User] [RNFB] Crashlytics Configuration */,
+				0BB4E4862D1D587DAA08414C /* [CP] Embed Pods Frameworks */,
+				180AD9DDB7E21270EB312672 /* [CP-User] [RNFB] Core Configuration */,
+				BD6BF3C13E35D1D0EF547945 /* [CP-User] [RNFB] Crashlytics Configuration */,
 			);
 			buildRules = (
 			);
@@ -201,8 +201,8 @@
 				BB2F792D24A3F905000567C9 /* Expo.plist in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
 				3E461D99554A48A4959DE609 /* SplashScreen.storyboard in Resources */,
-				5DCBC695445C47F1B4C3DCE3 /* GoogleService-Info.plist in Resources */,
-				37251D555D52E59F0A02D68F /* PrivacyInfo.xcprivacy in Resources */,
+				CAE2A72BD2F04286A7553AAB /* GoogleService-Info.plist in Resources */,
+				B5CB8A7998C6FBA6C23D5EAC /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -248,7 +248,29 @@
 			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
 			showEnvVarsInLog = 0;
 		};
-		546C42FA6C17A2009C18F5E4 /* [CP-User] [RNFB] Core Configuration */ = {
+		0BB4E4862D1D587DAA08414C /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet-frameworks.sh",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
+				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+		180AD9DDB7E21270EB312672 /* [CP-User] [RNFB] Core Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -319,7 +341,7 @@
 			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet-resources.sh\"\n";
 			showEnvVarsInLog = 0;
 		};
-		914E3246E2618D3272CBE4E7 /* [Expo] Configure project */ = {
+		B700C389DE0CB1DEC23C5ED2 /* [Expo] Configure project */ = {
 			isa = PBXShellScriptBuildPhase;
 			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
@@ -343,29 +365,7 @@
 			shellPath = /bin/sh;
 			shellScript = "# This script configures Expo modules and generates the modules provider file.\nbash -l -c \"./Pods/Target\\ Support\\ Files/Pods-BitSleuthWallet/expo-configure-project.sh\"\n";
 		};
-		95442E76ED84FC20E15A8489 /* [CP] Embed Pods Frameworks */ = {
-			isa = PBXShellScriptBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-			);
-			inputPaths = (
-				"${PODS_ROOT}/Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet-frameworks.sh",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/React-Core-prebuilt/React.framework/React",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/ReactNativeDependencies/ReactNativeDependencies.framework/ReactNativeDependencies",
-				"${PODS_XCFRAMEWORKS_BUILD_DIR}/hermes-engine/Pre-built/hermes.framework/hermes",
-			);
-			name = "[CP] Embed Pods Frameworks";
-			outputPaths = (
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/React.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/ReactNativeDependencies.framework",
-				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/hermes.framework",
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-			shellPath = /bin/sh;
-			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-BitSleuthWallet/Pods-BitSleuthWallet-frameworks.sh\"\n";
-			showEnvVarsInLog = 0;
-		};
-		E5047A943464322FA8E381A9 /* [CP-User] [RNFB] Crashlytics Configuration */ = {
+		BD6BF3C13E35D1D0EF547945 /* [CP-User] [RNFB] Crashlytics Configuration */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -387,7 +387,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				F11748422D0307B40044C1D9 /* AppDelegate.swift in Sources */,
-				C845330FE09332DDD71EC49D /* ExpoModulesProvider.swift in Sources */,
+				AE89449779A0F1837FCA3181 /* ExpoModulesProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -396,7 +396,7 @@
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = E14FEC93AC28FDA1FFA5D30F /* Pods-BitSleuthWallet.debug.xcconfig */;
+			baseConfigurationReference = 9B501304725F39261E125216 /* Pods-BitSleuthWallet.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
@@ -432,7 +432,7 @@
 		};
 		13B07F951A680F5B00A75B9A /* Release */ = {
 			isa = XCBuildConfiguration;
-			baseConfigurationReference = F1C907029DCA241C4DBDF9FE /* Pods-BitSleuthWallet.release.xcconfig */;
+			baseConfigurationReference = 786BF3E10CE53EC8ADDC6E8C /* Pods-BitSleuthWallet.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
