@@ -157,7 +157,7 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
     });
 
     // Close the gradient path
-    const lastX = chartPadding + ((data.length - 1) / (data.length - 1)) * (chartWidth - 2 * chartPadding);
+    const lastX = chartPadding + (data[data.length - 1].x / (data.length - 1)) * (chartWidth - 2 * chartPadding);
     gradientPath += ` L ${lastX} ${chartHeight - chartPadding} Z`;
 
     return { linePath: path, gradientPath };
