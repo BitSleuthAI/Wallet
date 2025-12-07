@@ -9,6 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+- **CVE-2025-55182**: Updated React to version 19.1.2 to address security vulnerability
+  - Updated `react` from 19.1.0 to 19.1.2
+  - Updated `react-dom` from 19.1.0 to 19.1.2
+  - Updated `@types/react` from ~19.1.10 to ~19.1.2 to align with React version
+  - All peer dependencies remain compatible (React Native 0.81.5, Expo SDK 54, @tanstack/react-query, zustand, React Native Reanimated, Expo Router, NativeWind)
+  - No breaking changes or compatibility issues
+
 ### Fixed
 - **iOS Build Error**: Fixed build failure caused by non-modular header includes in React Native Firebase
   - Removed `use_modular_headers!` from Podfile which was causing RNFBApp to fail when importing React-Core headers
