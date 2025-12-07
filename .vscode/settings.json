@@ -4,5 +4,6 @@
     "source.organizeImports": "explicit",
     "source.sortMembers": "explicit"
   },
-  "chat.mcp.gallery.enabled": true
+  "chat.mcp.gallery.enabled": true,
+  "java.compile.nullAnalysis.mode": "automatic"
 }
