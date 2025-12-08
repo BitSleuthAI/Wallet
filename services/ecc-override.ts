@@ -370,7 +370,7 @@ export const createNobleECC = () => {
             compressedPointEven[0] = 0x02;
             compressedPointEven.set(p, 1);
             
-            const pointEven = noble.Point.fromHex(compressedPointEven);
+            noble.Point.fromHex(compressedPointEven);
             console.log(`🔧 isXOnlyPoint: even y-coordinate works`);
             return true;
           } catch {
@@ -380,7 +380,7 @@ export const createNobleECC = () => {
               compressedPointOdd[0] = 0x03;
               compressedPointOdd.set(p, 1);
               
-              const pointOdd = noble.Point.fromHex(compressedPointOdd);
+              noble.Point.fromHex(compressedPointOdd);
               console.log(`🔧 isXOnlyPoint: odd y-coordinate works`);
               return true;
             } catch {

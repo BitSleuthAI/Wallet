@@ -10,7 +10,6 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CACHE_KEY_PREFIX = 'tx_cache_';
 const CONFIRMED_CACHE_KEY = 'tx_cache_confirmed';
 const UNCONFIRMED_CACHE_KEY = 'tx_cache_unconfirmed';
 const UNCONFIRMED_TTL = 120000; // 2 minutes for unconfirmed transactions
@@ -248,7 +247,6 @@ export function getCacheStats(): {
   newestConfirmed?: number;
 } {
   const confirmedTxs = Array.from(cache.confirmed.values());
-  const unconfirmedTxs = Array.from(cache.unconfirmed.values());
   
   let oldestConfirmed: number | undefined;
   let newestConfirmed: number | undefined;
