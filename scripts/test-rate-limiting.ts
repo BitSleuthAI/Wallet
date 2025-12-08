@@ -26,7 +26,7 @@ async function testRateLimiting() {
   ];
   
   try {
-    const results = await Promise.all(requests);
+    await Promise.all(requests);
     const endTime = Date.now();
     const duration = endTime - startTime;
     
