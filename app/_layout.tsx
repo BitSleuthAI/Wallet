@@ -49,7 +49,7 @@ const queryClient = new QueryClient({
 // Error Boundary to catch hook ordering issues
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined }
+  { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined; error?: Error }
 > {
   private appearanceSubscription: any;
 
