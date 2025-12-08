@@ -19,13 +19,6 @@ const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
-// Additional fallback providers for better reliability
-// Note: Only includes Esplora-compatible providers (Blockchair uses different API format)
-const FALLBACK_PROVIDERS = [
-  // These are the same as ESPLORA_BASES, so we'll just use ESPLORA_BASES directly
-  // No additional fallback providers are needed since we already have the main ones
-];
-
 // Rate limiting configuration - PRODUCTION OPTIMIZED
 // Based on Blockstream Green (1000ms), Trust Wallet (1500ms), and Bluewallet (800ms) best practices
 // Blockstream public API allows ~10 req/sec = 100ms, but bursts cause 429s
@@ -564,7 +557,6 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
 
   const attemptsPerProvider = 3; // Increased attempts per provider
   let lastError: any = null;
-  let providerIndex = 0;
   
   // Try all providers
   const allProviders = ESPLORA_BASES;

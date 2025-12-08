@@ -221,7 +221,7 @@ async function runTests() {
   console.log('📝 Test 8: Corrupted data handling');
   await AsyncStorage.setItem(`${WALLET_BALANCE_PREFIX}corrupted`, 'invalid json {{{');
   try {
-    const corrupted = await getPersistedBalance('corrupted');
+    await getPersistedBalance('corrupted');
     assert(false, 'Should have thrown error for corrupted data');
   } catch (error) {
     assert(true, 'Gracefully handles corrupted data');

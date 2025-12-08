@@ -4,7 +4,6 @@ import { Platform } from 'react-native';
 
 // API endpoints for fee estimation
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
-const MEMPOOL_API = 'https://mempool.space/api';
 const MEMPOOL_RECOMMENDED_API = 'https://mempool.space/api/v1/fees/recommended';
 const MEMPOOL_ESTIMATES_API = 'https://mempool.space/api/v1/fees/mempool-blocks';
 

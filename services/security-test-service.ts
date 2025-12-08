@@ -175,7 +175,6 @@ export class SecurityTestService {
   displayTestResults(results: SecurityTestResult[]): void {
     const passedTests = results.filter(r => r.passed).length;
     const totalTests = results.length;
-    const educationalResults = results.filter(r => !r.passed && r.error?.includes('educational') || r.error?.includes('Educational')).length;
     
     console.log(`\n🧪 Security Education Assessment: ${passedTests}/${totalTests} features enabled\n`);
     

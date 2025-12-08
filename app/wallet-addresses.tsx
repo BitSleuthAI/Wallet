@@ -36,7 +36,6 @@ export default function WalletAddressesScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Generate addresses following gap limit logic
   // OPTIMIZED: Fetch both chains at once to leverage shared caching from discoverUsedAddresses
@@ -83,25 +82,6 @@ export default function WalletAddressesScreen() {
     gcTime: 300000, // 5 minutes - keep cached data even when query is disabled (wallet switching)
     refetchOnWindowFocus: false,
   });
-
-  // Function reserved for future infinite scroll feature
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const loadMoreAddresses = async () => {
-    console.log('Load more addresses functionality to be implemented');
-    if (isLoadingMore) return;
-    
-    setIsLoadingMore(true);
-    try {
-      // For now, we'll disable the load more button since we're using gap limit logic
-      // The gap limit logic already shows all used addresses + appropriate unused addresses
-      console.log('Load more is disabled when using gap limit logic');
-    } catch (error) {
-      console.error('Failed to load more addresses:', error);
-      Alert.alert('Error', 'Failed to load more addresses');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
 
   // Get address data for current tab (filtered from query data)
   const addressData = useMemo((): AddressInfo[] => {

@@ -423,53 +423,6 @@ export const sendTransaction = async (
 };
 
 /**
- * Select UTXOs for transaction using greedy algorithm
- */
-function selectUTXOs(utxos: UTXO[], targetAmount: number, feeRate: number): {
-  selectedUTXOs: UTXO[];
-  fee: number;
-  change: number;
-} {
-  // Filter confirmed UTXOs and sort by value (largest first)
-  // Use optional chaining to safely access status.confirmed
-  const availableUTXOs = utxos
-    .filter(utxo => utxo.status?.confirmed === true)
-    .sort((a, b) => b.value - a.value);
-  
-  if (availableUTXOs.length === 0) {
-    throw new Error('No confirmed UTXOs available');
-  }
-  
-  const selectedUTXOs: UTXO[] = [];
-  let totalSelected = 0;
-  
-  // Greedy selection algorithm
-  for (const utxo of availableUTXOs) {
-    selectedUTXOs.push(utxo);
-    totalSelected += utxo.value;
-    
-    // Calculate change amount first
-    const tempFee = Math.ceil(estimateTransactionSize(selectedUTXOs.length, 2) * feeRate);
-    const tempChange = totalSelected - targetAmount - tempFee;
-    
-    // Calculate actual output count based on change amount
-    const actualOutputCount = calculateOutputCount(tempChange);
-    
-    // Recalculate fee with accurate output count
-    const estimatedSize = estimateTransactionSize(selectedUTXOs.length, actualOutputCount);
-    const fee = Math.ceil(estimatedSize * feeRate);
-    const totalNeeded = targetAmount + fee;
-    
-    if (totalSelected >= totalNeeded) {
-      const change = totalSelected - totalNeeded;
-      return { selectedUTXOs, fee, change };
-    }
-  }
-  
-  throw new Error('Insufficient funds');
-}
-
-/**
  * Calculate the actual number of outputs based on change amount and dust threshold
  */
 function calculateOutputCount(changeAmount: number): number {
