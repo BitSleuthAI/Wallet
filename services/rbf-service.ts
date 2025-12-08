@@ -449,7 +449,7 @@ export async function createReplacementTransaction(
     }
     
     // Add inputs with RBF enabled (sequence number 0xFFFFFFFD)
-    for (const [key, { input, utxo }] of inputMap) {
+    for (const [, { utxo }] of inputMap) {
       txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
     }
     
@@ -561,7 +561,7 @@ export async function createReplacementTransaction(
     txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Re-add inputs
-    for (const [key, { input, utxo }] of inputMap) {
+    for (const [, { utxo }] of inputMap) {
       txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
     }
     
@@ -986,7 +986,7 @@ async function createCancellationTransaction(
     }
     
     // Add inputs with RBF enabled (sequence number 0xFFFFFFFD)
-    for (const [key, { input, utxo }] of inputMap) {
+    for (const [, { utxo }] of inputMap) {
       txb.addInput(utxo.txid, utxo.vout, 0xFFFFFFFD);
     }
     
