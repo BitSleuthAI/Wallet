@@ -598,7 +598,7 @@ export async function createReplacementTransaction(
     
     // Sign each input
     let inputIndex = 0;
-    for (const [key, { input, utxo, addressIndex, chain }] of inputMap) {
+    for (const [, { utxo, addressIndex, chain }] of inputMap) {
       // Derive private key for this address using the correct chain
       // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
       const child = root.derivePath(`m/84'/0'/0'/${chain}/${addressIndex}`);
@@ -1076,7 +1076,7 @@ async function createCancellationTransaction(
     
     // Sign each input
     let inputIndex = 0;
-    for (const [key, { input, utxo, addressIndex, chain }] of inputMap) {
+    for (const [, { utxo, addressIndex, chain }] of inputMap) {
       // Derive private key for this address using the correct chain
       // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
       const child = root.derivePath(`m/84'/0'/0'/${chain}/${addressIndex}`);
@@ -1495,50 +1495,4 @@ function estimateTransactionSize(inputCount: number, outputCount: number): numbe
   size += outputCount * 34;
   
   return size;
-}
-
-/**
- * Generate a change address using the wallet's derivation path
- */
-async function generateChangeAddress(mnemonic: string, changeIndex: number = 0): Promise<string> {
-  try {
-    console.log(`🔧 Generating change address for index: ${changeIndex}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
-    }
-    
-    if (!bip32 || !bip32.BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    
-    // Derive private key for change address (chain 1)
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
-    
-    if (!child.publicKey) {
-      throw new Error('Failed to derive public key for change address');
-    }
-    
-    // Generate P2WPKH address
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const sha256Hash = sha256(child.publicKey);
-    const hash160 = ripemd160(sha256Hash);
-    const words = bech32.bech32.toWords(hash160);
-    const address = bech32.bech32.encode('bc', [0, ...words]);
-    
-    console.log(`✅ Generated change address: ${address}`);
-    return address;
-  } catch (error) {
-    console.error(`❌ Failed to generate change address:`, error);
-    throw error;
-  }
 }

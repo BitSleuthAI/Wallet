@@ -85,7 +85,6 @@ export async function validateCPFPTransaction(
     // Calculate required child fee to achieve target fee rate
     const parentTxSize = estimateTransactionSize(parentTxData.vin?.length || 0, parentTxData.vout?.length || 0);
     const parentFee = calculateParentFee(parentTxData);
-    const parentFeeRate = parentFee / parentTxSize;
     
     // Calculate effective fee rate when combined with child transaction
     const totalSize = parentTxSize + childTxSize;
@@ -312,7 +311,7 @@ export async function createCPFPTransaction(
     }
     
     // Add inputs (spending parent transaction outputs) with proper SegWit support
-    for (const [key, { utxo }] of inputMap) {
+    for (const [, { utxo }] of inputMap) {
       // For P2WPKH inputs, we need to provide the witnessUtxo
       if (!utxo.scriptPubKey) {
         throw new Error(`Missing scriptPubKey for UTXO ${utxo.txid}:${utxo.vout}`);
@@ -371,7 +370,7 @@ export async function createCPFPTransaction(
     
     // Sign each input using PSBT
     let inputIndex = 0;
-    for (const [key, { utxo, addressIndex, chain }] of inputMap) {
+    for (const [, { addressIndex, chain }] of inputMap) {
       // Derive private key for this address using the correct chain
       // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
       const child = root.derivePath(`m/84'/0'/0'/${chain}/${addressIndex}`);

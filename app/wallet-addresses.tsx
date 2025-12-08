@@ -36,7 +36,6 @@ export default function WalletAddressesScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
-  const [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
 
   // Generate addresses following gap limit logic
   // OPTIMIZED: Fetch both chains at once to leverage shared caching from discoverUsedAddresses

@@ -392,7 +392,6 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       
       // Determine transaction type
       const isSent = sentAmountSatoshis > 0;
-      const isReceived = receivedAmountSatoshis > 0 && sentAmountSatoshis === 0;
       
       // Calculate change (amount returned to our addresses)
       // For sent transactions, exclude the primary recipient from change calculation
@@ -426,9 +425,6 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
       const confirmations = isConfirmed && latestBlockHeight ? latestBlockHeight - tx.status.block_height + 1 : 0;
       const txDate = isConfirmed ? new Date(tx.status.block_time * 1000) : new Date();
       const isPending = !isConfirmed;
-
-      const fromAddress = tx.vin?.map((i: any) => i.prevout?.scriptpubkey_address).filter(Boolean) ?? [];
-      const toAddress = tx.vout?.map((o: any) => o.scriptpubkey_address).filter(Boolean) ?? [];
 
       // Check for RBF and CPFP
       const hasRBF = tx.vin?.some((input: any) => {
