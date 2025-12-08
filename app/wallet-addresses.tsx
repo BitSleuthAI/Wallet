@@ -84,25 +84,6 @@ export default function WalletAddressesScreen() {
     refetchOnWindowFocus: false,
   });
 
-  // Function reserved for future infinite scroll feature
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const loadMoreAddresses = async () => {
-    console.log('Load more addresses functionality to be implemented');
-    if (isLoadingMore) return;
-    
-    setIsLoadingMore(true);
-    try {
-      // For now, we'll disable the load more button since we're using gap limit logic
-      // The gap limit logic already shows all used addresses + appropriate unused addresses
-      console.log('Load more is disabled when using gap limit logic');
-    } catch (error) {
-      console.error('Failed to load more addresses:', error);
-      Alert.alert('Error', 'Failed to load more addresses');
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
   // Get address data for current tab (filtered from query data)
   const addressData = useMemo((): AddressInfo[] => {
     // Use data from the addressesQuery instead of the wallet store

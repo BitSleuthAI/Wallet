@@ -1,5 +1,5 @@
 import { darkTheme, lightTheme } from '@/constants/themes';
-import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_STALE_TIME, REACT_QUERY_GC_TIME } from '@/constants/cache';
+import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
@@ -1262,7 +1262,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
 
   // Save theme mutation
-  const saveThemeMutation = useMutation({
+  useMutation({
     mutationFn: async (isDark: boolean) => {
       const newTheme = isDark ? darkTheme : lightTheme;
       await AsyncStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -1273,7 +1273,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       queryClient.invalidateQueries({ queryKey: ['theme'] });
     },
   });
-  const { mutate: saveTheme } = saveThemeMutation;
 
   // Save currency mutation
   const saveCurrencyMutation = useMutation({
@@ -1939,48 +1938,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, [queryClient, currentWallet, getWalletQueryKeys]);
 
-  const debugTransactionFetching = useCallback(async () => {
-    if (!currentWallet || !currentWallet.addresses.length) {
-      console.log('🚫 No current wallet or addresses available for debugging');
-      return;
-    }
-
-    console.log('🔧 Starting debug transaction fetching...');
-    const { esploraGet, getAddressTransactions, testProviderConnectivity } = await import('@/services/esplora-service');
-
-    console.log('🧪 Testing provider connectivity...');
-    const connectivityResult = await testProviderConnectivity();
-    console.log('🔧 Provider connectivity:', connectivityResult.data ? '✅ Connected' : '❌ Failed', connectivityResult.error || '');
-
-    console.log('🧪 Testing with known address (Genesis block)...');
-    try {
-      const genesisAddress = '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa';
-      const genesisResult = await getAddressTransactions(genesisAddress);
-      console.log('🔧 Genesis address test:', genesisResult.data ? `✅ Found ${genesisResult.data.length} transactions` : '❌ Failed', genesisResult.error || '');
-    } catch (err) {
-      console.log('🔧 Genesis address test failed:', err);
-    }
-
-    console.log('🧪 Testing raw esploraGet...');
-    try {
-      const blockHeight = await esploraGet('/blocks/tip/height');
-      console.log('🔧 Raw esploraGet test:', `✅ Block height: ${blockHeight}`);
-    } catch (err) {
-      console.log('🔧 Raw esploraGet test failed:', err);
-    }
-
-    console.log('🔧 Now testing your wallet addresses...');
-    for (const address of currentWallet.addresses) {
-      console.log(`🔧 Testing address: ${address}`);
-      try {
-        const result = await getAddressTransactions(address, currentWallet.xpub);
-        console.log(`🔧 Address ${address}:`, result.data ? `✅ Found ${result.data.length} transactions` : '❌ Failed', result.error || '');
-      } catch (err) {
-        console.log(`🔧 Address ${address} test failed:`, err);
-      }
-    }
-  }, [currentWallet]);
-
   // Debounce wallet switching to prevent rapid API calls on iOS
   const switchWalletTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
@@ -2451,13 +2408,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     
     // Require at least 5 different types of interactions AND 10+ total interactions
     // This ensures user has thoroughly explored different parts of the app
-    const requiredInteractionTypes = [
-      'wallet_switch',      // User has switched between wallets
-      'data_refresh',       // User has refreshed data
-      'send_interaction',   // User has interacted with send screen
-      'receive_interaction', // User has interacted with receive screen
-      'settings_interaction', // User has used settings/features
-    ];
+    // Required interaction types: wallet_switch, data_refresh, send_interaction,
+    // receive_interaction, settings_interaction
     
     // Need BOTH: at least 5 different interaction types AND 10+ total interactions
     const hasDiverseInteractions = usageTypes.size >= 5;
