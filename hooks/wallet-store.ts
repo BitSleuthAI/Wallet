@@ -2408,8 +2408,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     
     // Require at least 5 different types of interactions AND 10+ total interactions
     // This ensures user has thoroughly explored different parts of the app
-    // Required interaction types: wallet_switch, data_refresh, send_interaction,
-    // receive_interaction, settings_interaction
+    //
+    // Required interaction types (need at least 5 of these):
+    //   - 'wallet_switch':        User has switched between wallets
+    //   - 'data_refresh':         User has refreshed data
+    //   - 'send_interaction':     User has interacted with send screen
+    //   - 'receive_interaction':  User has interacted with receive screen
+    //   - 'settings_interaction': User has used settings/features
     
     // Need BOTH: at least 5 different interaction types AND 10+ total interactions
     const hasDiverseInteractions = usageTypes.size >= 5;
