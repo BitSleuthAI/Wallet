@@ -137,6 +137,8 @@ function ReceiveScreenContent() {
     outputRange: ['0deg', '360deg'],
   });
 
+  const hasValidAddress = currentAddress.trim().length > 0 && currentAddress !== 'No address available';
+
   const handleNewAddress = async () => {
     if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
     
@@ -297,7 +299,7 @@ function ReceiveScreenContent() {
                   Loading address...
                 </Text>
               </View>
-            ) : currentAddress && currentAddress.length > 0 && currentAddress !== 'No address available' ? (
+            ) : hasValidAddress ? (
               <QRCode
                 value={currentAddress}
                 size={240}
