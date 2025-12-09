@@ -255,7 +255,7 @@ if (isInitialized && crashlytics && !isExpoGo) {
       platform: Platform.OS,
       appVersion: '1.2.1',
       buildType: __DEV__ ? 'debug' : 'release',
-      environment: isExpoGo ? 'expo-go' : 'development-build',
+      environment: 'development-build',
     });
     console.log('✅ Crashlytics service initialized successfully');
   } catch (error) {
