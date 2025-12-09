@@ -1793,10 +1793,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setUtxosCacheTimestamp(prev => ({ ...prev, [walletId]: Date.now() }));
       
       // Mark that complete mode has run for this wallet
-      if (!fastMode) {
-        setUtxosCompleteModeRan(prev => ({ ...prev, [walletId]: true }));
-        console.log('✅ Complete mode finished for wallet:', walletId);
-      }
+      setUtxosCompleteModeRan(prev => ({ ...prev, [walletId]: true }));
+      console.log('✅ Complete mode finished for wallet:', walletId);
       
       console.log('🔍 Wallet store: UTXOs cached successfully for wallet:', walletId);
       return utxosWithFrozenStatus;
