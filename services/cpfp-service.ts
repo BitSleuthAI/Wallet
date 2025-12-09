@@ -853,7 +853,7 @@ export async function getCPFPRecommendations(
     const effectiveFeeRate = validation.effectiveFeeRate || 0;
     
     // Estimate confirmation time based on effective fee rate
-    let timeEstimate = 'Unknown';
+    let timeEstimate: string;
     if (effectiveFeeRate >= feeEstimates.fastestFee) {
       timeEstimate = '5-15 minutes';
     } else if (effectiveFeeRate >= feeEstimates.halfHourFee) {
