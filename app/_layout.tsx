@@ -49,7 +49,7 @@ const queryClient = new QueryClient({
 // Error Boundary to catch hook ordering issues
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined; error?: Error }
+  { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined }
 > {
   private appearanceSubscription: any;
 
@@ -85,9 +85,8 @@ class ErrorBoundary extends Component<
     crashlyticsService.recordError(error);
     
     // Return minimal state update - colorScheme will be preserved from existing state
-    return { 
-      hasError: true, 
-      error,
+    return {
+      hasError: true,
     };
   }
 
@@ -142,7 +141,7 @@ class ErrorBoundary extends Component<
             <TouchableOpacity
               style={errorStyles.buttonContainer}
               onPress={() => {
-                this.setState({ hasError: false, error: undefined });
+                this.setState({ hasError: false });
                 // Force a complete re-render
                 queryClient.clear();
               }}
