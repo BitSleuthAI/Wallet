@@ -126,8 +126,8 @@ export default function AddressDetailsScreen() {
     if (!transactions || !address) return [];
     
     return transactions.map((tx: Transaction) => {
-      let type: 'sent' | 'received' = 'received';
-      let amount = 0;
+      let type: 'sent' | 'received';
+      let amount: number;
       
       // Check if this address received funds
       const receivedOutputs = tx.vout.filter(output => 

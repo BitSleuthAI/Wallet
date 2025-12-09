@@ -526,7 +526,7 @@ export async function createReplacementTransaction(
     
     // Calculate actual output values and transaction size
     let actualOutputCount = originalTx.vout.length;
-    let actualOutputValue = totalOutputValue;
+    let actualOutputValue: number;
     let newChangeValue = 0;
     
     // Adjust the change output value
