@@ -316,7 +316,7 @@ function ReceiveScreenContent() {
             ) : (
               <View style={styles.qrPlaceholder}>
                 <Text style={[styles.qrPlaceholderText, { color: theme.colors.textSecondary }]}>
-                  {!currentWallet ? 'No wallet selected' : 'No address available'}
+                  No address available
                 </Text>
               </View>
             )}
