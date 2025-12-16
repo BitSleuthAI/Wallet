@@ -21,7 +21,7 @@ import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View, EmitterSubscription, NativeModules } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -51,7 +51,7 @@ class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined }
 > {
-  private appearanceSubscription: any;
+  private appearanceSubscription: EmitterSubscription | undefined;
 
   constructor(props: { children: ReactNode }) {
     super(props);
@@ -135,7 +135,7 @@ class ErrorBoundary extends Component<
             </Text>
             
             <Text style={[errorStyles.message, { color: colors.textSecondary }]}>
-              The app encountered an error. Please restart BitSleuth Wallet by force closing the app.
+              The app encountered an error. You can try again, or if the issue persists, please force close and restart BitSleuth Wallet.
             </Text>
             
             <TouchableOpacity
@@ -371,14 +371,13 @@ export default function RootLayout() {
         const isBridgeReady = async () => {
           try {
             // Test if React Native core is available
-            // eslint-disable-next-line @typescript-eslint/no-require-imports
-            const testNative = require('react-native');
-            if (!testNative || typeof testNative.Platform === 'undefined') {
+            // Check if Platform and NativeModules are available as expected
+            if (typeof Platform === 'undefined') {
               return false;
             }
 
             // Test if NativeModules is available and functional
-            const { NativeModules } = testNative;
+            // Already imported above
             if (!NativeModules) {
               return false;
             }
@@ -391,19 +390,8 @@ export default function RootLayout() {
                 // This will throw if the bridge isn't ready
                 const moduleKeys = Object.keys(NativeModules);
                 
-                // Additional test: try to access a specific native module that we know exists
-                // This ensures the bridge is not just available but functional
-                if (testNative.Platform.OS === 'android') {
-                  // On Android, try to access GooglePlayServicesChecker if available
-                  const googlePlayServices = NativeModules.GooglePlayServicesChecker;
-                  if (googlePlayServices && typeof googlePlayServices === 'object') {
-                    // Bridge is ready if we can access the module object
-                    return true;
-                  }
-                }
-                
-                // For iOS or if specific modules aren't available, 
-                // just check that NativeModules is accessible
+                // Check that NativeModules is accessible and has keys
+                // If even empty, bridge is up (no fatal error accessing)
                 return moduleKeys.length >= 0; // Even empty object means bridge is ready
               } catch {
                 return false;
