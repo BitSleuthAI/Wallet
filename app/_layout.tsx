@@ -376,7 +376,6 @@ export default function RootLayout() {
               return false;
             }
 
-
             // Test if NativeModules is available and functional
             // Already imported above
             if (!NativeModules) {
