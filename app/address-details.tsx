@@ -156,7 +156,8 @@ export default function AddressDetailsScreen() {
         ...tx,
         type,
         amount,
-        timestamp: tx.status.block_time || Date.now() / 1000,
+        timestamp: tx.status.block_time || 0, // 0 for unconfirmed txs sorts them last (after confirmed txs)
+        formattedAmount: formatBTC(amount),
       };
     }).sort((a, b) => b.timestamp - a.timestamp);
   }, [transactions, address]);
@@ -335,7 +336,7 @@ export default function AddressDetailsScreen() {
                       styles.amountBTC,
                       { color: tx.type === 'sent' ? theme.colors.error : theme.colors.success }
                     ]}>
-                      {tx.type === 'sent' ? '-' : '+'}{formatBTC(tx.amount)}{"\n"}BTC
+                      {tx.type === 'sent' ? '-' : '+'}{tx.formattedAmount}{"\n"}BTC
                     </Text>
                   </View>
                   
