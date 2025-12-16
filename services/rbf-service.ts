@@ -408,7 +408,7 @@ export async function createReplacementTransaction(
     const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
-    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
@@ -959,7 +959,7 @@ async function createCancellationTransaction(
     const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
-    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
