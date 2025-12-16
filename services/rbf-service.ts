@@ -9,7 +9,14 @@ import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
 
 // Use centralized bip32 loader
-let bip32: any = null;
+let bip32Module: unknown = null;
+
+/**
+ * Sequence number that disables RBF (Replace-by-Fee) by default.
+ * Bitcoin interprets 0xFFFFFFFF as the maximum sequence number, meaning
+ * the transaction cannot be replaced. Used as fallback for failed parsing.
+ */
+const NON_RBF_SEQUENCE = 0xFFFFFFFF;
 
 export interface RBFTransaction {
   txid: string;
@@ -49,7 +56,7 @@ function parseSequenceNumber(sequence: any): number {
       const parsed = parseInt(sequence, 16);
       if (isNaN(parsed)) {
         console.warn(`⚠️ Failed to parse hexadecimal sequence: ${sequence}`);
-        return 0xFFFFFFFF; // Default to non-RBF sequence
+        return NON_RBF_SEQUENCE; // Default to non-RBF sequence
       }
       return parsed;
     }
@@ -57,7 +64,7 @@ function parseSequenceNumber(sequence: any): number {
     const parsed = parseInt(sequence, 10);
     if (isNaN(parsed)) {
       console.warn(`⚠️ Failed to parse decimal sequence: ${sequence}`);
-      return 0xFFFFFFFF; // Default to non-RBF sequence
+      return NON_RBF_SEQUENCE; // Default to non-RBF sequence
     }
     return parsed;
   }
@@ -68,7 +75,7 @@ function parseSequenceNumber(sequence: any): number {
     const parsed = parseInt(sequenceStr, 16);
     if (isNaN(parsed)) {
       console.warn(`⚠️ Failed to parse hexadecimal sequence: ${sequenceStr}`);
-      return 0xFFFFFFFF; // Default to non-RBF sequence
+      return NON_RBF_SEQUENCE; // Default to non-RBF sequence
     }
     return parsed;
   }
@@ -76,7 +83,7 @@ function parseSequenceNumber(sequence: any): number {
   const parsed = parseInt(sequenceStr, 10);
   if (isNaN(parsed)) {
     console.warn(`⚠️ Failed to parse sequence: ${sequenceStr}`);
-    return 0xFFFFFFFF; // Default to non-RBF sequence
+    return NON_RBF_SEQUENCE; // Default to non-RBF sequence
   }
   
   return parsed;
@@ -302,13 +309,14 @@ export async function createReplacementTransaction(
     const ecc = (global as any).ecc;
     
     // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
+    if (!bip32Module) {
+      bip32Module = await loadBip32Module();
     }
     
-    if (!bip32 || !bip32.BIP32Factory) {
+    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
+    const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     
     if (!ecc) {
@@ -318,23 +326,30 @@ export async function createReplacementTransaction(
     // Validate ECC library before using it
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
     
-    // Test basic ECC functionality
-    const testPrivateKey = new Uint8Array(32);
-    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-    
-    try {
+    /**
+     * Validates the given ECC library by checking basic functionality.
+     * Throws an error if validation fails.
+     */
+    function validateECCLibrary(ecc: any): void {
+      const testPrivateKey = new Uint8Array(32);
+      testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+
       // Test private key validation
       if (!ecc.isPrivate(testPrivateKey)) {
         throw new Error('ECC private key validation failed');
       }
-      
+
       // Test point generation
       const publicKey = ecc.pointFromScalar(testPrivateKey, true);
       if (!publicKey || publicKey.length !== 33) {
         throw new Error('ECC point generation failed');
       }
-      
+
       console.log('✅ ECC library validation passed');
+    }
+    // Validate ECC library using reusable function
+    try {
+      validateECCLibrary(ecc);
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
@@ -390,10 +405,10 @@ export async function createReplacementTransaction(
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
-    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     
-    // Create transaction builder
-    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
+    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
@@ -846,13 +861,14 @@ async function createCancellationTransaction(
     const ecc = (global as any).ecc;
     
     // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
+    if (!bip32Module) {
+      bip32Module = await loadBip32Module();
     }
     
-    if (!bip32 || !bip32.BIP32Factory) {
+    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
+    const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     
     if (!ecc) {
@@ -862,23 +878,30 @@ async function createCancellationTransaction(
     // Validate ECC library before using it
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
     
-    // Test basic ECC functionality
-    const testPrivateKey = new Uint8Array(32);
-    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-    
-    try {
+    /**
+     * Validates the given ECC library by checking basic functionality.
+     * Throws an error if validation fails.
+     */
+    function validateECCLibrary(ecc: any): void {
+      const testPrivateKey = new Uint8Array(32);
+      testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+
       // Test private key validation
       if (!ecc.isPrivate(testPrivateKey)) {
         throw new Error('ECC private key validation failed');
       }
-      
+
       // Test point generation
       const publicKey = ecc.pointFromScalar(testPrivateKey, true);
       if (!publicKey || publicKey.length !== 33) {
         throw new Error('ECC point generation failed');
       }
-      
+
       console.log('✅ ECC library validation passed');
+    }
+    // Validate ECC library using reusable function
+    try {
+      validateECCLibrary(ecc);
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
@@ -933,10 +956,10 @@ async function createCancellationTransaction(
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
-    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     
-    // Create transaction builder
-    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
+    // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
+    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
@@ -1152,16 +1175,17 @@ export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, ta
     console.log(`🔍 Deriving BIP32 index and chain for address: ${targetAddress}`);
     
     // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
+    if (!bip32Module) {
+      bip32Module = await loadBip32Module();
     }
     
-    if (!bip32 || !bip32.BIP32Factory) {
+    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
+    const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     const bech32 = await import('bech32');
     const { sha256 } = await import('@noble/hashes/sha256');
     const { ripemd160 } = await import('@noble/hashes/ripemd160');
@@ -1243,16 +1267,17 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
     console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
     
     // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
+    if (!bip32Module) {
+      bip32Module = await loadBip32Module();
     }
     
-    if (!bip32 || !bip32.BIP32Factory) {
+    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
+    const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     const bech32 = await import('bech32');
     const { sha256 } = await import('@noble/hashes/sha256');
     const { ripemd160 } = await import('@noble/hashes/ripemd160');
@@ -1443,16 +1468,17 @@ async function generateCancellationAddress(mnemonic: string, walletAddresses: st
     const addressIndex = await findNextUnusedAddressIndex(mnemonic, walletAddresses);
     
     // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
+    if (!bip32Module) {
+      bip32Module = await loadBip32Module();
     }
     
-    if (!bip32 || !bip32.BIP32Factory) {
+    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
       throw new Error('BIP32 module or BIP32Factory not available');
     }
+    const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
+    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
     
     // Derive private key for cancellation address
     const seed = await bip39.mnemonicToSeed(mnemonic);
@@ -1483,16 +1509,26 @@ async function generateCancellationAddress(mnemonic: string, walletAddresses: st
 
 /**
  * Estimate transaction size in bytes
+ *
+ * Assumes all inputs/outputs are SegWit v0 P2WPKH type.
  */
+
+// Standard SegWit v0 P2WPKH input size: 68 bytes
+// Derived from: 32 (txid) + 4 (vout) + 1 (scriptSig length) + 4 (sequence) + 
+// 1 (witness item count) + 72 (signature) + 33 (pubkey), weighted by witness discount
+const P2WPKH_INPUT_SIZE = 68;
+// Standard SegWit v0 P2WPKH output size: 34 bytes
+// Derived from: 8 (value) + 1 (scriptPubKey length) + 25 (scriptPubKey for P2WPKH)
+const P2WPKH_OUTPUT_SIZE = 34;
+
 function estimateTransactionSize(inputCount: number, outputCount: number): number {
-  // Base transaction size
-  let size = 10; // version (4) + input count (1) + output count (1) + locktime (4)
-  
-  // P2WPKH input size (68 bytes each)
-  size += inputCount * 68;
-  
-  // P2WPKH output size (34 bytes each)
-  size += outputCount * 34;
-  
+  // Base transaction size: 10 bytes
+  // (version [4 bytes] + input count [1 byte] + output count [1 byte] + locktime [4 bytes])
+  let size = 10;
+
+  // Add inputs and outputs (SegWit v0 P2WPKH only)
+  size += inputCount * P2WPKH_INPUT_SIZE;
+  size += outputCount * P2WPKH_OUTPUT_SIZE;
+
   return size;
 }

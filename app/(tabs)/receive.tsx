@@ -3,6 +3,9 @@ import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
+
+// Define Android-specific bottom padding for action buttons area
+const ANDROID_BOTTOM_PADDING = 120;
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
@@ -41,13 +44,13 @@ export default function ReceiveScreen() {
     );
   }
   
-  return <ReceiveScreenContent />;
+  return <ReceiveScreenContent walletContext={walletContext} />;
 }
 
 // Main component with all hooks
-function ReceiveScreenContent() {
+function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typeof useWallet> }) {
   const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
-  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = walletContext; // Context is guaranteed non-null by wrapper
   const spinValue = useRef(new Animated.Value(0)).current;
   
   // Initialize state hooks with empty string, will be loaded async
@@ -161,7 +164,7 @@ function ReceiveScreenContent() {
     
     try {
       setIsGeneratingAddress(true);
-      setLastGenTime(now); // Update timestamp at start of generation
+      // setLastGenTime(now); // Moved to finally block to ensure cooldown only after attempt
       console.log('🔄 Generating new address...');
       const result = await generateNewAddress(currentWallet);
       if (result.success && result.wallet) {
@@ -198,12 +201,13 @@ function ReceiveScreenContent() {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
     } finally {
       setIsGeneratingAddress(false);
+      setLastGenTime(now); // Cooldown set after address generation attempt (regardless of success)
     }
   };
 
   const handleCopy = async () => {
     try {
-      if (!currentAddress || currentAddress.length === 0) {
+      if (!hasValidAddress) {
         Alert.alert('Error', 'No address available to copy');
         return;
       }
@@ -218,7 +222,7 @@ function ReceiveScreenContent() {
 
   const handleShare = async () => {
     try {
-      if (!currentAddress || currentAddress.length === 0) {
+      if (!hasValidAddress) {
         Alert.alert('Error', 'No address available to share');
         return;
       }
@@ -232,7 +236,7 @@ function ReceiveScreenContent() {
       console.error('Error sharing:', error);
       // Fallback to copy
       try {
-        if (currentAddress && currentAddress.length > 0) {
+        if (hasValidAddress) {
           await Clipboard.setStringAsync(currentAddress);
           Alert.alert('Copied', 'Address copied to clipboard instead');
         } else {
@@ -470,7 +474,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: platformStyles.spacing.lg,
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingBottom: Platform.OS === 'android' ? 120 : platformStyles.spacing.xxl, // Increased from xl
+    paddingBottom: Platform.OS === 'android' ? ANDROID_BOTTOM_PADDING : platformStyles.spacing.xxl, // Increased from xl
     paddingTop: platformStyles.spacing.lg, // Increased from md
   },
   actionButton: {
