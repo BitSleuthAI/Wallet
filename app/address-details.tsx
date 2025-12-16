@@ -49,7 +49,7 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache } = useWallet();
+  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache, priceQuery, selectedCurrency, getCurrencySymbol } = useWallet();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
@@ -165,11 +165,12 @@ export default function AddressDetailsScreen() {
     return (satoshis / 100000000).toFixed(8);
   };
 
-  const formatGBP = (satoshis: number) => {
-    // Mock conversion rate - in real app, fetch from API
+  const formatFiat = (satoshis: number) => {
+    // Use real exchange rate from wallet store based on selected currency
     const btcAmount = satoshis / 100000000;
-    const gbpRate = 75000; // Mock rate
-    return (btcAmount * gbpRate).toFixed(2);
+    // Get rate for selected currency from price query, fallback to USD if specific currency not available
+    const rate = priceQuery?.data?.[selectedCurrency]?.last || priceQuery?.data?.USD?.last || 0;
+    return rate > 0 ? (btcAmount * rate).toFixed(2) : '0.00';
   };
 
   const formatDate = (timestamp: number) => {
@@ -260,7 +261,7 @@ export default function AddressDetailsScreen() {
             ) : (
               <>
                 <Text style={[styles.balanceGBP, { color: theme.colors.text }]}>
-                  £{formatGBP(balance)}
+                  {getCurrencySymbol()}{formatFiat(balance)}
                 </Text>
                 <Text style={[styles.balanceBTC, { color: theme.colors.textSecondary }]}>
                   {formatBTC(balance)} BTC
