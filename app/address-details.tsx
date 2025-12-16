@@ -156,7 +156,7 @@ export default function AddressDetailsScreen() {
         ...tx,
         type,
         amount,
-        timestamp: tx.status.block_time || 0,
+        timestamp: tx.status.block_time || 0, // 0 for unconfirmed txs sorts them last (after confirmed txs)
         formattedAmount: formatBTC(amount),
       };
     }).sort((a, b) => b.timestamp - a.timestamp);
