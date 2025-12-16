@@ -3,12 +3,12 @@ import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-
-// Define Android-specific bottom padding for action buttons area
-const ANDROID_BOTTOM_PADDING = 120;
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
+
+// Define Android-specific bottom padding for action buttons area
+const ANDROID_BOTTOM_PADDING = 120;
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';

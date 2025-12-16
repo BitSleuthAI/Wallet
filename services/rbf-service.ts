@@ -18,6 +18,28 @@ let bip32Module: unknown = null;
  */
 const NON_RBF_SEQUENCE = 0xFFFFFFFF;
 
+/**
+ * Validates the given ECC library by checking basic functionality.
+ * Throws an error if validation fails.
+ */
+function validateECCLibrary(ecc: any): void {
+  const testPrivateKey = new Uint8Array(32);
+  testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
+
+  // Test private key validation
+  if (!ecc.isPrivate(testPrivateKey)) {
+    throw new Error('ECC private key validation failed');
+  }
+
+  // Test point generation
+  const publicKey = ecc.pointFromScalar(testPrivateKey, true);
+  if (!publicKey || publicKey.length !== 33) {
+    throw new Error('ECC point generation failed');
+  }
+
+  console.log('✅ ECC library validation passed');
+}
+
 export interface RBFTransaction {
   txid: string;
   originalTx: Transaction;
@@ -326,27 +348,6 @@ export async function createReplacementTransaction(
     // Validate ECC library before using it
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
     
-    /**
-     * Validates the given ECC library by checking basic functionality.
-     * Throws an error if validation fails.
-     */
-    function validateECCLibrary(ecc: any): void {
-      const testPrivateKey = new Uint8Array(32);
-      testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-
-      // Test private key validation
-      if (!ecc.isPrivate(testPrivateKey)) {
-        throw new Error('ECC private key validation failed');
-      }
-
-      // Test point generation
-      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-      if (!publicKey || publicKey.length !== 33) {
-        throw new Error('ECC point generation failed');
-      }
-
-      console.log('✅ ECC library validation passed');
-    }
     // Validate ECC library using reusable function
     try {
       validateECCLibrary(ecc);
@@ -878,27 +879,6 @@ async function createCancellationTransaction(
     // Validate ECC library before using it
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
     
-    /**
-     * Validates the given ECC library by checking basic functionality.
-     * Throws an error if validation fails.
-     */
-    function validateECCLibrary(ecc: any): void {
-      const testPrivateKey = new Uint8Array(32);
-      testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-
-      // Test private key validation
-      if (!ecc.isPrivate(testPrivateKey)) {
-        throw new Error('ECC private key validation failed');
-      }
-
-      // Test point generation
-      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-      if (!publicKey || publicKey.length !== 33) {
-        throw new Error('ECC point generation failed');
-      }
-
-      console.log('✅ ECC library validation passed');
-    }
     // Validate ECC library using reusable function
     try {
       validateECCLibrary(ecc);
