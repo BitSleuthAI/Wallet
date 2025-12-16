@@ -406,7 +406,7 @@ export async function createReplacementTransaction(
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
-    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
     let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
@@ -936,7 +936,7 @@ async function createCancellationTransaction(
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
-    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
     let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
@@ -1165,7 +1165,7 @@ export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, ta
     const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     const bech32 = await import('bech32');
     const { sha256 } = await import('@noble/hashes/sha256');
     const { ripemd160 } = await import('@noble/hashes/ripemd160');
@@ -1257,7 +1257,7 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
     const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     const bech32 = await import('bech32');
     const { sha256 } = await import('@noble/hashes/sha256');
     const { ripemd160 } = await import('@noble/hashes/ripemd160');
@@ -1458,7 +1458,7 @@ async function generateCancellationAddress(mnemonic: string, walletAddresses: st
     const bip32 = bip32Module as any;
     const bip39 = require('bip39');
     const ecc = (global as any).ecc;
-    const bip32Instance = (bip32Module as any).BIP32Factory(ecc);
+    const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Derive private key for cancellation address
     const seed = await bip39.mnemonicToSeed(mnemonic);
