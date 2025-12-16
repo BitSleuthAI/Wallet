@@ -169,7 +169,7 @@ export default function AddressDetailsScreen() {
     // Use real exchange rate from wallet store based on selected currency
     const btcAmount = satoshis / 100000000;
     // Get rate for selected currency from price query, fallback to USD if specific currency not available
-    const rate = priceQuery?.data?.[selectedCurrency]?.last || priceQuery?.data?.usd || 0;
+    const rate = priceQuery?.data?.[selectedCurrency]?.last || priceQuery?.data?.USD?.last || 0;
     return rate > 0 ? (btcAmount * rate).toFixed(2) : '0.00';
   };
 
