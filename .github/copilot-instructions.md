@@ -34,6 +34,7 @@
 - **Multi-wallet**: Support for multiple wallets, each with custom name/color.
 - **Coin control**: Manual UTXO selection via `app/coin-control.tsx` and related services.
 - **Fee bumping**: RBF/CPFP logic in `services/rbf-service.ts` and `services/cpfp-service.ts`.
+- **Documentation organization**: All markdown documentation files MUST be stored in the `docs/` folder, except for: `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, `CHANGELOG.md`, `AGENTS.md`, and `.github/copilot-instructions.md`. This includes product requirements, implementation summaries, testing guides, design documents, API documentation, architecture documentation, deployment guides, troubleshooting guides, and TODO lists.
 
 ## Integration Points
 - **Blockstream Esplora**: UTXO, transaction, and fee data. Rate limits apply—consider caching and batching.
