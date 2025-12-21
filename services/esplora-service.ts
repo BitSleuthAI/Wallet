@@ -884,17 +884,15 @@ export async function getTransactionOutspends(txid: string): Promise<{ data: any
 /**
  * Get UTXOs for an address
  */
-export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
-  try {
-    console.log(`💰 Getting UTXOs for: ${address.substring(0, 10)}...`);
-    console.log(`💰 Full address: ${address}`);
-    const utxos = await esploraGet(`/address/${address}/utxo`, 300000, xpubHint);
-    console.log(`💰 Raw esplora response for ${address.substring(0, 10)}:`, utxos);
-    const arr = Array.isArray(utxos) ? utxos : [];
-    console.log(`💰 Processed UTXOs for ${address.substring(0, 10)}:`, arr.length);
-    return { data: arr, error: null };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+  export async function getAddressUTXOs(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
+    try {
+      console.log(`💰 Getting UTXOs for wallet address`);
+      const utxos = await esploraGet(`/address/${address}/utxo`, 300000, xpubHint);
+      const arr = Array.isArray(utxos) ? utxos : [];
+      console.log(`💰 Processed UTXOs for request:`, arr.length);
+      return { data: arr, error: null };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error(`❌ Failed to get address UTXOs for ${address.substring(0, 10)}:`, message);
     return { data: null, error: message };
   }
