@@ -41,7 +41,7 @@ const METADATA_CACHE_TTL = ADDRESS_METADATA_CACHE_TTL_MS;
 export function clearAddressCache(xpub?: string): void {
   if (xpub) {
     addressMetadataCache.delete(xpub);
-    console.log(`🗑️ Cleared address cache for xpub: ${xpub.substring(0, 20)}...`);
+    console.log(`🗑️ Cleared address cache for xpub`);
   } else {
     addressMetadataCache.clear();
     console.log(`🗑️ Cleared all address caches`);
@@ -108,7 +108,7 @@ async function deriveAddressBatch(node: any, chain: number, from: number, to: nu
 export async function discoverUsedAddresses(xpub: string): Promise<string[]>;
 export async function discoverUsedAddresses(xpub: string, returnMetadata: true): Promise<Array<{ address: string; index: number; chain: number; isUsed: boolean }>>;
 export async function discoverUsedAddresses(xpub: string, returnMetadata: boolean = false): Promise<string[] | Array<{ address: string; index: number; chain: number; isUsed: boolean }>> {
-  console.log(`🔍 Starting address discovery for xpub: ${xpub.substring(0, 20)}...`);
+  console.log(`🔍 Starting address discovery for wallet`);
   
   // Check cache first
   const cached = addressMetadataCache.get(xpub);
@@ -129,7 +129,6 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   }
   
     console.log(`🔍 Cache miss or expired, performing address discovery...`);
-    console.log(`🔍 Full xpub for discovery:`, xpub);
     
     try {
       await ensureECC();

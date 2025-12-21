@@ -38,7 +38,6 @@ export async function storeMnemonic(walletId: string, mnemonic: string): Promise
   try {
     const key = `${MNEMONIC_KEY_PREFIX}${walletId}`;
     await SecureStore.setItemAsync(key, mnemonic);
-    console.log(`🔐 Mnemonic securely stored for wallet: ${walletId}`);
   } catch (error) {
     console.error(`❌ Failed to store mnemonic for wallet ${walletId}:`, error);
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
@@ -58,8 +57,7 @@ export async function getMnemonic(walletId: string): Promise<string | null> {
       console.warn(`⚠️ No mnemonic found for wallet: ${walletId}`);
       return null;
     }
-    
-    console.log(`🔐 Mnemonic retrieved for wallet: ${walletId}`);
+
     return mnemonic;
   } catch (error) {
     console.error(`❌ Failed to retrieve mnemonic for wallet ${walletId}:`, error);
