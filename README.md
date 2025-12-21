@@ -450,6 +450,13 @@ This is proprietary software owned by BitSleuth. Contributions are limited to au
 - Never add Google Analytics or user tracking
 - Always prioritize security and privacy
 
+### Documentation Organization
+
+**All markdown documentation files MUST be stored in the `docs/` folder**, with the following exceptions:
+- `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, `CHANGELOG.md`, `AGENTS.md`, and `.github/copilot-instructions.md`
+
+All other markdown files (product requirements, implementation summaries, testing guides, design documents, etc.) should be placed in the `docs/` folder. See [CONTRIBUTING.md](CONTRIBUTING.md) for complete details.
+
 ---
 
 ## 📄 Privacy Policy

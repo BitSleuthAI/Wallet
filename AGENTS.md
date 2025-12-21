@@ -93,6 +93,38 @@ node scripts/test-biometric.js
 
 ## Development Principles
 
+### Documentation Organization
+
+**All markdown documentation files MUST be stored in the `docs/` folder**, with the following exceptions:
+
+#### Root-Level Markdown Files (Allowed)
+These files should remain in the root directory:
+- `README.md` - Project overview and getting started guide
+- `CONTRIBUTING.md` - Contribution guidelines
+- `LICENSE.md` or `LICENSE` - License information
+- `CHANGELOG.md` - Version history
+- `AGENTS.md` - Agent configuration and guidelines
+- `.github/copilot-instructions.md` - GitHub Copilot instructions
+
+#### Documentation Files (Must be in `docs/`)
+All other markdown files should be placed in the `docs/` folder, including but not limited to:
+- Product requirements and specifications (e.g., `PRD.md`)
+- Implementation summaries and technical documentation
+- Testing guides and procedures
+- Migration guides
+- Design documents
+- API documentation
+- Architecture documentation
+- Deployment guides
+- Troubleshooting guides
+- TODO lists and planning documents
+
+**When creating new markdown documentation:**
+1. Create the file in the `docs/` folder
+2. Use descriptive, UPPERCASE_SNAKE_CASE filenames (e.g., `WALLET_PERSISTENCE_SUMMARY.md`)
+3. Add a clear title at the top of the document
+4. Include a brief description or table of contents for longer documents
+
 ### Code Style & Standards
 
 - **TypeScript First**: Use TypeScript for all new code with strict type checking
