@@ -6,9 +6,6 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
-
-// Define Android-specific bottom padding for action buttons area
-const ANDROID_BOTTOM_PADDING = 120;
 import { Stack, router, useFocusEffect } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
@@ -24,6 +21,9 @@ import {
     View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+
+// Define Android-specific bottom padding for action buttons area
+const ANDROID_BOTTOM_PADDING = 120;
 
 // Load wallet service using shared utility
 const walletService = loadWalletService([
