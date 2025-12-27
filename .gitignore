@@ -46,3 +46,6 @@ yarn-error.*
 # /android
 
 ServiceAccountBitSleuthWallet.json
+
+# Prevent accidentally committing local absolute paths
+Users/
