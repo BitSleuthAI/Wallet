@@ -72,22 +72,6 @@ updates:
       prefix: "chore(deps)"
       include: "scope"
 
-  # Enable version updates for iOS CocoaPods dependencies
-  - package-ecosystem: "cocoapods"
-    directory: "/ios"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    open-pull-requests-limit: 5
-    labels:
-      - "dependencies"
-      - "ios"
-      - "native"
-    commit-message:
-      prefix: "chore(deps-ios)"
-      include: "scope"
-
   # Enable version updates for Android Gradle dependencies
   - package-ecosystem: "gradle"
     directory: "/android"

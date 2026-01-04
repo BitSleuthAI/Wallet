@@ -6,12 +6,13 @@ This document explains the Dependabot configuration for the BitSleuth Wallet, a 
 
 ## Configuration File
 
-The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies across four package ecosystems:
+The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies across three package ecosystems:
 
 1. **npm** - JavaScript/TypeScript dependencies
-2. **CocoaPods** - iOS native dependencies
-3. **Gradle** - Android native dependencies
-4. **GitHub Actions** - CI/CD workflow dependencies
+2. **Gradle** - Android native dependencies
+3. **GitHub Actions** - CI/CD workflow dependencies
+
+**Note:** CocoaPods is not supported by GitHub Dependabot. iOS native dependencies (managed via CocoaPods) must be updated manually or through other automation tools.
 
 ## Package Ecosystems
 
@@ -63,21 +64,7 @@ We group related packages to reduce PR noise and ensure compatibility:
 - Updating these packages independently can break transaction signing and address generation
 - Example: `bitcoinjs-lib` v7 requires specific versions of `bip32` and `tiny-secp256k1`
 
-### 2. CocoaPods (iOS)
-
-**Directory:** `/ios`  
-**Schedule:** Weekly on Mondays at 09:00  
-**PR Limit:** 5
-
-CocoaPods manages native iOS dependencies including:
-- React Native pods
-- Expo modules
-- Firebase iOS SDKs
-- Other native iOS libraries
-
-**Labels:** `dependencies`, `ios`, `native`
-
-### 3. Gradle (Android)
+### 2. Gradle (Android)
 
 **Directory:** `/android`  
 **Schedule:** Weekly on Mondays at 09:00  
@@ -92,7 +79,7 @@ Gradle manages native Android dependencies including:
 
 **Labels:** `dependencies`, `android`, `native`
 
-### 4. GitHub Actions
+### 3. GitHub Actions
 
 **Directory:** `/`  
 **Schedule:** Monthly  
@@ -106,13 +93,14 @@ Manages GitHub Actions workflow dependencies to keep CI/CD pipelines secure and 
 
 ### Removed
 - **radix-ui grouping**: Radix UI is a web-only component library not relevant for React Native mobile apps
+- **CocoaPods ecosystem**: Not supported by GitHub Dependabot (iOS dependencies must be managed manually)
 
 ### Added
-- **CocoaPods ecosystem**: Critical for iOS native dependency management
 - **Gradle ecosystem**: Critical for Android native dependency management
 - **expo-sdk grouping**: Essential for Expo SDK compatibility
 - **react-native-firebase grouping**: Ensures Firebase module compatibility
 - **babel grouping**: Prevents Babel version conflicts
+- **bitcoin grouping**: Ensures Bitcoin protocol package compatibility
 
 ### Modified
 - Updated npm label from `security` to `npm` for better categorization
@@ -138,16 +126,19 @@ We use conservative PR limits for native ecosystems (5 PRs each) because:
 
 ### Update Frequency
 
-- **npm/CocoaPods/Gradle**: Weekly to stay current with security patches
+- **npm/Gradle**: Weekly to stay current with security patches
 - **GitHub Actions**: Monthly as workflow changes are less frequent
+
+**Note:** iOS CocoaPods dependencies are not monitored by Dependabot as the ecosystem is not supported. These should be reviewed and updated manually on a regular basis.
 
 ## Troubleshooting
 
 ### Dependabot Fails to Create PR
 
-1. Check that directories exist (`/ios` has `Podfile`, `/android` has `build.gradle`)
+1. Check that directories exist (`/android` has `build.gradle`)
 2. Verify YAML syntax is valid
 3. Check GitHub's Dependabot logs in the repository's Insights > Dependency graph > Dependabot
+4. Ensure package-ecosystem values are valid (see [supported ecosystems](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#package-ecosystem))
 
 ### Conflicting Updates
 
