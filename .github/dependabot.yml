@@ -1,9 +1,10 @@
 # Dependabot configuration for automated dependency updates
 # This ensures security vulnerabilities are caught and patched quickly
+# Configured for React Native + Expo mobile app
 
 version: 2
 updates:
-  # Enable version updates for npm
+  # Enable version updates for npm (JavaScript/TypeScript dependencies)
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -18,9 +19,27 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      radix-ui:
+      # Group Expo SDK packages together - they must be updated in sync
+      expo-sdk:
         patterns:
-          - "@radix-ui/*"
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group React Native Firebase packages together
+      react-native-firebase:
+        patterns:
+          - "@react-native-firebase/*"
+        update-types:
+          - "minor"
+          - "patch"
+      # Group Babel packages together
+      babel:
+        patterns:
+          - "@babel/*"
+          - "babel-*"
         update-types:
           - "minor"
           - "patch"
@@ -32,10 +51,42 @@ updates:
     # Labels for easier tracking
     labels:
       - "dependencies"
-      - "security"
+      - "npm"
     # Commit message prefix
     commit-message:
       prefix: "chore(deps)"
+      include: "scope"
+
+  # Enable version updates for iOS CocoaPods dependencies
+  - package-ecosystem: "cocoapods"
+    directory: "/ios"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "ios"
+      - "native"
+    commit-message:
+      prefix: "chore(deps-ios)"
+      include: "scope"
+
+  # Enable version updates for Android Gradle dependencies
+  - package-ecosystem: "gradle"
+    directory: "/android"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "android"
+      - "native"
+    commit-message:
+      prefix: "chore(deps-android)"
       include: "scope"
 
   # Enable version updates for GitHub Actions
