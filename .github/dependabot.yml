@@ -87,14 +87,3 @@ updates:
     commit-message:
       prefix: "chore(deps-android)"
       include: "scope"
-
-  # Enable version updates for GitHub Actions
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "monthly"
-    labels:
-      - "dependencies"
-      - "github-actions"
-    commit-message:
-      prefix: "ci"
