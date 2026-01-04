@@ -35,6 +35,10 @@ We group related packages to reduce PR noise and ensure compatibility:
 - **babel**: All Babel-related packages
   - `@babel/*`, `babel-*`
   - Babel packages often have interdependencies
+- **bitcoin**: All Bitcoin protocol and cryptographic packages
+  - `bitcoinjs-lib`, `bip32`, `bip39`, `@scure/bip32`, `react-native-bip32-utils`
+  - `@noble/*`, `tiny-secp256k1`, `bech32`, `bs58check`
+  - **Critical**: Bitcoin protocol packages must maintain compatibility for wallet operations
 
 #### Why These Groups?
 
@@ -51,6 +55,13 @@ We group related packages to reduce PR noise and ensure compatibility:
 **Babel Grouping:**
 - Babel packages are part of a monorepo with shared versioning
 - Mixing versions can cause compilation issues
+
+**Bitcoin Protocol Grouping:**
+- Bitcoin protocol packages (`bitcoinjs-lib`, `bip32`, `bip39`) work together for wallet operations
+- Cryptographic primitives (`@noble/*`, `tiny-secp256k1`) must be compatible with Bitcoin libraries
+- Encoding libraries (`bech32`, `bs58check`) need to match Bitcoin protocol versions
+- Updating these packages independently can break transaction signing and address generation
+- Example: `bitcoinjs-lib` v7 requires specific versions of `bip32` and `tiny-secp256k1`
 
 ### 2. CocoaPods (iOS)
 

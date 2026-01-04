@@ -43,6 +43,21 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      # Group Bitcoin protocol packages together
+      bitcoin:
+        patterns:
+          - "bitcoinjs-lib"
+          - "bip32"
+          - "bip39"
+          - "@scure/bip32"
+          - "react-native-bip32-utils"
+          - "@noble/*"
+          - "tiny-secp256k1"
+          - "bech32"
+          - "bs58check"
+        update-types:
+          - "minor"
+          - "patch"
     # Automatic security updates
     allow:
       - dependency-type: "all"
