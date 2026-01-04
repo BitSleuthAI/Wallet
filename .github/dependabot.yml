@@ -1,0 +1,50 @@
+# Dependabot configuration for automated dependency updates
+# This ensures security vulnerabilities are caught and patched quickly
+
+version: 2
+updates:
+  # Enable version updates for npm
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 10
+    # Group minor and patch updates to reduce PR noise
+    groups:
+      development-dependencies:
+        dependency-type: "development"
+        update-types:
+          - "minor"
+          - "patch"
+      radix-ui:
+        patterns:
+          - "@radix-ui/*"
+        update-types:
+          - "minor"
+          - "patch"
+    # Automatic security updates
+    allow:
+      - dependency-type: "all"
+    # Maintain compatibility with existing package manager
+    versioning-strategy: increase
+    # Labels for easier tracking
+    labels:
+      - "dependencies"
+      - "security"
+    # Commit message prefix
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
+
+  # Enable version updates for GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "ci"
