@@ -1,44 +1,77 @@
 # Dependabot configuration for automated dependency updates
-# Simplified configuration to prevent timeouts on React Native + Expo projects
-# Focus on security updates and critical package grouping only
+# Optimized configuration to prevent timeouts on large React Native + Expo projects
+# 
+# TIMEOUT MITIGATION STRATEGIES:
+# 1. Limited to 3 concurrent PRs (down from 100) to minimize resolution overhead
+# 2. Monthly schedule (down from weekly) to reduce frequency
+# 3. Minimal grouping to reduce complexity
+# 4. Strategic ignores for packages with complex dependency trees
+# 5. Focus on security and critical updates only
+#
+# Project stats: 21K+ lines in package-lock.json, 1,500+ transitive dependencies
+# Dependabot timeout limit: 45 minutes for JavaScript/npm ecosystem
 
 version: 2
 updates:
-  # DISABLED: npm (JavaScript/TypeScript dependencies) updates due to resolution errors
-  # JavaScript dependencies should be updated manually
-  # - package-ecosystem: "npm"
-  #   directory: "/"
-  #   schedule:
-  #     interval: "weekly"
-  #     day: "monday"
-  #     time: "09:00"
-  #   open-pull-requests-limit: 100
-  #   groups:
-  #     expo-sdk:
-  #       patterns:
-  #         - "expo"
-  #         - "expo-*"
-  #         - "@expo/*"
-  #       update-types:
-  #         - "minor"
-  #         - "patch"
-  #   allow:
-  #     - dependency-type: "all"
-  #   ignore:
-  #     - dependency-name: "expo-mcp"
-  #     - dependency-name: "@babel/*"
-  #       update-types:
-  #         - "version-update:semver-patch"
-  #     - dependency-name: "babel-*"
-  #       update-types:
-  #         - "version-update:semver-patch"
-  #   versioning-strategy: increase
-  #   labels:
-  #     - "dependencies"
-  #     - "npm"
-  #   commit-message:
-  #     prefix: "chore(deps)"
-  #     include: "scope"
+  # Re-enabled npm updates with aggressive timeout mitigation
+  # Optimized for large React Native + Expo projects (100+ direct dependencies)
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      # Monthly (not weekly) to reduce load and give Dependabot more time between runs
+      interval: "monthly"
+      day: "monday"
+      time: "09:00"
+    # CRITICAL: Limit to 3 PRs max (was 100) to prevent timeout
+    # Each PR requires dependency resolution which is time-intensive
+    open-pull-requests-limit: 3
+    groups:
+      # Only group Expo SDK - these MUST be updated together
+      # Removed other groups to minimize resolution complexity
+      expo-sdk:
+        patterns:
+          - "expo"
+          - "expo-*"
+          - "@expo/*"
+        update-types:
+          - "minor"
+          - "patch"
+    allow:
+      # Allow all dependency types (production + development)
+      - dependency-type: "all"
+    ignore:
+      # Ignore packages that cause long resolution times or have complex trees
+      - dependency-name: "expo-mcp"
+        # Dev tool - manual updates preferred
+      - dependency-name: "@babel/*"
+        update-types:
+          # Only get security + minor/major updates, skip patch
+          - "version-update:semver-patch"
+      - dependency-name: "babel-*"
+        update-types:
+          - "version-update:semver-patch"
+      - dependency-name: "react"
+        update-types:
+          # React updates require careful testing, manual only
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+      - dependency-name: "react-native"
+        update-types:
+          # React Native updates require manual migration
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+      - dependency-name: "react-dom"
+        update-types:
+          # React DOM tied to React version
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+    versioning-strategy: increase
+    labels:
+      - "dependencies"
+      - "npm"
+    commit-message:
+      prefix: "chore(deps)"
+      include: "scope"
 
   # Enable version updates for Android Gradle dependencies
   - package-ecosystem: "gradle"
