@@ -44,7 +44,7 @@ Dependabot was consistently timing out when attempting to update npm/yarn depend
 
 **Critical change:** The previous configuration had `open-pull-requests-limit: 100` which meant Dependabot would attempt to create up to 100 PRs in a single run. Each PR requires:
 - Dependency resolution
-- Lock file updates  
+- Lock file updates
 - Compatibility checks
 - Security scanning
 
