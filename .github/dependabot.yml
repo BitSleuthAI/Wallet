@@ -42,8 +42,12 @@ updates:
       - dependency-type: "all"
     ignore:
       # Ignore packages that cause long resolution times or have complex trees
-      # expo-mcp: Dev tool - manual updates preferred (ignores all versions)
+      # expo-mcp: Dev tool - only manual updates for major/minor (security still enabled)
       - dependency-name: "expo-mcp"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
       - dependency-name: "@babel/*"
         update-types:
           # Only get security + minor/major updates, skip patch
