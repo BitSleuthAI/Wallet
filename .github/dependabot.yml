@@ -29,8 +29,6 @@ updates:
       - dependency-type: "all"
     # Ignore packages that cause timeouts or have known issues
     ignore:
-      # Development tool - can be updated manually
-      - dependency-name: "expo-mcp"
       # Babel packages can cause long resolution times - only ignore patch updates
       # Security fixes and minor versions will still be updated
       - dependency-name: "@babel/*"

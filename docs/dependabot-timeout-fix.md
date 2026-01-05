@@ -47,7 +47,6 @@ Added ignore rules for Babel packages to reduce resolution complexity while main
 
 ```yaml
 ignore:
-  - dependency-name: "expo-mcp"  # Dev tool - manual updates
   - dependency-name: "@babel/*"
     update-types:
       - "version-update:semver-patch"  # Only ignore patch
