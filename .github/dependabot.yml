@@ -31,11 +31,14 @@ updates:
     ignore:
       # Development tool - can be updated manually
       - dependency-name: "expo-mcp"
-      # These packages can cause long resolution times - handle manually
+      # Babel packages can cause long resolution times - only ignore patch updates
+      # Security fixes and minor versions will still be updated
       - dependency-name: "@babel/*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+        update-types:
+          - "version-update:semver-patch"
       - dependency-name: "babel-*"
-        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+        update-types:
+          - "version-update:semver-patch"
     # Maintain compatibility with existing package manager
     versioning-strategy: increase
     # Labels for easier tracking
