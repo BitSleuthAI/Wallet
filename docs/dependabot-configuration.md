@@ -166,8 +166,10 @@ See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md) for detailed trou
 
 | Ecosystem | Schedule | PR Limit | Critical Notes |
 |-----------|----------|----------|----------------|
-| npm | Monthly (1st Monday 09:00 UTC) | 3 | Timeout mitigation active |
+| npm | Monthly (Monday 09:00 UTC)* | 3 | Timeout mitigation active |
 | Gradle | Weekly (Tuesday 09:00 UTC) | 3 | No timeout issues |
+
+*GitHub selects which Monday of the month
 
 ## Security Coverage
 
