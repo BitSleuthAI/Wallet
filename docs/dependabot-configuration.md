@@ -4,13 +4,16 @@
 
 This document explains the Dependabot configuration for the BitSleuth Wallet, a React Native + Expo mobile application.
 
+**Status:** npm updates RE-ENABLED with aggressive timeout mitigation (as of 2026-01-05)
+
+See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md) for detailed analysis of timeout issues and mitigation strategies.
+
 ## Configuration File
 
-The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies across three package ecosystems:
+The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies across two package ecosystems:
 
-1. **npm** - JavaScript/TypeScript dependencies
+1. **npm** - JavaScript/TypeScript dependencies (re-enabled with optimizations)
 2. **Gradle** - Android native dependencies
-3. **GitHub Actions** - CI/CD workflow dependencies
 
 **Note:** CocoaPods is not supported by GitHub Dependabot. iOS native dependencies (managed via CocoaPods) must be updated manually or through other automation tools.
 
@@ -19,55 +22,51 @@ The Dependabot configuration is located at `.github/dependabot.yml` and is confi
 ### 1. NPM (JavaScript/TypeScript)
 
 **Directory:** `/`  
-**Schedule:** Weekly on Mondays at 09:00  
-**PR Limit:** 5
+**Schedule:** Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)  
+**PR Limit:** 3 (critical for timeout prevention)  
+**Status:** ✅ Enabled with timeout mitigation
+
+#### Current Configuration (v3)
+
+The npm ecosystem is configured with aggressive timeout mitigation strategies:
+
+- **Monthly schedule** (not weekly) to reduce frequency
+- **3 PR limit** (down from 100) to minimize concurrent dependency resolution
+- **Minimal grouping** to reduce resolution complexity
+- **Strategic ignores** for packages requiring manual testing
 
 #### Dependency Groups
 
-We group related packages to reduce PR noise and ensure compatibility:
+**Current groups (1 total):**
 
-- **development-dependencies**: All dev dependencies with minor/patch updates
 - **expo-sdk**: All Expo SDK packages that must be updated together
-  - `expo`, `expo-*`, `@expo/*`
+  - Patterns: `expo`, `expo-*`, `@expo/*`
+  - Update types: minor, patch
   - **Critical**: Expo packages are tightly coupled and should be updated in sync
-- **react-native-firebase**: All Firebase packages for React Native
-  - `@react-native-firebase/*`
-  - Ensures Firebase modules remain compatible
-- **babel**: All Babel-related packages
-  - `@babel/*`, `babel-*`
-  - Babel packages often have interdependencies
-- **bitcoin**: All Bitcoin protocol and cryptographic packages
-  - `bitcoinjs-lib`, `bip32`, `bip39`, `@scure/bip32`, `react-native-bip32-utils`
-  - `@noble/*`, `tiny-secp256k1`, `bech32`, `bs58check`
-  - **Critical**: Bitcoin protocol packages must maintain compatibility for wallet operations
+  - Example: `expo-router` requires specific versions of `expo` core
 
-#### Why These Groups?
+**Removed groups (for timeout mitigation):**
+- ❌ `development-dependencies` - Not critical to group
+- ❌ `react-native-firebase` - Can be updated independently
+- ❌ `babel` - Can be updated independently
+- ❌ `bitcoin` - Can be updated independently
 
-**Expo SDK Grouping:**
-- Expo SDK packages are interdependent and released together
-- Updating individual packages can cause compatibility issues
-- Example: `expo-router` requires specific versions of `expo` core
+#### Strategic Ignores
 
-**React Native Firebase Grouping:**
-- Firebase modules for React Native share common dependencies
-- Must maintain version compatibility across modules
-- Example: `@react-native-firebase/app` is required by all Firebase modules
+Packages ignored for major/minor updates (patch and security updates still automatic):
 
-**Babel Grouping:**
-- Babel packages are part of a monorepo with shared versioning
-- Mixing versions can cause compilation issues
+- **expo-mcp**: Dev tool - manual updates preferred
+- **@babel/\*** and **babel-\***: Patch updates ignored (security + major/minor still enabled)
+- **react**: Major/minor updates require careful testing
+- **react-native**: Major/minor updates require migration
+- **react-dom**: Tied to React version
 
-**Bitcoin Protocol Grouping:**
-- Bitcoin protocol packages (`bitcoinjs-lib`, `bip32`, `bip39`) work together for wallet operations
-- Cryptographic primitives (`@noble/*`, `tiny-secp256k1`) must be compatible with Bitcoin libraries
-- Encoding libraries (`bech32`, `bs58check`) need to match Bitcoin protocol versions
-- Updating these packages independently can break transaction signing and address generation
-- Example: `bitcoinjs-lib` v7 requires specific versions of `bip32` and `tiny-secp256k1`
+**Important:** Security updates are NEVER ignored for any package.
 
 ### 2. Gradle (Android)
 
 **Directory:** `/android`  
-**Schedule:** Weekly on Tuesdays at 09:00  
+**Schedule:** Weekly on Tuesdays at 09:00 UTC  
 **PR Limit:** 3
 
 Gradle manages native Android dependencies including:
@@ -79,32 +78,58 @@ Gradle manages native Android dependencies including:
 
 **Labels:** `dependencies`, `android`, `native`
 
-### 3. GitHub Actions
+## Timeout Mitigation Strategy
 
-**Directory:** `/`  
-**Schedule:** Monthly  
-**PR Limit:** Default (5)
+### Why Timeouts Were a Problem
 
-Manages GitHub Actions workflow dependencies to keep CI/CD pipelines secure and up-to-date.
+The project has:
+- 100+ direct npm dependencies
+- 1,500+ transitive dependencies
+- 21,000+ lines in package-lock.json
 
-**Labels:** `dependencies`, `github-actions`
+**GitHub Dependabot timeout limit:** 45 minutes for JavaScript/npm
 
-## Changes from Previous Configuration
+Previous configurations consistently exceeded this limit, causing:
+- Failed Dependabot runs
+- No PRs created
+- npm ecosystem eventually disabled entirely
 
-### Removed
-- **radix-ui grouping**: Radix UI is a web-only component library not relevant for React Native mobile apps
-- **CocoaPods ecosystem**: Not supported by GitHub Dependabot (iOS dependencies must be managed manually)
+### Current Solution
 
-### Added
-- **Gradle ecosystem**: Critical for Android native dependency management
-- **expo-sdk grouping**: Essential for Expo SDK compatibility
-- **react-native-firebase grouping**: Ensures Firebase module compatibility
-- **babel grouping**: Prevents Babel version conflicts
-- **bitcoin grouping**: Ensures Bitcoin protocol package compatibility
+The configuration uses multiple strategies to stay under the 45-minute timeout:
 
-### Modified
-- Updated npm label from `security` to `npm` for better categorization
-- Added clarifying comments for React Native + Expo context
+1. **Reduced PR limit** (100 → 3)
+   - Most critical change
+   - Limits concurrent dependency resolution work
+   - Focuses on highest-priority updates (usually security)
+
+2. **Monthly schedule** (weekly → monthly)
+   - Reduces frequency of heavy operations
+   - Gives more time between runs
+   - Security updates still arrive promptly
+
+3. **Minimal grouping** (5 groups → 1)
+   - Only Expo SDK grouped (critical for compatibility)
+   - Reduces resolution complexity significantly
+
+4. **Strategic ignores**
+   - React/React Native major/minor updates manual
+   - Babel patch updates ignored
+   - Reduces resolution attempts
+
+5. **Focus on security**
+   - All packages still get security updates
+   - Critical vulnerabilities never ignored
+   - Patch updates for most packages still automatic
+
+### Expected Results
+
+- ✅ Dependabot completes in < 30 minutes
+- ✅ 1-3 PRs created per month
+- ✅ Security updates automatic
+- ✅ No timeouts
+
+See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md) for full analysis and version history.
 
 ## Best Practices
 
@@ -112,61 +137,127 @@ Manages GitHub Actions workflow dependencies to keep CI/CD pipelines secure and 
 
 When reviewing Dependabot PRs:
 
-1. **Expo SDK updates**: Test thoroughly on both iOS and Android
-2. **Firebase updates**: Verify native module linking still works
-3. **Babel updates**: Run a full build to ensure no compilation errors
+1. **Security updates**: Review and merge promptly
+2. **Expo SDK updates**: Test thoroughly on both iOS and Android
+3. **Patch updates**: Generally safe, but test basic functionality
 4. **Native dependencies**: Test on physical devices when possible
 
-### PR Limits
+### Monitoring
 
-We use conservative PR limits for native ecosystems (5 PRs each) because:
-- Native updates often require manual testing
-- Build times are longer for native code
-- Platform-specific issues may arise
+Check Dependabot status regularly:
+- **Location**: Repository → Insights → Dependency graph → Dependabot
+- **Next npm run**: Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)
+- **Next Gradle run**: Every Tuesday at 09:00 UTC
+- **Expected**: npm runs complete in < 30 minutes with 1-3 PRs
 
-### Update Frequency
+### What to Do If Timeouts Return
 
-- **npm/Gradle**: Weekly to stay current with security patches
-- **GitHub Actions**: Monthly as workflow changes are less frequent
+If npm runs start timing out again:
 
-**Note:** iOS CocoaPods dependencies are not monitored by Dependabot as the ecosystem is not supported. These should be reviewed and updated manually on a regular basis.
+1. **Reduce PR limit further**: Set `open-pull-requests-limit: 1`
+2. **Remove Expo grouping**: Handle Expo SDK updates manually
+3. **Add more ignores**: Expand ignore list for problematic packages
+4. **Check logs**: Review Dependabot logs for specific timeout patterns
+5. **Consider security-only**: Remove groups entirely, focus on security
+
+See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md) for detailed troubleshooting.
+
+## Update Schedule Summary
+
+| Ecosystem | Schedule | PR Limit | Critical Notes |
+|-----------|----------|----------|----------------|
+| npm | Monthly (Monday 09:00 UTC)* | 3 | Timeout mitigation active |
+| Gradle | Weekly (Tuesday 09:00 UTC) | 3 | No timeout issues |
+
+*GitHub selects which Monday of the month
+
+## Security Coverage
+
+All packages receive:
+- ✅ Security updates (any severity, any package)
+- ✅ Patch updates (most packages)
+- ⚠️ Major/minor updates (selective - React/RN manual only)
+
+**Critical:** Security is never compromised. All security updates are automatic regardless of ignore rules.
 
 ## Troubleshooting
 
-### Dependabot Timeout Issues
+### Common Issues and Solutions
 
-If Dependabot times out during updates:
+#### Issue: npm Dependabot Times Out
 
-1. **Reduced PR Limits**: The current configuration uses reduced PR limits (npm: 5, gradle: 3) to prevent timeout issues in this large project (1,500+ packages)
-2. **Staggered Schedules**: npm runs on Mondays, gradle on Tuesdays to distribute processing load
-3. **Ignored Packages**: `expo-mcp` is ignored due to registry detection issues that cause timeouts
-4. **Monitor Runs**: Check Dependabot logs in repository Insights > Dependency graph > Dependabot to verify successful completion
+**Symptoms:**
+- Dependabot run cancelled after ~45 minutes
+- No PRs created
+- Error in Dependabot logs about timeout
 
-If timeouts persist, consider:
-- Further reducing `open-pull-requests-limit` values
-- Adding more problematic packages to the `ignore` list
-- Running updates bi-weekly instead of weekly
+**Solutions:**
+1. Current configuration already implements timeout mitigation
+2. If still occurring, reduce `open-pull-requests-limit` from 3 to 1
+3. Remove Expo SDK grouping
+4. Add more packages to ignore list
 
-### Dependabot Fails to Create PR
+**Reference:** See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md)
 
+#### Issue: Dependabot Fails to Create PR
+
+**Symptoms:**
+- Run completes but no PRs appear
+- Error messages in logs
+
+**Solutions:**
 1. Check that directories exist (`/android` has `build.gradle`)
-2. Verify YAML syntax is valid
-3. Check GitHub's Dependabot logs in the repository's Insights > Dependency graph > Dependabot
-4. Ensure package-ecosystem values are valid (see [supported ecosystems](https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file#package-ecosystem))
+2. Verify YAML syntax: `python3 -c "import yaml; yaml.safe_load(open('.github/dependabot.yml'))"`
+3. Check GitHub's Dependabot logs in repository Insights
+4. Ensure package-ecosystem values are valid
 
-### Conflicting Updates
+#### Issue: Conflicting Expo SDK Updates
 
-If Expo SDK updates conflict with other dependencies:
-1. Prioritize Expo SDK updates first
-2. Check [Expo SDK compatibility](https://docs.expo.dev/) docs
+**Symptoms:**
+- Expo packages update individually causing version mismatch
+- App fails to build after Dependabot PR
+
+**Solutions:**
+1. Check that Expo SDK grouping is configured correctly
+2. Review [Expo SDK compatibility docs](https://docs.expo.dev/)
 3. May need to pin certain packages temporarily
+4. Reject individual PRs, wait for grouped PR
 
-### Native Build Failures
+#### Issue: Native Build Failures After Updates
 
-After native dependency updates:
+**Symptoms:**
+- iOS or Android build fails after merging Dependabot PR
+
+**Solutions:**
 1. **iOS**: Run `cd ios && pod install && cd ..`
 2. **Android**: Run `cd android && ./gradlew clean && cd ..`
 3. Clear Metro cache: `npx expo start -c`
+4. Check for breaking changes in package changelogs
+
+## Version History
+
+### v3 - Re-enabled npm with Timeout Mitigation (2026-01-05)
+- ✅ Re-enabled npm ecosystem
+- Reduced `open-pull-requests-limit` from 100 → 3
+- Changed schedule from weekly → monthly
+- Kept only Expo SDK grouping
+- Added React/React Native to ignore list (major/minor)
+- Comprehensive documentation updates
+
+### v2 - npm Disabled (Previous)
+- ❌ npm ecosystem completely disabled
+- Comment: "DISABLED: npm updates due to resolution errors"
+- Only Gradle ecosystem active
+
+### v1 - Simplified (Prior attempt)
+- Reduced groups from 5 → 1
+- Still had `open-pull-requests-limit: 100`
+- Result: Still timed out
+
+### v0 - Original Complex Configuration
+- 5 dependency groups
+- Multiple concurrent PRs
+- Result: Consistent timeouts
 
 ## References
 
