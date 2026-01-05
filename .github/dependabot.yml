@@ -4,51 +4,41 @@
 
 version: 2
 updates:
-  # Enable version updates for npm (JavaScript/TypeScript dependencies)
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-      day: "monday"
-      time: "09:00"
-    # Reduced from 5 to 3 to limit concurrent update attempts
-    open-pull-requests-limit: 100
-    # Simplified grouping - only group packages that MUST be updated together
-    groups:
-      # Group only core Expo SDK packages that require synchronized updates
-      expo-sdk:
-        patterns:
-          - "expo"
-          - "expo-*"
-          - "@expo/*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Automatic security updates
-    allow:
-      - dependency-type: "all"
-    # Ignore packages that cause timeouts or have known issues
-    ignore:
-      # Development tool - can be updated manually
-      - dependency-name: "expo-mcp"
-      # Babel packages can cause long resolution times - only ignore patch updates
-      # Security fixes and minor versions will still be updated
-      - dependency-name: "@babel/*"
-        update-types:
-          - "version-update:semver-patch"
-      - dependency-name: "babel-*"
-        update-types:
-          - "version-update:semver-patch"
-    # Maintain compatibility with existing package manager
-    versioning-strategy: increase
-    # Labels for easier tracking
-    labels:
-      - "dependencies"
-      - "npm"
-    # Commit message prefix
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
+  # DISABLED: npm (JavaScript/TypeScript dependencies) updates due to resolution errors
+  # JavaScript dependencies should be updated manually
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     interval: "weekly"
+  #     day: "monday"
+  #     time: "09:00"
+  #   open-pull-requests-limit: 100
+  #   groups:
+  #     expo-sdk:
+  #       patterns:
+  #         - "expo"
+  #         - "expo-*"
+  #         - "@expo/*"
+  #       update-types:
+  #         - "minor"
+  #         - "patch"
+  #   allow:
+  #     - dependency-type: "all"
+  #   ignore:
+  #     - dependency-name: "expo-mcp"
+  #     - dependency-name: "@babel/*"
+  #       update-types:
+  #         - "version-update:semver-patch"
+  #     - dependency-name: "babel-*"
+  #       update-types:
+  #         - "version-update:semver-patch"
+  #   versioning-strategy: increase
+  #   labels:
+  #     - "dependencies"
+  #     - "npm"
+  #   commit-message:
+  #     prefix: "chore(deps)"
+  #     include: "scope"
 
   # Enable version updates for Android Gradle dependencies
   - package-ecosystem: "gradle"
