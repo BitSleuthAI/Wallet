@@ -61,6 +61,11 @@ updates:
     # Automatic security updates
     allow:
       - dependency-type: "all"
+    # Ignore packages that cause issues with Dependabot
+    ignore:
+      # expo-mcp is a development tool that causes Dependabot to timeout
+      # due to registry detection issues. Updates can be done manually.
+      - dependency-name: "expo-mcp"
     # Maintain compatibility with existing package manager
     versioning-strategy: increase
     # Labels for easier tracking
