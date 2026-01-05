@@ -147,7 +147,7 @@ With these optimizations:
 
 ### Timeline
 
-- **Next Dependabot run:** First Monday of each month at 09:00 UTC
+- **Next Dependabot run:** Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)
 - **Expected:** Successful completion with 1-3 PRs created
 - **Fallback:** If timeout persists, see "Additional Mitigation Options" below
 
@@ -236,7 +236,7 @@ JavaScript/npm is particularly prone to timeouts due to:
 ## Testing & Verification
 
 The configuration change will be tested on the next scheduled Dependabot run:
-- **Schedule:** Monthly on first Monday at 09:00 UTC
+- **Schedule:** Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)
 - **Expected result:** Successful completion without timeout, 1-3 PRs created
 - **Expected duration:** < 30 minutes (well under 45-minute limit)
 - **Monitor:** GitHub Actions → Insights → Dependency graph → Dependabot

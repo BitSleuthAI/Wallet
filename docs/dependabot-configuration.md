@@ -22,7 +22,7 @@ The Dependabot configuration is located at `.github/dependabot.yml` and is confi
 ### 1. NPM (JavaScript/TypeScript)
 
 **Directory:** `/`  
-**Schedule:** Monthly (first Monday at 09:00 UTC)  
+**Schedule:** Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)  
 **PR Limit:** 3 (critical for timeout prevention)  
 **Status:** ✅ Enabled with timeout mitigation
 
@@ -146,7 +146,7 @@ When reviewing Dependabot PRs:
 
 Check Dependabot status regularly:
 - **Location**: Repository → Insights → Dependency graph → Dependabot
-- **Next npm run**: First Monday of each month at 09:00 UTC
+- **Next npm run**: Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)
 - **Next Gradle run**: Every Tuesday at 09:00 UTC
 - **Expected**: npm runs complete in < 30 minutes with 1-3 PRs
 

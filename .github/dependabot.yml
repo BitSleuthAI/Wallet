@@ -19,6 +19,7 @@ updates:
     directory: "/"
     schedule:
       # Monthly (not weekly) to reduce load and give Dependabot more time between runs
+      # Runs on a Monday each month (GitHub selects which Monday)
       interval: "monthly"
       day: "monday"
       time: "09:00"
