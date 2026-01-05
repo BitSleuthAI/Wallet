@@ -12,7 +12,7 @@ updates:
       day: "monday"
       time: "09:00"
     # Reduced from 5 to 3 to limit concurrent update attempts
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 100
     # Simplified grouping - only group packages that MUST be updated together
     groups:
       # Group only core Expo SDK packages that require synchronized updates
