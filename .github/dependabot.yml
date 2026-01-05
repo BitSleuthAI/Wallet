@@ -1,6 +1,6 @@
 # Dependabot configuration for automated dependency updates
-# This ensures security vulnerabilities are caught and patched quickly
-# Configured for React Native + Expo mobile app
+# Simplified configuration to prevent timeouts on React Native + Expo projects
+# Focus on security updates and critical package grouping only
 
 version: 2
 updates:
@@ -11,15 +11,11 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "09:00"
-    open-pull-requests-limit: 5
-    # Group minor and patch updates to reduce PR noise
+    # Reduced from 5 to 3 to limit concurrent update attempts
+    open-pull-requests-limit: 3
+    # Simplified grouping - only group packages that MUST be updated together
     groups:
-      development-dependencies:
-        dependency-type: "development"
-        update-types:
-          - "minor"
-          - "patch"
-      # Group Expo SDK packages together - they must be updated in sync
+      # Group only core Expo SDK packages that require synchronized updates
       expo-sdk:
         patterns:
           - "expo"
@@ -28,44 +24,18 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      # Group React Native Firebase packages together
-      react-native-firebase:
-        patterns:
-          - "@react-native-firebase/*"
-        update-types:
-          - "minor"
-          - "patch"
-      # Group Babel packages together
-      babel:
-        patterns:
-          - "@babel/*"
-          - "babel-*"
-        update-types:
-          - "minor"
-          - "patch"
-      # Group Bitcoin protocol packages together
-      bitcoin:
-        patterns:
-          - "bitcoinjs-lib"
-          - "bip32"
-          - "bip39"
-          - "@scure/bip32"
-          - "react-native-bip32-utils"
-          - "@noble/*"
-          - "tiny-secp256k1"
-          - "bech32"
-          - "bs58check"
-        update-types:
-          - "minor"
-          - "patch"
     # Automatic security updates
     allow:
       - dependency-type: "all"
-    # Ignore packages that cause issues with Dependabot
+    # Ignore packages that cause timeouts or have known issues
     ignore:
-      # expo-mcp is a development tool that causes Dependabot to timeout
-      # due to registry detection issues. Updates can be done manually.
+      # Development tool - can be updated manually
       - dependency-name: "expo-mcp"
+      # These packages can cause long resolution times - handle manually
+      - dependency-name: "@babel/*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
+      - dependency-name: "babel-*"
+        update-types: ["version-update:semver-patch", "version-update:semver-minor"]
     # Maintain compatibility with existing package manager
     versioning-strategy: increase
     # Labels for easier tracking
