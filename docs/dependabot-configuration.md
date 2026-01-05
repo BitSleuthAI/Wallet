@@ -20,7 +20,7 @@ The Dependabot configuration is located at `.github/dependabot.yml` and is confi
 
 **Directory:** `/`  
 **Schedule:** Weekly on Mondays at 09:00  
-**PR Limit:** 10
+**PR Limit:** 5
 
 #### Dependency Groups
 
@@ -67,8 +67,8 @@ We group related packages to reduce PR noise and ensure compatibility:
 ### 2. Gradle (Android)
 
 **Directory:** `/android`  
-**Schedule:** Weekly on Mondays at 09:00  
-**PR Limit:** 5
+**Schedule:** Weekly on Tuesdays at 09:00  
+**PR Limit:** 3
 
 Gradle manages native Android dependencies including:
 - React Native Android libraries
@@ -132,6 +132,20 @@ We use conservative PR limits for native ecosystems (5 PRs each) because:
 **Note:** iOS CocoaPods dependencies are not monitored by Dependabot as the ecosystem is not supported. These should be reviewed and updated manually on a regular basis.
 
 ## Troubleshooting
+
+### Dependabot Timeout Issues
+
+If Dependabot times out during updates:
+
+1. **Reduced PR Limits**: The current configuration uses reduced PR limits (npm: 5, gradle: 3) to prevent timeout issues in this large project (1,500+ packages)
+2. **Staggered Schedules**: npm runs on Mondays, gradle on Tuesdays to distribute processing load
+3. **Ignored Packages**: `expo-mcp` is ignored due to registry detection issues that cause timeouts
+4. **Monitor Runs**: Check Dependabot logs in repository Insights > Dependency graph > Dependabot to verify successful completion
+
+If timeouts persist, consider:
+- Further reducing `open-pull-requests-limit` values
+- Adding more problematic packages to the `ignore` list
+- Running updates bi-weekly instead of weekly
 
 ### Dependabot Fails to Create PR
 
