@@ -13,70 +13,87 @@
 
 version: 2
 updates:
-  # Re-enabled npm updates with aggressive timeout mitigation
-  # Optimized for large React Native + Expo projects (100+ direct dependencies)
-  - package-ecosystem: "npm"
-    directory: "/"
-    schedule:
-      # Monthly (not weekly) to reduce load and give Dependabot more time between runs
-      # Runs on a Monday each month (GitHub selects which Monday)
-      interval: "monthly"
-      day: "monday"
-      time: "09:00"
-    # CRITICAL: Limit to 3 PRs max (was 100) to prevent timeout
-    # Each PR requires dependency resolution which is time-intensive
-    open-pull-requests-limit: 3
-    groups:
-      # Only group Expo SDK - these MUST be updated together
-      # Removed other groups to minimize resolution complexity
-      expo-sdk:
-        patterns:
-          - "expo"
-          - "expo-*"
-          - "@expo/*"
-        update-types:
-          - "minor"
-          - "patch"
-    allow:
-      # Allow all dependency types (production + development)
-      - dependency-type: "all"
-    ignore:
-      # Ignore packages that cause long resolution times or have complex trees
-      # expo-mcp: Dev tool - only manual updates for major/minor (security still enabled)
-      - dependency-name: "expo-mcp"
-        update-types:
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-          - "version-update:semver-patch"
-      - dependency-name: "@babel/*"
-        update-types:
-          # Only get security + minor/major updates, skip patch
-          - "version-update:semver-patch"
-      - dependency-name: "babel-*"
-        update-types:
-          - "version-update:semver-patch"
-      - dependency-name: "react"
-        update-types:
-          # React updates require careful testing, manual only
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-      - dependency-name: "react-native"
-        update-types:
-          # React Native updates require manual migration
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-      - dependency-name: "react-dom"
-        update-types:
-          # React DOM tied to React version
-          - "version-update:semver-major"
-          - "version-update:semver-minor"
-    versioning-strategy: increase
-    labels:
-      - "dependencies"
-      - "npm"
-    commit-message:
-      prefix: "chore(deps)"
-      include: "scope"
+  # DISABLED: npm updates due to persistent peer dependency resolution errors
+  # Even with aggressive timeout mitigation, Dependabot cannot reliably resolve
+  # the complex dependency tree in this React Native + Expo project.
+  # 
+  # Context:
+  # - 100+ direct dependencies, 1,500+ transitive dependencies
+  # - 21,000+ lines in package-lock.json
+  # - Multiple peer dependency conflicts
+  # - Exceeds Dependabot's 45-minute timeout limit
+  #
+  # Manual dependency management workflow:
+  # 1. Security updates: Run `npm audit` monthly
+  # 2. Expo SDK updates: Follow https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/
+  # 3. React Native: Follow https://react-native-community.github.io/upgrade-helper/
+  # 4. Other packages: Update as needed with testing
+  #
+  # Re-enable decision: Only re-enable if Dependabot adds better support for
+  # complex peer dependency resolution or if dependency tree is significantly simplified.
+  #
+  # - package-ecosystem: "npm"
+  #   directory: "/"
+  #   schedule:
+  #     # Monthly (not weekly) to reduce load and give Dependabot more time between runs
+  #     # Runs on a Monday each month (GitHub selects which Monday)
+  #     interval: "monthly"
+  #     day: "monday"
+  #     time: "09:00"
+  #   # CRITICAL: Limit to 3 PRs max (was 100) to prevent timeout
+  #   # Each PR requires dependency resolution which is time-intensive
+  #   open-pull-requests-limit: 3
+  #   groups:
+  #     # Only group Expo SDK - these MUST be updated together
+  #     # Removed other groups to minimize resolution complexity
+  #     expo-sdk:
+  #       patterns:
+  #         - "expo"
+  #         - "expo-*"
+  #         - "@expo/*"
+  #       update-types:
+  #         - "minor"
+  #         - "patch"
+  #   allow:
+  #     # Allow all dependency types (production + development)
+  #     - dependency-type: "all"
+  #   ignore:
+  #     # Ignore packages that cause long resolution times or have complex trees
+  #     # expo-mcp: Dev tool - only manual updates for major/minor (security still enabled)
+  #     - dependency-name: "expo-mcp"
+  #       update-types:
+  #         - "version-update:semver-major"
+  #         - "version-update:semver-minor"
+  #         - "version-update:semver-patch"
+  #     - dependency-name: "@babel/*"
+  #       update-types:
+  #         # Only get security + minor/major updates, skip patch
+  #         - "version-update:semver-patch"
+  #     - dependency-name: "babel-*"
+  #       update-types:
+  #         - "version-update:semver-patch"
+  #     - dependency-name: "react"
+  #       update-types:
+  #         # React updates require careful testing, manual only
+  #         - "version-update:semver-major"
+  #         - "version-update:semver-minor"
+  #     - dependency-name: "react-native"
+  #       update-types:
+  #         # React Native updates require manual migration
+  #         - "version-update:semver-major"
+  #         - "version-update:semver-minor"
+  #     - dependency-name: "react-dom"
+  #       update-types:
+  #         # React DOM tied to React version
+  #         - "version-update:semver-major"
+  #         - "version-update:semver-minor"
+  #   versioning-strategy: increase
+  #   labels:
+  #     - "dependencies"
+  #     - "npm"
+  #   commit-message:
+  #     prefix: "chore(deps)"
+  #     include: "scope"
 
   # Enable version updates for Android Gradle dependencies
   - package-ecosystem: "gradle"
