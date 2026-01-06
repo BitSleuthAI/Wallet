@@ -4,16 +4,16 @@
 
 This document explains the Dependabot configuration for the BitSleuth Wallet, a React Native + Expo mobile application.
 
-**Status:** npm updates RE-ENABLED with aggressive timeout mitigation (as of 2026-01-05)
+**Status:** ❌ npm updates DISABLED due to persistent peer dependency resolution errors (as of 2026-01-06)
 
 See [`dependabot-timeout-fix.md`](./dependabot-timeout-fix.md) for detailed analysis of timeout issues and mitigation strategies.
 
 ## Configuration File
 
-The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies across two package ecosystems:
+The Dependabot configuration is located at `.github/dependabot.yml` and is configured to manage dependencies for:
 
-1. **npm** - JavaScript/TypeScript dependencies (re-enabled with optimizations)
-2. **Gradle** - Android native dependencies
+1. **npm** - ❌ DISABLED - JavaScript/TypeScript dependencies (commented out)
+2. **Gradle** - ✅ ENABLED - Android native dependencies
 
 **Note:** CocoaPods is not supported by GitHub Dependabot. iOS native dependencies (managed via CocoaPods) must be updated manually or through other automation tools.
 
@@ -22,13 +22,60 @@ The Dependabot configuration is located at `.github/dependabot.yml` and is confi
 ### 1. NPM (JavaScript/TypeScript)
 
 **Directory:** `/`  
-**Schedule:** Monthly on a Monday at 09:00 UTC (GitHub selects which Monday)  
-**PR Limit:** 3 (critical for timeout prevention)  
-**Status:** ✅ Enabled with timeout mitigation
+**Schedule:** N/A (disabled)  
+**PR Limit:** N/A (disabled)  
+**Status:** ❌ DISABLED - Peer dependency resolution failures
 
-#### Current Configuration (v3)
+#### Why npm is Disabled (v5 - 2026-01-06)
 
-The npm ecosystem is configured with aggressive timeout mitigation strategies:
+Despite multiple optimization attempts, Dependabot continues to fail with peer dependency resolution errors in this project:
+
+**Challenges:**
+- 100+ direct dependencies, 1,500+ transitive dependencies
+- 21,000+ lines in package-lock.json
+- Complex peer dependency requirements from React Native ecosystem
+- Multiple conflicting peer dependency constraints
+- Exceeds Dependabot's 45-minute timeout limit
+
+**Previous Attempts:**
+- ✅ Removed `.npmrc` file (fixed registry URL malformation)
+- ✅ Reduced PR limit from 100 → 3
+- ✅ Changed schedule from weekly → monthly
+- ✅ Minimized grouping (only Expo SDK)
+- ✅ Added strategic ignores
+- ❌ Still experiencing peer dependency resolution failures
+
+**Current Solution: Manual Dependency Management**
+
+Until Dependabot improves peer dependency resolution or the dependency tree is simplified, npm dependencies must be managed manually:
+
+1. **Security Updates:**
+   ```bash
+   npm audit
+   npm audit fix
+   ```
+   Run monthly or when security advisories are received.
+
+2. **Expo SDK Updates:**
+   Follow the [Expo SDK upgrade guide](https://docs.expo.dev/workflow/upgrading-expo-sdk-walkthrough/)
+   ```bash
+   npx expo install expo@latest
+   npx expo install --fix
+   ```
+
+3. **React Native Updates:**
+   Follow the [React Native Upgrade Helper](https://react-native-community.github.io/upgrade-helper/)
+   
+4. **Other Package Updates:**
+   ```bash
+   npm outdated
+   npm update <package-name>
+   ```
+   Test thoroughly after each update.
+
+#### Previous Configuration (v3-v4 - Archived)
+
+The npm ecosystem was configured with aggressive timeout mitigation strategies:
 
 - **Monthly schedule** (not weekly) to reduce frequency
 - **3 PR limit** (down from 100) to minimize concurrent dependency resolution
@@ -253,11 +300,20 @@ All packages receive:
 
 ## Version History
 
+### v5 - Disabled npm Due to Persistent Peer Dependency Errors (2026-01-06)
+- ❌ npm ecosystem completely disabled (commented out in dependabot.yml)
+- **Reason:** Persistent peer dependency resolution failures despite all mitigations
+- Even after fixing registry URL issue, complex dependency tree exceeds Dependabot capabilities
+- Manual dependency management workflow documented
+- Gradle ecosystem remains enabled and functional
+- **Next steps:** Re-enable only if Dependabot improves or dependency tree is simplified
+
 ### v4 - Fixed Registry URL Issue (2026-01-06)
 - Fixed malformed npm registry URL preventing dependency resolution
 - Removed `.npmrc` file with `package-manager-strict=true`
 - Package manager enforcement preserved via package.json `packageManager` field
 - Dependabot can now properly access npm registry
+- **Result:** Registry access fixed, but peer dependency resolution still fails
 
 ### v3 - Re-enabled npm with Timeout Mitigation (2026-01-05)
 - ✅ Re-enabled npm ecosystem
@@ -266,6 +322,7 @@ All packages receive:
 - Kept only Expo SDK grouping
 - Added React/React Native to ignore list (major/minor)
 - Comprehensive documentation updates
+- **Result:** Still experiencing failures
 
 ### v2 - npm Disabled (Previous)
 - ❌ npm ecosystem completely disabled
