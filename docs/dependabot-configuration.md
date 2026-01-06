@@ -184,6 +184,23 @@ All packages receive:
 
 ### Common Issues and Solutions
 
+#### Issue: Malformed Registry URL
+
+**Symptoms:**
+- Error: `GET https://registry.npmjs.org:443http://registry.npmjs.org:443/package`
+- "Cannot read TLS response from mitm'd server"
+- "Error while updating peer dependency"
+
+**Root Cause:**
+`.npmrc` file with `package-manager-strict=true` interferes with Dependabot's registry configuration.
+
+**Solutions:**
+1. Remove `.npmrc` if it only contains `package-manager-strict=true`
+2. The `packageManager` field in package.json provides equivalent functionality
+3. Verify package.json has: `"packageManager": "npm@10.2.4"`
+
+**Fixed:** 2026-01-06 - `.npmrc` removed from repository
+
 #### Issue: npm Dependabot Times Out
 
 **Symptoms:**
@@ -235,6 +252,12 @@ All packages receive:
 4. Check for breaking changes in package changelogs
 
 ## Version History
+
+### v4 - Fixed Registry URL Issue (2026-01-06)
+- Fixed malformed npm registry URL preventing dependency resolution
+- Removed `.npmrc` file with `package-manager-strict=true`
+- Package manager enforcement preserved via package.json `packageManager` field
+- Dependabot can now properly access npm registry
 
 ### v3 - Re-enabled npm with Timeout Mitigation (2026-01-05)
 - ✅ Re-enabled npm ecosystem

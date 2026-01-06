@@ -151,6 +151,34 @@ With these optimizations:
 - **Expected:** Successful completion with 1-3 PRs created
 - **Fallback:** If timeout persists, see "Additional Mitigation Options" below
 
+## Troubleshooting Dependabot Issues
+
+### Registry URL Malformation Issue (Fixed 2026-01-06)
+
+**Symptoms:**
+- Dependabot logs show malformed URLs like `https://registry.npmjs.org:443http://registry.npmjs.org:443/package`
+- Error: "Cannot read TLS response from mitm'd server lookup registry.npmjs.org:443http: no such host"
+- Updates fail with "Error while updating peer dependency"
+
+**Root Cause:**
+The `.npmrc` file with `package-manager-strict=true` setting interfered with Dependabot's internal npm registry configuration, causing URL concatenation issues.
+
+**Solution:**
+Remove `.npmrc` file if it contains only `package-manager-strict=true`. The `packageManager` field in `package.json` provides equivalent package manager version enforcement without interfering with Dependabot:
+
+```json
+{
+  "packageManager": "npm@10.2.4"
+}
+```
+
+This field serves the same purpose as `package-manager-strict=true` but doesn't conflict with Dependabot's registry handling.
+
+**Verification:**
+- Local npm operations continue to work normally
+- Package manager version is still enforced
+- Dependabot can properly resolve npm registry URLs
+
 ## Additional Mitigation Options
 
 If timeouts continue despite these optimizations:
@@ -253,13 +281,21 @@ If timeouts continue despite optimizations:
 
 ## Version History & Changelog
 
-### v3 - Re-enabled npm updates (Current - 2026-01-05)
+### v4 - Fixed Registry URL Issue (2026-01-06)
+- Fixed malformed npm registry URL issue preventing Dependabot from resolving dependencies
+- **Problem:** Dependabot was encountering `https://registry.npmjs.org:443http://registry.npmjs.org:443/dotenv` (double protocol)
+- **Root cause:** `.npmrc` file with `package-manager-strict=true` interfered with Dependabot's registry configuration
+- **Solution:** Removed `.npmrc` file - `packageManager` field in package.json provides equivalent functionality
+- **Impact:** Dependabot can now properly resolve npm registry URLs without conflicts
+- **Status:** Monitoring - awaiting next monthly run to confirm fix
+
+### v3 - Re-enabled npm updates (2026-01-05)
 - Re-enabled npm ecosystem with aggressive timeout mitigation
 - Reduced `open-pull-requests-limit` from 100 → 3
 - Changed schedule from weekly → monthly
 - Added React/React Native to ignore list (major/minor only)
 - Expanded documentation with detailed rationale
-- **Status:** Testing - awaiting first monthly run
+- **Status:** Identified registry URL issue blocking updates
 
 ### v2 - Disabled npm updates (Prior state)
 - npm ecosystem completely disabled
