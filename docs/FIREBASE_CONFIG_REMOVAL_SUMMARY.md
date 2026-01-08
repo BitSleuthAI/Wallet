@@ -3,8 +3,8 @@
 ## Issue Addressed
 
 The repository previously had Firebase configuration files committed to the public repository:
-- `google-services.json` (Android) - containing API key `AIzaSyBCpQwAvY3MyN-OCYvMlJqbInohHSJpgfg`
-- `GoogleService-Info.plist` (iOS) - containing API key `AIzaSyDnlFxwXvMa7Kfeycf_uj6v_YKMmggwc5g`
+- `google-services.json` (Android) - containing Firebase API key
+- `GoogleService-Info.plist` (iOS) - containing Firebase API key
 
 This violates security best practices for open-source projects.
 

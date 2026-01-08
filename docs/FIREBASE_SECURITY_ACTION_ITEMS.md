@@ -2,11 +2,10 @@
 
 ## Summary
 
-The following Firebase API keys were previously committed to this public repository:
+Firebase API keys and configuration files were previously committed to this public repository:
 
-- **Android API Key**: `AIzaSyBCpQwAvY3MyN-OCYvMlJqbInohHSJpgfg`
-- **iOS API Key**: `AIzaSyDnlFxwXvMa7Kfeycf_uj6v_YKMmggwc5g`
 - **Firebase Project**: `bitsleuth` (Project Number: 510465233305)
+- Android and iOS API keys were exposed in the configuration files
 
 ## What These Keys Are
 
