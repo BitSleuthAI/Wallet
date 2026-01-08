@@ -149,12 +149,19 @@ touch docs/NEW_FEATURE_GUIDE.md
    cd ios && pod install && cd ..
    ```
 
-4. Start the development server:
+4. **Set up Firebase configuration** (Required):
+   - You must create your own Firebase project before running the app
+   - See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) for complete instructions
+   - Download `google-services.json` and `GoogleService-Info.plist` from your Firebase project
+   - Place them in the required locations (see setup guide)
+   - **Important**: These files are in `.gitignore` and should never be committed
+
+5. Start the development server:
    ```bash
    npm start
    ```
 
-5. Run on a device/simulator:
+6. Run on a device/simulator:
    ```bash
    npm run ios      # iOS
    npm run android  # Android
@@ -202,6 +209,7 @@ Before submitting a PR, make sure to:
 ### Security
 
 - **Never commit secrets**: No API keys, private keys, or sensitive data
+- **Firebase Configuration**: Never commit `google-services.json` or `GoogleService-Info.plist` (they're in `.gitignore`)
 - **Private Keys**: All key management must remain client-side
 - **Review Changes**: Security-sensitive changes require thorough review
 - **Vulnerability Reporting**: Report security issues via our [Security Policy](SECURITY.md), not in public issues
