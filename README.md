@@ -4,9 +4,9 @@
 
 **A professional-grade, non-custodial Bitcoin wallet for iOS and Android**
 
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/bitsleuth/wallet)
-[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg)](https://github.com/bitsleuth/wallet)
-[![License](https://img.shields.io/badge/license-Proprietary-red.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/BitSleuthAI/Wallet)
+[![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg)](https://github.com/BitSleuthAI/Wallet)
+[![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb.svg)](https://reactnative.dev/)
 [![Expo](https://img.shields.io/badge/Expo-54-000020.svg)](https://expo.dev/)
 [![New Architecture](https://img.shields.io/badge/New%20Architecture-Enabled-green.svg)](https://reactnative.dev/architecture/landing-page)
@@ -178,8 +178,8 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 
 ```bash
 # Clone the repository
-git clone https://github.com/bitsleuth/wallet.git
-cd wallet
+git clone https://github.com/BitSleuthAI/Wallet.git
+cd Wallet
 
 # Install dependencies
 npm install
@@ -437,7 +437,7 @@ eas submit --platform android
 
 ## 🤝 Contributing
 
-This is proprietary software owned by BitSleuth. Contributions are limited to authorized BitSleuth personnel only.
+We welcome contributions from the community! BitSleuth Wallet is open source software, and we appreciate your help in making it better.
 
 **For detailed contribution guidelines, including documentation organization and code style, see [CONTRIBUTING.md](CONTRIBUTING.md).**
 
@@ -449,11 +449,20 @@ This is proprietary software owned by BitSleuth. Contributions are limited to au
 - Ensure all linting passes before commits
 - Never add Google Analytics or user tracking
 - Always prioritize security and privacy
+- Follow our [Code of Conduct](CODE_OF_CONDUCT.md)
+
+### How to Contribute
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Make your changes and test thoroughly
+4. Commit your changes (`git commit -m 'Add amazing feature'`)
+5. Push to your branch (`git push origin feature/amazing-feature`)
+6. Open a Pull Request
 
 ### Documentation Organization
 
 **All markdown documentation files MUST be stored in the `docs/` folder**, with the following exceptions:
-- `README.md`, `CONTRIBUTING.md`, `LICENSE.md`, `CHANGELOG.md`, `AGENTS.md`, and `.github/copilot-instructions.md`
+- `README.md`, `CONTRIBUTING.md`, `LICENSE`, `CODE_OF_CONDUCT.md`, `SECURITY.md`, `CHANGELOG.md`, `AGENTS.md`, and `.github/copilot-instructions.md`
 
 All other markdown files (product requirements, implementation summaries, testing guides, design documents, etc.) should be placed in the `docs/` folder. See [CONTRIBUTING.md](CONTRIBUTING.md) for complete details.
 
@@ -477,19 +486,17 @@ All other markdown files (product requirements, implementation summaries, testin
 
 ## 📜 License
 
-**PROPRIETARY SOFTWARE**
+**Open Source Software - AGPL-3.0**
 
 Copyright © 2025 BitSleuth. All rights reserved.
 
-This software is the proprietary and confidential information of BitSleuth. It is provided solely for use by BitSleuth and its authorized personnel. This software is not intended for public distribution or open source use.
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-**Restrictions:**
-- No redistribution or copying without explicit permission
-- No reverse engineering or decompilation
-- No commercial use without licensing agreement
-- All rights reserved by BitSleuth
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more details.
 
-For licensing inquiries, contact: **legal@bitsleuth.ai**
+You should have received a copy of the GNU Affero General Public License along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+**Important:** If you modify this software and make it available as a service over a network, you must make the source code of your modifications available under the AGPL-3.0 license. This ensures that improvements benefit the entire community.
 
 ---
 
@@ -503,11 +510,19 @@ For licensing inquiries, contact: **legal@bitsleuth.ai**
 
 ---
 
-## 📞 Support
+## 📞 Support & Community
 
-For support inquiries, please contact:
-- **Email**: support@bitsleuth.ai
-- **Website**: https://bitsleuth.ai
+We're here to help! Here's how to get support:
+
+### Getting Help
+- **Issues**: Report bugs or request features via [GitHub Issues](https://github.com/BitSleuthAI/Wallet/issues)
+- **Discussions**: Join community discussions on [GitHub Discussions](https://github.com/BitSleuthAI/Wallet/discussions)
+- **Security**: Report security vulnerabilities via our [Security Policy](SECURITY.md)
+- **Email**: For general inquiries, contact support@bitsleuth.ai
+- **Website**: Visit https://bitsleuth.ai for more information
+
+### Community Guidelines
+Please read our [Code of Conduct](CODE_OF_CONDUCT.md) before participating in our community.
 
 ---
 
