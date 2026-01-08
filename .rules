@@ -101,7 +101,7 @@ ignore:
   - "docs/**"
 
 # -------------------------------------------------------------------
-# 🚀 Expansion Notes:
+# 🚀 Expansion Notes: -
 # - To add more guardrails, copy/paste one of the above policy blocks
 #   and adjust. Example ideas:
 #     * Linting / formatting checks
