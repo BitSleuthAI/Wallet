@@ -2,20 +2,60 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+We take security seriously at BitSleuth Wallet. The following versions are currently supported with security updates:
 
 | Version | Supported          |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 1.2.x   | :white_check_mark: |
+| 1.1.x   | :white_check_mark: |
+| 1.0.x   | :x:                |
+| < 1.0   | :x:                |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+**Please do not report security vulnerabilities through public GitHub issues.**
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+If you discover a security vulnerability in BitSleuth Wallet, please report it to us privately to help protect our users.
+
+### How to Report
+
+Send an email to **security@bitsleuth.ai** with the following information:
+
+- **Description**: A clear description of the vulnerability
+- **Impact**: The potential impact of the vulnerability
+- **Steps to Reproduce**: Detailed steps to reproduce the issue
+- **Affected Versions**: Which version(s) of the app are affected
+- **Suggested Fix**: If you have suggestions for fixing the issue (optional)
+
+### What to Expect
+
+- **Acknowledgment**: We will acknowledge receipt of your report within 48 hours
+- **Assessment**: We will assess the vulnerability and determine its severity
+- **Updates**: You will receive updates on our progress at least every 7 days
+- **Resolution**: We aim to resolve critical vulnerabilities within 30 days
+- **Credit**: If you wish, we will publicly credit you for the discovery once the issue is resolved
+
+### Security Best Practices
+
+BitSleuth Wallet is designed with security as a top priority:
+
+- **Client-Side Cryptography**: All sensitive operations happen on your device
+- **No Cloud Backup**: Your mnemonic seed is the only way to recover your wallet
+- **Biometric/PIN Protection**: Device-level authentication required
+- **Open Source**: Our code is publicly auditable
+- **No Analytics**: We don't track user behavior or collect personal data
+
+### Scope
+
+Security issues in scope:
+- Cryptographic vulnerabilities in key generation, storage, or transaction signing
+- Authentication bypass or privilege escalation
+- Data exposure or privacy leaks
+- Transaction manipulation or double-spending risks
+- Dependency vulnerabilities in critical packages
+
+Out of scope:
+- Social engineering attacks
+- Physical device attacks
+- Issues in third-party dependencies without direct impact
+- UI/UX issues without security impact
