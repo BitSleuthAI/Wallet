@@ -44,6 +44,18 @@ BitSleuth Wallet is designed with security as a top priority:
 - **Biometric/PIN Protection**: Device-level authentication required
 - **Open Source**: Our code is publicly auditable
 - **No Analytics**: We don't track user behavior or collect personal data
+- **Firebase API Keys**: Configuration files are excluded from the repository (see [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md))
+
+### Firebase Configuration Security
+
+This repository does **not** include Firebase configuration files (`google-services.json` and `GoogleService-Info.plist`) for security reasons:
+
+- **Each developer must use their own Firebase project** for development
+- Configuration files contain API keys that, while designed for client use, should not be publicly exposed in repositories
+- Example template files are provided for reference
+- See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) for complete setup instructions and security best practices
+
+**Important**: If you find actual Firebase configuration files (not `.example` files) committed to this repository, please report it as a security issue.
 
 ### Scope
 
@@ -53,6 +65,8 @@ Security issues in scope:
 - Data exposure or privacy leaks
 - Transaction manipulation or double-spending risks
 - Dependency vulnerabilities in critical packages
+- Exposed Firebase configuration files or API keys in the repository
+- Misconfigured Firebase security rules
 
 Out of scope:
 - Social engineering attacks

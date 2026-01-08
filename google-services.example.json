@@ -1,0 +1,31 @@
+{
+  "_comment": "This is an EXAMPLE file. Replace with your own google-services.json from Firebase Console.",
+  "_instructions": "1. Go to https://console.firebase.google.com/ 2. Create/select your project 3. Add Android app 4. Download google-services.json 5. Replace this file",
+  "project_info": {
+    "project_number": "YOUR_PROJECT_NUMBER",
+    "project_id": "your-project-id",
+    "storage_bucket": "your-project-id.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:YOUR_PROJECT_NUMBER:android:YOUR_APP_ID",
+        "android_client_info": {
+          "package_name": "ai.bitsleuth.wallet"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSy_YOUR_ANDROID_API_KEY_HERE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
