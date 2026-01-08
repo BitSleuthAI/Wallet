@@ -49,3 +49,9 @@ ServiceAccountBitSleuthWallet.json
 
 # Prevent accidentally committing local absolute paths
 Users/
+
+# Firebase configuration files (use .example files as templates)
+google-services.json
+GoogleService-Info.plist
+android/app/google-services.json
+ios/BitSleuthWallet/GoogleService-Info.plist

@@ -162,11 +162,17 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 - **Testing**: Expo Go app or configured simulator/emulator
 
 ### Firebase Setup (Required)
+
+**Each developer must configure their own Firebase project.** See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) for detailed instructions.
+
+Required:
 - Firebase project with iOS and Android apps configured
-- `google-services.json` (Android) in `android/app/`
-- `GoogleService-Info.plist` (iOS) in `ios/BitSleuthWallet/`
+- `google-services.json` (Android) in `android/app/` and root directory
+- `GoogleService-Info.plist` (iOS) in `ios/BitSleuthWallet/` and root directory
 - **Firebase Services enabled**: Crashlytics (with Release Monitoring), Performance Monitoring
 - **Firebase Analytics DISABLED** for privacy (explicitly configured)
+
+**Note**: Configuration files are in `.gitignore` and should never be committed to the repository.
 
 ---
 
@@ -192,10 +198,20 @@ cd ios && pod install && cd ..
 
 ### 2. Firebase Configuration
 
-Ensure you have the required Firebase configuration files:
+**You must set up your own Firebase project** before running the app. Configuration files are not included in this repository for security reasons.
 
-- **Android**: Place `google-services.json` in `android/app/`
-- **iOS**: Place `GoogleService-Info.plist` in `ios/BitSleuthWallet/`
+📖 **See [docs/FIREBASE_SETUP.md](docs/FIREBASE_SETUP.md) for complete setup instructions.**
+
+Quick summary:
+1. Create a Firebase project at [console.firebase.google.com](https://console.firebase.google.com/)
+2. Add iOS and Android apps to your project
+3. Download `google-services.json` (Android) and place it in:
+   - `android/app/google-services.json`
+   - `google-services.json` (root)
+4. Download `GoogleService-Info.plist` (iOS) and place it in:
+   - `ios/BitSleuthWallet/GoogleService-Info.plist`
+   - `GoogleService-Info.plist` (root)
+5. Enable Crashlytics and Performance Monitoring in Firebase Console
 
 ⚠️ **Important**: Firebase Analytics is **prohibited** for privacy reasons. Only Crashlytics (with Release Monitoring) and Performance Monitoring are enabled. See [docs/FIREBASE_INTEGRATION.md](docs/FIREBASE_INTEGRATION.md) for details.
 
