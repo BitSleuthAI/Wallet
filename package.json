@@ -123,7 +123,8 @@
     }
   },
   "overrides": {
-    "react-native-randombytes": "^3.6.2"
+    "react-native-randombytes": "^3.6.2",
+    "react-native-renderer": "19.1.2"
   },
   "resolutions": {
     "@babel/traverse": "^7.28.4",
@@ -132,7 +133,8 @@
     "@babel/parser": "^7.28.4",
     "@babel/template": "^7.27.2",
     "@babel/types": "^7.28.4",
-    "react-native-randombytes": "^3.6.2"
+    "react-native-randombytes": "^3.6.2",
+    "react-native-renderer": "19.1.2"
   },
   "private": true
 }
