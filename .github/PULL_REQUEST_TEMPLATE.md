@@ -55,7 +55,8 @@ Fixes #
 - [ ] Tested biometric/PIN authentication
 
 ### Automated Testing
-- [ ] All existing tests pass (`npm run lint`)
+- [ ] Linting passes (`npm run lint`)
+- [ ] All existing tests pass (if test suite exists)
 - [ ] Added new tests for new functionality
 - [ ] Tested on both light and dark themes
 
