@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Community Discussions
+    url: https://github.com/BitSleuthAI/Wallet/discussions
+    about: Ask questions, share ideas, and connect with the community
+  - name: 🔒 Security Vulnerability
+    url: https://github.com/BitSleuthAI/Wallet/security/advisories/new
+    about: Report a security vulnerability privately (DO NOT create a public issue)
