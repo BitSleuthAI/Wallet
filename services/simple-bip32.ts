@@ -47,7 +47,7 @@ export class SimpleBIP32Node {
     
     for (const part of parts) {
       if (part === 'm') continue;
-      const index = parseInt(part.replace("'", ''), 10);
+      const index = parseInt(part.replace(/'/g, ''), 10);
       current = this.deriveChild(current, index);
     }
     
