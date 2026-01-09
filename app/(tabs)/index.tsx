@@ -13,21 +13,21 @@ import { isIOS18OrHigher } from '@/utils/platform';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-    Alert,
-    Animated,
-    FlatList,
-    Modal,
-    Platform,
-    RefreshControl,
-    SafeAreaView,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  Animated,
+  FlatList,
+  Modal,
+  Platform,
+  RefreshControl,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
@@ -744,26 +744,31 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     // Add sufficient bottom padding to prevent content from going under tab bar
-    // iOS tab bar height (~49pt) + safe area (~34pt) + spacing = ~100pt
     paddingBottom: platformStyles.tabBarBottomPadding,
+    // Add top padding for content breathing room
+    paddingTop: platformStyles.spacing.md,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: platformStyles.spacing.xl,
-    paddingTop: platformStyles.spacing.xxl, // Increased breathing room
-    paddingBottom: platformStyles.spacing.lg, // Increased from md
+    paddingTop: platformStyles.spacing.xl, // Balanced top padding
+    paddingBottom: platformStyles.spacing.xl,
+    marginBottom: platformStyles.spacing.md,
   },
   greeting: {
-    fontSize: 30, // Increased from 26 for better hierarchy
-    fontWeight: '800', // Increased weight
-    letterSpacing: -0.3, // Improved readability
+    fontSize: platformStyles.typography.heading.fontSize, // Use uniform typography
+    fontWeight: platformStyles.typography.heading.fontWeight,
+    letterSpacing: platformStyles.typography.heading.letterSpacing,
+    lineHeight: platformStyles.typography.heading.lineHeight,
   },
   subtitle: {
-    fontSize: 16, // Increased from 15
-    marginTop: 6, // Increased from 4
-    letterSpacing: 0.2,
+    fontSize: platformStyles.typography.bodyLarge.fontSize,
+    lineHeight: platformStyles.typography.bodyLarge.lineHeight,
+    letterSpacing: platformStyles.typography.bodyLarge.letterSpacing,
+    marginTop: 4,
+    opacity: 0.8, // Subtle fade for subtitle
   },
   priceContainer: {
     alignItems: 'flex-end',
@@ -788,8 +793,9 @@ const styles = StyleSheet.create({
     fontWeight: '700', // More specific weight
   },
   bitcoinLabel: {
-    fontSize: 14, // Increased from 13
+    fontSize: 15,
     letterSpacing: 0.2,
+    fontWeight: '500',
   },
   priceRow: {
     flexDirection: 'row',
@@ -808,32 +814,39 @@ const styles = StyleSheet.create({
   },
   balanceSection: {
     marginHorizontal: platformStyles.spacing.xl,
-    marginTop: platformStyles.spacing.xxl, // Increased from xl
+    marginTop: platformStyles.spacing.xl,
+    marginBottom: platformStyles.spacing.xxl, // Add space below balance
   },
   balanceContainer: {
     position: 'relative',
-    marginBottom: 14, // Increased from 10
+    marginBottom: platformStyles.spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center', // Center align balance
   },
   mainBalance: {
-    fontSize: 42, // Increased from 36 for better prominence
-    fontWeight: '800',
+    fontSize: platformStyles.typography.display.fontSize, 
+    fontWeight: platformStyles.typography.display.fontWeight,
     textAlign: 'center',
-    paddingRight: 50,
-    letterSpacing: -0.5, // Improved readability for large numbers
+    letterSpacing: platformStyles.typography.display.letterSpacing,
+    lineHeight: platformStyles.typography.display.lineHeight,
+    paddingHorizontal: 20, // Add padding instead of fixed paddingRight
   },
   eyeButton: {
     position: 'absolute',
-    top: 0,
     right: 0,
-    padding: 12, // Increased from 10 for better touch target
-    borderRadius: platformStyles.borderRadius.xl,
+    top: '50%', // Center vertically relative to balance
+    transform: [{ translateY: -20 }], // Adjust for icon size/padding
+    padding: 12,
+    borderRadius: platformStyles.borderRadius.round, // Fully rounded
     zIndex: 1,
   },
   btcBalance: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '600', // Increased from 500
-    marginBottom: 16, // Increased from 12
-    letterSpacing: 0.2,
+    fontSize: platformStyles.typography.bodyLarge.fontSize,
+    fontWeight: platformStyles.typography.bodyLarge.fontWeight,
+    marginBottom: platformStyles.spacing.lg,
+    letterSpacing: platformStyles.typography.bodyLarge.letterSpacing,
+    textAlign: 'center', // Center align
+    opacity: 0.9,
   },
   changeContainer: {
     flexDirection: 'row',
@@ -903,12 +916,12 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   transactionsSection: {
-    marginTop: platformStyles.spacing.huge, // Increased from xxxl for more space
-    paddingBottom: platformStyles.spacing.xl,
+    marginTop: platformStyles.spacing.xl,
     marginHorizontal: platformStyles.spacing.xl,
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    ...platformStyles.cardShadow,
+    padding: platformStyles.spacing.xl,
+    borderRadius: platformStyles.borderRadius.xxl,
+    ...platformStyles.cardShadow, // Consistent shadow
+    overflow: 'hidden', // Ensure glass effect is contained
   },
   transactionsHeader: {
     flexDirection: 'row',
