@@ -101,45 +101,45 @@ export const platformStyles = {
   // Typography scale - Enhanced for better readability and hierarchy
   typography: {
     caption: {
-      fontSize: 12,
-      lineHeight: 18, // Increased from 16 for better readability
-      letterSpacing: 0.3,
+      fontSize: 13,
+      lineHeight: 18,
+      letterSpacing: 0.2,
       fontWeight: '500' as const,
     },
     body: {
-      fontSize: 15, // Increased from 14 for better readability
-      lineHeight: 22, // Increased from 20
-      letterSpacing: 0.2,
-      fontWeight: '400' as const,
-    },
-    bodyLarge: {
-      fontSize: 17, // Increased from 16
-      lineHeight: 26, // Increased from 24
+      fontSize: 16, // Premium standard body size
+      lineHeight: 24,
       letterSpacing: 0.1,
       fontWeight: '400' as const,
     },
+    bodyLarge: {
+      fontSize: 18,
+      lineHeight: 28,
+      letterSpacing: 0.1,
+      fontWeight: '500' as const,
+    },
     subtitle: {
-      fontSize: 19, // Increased from 18
-      lineHeight: 26, // Increased from 24
+      fontSize: 20,
+      lineHeight: 28,
       letterSpacing: 0.15,
       fontWeight: '600' as const,
     },
     title: {
-      fontSize: 22, // Increased from 20
-      lineHeight: 30, // Increased from 28
-      letterSpacing: 0.1,
-      fontWeight: 'bold' as const,
+      fontSize: 24,
+      lineHeight: 32,
+      letterSpacing: -0.2, // Tighter for headers
+      fontWeight: '700' as const,
     },
     heading: {
-      fontSize: 28, // Increased from 24
-      lineHeight: 36, // Increased from 32
-      letterSpacing: -0.2, // Negative for large text
+      fontSize: 34,
+      lineHeight: 40,
+      letterSpacing: -0.4,
       fontWeight: '700' as const,
     },
     display: {
-      fontSize: 36, // Increased from 32
-      lineHeight: 44, // Increased from 40
-      letterSpacing: -0.5, // Negative for large text
+      fontSize: 48, // Hero size
+      lineHeight: 56,
+      letterSpacing: -1,
       fontWeight: '800' as const,
     },
   },
@@ -148,78 +148,78 @@ export const platformStyles = {
 export const lightTheme: Theme = {
   isDark: false,
   colors: {
-    // Base colors with gradient-inspired tones - Enhanced for better contrast
-    background: '#FFFFFF',
-    surface: '#F9FAFB', // Slightly warmer from #FAFAFA
-    primary: '#FF8A65', // Coral orange inspired by gradient
-    secondary: '#FF6B6B', // Warm red-orange
-    accent: '#FFB74D', // Golden orange
+    // Premium Light Theme - Inspired by High-End Finance Apps
+    background: '#F2F2F7', // iOS System Gray 6 - softer than pure white
+    surface: '#FFFFFF', // Pure white cards for contrast
+    primary: '#F7931A', // Bitcoin Orange
+    secondary: '#FFAB40', // Warmer Secondary
+    accent: '#18181B', // Dark accent for high contrast elements
     success: '#10B981',
     warning: '#F59E0B',
     error: '#EF4444',
-    text: '#111827', // Darker from #1F2937 for better contrast
-    textSecondary: '#6B7280',
-    border: '#E5E7EB', // Slightly darker from #F3F4F6 for better visibility
-    // Gradient colors - inspired by the orange/coral gradient image
-    gradientStart: '#FF8A65', // Coral orange
-    gradientEnd: '#FF6B6B', // Warm red-orange
-    gradientAccent: '#FFB74D', // Golden accent
-    // Glow effects for light theme (subtle)
-    glowPrimary: 'rgba(255, 138, 101, 0.12)',
-    glowSecondary: 'rgba(255, 107, 107, 0.12)',
-    glowAccent: 'rgba(255, 183, 77, 0.12)',
+    text: '#18181B', // Almost black for sharpness
+    textSecondary: '#8E8E93', // iOS System Gray
+    border: '#E5E5EA', // Apple-style border
+    // Gradient colors
+    gradientStart: '#F7931A',
+    gradientEnd: '#FFAB40',
+    gradientAccent: '#FFD700',
+    // Glow effects (Subtle shadows in light mode)
+    glowPrimary: 'rgba(247, 147, 26, 0.15)',
+    glowSecondary: 'rgba(255, 171, 64, 0.15)',
+    glowAccent: 'rgba(0, 0, 0, 0.05)',
     // Additional colors
-    purple: '#FF8A65',
-    blue: '#3B82F6',
-    green: '#22C55E',
-    orange: '#FF8A65',
-    pink: '#FF6B6B',
-    yellow: '#FFB74D',
+    purple: '#F7931A',
+    blue: '#007AFF', // iOS Blue
+    green: '#34C759', // iOS Green
+    orange: '#FF9500', // iOS Orange
+    pink: '#FF2D55', // iOS Pink
+    yellow: '#FFCC00', // iOS Yellow
     // Surface variants
     surfaceLight: '#FFFFFF',
-    surfaceDark: '#F5F5F5',
-    // Card backgrounds with subtle gradient feel
+    surfaceDark: '#F2F2F7',
+    // Card backgrounds
     cardBackground: '#FFFFFF',
-    cardBorder: '#FFE5DB',
+    cardBorder: 'rgba(0, 0, 0, 0.05)',
   },
 };
 
 export const darkTheme: Theme = {
   isDark: true,
   colors: {
-    // Deep dark background with cool undertones - Enhanced contrast
-    background: '#0A0E1A', // Darker from #0F172A for deeper blacks
-    surface: '#1A2332', // Adjusted from #1E293B for better hierarchy
-    primary: '#26F5FE', // Bright cyan - perfect complement to coral orange
-    secondary: '#00BCD4', // Teal - creates beautiful gradient with cyan
-    accent: '#40E0D0', // Turquoise accent - bridges cyan and teal
-    success: '#00E676', // Bright emerald - complements the cool theme
-    warning: '#FFB74D', // Keep warm amber for contrast
-    error: '#FF5252', // Bright red - maintains energy
-    text: '#F8FAFC', // Brighter from #F1F5F9 for better readability
-    textSecondary: '#9CA3AF', // Adjusted from #94A3B8 for better contrast
-    border: '#2D3748', // Adjusted from #334155 for better visibility
-    // Gradient colors - cool cyan theme (opposite energy to warm coral)
-    gradientStart: '#26F5FE', // Bright cyan
-    gradientEnd: '#00BCD4', // Teal
-    gradientAccent: '#40E0D0', // Turquoise accent
-    // Glow effects for dark theme (cool cyan glow)
-    glowPrimary: 'rgba(38, 245, 254, 0.25)', // Cyan glow
-    glowSecondary: 'rgba(0, 188, 212, 0.25)', // Teal glow
-    glowAccent: 'rgba(64, 224, 208, 0.25)', // Turquoise glow
-    // Additional colors with cool variants
-    purple: '#26F5FE', // Replace purple with cyan
-    blue: '#26F5FE', // Cyan blue
-    green: '#00E676', // Bright emerald
-    orange: '#FFB74D', // Keep warm amber for contrast
-    pink: '#FF4081', // Bright pink for energy
-    yellow: '#FFEB3B', // Bright yellow for warmth
-    // Surface variants with cool undertones
-    surfaceLight: '#293548',
-    surfaceDark: '#1A2332',
-    // Card backgrounds with cyan glow effect
-    cardBackground: '#1E293B',
-    cardBorder: '#26F5FE', // Cyan border for accent
+    // Deep premium dark background
+    background: '#09090B', // Slightly warmer/richer black than pure #000
+    surface: '#18181B', // Zinc-900 style surface
+    primary: '#F7931A', // Bitcoin Orange
+    secondary: '#FFAB40', // Lighter Amber
+    accent: '#FFD700', // Gold
+    success: '#10B981', // Emerald 500
+    warning: '#F59E0B',
+    error: '#EF4444',
+    text: '#FAFAFA', // Zinc-50
+    textSecondary: '#A1A1AA', // Zinc-400
+    border: '#27272A', // Zinc-800
+    // Gradient colors - Bitcoin Theme
+    gradientStart: '#F7931A', // Bitcoin Orange
+    gradientEnd: '#FFAB40', // Warmer Amber
+    gradientAccent: '#FFD700', // Gold
+    // Glow effects for dark theme (Warm/Orange glow)
+    glowPrimary: 'rgba(247, 147, 26, 0.2)',
+    glowSecondary: 'rgba(255, 171, 64, 0.2)',
+    glowAccent: 'rgba(255, 215, 0, 0.2)',
+    // Additional colors
+    purple: '#F7931A', // Remap for consistency
+    blue: '#3B82F6',
+    green: '#10B981',
+    orange: '#F7931A',
+    pink: '#EC4899',
+    yellow: '#EAB308',
+    // Surface variants
+    surfaceLight: '#27272A',
+    surfaceDark: '#09090B',
+    // Card backgrounds
+    cardBackground: '#18181B',
+    cardBorder: '#F7931A', // Subtle orange border hint
   },
 };
 
