@@ -55,12 +55,11 @@ let lastAddressesRef: readonly string[] | undefined;
 let lastAddressSet: Set<string> | undefined;
 
 function getAddressSet(addresses: readonly string[] | undefined | null): Set<string> {
-  const normalized = addresses ?? [];
-  if (normalized === lastAddressesRef && lastAddressSet) {
+  if (addresses === lastAddressesRef && lastAddressSet) {
     return lastAddressSet;
   }
-  lastAddressesRef = normalized;
-  lastAddressSet = new Set(normalized);
+  lastAddressesRef = addresses ?? undefined;
+  lastAddressSet = new Set(addresses ?? []);
   return lastAddressSet;
 }
 
