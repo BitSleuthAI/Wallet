@@ -51,14 +51,14 @@ interface TransactionExplorerData {
 }
 
 // Memoize the Set of wallet addresses to avoid recreating it on every function call.
-let lastAddressesRef: readonly string[] | undefined;
+let lastAddressesRef: readonly string[] | undefined | null;
 let lastAddressSet: Set<string> | undefined;
 
 function getAddressSet(addresses: readonly string[] | undefined | null): Set<string> {
   if (addresses === lastAddressesRef && lastAddressSet) {
     return lastAddressSet;
   }
-  lastAddressesRef = addresses ?? undefined;
+  lastAddressesRef = addresses;
   lastAddressSet = new Set(addresses ?? []);
   return lastAddressSet;
 }
