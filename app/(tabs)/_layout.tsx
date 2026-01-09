@@ -1,3 +1,4 @@
+import { lightTheme } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
@@ -6,7 +7,9 @@ import { Platform } from 'react-native';
 
 export default function TabLayout() {
   // Use theme from WalletProvider context for consistency
-  const { theme } = useWallet();
+  // Fallback to lightTheme if context is not available yet
+  const walletContext = useWallet();
+  const theme = walletContext?.theme ?? lightTheme;
   const [themeKey, setThemeKey] = useState(0);
 
   // Force re-render when theme changes
