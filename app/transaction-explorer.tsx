@@ -50,6 +50,38 @@ interface TransactionExplorerData {
   }[];
 }
 
+const SATOSHIS_PER_BTC = 1e8;
+
+interface NormalizedVoutSource {
+  value?: number;
+  amount?: number;
+  address?: string;
+  scriptpubkey_address?: string;
+}
+
+interface NormalizedVinSource {
+  prevout?: {
+    value?: number;
+    scriptpubkey_address?: string;
+  };
+  value?: number;
+  address?: string;
+}
+
+// Some transaction detail responses include extra fields such as `net_amount` and `vsize`.
+// Model those explicitly instead of using `as any` to preserve type safety.
+interface ExtendedTransactionDetails extends Transaction {
+  net_amount?: number;
+  vsize?: number;
+  time?: number;
+  confirmations?: number;
+  size?: number;
+  weight?: number;
+  version?: number;
+  locktime?: number;
+  rbf?: boolean;
+}
+
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
   const { theme, transactions, bitcoinPrice, currentWallet, formatCurrency } = useWallet();
@@ -646,32 +678,32 @@ const styles = StyleSheet.create({
 const buildExplorerData = (
   txDetails: Transaction,
   bitcoinPrice: { usd?: number } | null,
-  currentWallet: Wallet | null,
+  userWallet: Wallet | null,
 ): TransactionExplorerData => {
   const statusInfo = txDetails.status || {};
   const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : txDetails.vin || [];
   const voutList = Array.isArray(txDetails.outputs) ? txDetails.outputs : txDetails.vout || [];
 
-  const normalizeVin = vinList.map((vin: any) => ({
+  const normalizeVin = vinList.map((vin: NormalizedVinSource) => ({
     prevout: vin.prevout || {
-      value: vin.value ? Math.round(vin.value * 1e8) : 0,
+      value: vin.value ? Math.round(vin.value * SATOSHIS_PER_BTC) : 0,
       scriptpubkey_address: vin.address,
     },
   }));
-  const normalizeVout = voutList.map((vout: any) => ({
-    value: typeof vout.value === 'number' ? vout.value : Math.round((vout.amount ?? 0) * 1e8),
+  const normalizeVout = voutList.map((vout: NormalizedVoutSource) => ({
+    value: typeof vout.value === 'number' ? vout.value : Math.round((vout.amount ?? 0) * SATOSHIS_PER_BTC),
     scriptpubkey_address: vout.address ?? vout.scriptpubkey_address,
   }));
 
   const inputValueSats = normalizeVin.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
   const outputValueSats = normalizeVout.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
   const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : (txDetails.fee ?? 0);
-  const feeBtc = feeSats / 1e8;
+  const feeBtc = feeSats / SATOSHIS_PER_BTC;
 
-  const addressSet = new Set(currentWallet?.addresses ?? []);
+  const addressSet = new Set(userWallet?.addresses ?? []);
   const fallbackNetAmountSats = (() => {
     if (typeof txDetails.amount === 'number') {
-      return Math.round(txDetails.amount * 1e8);
+      return Math.round(txDetails.amount * SATOSHIS_PER_BTC);
     }
 
     if (addressSet.size > 0) {
@@ -693,39 +725,40 @@ const buildExplorerData = (
     return 0;
   })();
 
-  const netAmountBtc = typeof (txDetails as any).net_amount === 'number'
-    ? (txDetails as any).net_amount / 1e8
-    : fallbackNetAmountSats / 1e8;
+  const extendedTxDetails = txDetails as ExtendedTransactionDetails;
+  const netAmountBtc = typeof extendedTxDetails.net_amount === 'number'
+    ? extendedTxDetails.net_amount / SATOSHIS_PER_BTC
+    : fallbackNetAmountSats / SATOSHIS_PER_BTC;
 
   const feeUsd = bitcoinPrice?.usd ? feeBtc * bitcoinPrice.usd : 0;
-  const feePerVB = (txDetails as any).vsize ? feeSats / (txDetails as any).vsize : 0;
+  const feePerVB = extendedTxDetails.vsize ? feeSats / extendedTxDetails.vsize : 0;
 
   return {
     txid: txDetails.txid,
-    timestamp: ((statusInfo.block_time ?? (txDetails as any).time ?? Math.floor(Date.now() / 1000)) * 1000),
+    timestamp: ((statusInfo.block_time ?? extendedTxDetails.time ?? Math.floor(Date.now() / 1000)) * 1000),
     netAmount: netAmountBtc,
     fee: feeBtc,
     feeUSD: feeUsd,
-    confirmations: typeof (txDetails as any).confirmations === 'number'
-      ? (txDetails as any).confirmations
+    confirmations: typeof extendedTxDetails.confirmations === 'number'
+      ? extendedTxDetails.confirmations
       : (statusInfo.confirmed ? 1 : 0),
     blockHeight: statusInfo.block_height ?? 0,
     status: statusInfo.confirmed ? 'confirmed' : 'pending',
-    inputValue: inputValueSats / 1e8,
-    outputValue: outputValueSats / 1e8,
+    inputValue: inputValueSats / SATOSHIS_PER_BTC,
+    outputValue: outputValueSats / SATOSHIS_PER_BTC,
     feePerVB,
-    size: (txDetails as any).size ?? 0,
-    weight: (txDetails as any).weight ?? 0,
-    version: (txDetails as any).version ?? 0,
-    locktime: (txDetails as any).locktime ?? 0,
-    rbf: (txDetails as any).rbf ?? false,
+    size: extendedTxDetails.size ?? 0,
+    weight: extendedTxDetails.weight ?? 0,
+    version: extendedTxDetails.version ?? 0,
+    locktime: extendedTxDetails.locktime ?? 0,
+    rbf: extendedTxDetails.rbf ?? false,
     inputs: normalizeVin.map(vin => ({
       address: vin.prevout?.scriptpubkey_address ?? 'Unknown',
-      value: (vin.prevout?.value ?? 0) / 1e8,
+      value: (vin.prevout?.value ?? 0) / SATOSHIS_PER_BTC,
     })),
     outputs: normalizeVout.map(vout => ({
       address: vout.scriptpubkey_address ?? 'Unknown',
-      value: (vout.value ?? 0) / 1e8,
+      value: (vout.value ?? 0) / SATOSHIS_PER_BTC,
     })),
   };
 };
