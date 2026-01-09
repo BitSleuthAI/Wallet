@@ -3,7 +3,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getTransactionDetails } from '@/services/esplora-service';
-import { Transaction } from '@/types/wallet';
+import { Transaction, Wallet } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import {
