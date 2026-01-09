@@ -1671,8 +1671,6 @@ PODS:
     - React-Core
   - react-native-quick-base64 (2.2.2):
     - React-Core
-  - react-native-randombytes (3.6.2):
-    - React-Core
   - react-native-safe-area-context (5.6.2):
     - hermes-engine
     - RCTRequired
@@ -2476,7 +2474,6 @@ DEPENDENCIES:
   - react-native-biometrics (from `../node_modules/react-native-biometrics`)
   - react-native-get-random-values (from `../node_modules/react-native-get-random-values`)
   - react-native-quick-base64 (from `../node_modules/react-native-quick-base64`)
-  - react-native-randombytes (from `../node_modules/react-native-randombytes`)
   - react-native-safe-area-context (from `../node_modules/react-native-safe-area-context`)
   - React-NativeModulesApple (from `../node_modules/react-native/ReactCommon/react/nativemodule/core/platform/ios`)
   - React-oscompat (from `../node_modules/react-native/ReactCommon/oscompat`)
@@ -2690,8 +2687,6 @@ EXTERNAL SOURCES:
     :path: "../node_modules/react-native-get-random-values"
   react-native-quick-base64:
     :path: "../node_modules/react-native-quick-base64"
-  react-native-randombytes:
-    :path: "../node_modules/react-native-randombytes"
   react-native-safe-area-context:
     :path: "../node_modules/react-native-safe-area-context"
   React-NativeModulesApple:
@@ -2868,7 +2863,6 @@ SPEC CHECKSUMS:
   react-native-biometrics: 43ed5b828646a7862dbc7945556446be00798e7d
   react-native-get-random-values: d16467cf726c618e9c7a8c3c39c31faa2244bbba
   react-native-quick-base64: 6568199bb2ac8e72ecdfdc73a230fbc5c1d3aac4
-  react-native-randombytes: 4eeddad82d1fd57adda1cd5beffe67d041c9d6de
   react-native-safe-area-context: c5d42c4294aa175415947e23c2ac956253abfc7d
   React-NativeModulesApple: 8969913947d5b576de4ed371a939455a8daf28aa
   React-oscompat: ce47230ed20185e91de62d8c6d139ae61763d09c
