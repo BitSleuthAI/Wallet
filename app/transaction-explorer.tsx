@@ -684,6 +684,8 @@ const buildExplorerData = (
   const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : txDetails.vin || [];
   const voutList = Array.isArray(txDetails.outputs) ? txDetails.outputs : txDetails.vout || [];
 
+  // Normalize vin objects to ensure consistent structure.
+  // Some sources provide prevout directly, others provide value/address at the top level.
   const normalizeVin = vinList.map((vin: NormalizedVinSource) => ({
     prevout: vin.prevout || {
       value: vin.value ? Math.round(vin.value * SATOSHIS_PER_BTC) : 0,
