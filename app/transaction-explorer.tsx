@@ -50,6 +50,20 @@ interface TransactionExplorerData {
   }[];
 }
 
+// Memoize the Set of wallet addresses to avoid recreating it on every function call.
+let lastAddressesRef: readonly string[] | undefined;
+let lastAddressSet: Set<string> | undefined;
+
+function getAddressSet(addresses: readonly string[] | undefined | null): Set<string> {
+  const normalized = addresses ?? [];
+  if (normalized === lastAddressesRef && lastAddressSet) {
+    return lastAddressSet;
+  }
+  lastAddressesRef = normalized;
+  lastAddressSet = new Set(normalized);
+  return lastAddressSet;
+}
+
 const SATOSHIS_PER_BTC = 1e8;
 
 interface NormalizedVoutSource {
@@ -183,8 +197,6 @@ export default function TransactionExplorerScreen() {
       Alert.alert('Error', 'Failed to copy');
     }
   };
-
-
 
   if (loading) {
     return (
@@ -678,7 +690,7 @@ const styles = StyleSheet.create({
 const buildExplorerData = (
   txDetails: Transaction,
   bitcoinPrice: { usd?: number } | null,
-  userWallet: Wallet | null,
+  currentWallet: Wallet | null,
 ): TransactionExplorerData => {
   const statusInfo = txDetails.status || {};
   const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : txDetails.vin || [];
@@ -688,7 +700,7 @@ const buildExplorerData = (
   // Some sources provide prevout directly, others provide value/address at the top level.
   const normalizeVin = vinList.map((vin: NormalizedVinSource) => ({
     prevout: vin.prevout || {
-      value: vin.value ? Math.round(vin.value * SATOSHIS_PER_BTC) : 0,
+      value: typeof vin.value === 'number' ? Math.round(vin.value * SATOSHIS_PER_BTC) : 0,
       scriptpubkey_address: vin.address,
     },
   }));
@@ -699,10 +711,10 @@ const buildExplorerData = (
 
   const inputValueSats = normalizeVin.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
   const outputValueSats = normalizeVout.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
-  const feeSats = typeof txDetails.fee === 'number' ? txDetails.fee : (txDetails.fee ?? 0);
+  const feeSats = txDetails.fee ?? 0;
   const feeBtc = feeSats / SATOSHIS_PER_BTC;
 
-  const addressSet = new Set(userWallet?.addresses ?? []);
+  const addressSet = getAddressSet(currentWallet?.addresses);
   const fallbackNetAmountSats = (() => {
     if (typeof txDetails.amount === 'number') {
       return Math.round(txDetails.amount * SATOSHIS_PER_BTC);
