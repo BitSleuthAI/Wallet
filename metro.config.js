@@ -5,6 +5,13 @@ const config = getDefaultConfig(__dirname);
 // Enable debug logging and better error reporting
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
+// Polyfill Node.js modules for React Native
+config.resolver.extraNodeModules = {
+  ...config.resolver.extraNodeModules,
+  buffer: require.resolve('@craftzdog/react-native-buffer'),
+  stream: require.resolve('stream-browserify'),
+};
+
 // Enable source maps for better debugging
 config.transformer.minifierConfig = {
   keep_fnames: true,
