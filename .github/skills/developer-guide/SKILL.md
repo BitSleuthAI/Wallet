@@ -1,6 +1,9 @@
-# SKILL.md
+---
+name: developer-guide
+description: Comprehensive guide to technical skills, knowledge areas, and competencies required for BitSleuth Wallet development. Covers React Native/Expo mobile development, Bitcoin protocol expertise, cryptography, security best practices, and platform-specific knowledge for building a professional-grade Bitcoin wallet.
+---
 
-## Required Skills for BitSleuth Wallet Development
+# Required Skills for BitSleuth Wallet Development
 
 This document outlines the technical skills, knowledge areas, and competencies required to effectively contribute to the **BitSleuth Wallet** project—a professional-grade, non-custodial Bitcoin mobile wallet built with React Native and Expo for iOS and Android.
 
@@ -553,7 +556,7 @@ Contributing to **BitSleuth Wallet** requires a unique blend of mobile developme
 **Remember**: This is a Bitcoin wallet handling real user funds. Every line of code should be written with security, privacy, and reliability as top priorities.
 
 For questions or clarification on any skill area, please refer to:
-- [AGENTS.md](../AGENTS.md) - Project overview and patterns
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution guidelines
-- [.github/copilot-instructions.md](../.github/copilot-instructions.md) - Development conventions
-- [docs/](.) - Additional technical documentation
+- [AGENTS.md](../../../AGENTS.md) - Project overview and patterns
+- [CONTRIBUTING.md](../../../CONTRIBUTING.md) - Contribution guidelines
+- [.github/copilot-instructions.md](../../copilot-instructions.md) - Development conventions
+- [docs/](../../../docs/) - Additional technical documentation
