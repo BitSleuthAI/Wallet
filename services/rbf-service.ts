@@ -477,7 +477,11 @@ export async function createReplacementTransaction(
     const inputMap = new Map<string, { input: any; utxo: UTXO; addressIndex: number; chain: number }>();
     
     for (const input of ourInputs) {
-      const address = input.prevout.scriptpubkey_address;
+      const address = input.prevout?.scriptpubkey_address;
+      
+      if (!address) {
+        throw new Error(`Input missing address information: ${JSON.stringify(input)}`);
+      }
       
       // Derive the actual BIP32 address index and chain instead of using array index
       const { index: addressIndex, chain } = await deriveAddressIndexAndChainFromAddress(mnemonic, address);
@@ -534,7 +538,7 @@ export async function createReplacementTransaction(
       } else {
         throw new Error(`Unsupported output type: ${JSON.stringify(output)}`);
       }
-      totalOutputValue += output.value;
+      totalOutputValue += output.value ?? 0;
     }
     
     // Find the change output in the original transaction (if any)
@@ -546,7 +550,7 @@ export async function createReplacementTransaction(
       const output = originalTx.vout[i];
       if (output.scriptpubkey_address && walletAddressesSet.has(output.scriptpubkey_address)) {
         changeOutputIndex = i;
-        changeOutputValue = output.value;
+        changeOutputValue = output.value ?? 0;
         break;
       }
     }
