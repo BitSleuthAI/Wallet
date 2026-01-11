@@ -47,7 +47,7 @@ function validateECCLibrary(ecc: any): void {
 
 export interface RBFTransaction {
   txid: string;
-  originalTx: Transaction;
+  originalTx: any; // Raw Esplora transaction with vin/vout properties
   newFeeRate: number;
   newFee: number;
   replacementTx?: string; // hex transaction
@@ -59,7 +59,7 @@ export interface RBFValidationResult {
   isValid: boolean;
   canReplace: boolean;
   reason?: string;
-  originalTx?: Transaction;
+  originalTx?: any; // Raw Esplora transaction with vin/vout properties
   utxos?: UTXO[];
 }
 
