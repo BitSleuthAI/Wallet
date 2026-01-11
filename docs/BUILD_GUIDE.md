@@ -229,6 +229,17 @@ cd android
 cd ..
 ```
 
+### 4. Android Keystore (Development)
+
+The repository includes a debug keystore (`android/app/debug.keystore`) for development builds. This uses standard Android debug credentials and is safe for development.
+
+**For production builds**, you must generate your own keystore. See [KEYSTORE_FILES.md](KEYSTORE_FILES.md) for detailed instructions on:
+- Creating production keystores
+- Configuring signing for release builds
+- Security best practices
+
+**Note:** Never use the debug keystore for production releases.
+
 ## Running the App
 
 ### Start Metro Bundler
@@ -334,6 +345,12 @@ cd android
 ./gradlew bundleRelease
 # APK will be at: android/app/build/outputs/bundle/release/app-release.aab
 ```
+
+**Important for Android Production Builds:**
+- You must configure a production keystore before building for release
+- The current setup uses the debug keystore for both debug and release builds
+- See [KEYSTORE_FILES.md](KEYSTORE_FILES.md) for step-by-step instructions on generating and configuring production keystores
+- EAS Build can manage keystores automatically through the Expo dashboard
 
 ## Troubleshooting
 
