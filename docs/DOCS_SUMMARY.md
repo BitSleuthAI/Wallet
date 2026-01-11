@@ -605,6 +605,41 @@
 4. Update stored version
 5. Trigger data refresh
 
+### Keystore Files
+
+**Key Document:** `KEYSTORE_FILES.md`
+
+**Overview:** Complete documentation of keystore files in the repository and their purposes.
+
+**Keystore Files Found:**
+- `android/app/debug.keystore` - Java KeyStore for Android debug builds (2.3KB)
+  - Standard Android debug keystore with default credentials
+  - Safe for development and version control
+  - **Must NOT** be used for production releases
+
+**Key Information:**
+- **Debug Keystore Credentials:** Standard Android defaults (publicly known)
+  - Store Password: `android`
+  - Key Alias: `androiddebugkey`
+  - Key Password: `android`
+
+**Production Keystore Requirements:**
+- Current setup uses debug keystore for both debug and release builds
+- Production builds **require** a secure keystore with strong passwords
+- Production keystores must be stored outside version control
+- `.gitignore` excludes `*.jks`, `*.p12`, and `*.key` files
+
+**Security Best Practices:**
+- ✅ Debug keystore tracked in version control (safe with default credentials)
+- ✅ Production keystores excluded via `.gitignore`
+- ✅ Documentation of keystore generation and configuration
+- ⚠️ Release builds currently use debug keystore (must change for production)
+
+**Related Concepts:**
+- Device Keystore/Keychain (biometric authentication, Secure Enclave)
+- APK Signing Keystore (application signing for distribution)
+- EAS Build credential management
+
 ---
 
 ## Troubleshooting & Fixes
