@@ -354,9 +354,11 @@ import { usePerformanceMonitor } from '@/hooks/use-performance-monitor'
 // In component
 const { startTrace, stopTrace } = usePerformanceMonitor()
 
-startTrace('screen_load')
-// ... load screen
-stopTrace('screen_load')
+const handleLoad = async () => {
+  startTrace('screen_load')
+  // ... load screen
+  stopTrace('screen_load')
+}
 ```
 
 ### Firebase Performance

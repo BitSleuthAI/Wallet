@@ -170,7 +170,7 @@ This installs native iOS dependencies via CocoaPods.
    ✅ Analytics is DISABLED (correct for privacy)
    ```
 
-For detailed Firebase setup instructions, see [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
+For detailed Firebase setup instructions, see [FIREBASE_SETUP.md](archive/FIREBASE_SETUP.md).
 
 ## iOS Setup
 

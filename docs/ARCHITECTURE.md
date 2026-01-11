@@ -434,7 +434,7 @@ Tab Navigator ←────┘
 ### Core Framework
 - **React Native** 0.81.5 (New Architecture)
 - **Expo** SDK 54
-- **TypeScript** 5.8
+- **TypeScript** 5.9
 - **React** 19.1
 
 ### Bitcoin & Cryptography
