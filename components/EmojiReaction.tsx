@@ -1,3 +1,4 @@
+import { platformStyles } from '@/constants/themes';
 import React, { useCallback, useEffect, useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Animated, {

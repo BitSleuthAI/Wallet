@@ -1,3 +1,4 @@
+import { platformStyles } from '@/constants/themes';
 import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useCallback } from 'react';
@@ -75,7 +76,7 @@ export default function PremiumButton({
     }
   }, [disabled, loading, onPress, scale, opacity]);
 
-  const getGradientColors = () => {
+  const getGradientColors = (): readonly [string, string] => {
     switch (variant) {
       case 'primary':
         return ['#26F5FE', '#00BCD4'];
@@ -94,7 +95,7 @@ export default function PremiumButton({
     <>
       {loading && <ActivityIndicator size="small" color="white" style={styles.loader} />}
       {!loading && icon && <>{icon}</>}
-      <Text style={[styles.text, textStyle, icon && styles.textWithIcon]}>
+      <Text style={[styles.text, textStyle, icon ? { marginLeft: 8 } : null]}>
         {loading ? 'Loading...' : title}
       </Text>
     </>

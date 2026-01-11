@@ -63,7 +63,7 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
   // This prevents showing used addresses after receiving funds
   useFocusEffect(
     useCallback(() => {
-      if (currentWallet?.xpub) {
+      if (currentWallet?.xpub && walletService.clearAddressCache) {
         console.log('🔄 Receive screen focused - clearing address cache for fresh data');
         walletService.clearAddressCache(currentWallet.xpub);
       }
@@ -86,7 +86,9 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
         console.log('🔍 Loading first unused receiving address...');
         
         // Get first unused address within gap limit
-        const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
+        const unusedAddress = walletService.getFirstUnusedReceivingAddress 
+          ? await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub)
+          : null;
         
         if (unusedAddress) {
           console.log('✅ Found first unused address:', unusedAddress.substring(0, 20) + '...');
@@ -186,7 +188,9 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
         
         // Reload the first unused address after generating a new one
         try {
-          const unusedAddress = await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub);
+          const unusedAddress = walletService.getFirstUnusedReceivingAddress
+            ? await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub)
+            : null;
           setCurrentAddress(unusedAddress || newlyGeneratedAddress);
         } catch (error) {
           console.error('❌ Failed to reload first unused address:', error);

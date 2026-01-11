@@ -92,7 +92,7 @@ export default function CoinControlScreen() {
     console.log('🔍 Coin control: Starting filtering with', utxos.length, 'UTXOs');
     console.log('🔍 Coin control: Filter settings:', { filterBy, hideSmallUtxos });
     
-    let filtered = utxos.filter(utxo => {
+    let filtered = utxos.filter((utxo: UTXO) => {
       console.log('🔍 Coin control: Filtering UTXO:', {
         txid: utxo.txid?.substring(0, 10) + '...',
         value: utxo.value,
@@ -131,7 +131,7 @@ export default function CoinControlScreen() {
     
     console.log('🔍 Coin control: After filtering:', filtered.length, 'UTXOs remain');
 
-    const sorted = filtered.sort((a, b) => {
+    const sorted = filtered.sort((a: UTXO, b: UTXO) => {
       let comparison = 0;
       
       switch (sortBy) {
@@ -155,7 +155,7 @@ export default function CoinControlScreen() {
     });
     
     console.log('🔍 Coin control: Final sorted UTXOs:', sorted.length);
-    console.log('🔍 Coin control: Final UTXO details:', sorted.map(u => ({
+    console.log('🔍 Coin control: Final UTXO details:', sorted.map((u: UTXO) => ({
       txid: u.txid?.substring(0, 10) + '...',
       vout: u.vout,
       value: u.value,
@@ -167,7 +167,7 @@ export default function CoinControlScreen() {
   }, [utxos, sortBy, sortAscending, filterBy, hideSmallUtxos]);
 
   const toggleUtxoSelection = (utxoId: string) => {
-    const utxo = utxos.find(item => `${item.txid}:${item.vout}` === utxoId);
+    const utxo = utxos.find((item: UTXO) => `${item.txid}:${item.vout}` === utxoId);
     if (utxo?.frozen && !selectedUtxos.has(utxoId)) {
       return;
     }
@@ -181,7 +181,7 @@ export default function CoinControlScreen() {
   };
 
   const toggleUtxoFreeze = (utxoId: string) => {
-    const target = utxos.find(utxo => `${utxo.txid}:${utxo.vout}` === utxoId);
+    const target = utxos.find((utxo: UTXO) => `${utxo.txid}:${utxo.vout}` === utxoId);
     const wasFrozen = target?.frozen ?? false;
     coinControl.toggleFreeze(utxoId);
     // Note: No need to update local state - the coinControl store manages frozen status
@@ -198,8 +198,8 @@ export default function CoinControlScreen() {
 
   const selectAllUtxos = () => {
     const allIds = filteredAndSortedUtxos
-      .filter(utxo => !utxo.frozen)
-      .map(utxo => `${utxo.txid}:${utxo.vout}`);
+      .filter((utxo: UTXO) => !utxo.frozen)
+      .map((utxo: UTXO) => `${utxo.txid}:${utxo.vout}`);
     setSelectedUtxos(new Set(allIds));
   };
 
@@ -266,12 +266,12 @@ export default function CoinControlScreen() {
 
   const totalSelectedValue = useMemo(() => {
     return filteredAndSortedUtxos
-      .filter(utxo => selectedUtxos.has(`${utxo.txid}:${utxo.vout}`))
-      .reduce((sum, utxo) => sum + utxo.value, 0);
+      .filter((utxo: UTXO) => selectedUtxos.has(`${utxo.txid}:${utxo.vout}`))
+      .reduce((sum: number, utxo: UTXO) => sum + utxo.value, 0);
   }, [filteredAndSortedUtxos, selectedUtxos]);
 
   const totalValue = useMemo(() => {
-    return filteredAndSortedUtxos.reduce((sum, utxo) => sum + utxo.value, 0);
+    return filteredAndSortedUtxos.reduce((sum: number, utxo: UTXO) => sum + utxo.value, 0);
   }, [filteredAndSortedUtxos]);
 
   const UtxoItem = ({ utxo }: { utxo: UTXO }) => {
@@ -602,7 +602,7 @@ export default function CoinControlScreen() {
             </View>
             
             {/* UTXO Items */}
-            {filteredAndSortedUtxos.map((utxo) => (
+            {filteredAndSortedUtxos.map((utxo: UTXO) => (
               <UtxoItem key={`${utxo.txid}:${utxo.vout}`} utxo={utxo} />
             ))}
             

@@ -696,8 +696,12 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
   try {
     // Check cache first
     if (addressIndexCache.has(targetAddress)) {
-      const cachedIndex = addressIndexCache.get(targetAddress)!;
-      console.log(`✅ Found cached BIP32 index ${cachedIndex} for address: ${targetAddress}`);
+      const cachedValue = addressIndexCache.get(targetAddress)!;
+      console.log(`✅ Found cached BIP32 index ${cachedValue} for address: ${targetAddress}`);
+      // If cached value is a string, parse the index from it
+      const cachedIndex = typeof cachedValue === 'string' 
+        ? parseInt(cachedValue.split(':')[1], 10)
+        : cachedValue;
       return cachedIndex;
     }
     

@@ -321,7 +321,7 @@ export default function WalletAddressesScreen() {
         </View>
         
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {addressesQuery.isLoading && (!addressesQuery.data || addressesQuery.data.length === 0) ? (
+        {addressesQuery.isLoading && addressData.length === 0 ? (
           <View style={styles.loadingState}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>

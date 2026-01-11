@@ -1,5 +1,6 @@
 import { HapticService } from '@/services/haptic-service';
 import { Check } from 'lucide-react-native';
+import { platformStyles } from '@/constants/themes';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
