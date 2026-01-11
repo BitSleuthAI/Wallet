@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Open Source Release**: BitSleuth Wallet is now open source under AGPL-3.0 license
+  - GitHub Actions workflows for CI/CD (lint, build verification, security scanning)
+  - Comprehensive build guide for new contributors
+  - Architecture documentation
+  - Contributing guidelines with documentation organization standards
+  - Security scanning with dependency review and secret detection
+  - GitHub Discussions for community support
+  - Issue and PR templates for structured contributions
+
 ### Security
 - **CVE-2025-55182**: Updated React to version 19.1.2 to address security vulnerability
   - Updated `react` from 19.1.0 to 19.1.2
@@ -383,13 +393,15 @@ BitSleuth Wallet/
 
 ### Contributing
 
-This is proprietary software owned by BitSleuth. Contributions are limited to authorized BitSleuth personnel only. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+BitSleuth Wallet is open source software! We welcome contributions from the community. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to contribute.
 
 ### License
 
-**PROPRIETARY SOFTWARE** - Copyright © 2025 BitSleuth. All rights reserved.
+**Open Source Software - AGPL-3.0**
 
-For licensing inquiries: legal@bitsleuth.ai
+Copyright © 2025 BitSleuth. Licensed under the GNU Affero General Public License v3.0.
+
+This program is free software: you can redistribute it and/or modify it under the terms of the AGPL-3.0 license. See [LICENSE](LICENSE) for details.
 
 ---
 
