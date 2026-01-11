@@ -19,6 +19,13 @@ let bip32Module: unknown = null;
 const NON_RBF_SEQUENCE = 0xFFFFFFFF;
 
 /**
+ * Minimum required fee increase (as a fraction of the original fee)
+ * to consider a replacement transaction for RBF.
+ * For example, 0.1 means a 10% minimum fee increase.
+ */
+const MIN_RBF_FEE_INCREASE_RATE = 0.1;
+
+/**
  * Validates the given ECC library by checking basic functionality.
  * Throws an error if validation fails.
  */
@@ -36,8 +43,6 @@ function validateECCLibrary(ecc: any): void {
   if (!publicKey || publicKey.length !== 33) {
     throw new Error('ECC point generation failed');
   }
-
-  console.log('✅ ECC library validation passed');
 }
 
 export interface RBFTransaction {
@@ -54,7 +59,7 @@ export interface RBFValidationResult {
   isValid: boolean;
   canReplace: boolean;
   reason?: string;
-  originalTx?: any;
+  originalTx?: Transaction;
   utxos?: UTXO[];
 }
 
@@ -519,7 +524,7 @@ export async function createReplacementTransaction(
     
     // Ensure the new fee meets RBF requirements (must be higher than original)
     // Only apply minimum increase if user's requested fee is too low
-    const minFeeIncrease = Math.ceil(originalFee * 0.1); // 10% increase minimum for RBF
+    const minFeeIncrease = Math.ceil(originalFee * MIN_RBF_FEE_INCREASE_RATE); // minimum increase for RBF
     const actualTargetFee = Math.max(targetFee, originalFee + minFeeIncrease);
     
     const feeIncrease = actualTargetFee - originalFee;
