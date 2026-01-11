@@ -35,11 +35,13 @@ try {
     generateAddressesForView: importedService.generateAddressesForView,
     isAddressInWallet: importedService.isAddressInWallet,
     discoverUsedAddresses: importedService.discoverUsedAddresses,
-    getWalletData: importedService.getWalletData
+    getWalletData: importedService.getWalletData,
+    clearAddressCache: importedService.clearAddressCache,
+    getFirstUnusedReceivingAddress: importedService.getFirstUnusedReceivingAddress
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'generateAddressesForView', 'isAddressInWallet', 'discoverUsedAddresses', 'getWalletData'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet', 'generateAddressFromXpub', 'generateNewAddress', 'getPrivateKey', 'findNextUnusedAddressIndexWithCycling', 'generateAddressBatchForView', 'generateAddressesForView', 'isAddressInWallet', 'discoverUsedAddresses', 'getWalletData', 'clearAddressCache', 'getFirstUnusedReceivingAddress'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -63,7 +65,9 @@ try {
     generateAddressesForView: async () => { throw new Error('Wallet service not available'); },
     isAddressInWallet: async () => { throw new Error('Wallet service not available'); },
     discoverUsedAddresses: async () => { throw new Error('Wallet service not available'); },
-    getWalletData: async () => { throw new Error('Wallet service not available'); }
+    getWalletData: async () => { throw new Error('Wallet service not available'); },
+    clearAddressCache: () => {},
+    getFirstUnusedReceivingAddress: async () => null
   };
 }
 
@@ -2226,6 +2230,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       balance,
       balanceUSD: balance * (priceQuery.data?.usd || 0),
       bitcoinPrice: priceQuery.data,
+      priceQuery,
       isLoadingBalance: balanceQuery.isLoading && lastBalanceRef.current === null,
       isRefreshingBalance: balanceQuery.isFetching && lastBalanceRef.current !== null,
       isLoadingPrice: priceQuery.isLoading,
@@ -2234,7 +2239,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       balanceError: balanceQuery.error,
       priceError: priceQuery.error,
     };
-  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
+  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error, priceQuery]);
 
   const stableTransactions = transactionsQuery.data ?? lastTransactionsRef.current;
   useEffect(() => {

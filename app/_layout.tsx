@@ -21,7 +21,7 @@ import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View, EmitterSubscription, NativeModules } from 'react-native';
+import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View, NativeEventSubscription, NativeModules } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -51,7 +51,7 @@ class ErrorBoundary extends Component<
   { children: ReactNode },
   { hasError: boolean; colorScheme: 'light' | 'dark' | null | undefined }
 > {
-  private appearanceSubscription: EmitterSubscription | undefined;
+  private appearanceSubscription: NativeEventSubscription | undefined;
 
   constructor(props: { children: ReactNode }) {
     super(props);

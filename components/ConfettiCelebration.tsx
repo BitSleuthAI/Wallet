@@ -1,7 +1,9 @@
 import { HapticService } from '@/services/haptic-service';
 import React, { useEffect, useRef } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Dimensions, StyleSheet, View } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+
+const { height: screenHeight } = Dimensions.get('window');
 
 interface ConfettiCelebrationProps {
   isVisible: boolean;
@@ -73,16 +75,16 @@ export default function ConfettiCelebration({
   };
 
   // Position configuration
-  const getPositionStyle = () => {
+  const getPositionStyle = (): { top?: number; bottom?: number } => {
     switch (position) {
       case 'top':
         return { top: 100 };
       case 'center':
-        return { top: '50%' };
+        return { top: screenHeight / 2 };
       case 'bottom':
         return { bottom: 100 };
       default:
-        return { top: '50%' };
+        return { top: screenHeight / 2 };
     }
   };
 

@@ -43,7 +43,7 @@ export default function TransactionDetailsScreen() {
 
   useEffect(() => {
     if (txid && transactions) {
-      const tx = transactions.find(t => t.txid === txid);
+      const tx = transactions.find((t: Transaction) => t.txid === txid);
       if (tx) {
         setTransaction(tx);
         lastTxRef.current = tx;
@@ -580,6 +580,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: platformStyles.spacing.lg,
     borderRadius: platformStyles.borderRadius.medium,
     marginBottom: platformStyles.spacing.sm,
+  },
+  disabledActionButton: {
+    opacity: 0.5,
   },
   actionButtonText: {
     ...platformStyles.typography.bodyLarge,

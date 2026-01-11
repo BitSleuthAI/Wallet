@@ -83,16 +83,20 @@ interface NormalizedVinSource {
 
 // Some transaction detail responses include extra fields such as `net_amount` and `vsize`.
 // Model those explicitly instead of using `as any` to preserve type safety.
-interface ExtendedTransactionDetails extends Transaction {
+interface ExtendedTransactionDetails extends Omit<Transaction, 'status'> {
   net_amount?: number;
-  vsize?: number;
   time?: number;
-  confirmations?: number;
-  size?: number;
   weight?: number;
   version?: number;
   locktime?: number;
-  rbf?: boolean;
+  vin?: any[];
+  vout?: any[];
+  status?: {
+    confirmed?: boolean;
+    block_height?: number;
+    block_hash?: string;
+    block_time?: number;
+  } | 'pending' | 'confirmed' | 'failed';
 }
 
 export default function TransactionExplorerScreen() {
@@ -123,7 +127,7 @@ export default function TransactionExplorerScreen() {
         setError(null);
       }
 
-      const localTx = transactions?.find(t => t.txid === txid) || lastDetailsRef.current[txid] || null;
+      const localTx = transactions?.find((t: Transaction) => t.txid === txid) || lastDetailsRef.current[txid] || null;
       if (localTx) {
         lastDetailsRef.current[txid] = localTx;
       }
@@ -144,7 +148,7 @@ export default function TransactionExplorerScreen() {
         } as Transaction;
         lastDetailsRef.current[txid] = summaryTransaction;
 
-        const explorerSummary = buildExplorerData(summaryTransaction, bitcoinPrice, currentWallet);
+        const explorerSummary = buildExplorerData(summaryTransaction, bitcoinPrice || null, currentWallet);
 
         if (isMounted) {
           setTransaction(summaryTransaction);
@@ -155,7 +159,7 @@ export default function TransactionExplorerScreen() {
           const cached = lastDetailsRef.current[txid];
           if (cached) {
             setTransaction(cached);
-            setExplorerData(buildExplorerData(cached, bitcoinPrice, currentWallet));
+            setExplorerData(buildExplorerData(cached, bitcoinPrice || null, currentWallet));
           } else {
             setExplorerData(null);
             setError(error.message || 'Failed to fetch transaction details');
@@ -687,13 +691,14 @@ const styles = StyleSheet.create({
 });
 
 const buildExplorerData = (
-  txDetails: Transaction,
-  bitcoinPrice: { usd?: number } | null,
+  txDetails: Transaction | ExtendedTransactionDetails,
+  bitcoinPrice: { usd?: number } | null | undefined,
   currentWallet: Wallet | null,
 ): TransactionExplorerData => {
-  const statusInfo = txDetails.status || {};
-  const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : txDetails.vin || [];
-  const voutList = Array.isArray(txDetails.outputs) ? txDetails.outputs : txDetails.vout || [];
+  const extendedTx = txDetails as ExtendedTransactionDetails;
+  const statusInfo = (typeof extendedTx.status === 'object' ? extendedTx.status : {}) as { confirmed?: boolean; block_height?: number; block_hash?: string; block_time?: number };
+  const vinList = Array.isArray(txDetails.inputs) ? txDetails.inputs : extendedTx.vin || [];
+  const voutList = Array.isArray(txDetails.outputs) ? txDetails.outputs : extendedTx.vout || [];
 
   // Normalize vin objects to ensure consistent structure.
   // Some sources provide prevout directly, others provide value/address at the top level.
@@ -708,8 +713,8 @@ const buildExplorerData = (
     scriptpubkey_address: vout.address ?? vout.scriptpubkey_address,
   }));
 
-  const inputValueSats = normalizeVin.reduce((sum, vin) => sum + (vin.prevout?.value ?? 0), 0);
-  const outputValueSats = normalizeVout.reduce((sum, vout) => sum + (vout.value ?? 0), 0);
+  const inputValueSats = normalizeVin.reduce((sum: number, vin: any) => sum + (vin.prevout?.value ?? 0), 0);
+  const outputValueSats = normalizeVout.reduce((sum: number, vout: any) => sum + (vout.value ?? 0), 0);
   const feeSats = txDetails.fee ?? 0;
   const feeBtc = feeSats / SATOSHIS_PER_BTC;
 
@@ -720,13 +725,13 @@ const buildExplorerData = (
     }
 
     if (addressSet.size > 0) {
-      const received = normalizeVout.reduce((sum, output) =>
+      const received = normalizeVout.reduce((sum: number, output: any) =>
         output.scriptpubkey_address && addressSet.has(output.scriptpubkey_address)
           ? sum + (output.value ?? 0)
           : sum,
       0);
 
-      const sent = normalizeVin.reduce((sum, input) =>
+      const sent = normalizeVin.reduce((sum: number, input: any) =>
         input.prevout?.scriptpubkey_address && addressSet.has(input.prevout.scriptpubkey_address)
           ? sum + (input.prevout?.value ?? 0)
           : sum,
@@ -765,11 +770,11 @@ const buildExplorerData = (
     version: extendedTxDetails.version ?? 0,
     locktime: extendedTxDetails.locktime ?? 0,
     rbf: extendedTxDetails.rbf ?? false,
-    inputs: normalizeVin.map(vin => ({
+    inputs: normalizeVin.map((vin: any) => ({
       address: vin.prevout?.scriptpubkey_address ?? 'Unknown',
       value: (vin.prevout?.value ?? 0) / SATOSHIS_PER_BTC,
     })),
-    outputs: normalizeVout.map(vout => ({
+    outputs: normalizeVout.map((vout: any) => ({
       address: vout.scriptpubkey_address ?? 'Unknown',
       value: (vout.value ?? 0) / SATOSHIS_PER_BTC,
     })),
