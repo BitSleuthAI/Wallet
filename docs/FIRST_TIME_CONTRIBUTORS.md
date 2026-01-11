@@ -15,7 +15,7 @@ We label issues to help you find good starting points:
 - 🔵 **`documentation`**: Improve our docs
 - 🟣 **`bug`**: Fix a bug
 
-Browse issues: [Good First Issues](https://github.com/BitSleuthAI/Wallet/labels/good%20first%20issue)
+Browse issues: [Good First Issues](https://github.com/BitSleuthAI/Wallet/issues?q=is%3Aissue+is%3Aopen+label%3A%22good+first+issue%22)
 
 ### 2. Set Up Your Development Environment
 
@@ -293,7 +293,7 @@ New to React Native or Bitcoin development? Here are some helpful resources:
 Have questions about contributing? Feel free to:
 - Open a [Discussion](https://github.com/BitSleuthAI/Wallet/discussions)
 - Comment on an issue
-- Reach out at opensource@bitsleuth.ai
+- Contact us via [GitHub Issues](https://github.com/BitSleuthAI/Wallet/issues) for support
 
 **Welcome to the BitSleuth Wallet community! We're excited to have you here.** 🚀
 

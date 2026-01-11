@@ -169,7 +169,7 @@ The services layer encapsulates all business logic and external API interactions
 - Background updates
 - Cache invalidation
 
-#### **AsyncStorage**
+#### **AsyncStorage (Persistent Storage)**
 - Wallet persistence
 - Encrypted mnemonic storage
 - User preferences
