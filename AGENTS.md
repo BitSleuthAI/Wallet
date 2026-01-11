@@ -511,4 +511,132 @@ node scripts/test-biometric.js
 
 ---
 
-**For unclear conventions or missing patterns, refer to recent code changes or ask the development team for clarification.**
+## Skills Feedback Loop System
+
+**BitSleuth Wallet** implements a self-improving skills system where agent skills evolve based on real-world usage outcomes. This creates a living, adaptive knowledge base rather than static documentation.
+
+### How It Works
+
+Skills (like `developer-guide`, `frontend-design`, `webapp-testing`) learn from experience through a structured feedback loop:
+
+1. **Skill Usage**: Agent invokes a skill to complete a task
+2. **Outcome Observation**: Task succeeds, fails, or partially succeeds
+3. **Reflection**: Agent reflects on what worked, what didn't, and what was learned
+4. **Recording**: Agent logs the experience in the skill's `SKILL_MEMORY.md` file
+5. **Pattern Recognition**: Over time, patterns emerge from accumulated feedback
+6. **Skill Evolution**: When patterns are validated, `SKILL.md` is updated with improvements
+
+### File Structure
+
+Each skill directory (`.github/skills/[skill-name]/`) contains:
+
+- **`SKILL.md`** - Core skill instructions (updated deliberately based on validated patterns)
+- **`SKILL_MEMORY.md`** - Learning memory that captures feedback from each usage (updated frequently)
+- **Relationship**: `SKILL_MEMORY.md` acts as a buffer where experiences accumulate; proven patterns graduate to `SKILL.md`
+
+### Agent Responsibilities
+
+#### When Using a Skill
+
+1. **Read both files**: Check `SKILL.md` for core guidance and `SKILL_MEMORY.md` for recent learnings
+2. **Execute the task**: Apply the guidance from the skill
+3. **Observe the outcome**: Did it succeed? Partially? Fail?
+
+#### After Using a Skill
+
+1. **Reflect on the experience**:
+   - What specific task did you perform?
+   - What aspects of the skill's guidance were helpful?
+   - What was missing or misleading?
+   - What did you learn that others should know?
+
+2. **Record feedback in `SKILL_MEMORY.md`**:
+   - Add an entry to the Feedback Log section
+   - Follow the template in `.github/skills/FEEDBACK_TEMPLATE.md`
+   - Be specific with examples and context
+   - Assign impact level: HIGH, MEDIUM, or LOW
+
+3. **Identify patterns** (if multiple feedback entries exist):
+   - Do you see repeated successes or failures?
+   - Are there common gaps in coverage?
+   - Should any learnings be elevated to `SKILL.md`?
+
+4. **Propose updates** (if warranted):
+   - Add recommendations to "Pending SKILL.md Updates" section
+   - Don't edit `SKILL.md` directly yet—let patterns accumulate
+   - High-impact security learnings may warrant immediate updates
+
+### When to Update SKILL.md
+
+Update a skill's core instructions when:
+
+- ✅ **Strong pattern emerges**: Multiple feedback entries point to the same issue
+- ✅ **Critical gap found**: Missing guidance causes repeated failures
+- ✅ **Best practice validated**: A technique succeeds consistently across different contexts
+- ✅ **Ecosystem evolves**: Libraries, frameworks, or Bitcoin protocol updates
+- ✅ **Security issue discovered**: Any security-related learning (immediate update)
+
+Do NOT update based on:
+
+- ❌ Single isolated incidents (unless security-critical)
+- ❌ Unvalidated theories or hunches
+- ❌ Temporary workarounds
+- ❌ Personal preferences without evidence
+
+### Example Feedback Entry
+
+```markdown
+### 2026-01-11 18:30 - SUCCESS
+
+**Skill Used**: frontend-design
+
+**Task Context**: 
+Created transaction details screen with hash display, confirmations, and status.
+
+**Outcome**:
+Successfully implemented with positive feedback. Discovered monospace font 
+requirement for Bitcoin data not covered in SKILL.md.
+
+**What Worked Well**:
+- Typography scale perfect for titles
+- Spring animations felt natural
+- Haptic feedback on copy actions (from previous SKILL_MEMORY insight)
+
+**What Didn't Work**:
+- No guidance on monospace fonts for transaction hashes/addresses
+- Missing "copy to clipboard" interaction pattern
+
+**Key Learnings**:
+- Bitcoin technical data (hashes, addresses) MUST use monospace fonts
+- Copy actions need: haptic + visual + temporal feedback
+- Technical data benefits from smaller font size (14pt vs 16pt)
+
+**Recommended Updates**:
+1. Add section: "Displaying Technical/Monospace Data" to SKILL.md
+2. Add pattern: "Copy to Clipboard Interactions" with example
+3. Update typography guidance with technical data exceptions
+
+**Impact Level**: MEDIUM
+```
+
+### Benefits
+
+- **Continuous Improvement**: Skills get better with every use
+- **Evidence-Based**: Changes based on real outcomes, not speculation  
+- **Institutional Memory**: Knowledge persists across agent sessions
+- **Collaborative Learning**: Multiple agents contribute to shared skills
+- **Balanced Stability**: Core guidance stays stable while memory captures variation
+
+### Resources
+
+- **Feedback Loop Guide**: `.github/skills/FEEDBACK_LOOP_GUIDE.md` - Complete system documentation
+- **Feedback Template**: `.github/skills/FEEDBACK_TEMPLATE.md` - Template for recording outcomes
+- **Skill Memories**: Each skill has its own `SKILL_MEMORY.md` file for accumulated learnings
+
+### Key Principle
+
+> **Skills are living systems.** Don't just follow instructions—observe outcomes, record learnings, and contribute to collective improvement. Your feedback makes the next agent more effective.
+
+---
+
+**For unclear conventions or missing patterns, refer to recent code changes, check skill memory files, or ask the development team for clarification.**
