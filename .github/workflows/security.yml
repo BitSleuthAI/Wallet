@@ -1,0 +1,107 @@
+name: 🔒 Security Scan
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+  schedule:
+    # Run weekly on Mondays at 00:00 UTC
+    - cron: '0 0 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Dependency Review
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          
+  npm-audit:
+    name: NPM Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: 🔒 Run npm audit
+        run: |
+          npm audit --audit-level=moderate || true
+          echo "⚠️ Review audit results above"
+        continue-on-error: true
+        
+  secret-scan:
+    name: Secret Scanning
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          
+      - name: 🔍 TruffleHog Secret Scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --debug --only-verified
+          
+  file-check:
+    name: Sensitive File Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 🔍 Check for sensitive files
+        run: |
+          echo "Checking for sensitive files that should not be committed..."
+          
+          # Check for actual Firebase config files (not .example files)
+          if [ -f "google-services.json" ] && ! [[ "google-services.json" =~ \.example ]]; then
+            echo "❌ ERROR: google-services.json found in repository"
+            exit 1
+          fi
+          
+          if [ -f "GoogleService-Info.plist" ] && ! [[ "GoogleService-Info.plist" =~ \.example ]]; then
+            echo "❌ ERROR: GoogleService-Info.plist found in repository"
+            exit 1
+          fi
+          
+          if find . -name "*.p8" -o -name "*.p12" -o -name "*.key" -o -name "*.pem" | grep -v node_modules | grep -q .; then
+            echo "❌ ERROR: Private key files found in repository"
+            exit 1
+          fi
+          
+          if find . -name "*.jks" -o -name "*.keystore" | grep -v node_modules | grep -q .; then
+            echo "❌ ERROR: Keystore files found in repository"
+            exit 1
+          fi
+          
+          if [ -f ".env" ] || [ -f ".env.local" ]; then
+            echo "❌ ERROR: Environment files found in repository"
+            exit 1
+          fi
+          
+          echo "✅ No sensitive files detected"

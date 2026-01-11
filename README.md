@@ -455,7 +455,14 @@ eas submit --platform android
 
 We welcome contributions from the community! BitSleuth Wallet is open source software, and we appreciate your help in making it better.
 
-**For detailed contribution guidelines, including documentation organization and code style, see [CONTRIBUTING.md](CONTRIBUTING.md).**
+### Quick Links for Contributors
+
+- 📖 **[Contributing Guidelines](CONTRIBUTING.md)** - Start here for contribution rules and guidelines
+- 🏗️ **[Build Guide](docs/BUILD_GUIDE.md)** - Complete setup instructions for development
+- 🏛️ **[Architecture Overview](docs/ARCHITECTURE.md)** - Understand the codebase structure
+- 🆕 **[First-Time Contributors Guide](docs/FIRST_TIME_CONTRIBUTORS.md)** - Perfect for newcomers to open source
+- ⚡ **[Quick Reference](docs/QUICK_REFERENCE.md)** - Common commands and patterns
+- 🔒 **[Security Policy](SECURITY.md)** - Report security vulnerabilities
 
 ### Quick Guidelines
 - Follow TypeScript best practices
@@ -474,6 +481,8 @@ We welcome contributions from the community! BitSleuth Wallet is open source sof
 4. Commit your changes (`git commit -m 'Add amazing feature'`)
 5. Push to your branch (`git push origin feature/amazing-feature`)
 6. Open a Pull Request
+
+**For detailed instructions, see our [First-Time Contributors Guide](docs/FIRST_TIME_CONTRIBUTORS.md).**
 
 ### Documentation Organization
 

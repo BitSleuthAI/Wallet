@@ -1,0 +1,59 @@
+name: 🏗️ Build Verification
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+  push:
+    branches: [ main, develop ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-check:
+    name: TypeScript Build Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: 📥 Install dependencies
+        run: npm ci
+        
+      - name: 🔍 TypeScript Check
+        run: npx tsc --noEmit
+        
+      - name: ✅ Build check passed
+        if: success()
+        run: echo "✅ TypeScript compilation successful"
+        
+  expo-check:
+    name: Expo Doctor
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+        
+      - name: 📦 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          
+      - name: 📥 Install dependencies
+        run: npm ci
+        
+      - name: 🏥 Run Expo Doctor
+        run: npx expo-doctor@latest
+        continue-on-error: true
+        
+      - name: ✅ Expo check completed
+        run: echo "✅ Expo doctor check completed"
