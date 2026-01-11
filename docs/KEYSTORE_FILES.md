@@ -105,16 +105,29 @@ keytool -genkeypair -v -storetype PKCS12 \
 The repository's `.gitignore` file includes the following keystore-related exclusions:
 
 ```gitignore
-*.jks      # Java KeyStore files
-*.p12      # PKCS12 files
-*.key      # Private key files
+# Android keystores
+*.jks                          # Java KeyStore files (Android production keystores)
+*.keystore                     # Android keystore files
+!android/app/debug.keystore    # Exception: Allow debug keystore (safe, uses default credentials)
+
+# iOS certificates and provisioning
+*.p12                          # PKCS12 certificate files
+*.p8                           # Apple AuthKey files
+*.key                          # Private key files
+*.mobileprovision              # iOS provisioning profiles
 ```
 
-These patterns ensure that production keystores and other sensitive key material are never accidentally committed to version control.
+These patterns ensure that production keystores and other sensitive key material are never accidentally committed to version control, while allowing the debug keystore to remain tracked since it uses publicly-known default credentials.
+
+**Important:** The `debug.keystore` is explicitly allowed via the negation pattern `!android/app/debug.keystore` because it's safe for version control.
 
 ## Android-Specific Gitignore
 
-The `android/.gitignore` file does not explicitly exclude keystore files, but the root `.gitignore` covers them. The debug keystore is intentionally tracked in version control as it uses default, publicly-known credentials and is safe to share.
+The `android/.gitignore` file does not explicitly exclude keystore files, as the root `.gitignore` covers them through the `*.keystore` and `*.jks` patterns. The debug keystore is intentionally tracked in version control (via the negation pattern `!android/app/debug.keystore`) as it uses default, publicly-known credentials and is safe to share.
+
+## iOS-Specific Gitignore
+
+The `ios/.gitignore` file does not explicitly exclude certificate files, as the root `.gitignore` covers iOS-specific certificate and provisioning files through patterns like `*.p12`, `*.p8`, `*.key`, and `*.mobileprovision`.
 
 ## Related Concepts
 
