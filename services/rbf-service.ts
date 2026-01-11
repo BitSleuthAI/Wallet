@@ -29,7 +29,12 @@ const MIN_RBF_FEE_INCREASE_RATE = 0.1;
  * Validates the given ECC library by checking basic functionality.
  * Throws an error if validation fails.
  */
-function validateECCLibrary(ecc: any): void {
+interface ECCLibrary {
+  isPrivate(privKey: Uint8Array): boolean;
+  pointFromScalar(scalar: Uint8Array, compressed: boolean): Uint8Array | null;
+}
+
+function validateECCLibrary(ecc: ECCLibrary): void {
   const testPrivateKey = new Uint8Array(32);
   testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
 
@@ -45,9 +50,47 @@ function validateECCLibrary(ecc: any): void {
   }
 }
 
+export interface EsploraTransactionVin {
+  txid?: string;
+  vout?: number;
+  sequence?: number;
+  prevout?: {
+    value?: number;
+    scriptpubkey?: string;
+    scriptpubkey_address?: string;
+  } | null;
+  [key: string]: unknown;
+}
+
+export interface EsploraTransactionVout {
+  value?: number;
+  scriptpubkey?: string;
+  scriptpubkey_address?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Minimal representation of an Esplora transaction used by the RBF service.
+ * Additional fields returned by Esplora are allowed via the index signature.
+ */
+export interface EsploraTransaction {
+  txid: string;
+  version?: number;
+  locktime?: number;
+  vin: EsploraTransactionVin[];
+  vout: EsploraTransactionVout[];
+  status?: {
+    confirmed?: boolean;
+    block_height?: number;
+    block_hash?: string;
+    block_time?: number;
+  };
+  [key: string]: unknown;
+}
+
 export interface RBFTransaction {
   txid: string;
-  originalTx: any; // Raw Esplora transaction with vin/vout properties
+  originalTx: EsploraTransaction; // Raw Esplora transaction with vin/vout properties
   newFeeRate: number;
   newFee: number;
   replacementTx?: string; // hex transaction
@@ -59,7 +102,7 @@ export interface RBFValidationResult {
   isValid: boolean;
   canReplace: boolean;
   reason?: string;
-  originalTx?: any; // Raw Esplora transaction with vin/vout properties
+  originalTx?: EsploraTransaction; // Raw Esplora transaction with vin/vout properties
   utxos?: UTXO[];
 }
 
@@ -72,7 +115,7 @@ export interface RBFValidationResult {
  * causing incorrect RBF validation. This function now detects the format
  * and parses accordingly.
  */
-function parseSequenceNumber(sequence: any): number {
+function parseSequenceNumber(sequence: unknown): number {
   if (typeof sequence === 'number') {
     return sequence;
   }
@@ -415,6 +458,7 @@ export async function createReplacementTransaction(
     const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
+    // TransactionBuilder is deprecated in newer versions of bitcoinjs-lib. Consider migrating to PSBT (Partially Signed Bitcoin Transaction) for better compatibility and future-proofing.
     let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
@@ -947,6 +991,7 @@ async function createCancellationTransaction(
     const bip32Instance = bip32.BIP32Factory(ecc);
     
     // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
+    // TransactionBuilder is deprecated in newer versions of bitcoinjs-lib. Consider migrating to PSBT (Partially Signed Bitcoin Transaction) for better compatibility and future-proofing.
     let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
