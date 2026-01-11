@@ -2,7 +2,7 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Enable debug logging and better error reporting
+// Configure supported platforms for module resolution
 config.resolver.platforms = ['ios', 'android', 'native', 'web'];
 
 // Polyfill Node.js modules for React Native
@@ -24,13 +24,15 @@ config.transformer.minifierConfig = {
 config.server = {
   enhanceMiddleware: (middleware) => {
     return (req, res, next) => {
-      console.log(`[Metro] ${req.method} ${req.url}`);
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(`[Metro] ${req.method} ${req.url}`);
+      }
       return middleware(req, res, next);
     };
   },
 };
 
-// Enable better error handling
+// Configure Metro transformer options for imports and inline requires
 config.transformer.getTransformOptions = async () => ({
   transform: {
     experimentalImportSupport: false,
