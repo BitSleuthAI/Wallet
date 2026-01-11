@@ -414,10 +414,8 @@ export async function createReplacementTransaction(
     }
     const bip32Instance = bip32.BIP32Factory(ecc);
     
-    // Create transaction using PSBT for modern bitcoinjs-lib
-    const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
-    // Keep existing variable name for compatibility with downstream code
-    const txb = psbt as unknown as any;
+    // Create transaction builder (replace TransactionBuilder with PSBT for modern bitcoinjs-lib)
+    let txb = new bitcoin.TransactionBuilder(bitcoin.networks.bitcoin);
     
     // Get our inputs from the original transaction
     const walletAddressesSet = new Set(walletAddresses);
