@@ -1,0 +1,91 @@
+# Frontend Design Skill Memory
+
+This file captures learnings and feedback from using the frontend-design skill. It serves as a living memory that informs future updates to SKILL.md.
+
+## Purpose
+
+The frontend-design skill guides creation of distinctive, production-grade mobile interfaces for React Native + Expo. This memory file tracks:
+- Design patterns that resonate with users
+- Implementation challenges and solutions
+- Platform-specific quirks discovered
+- Visual trends and techniques that prove effective
+
+## Core Principles
+
+These principles guide how this skill evolves:
+
+1. **Design Intent Over Trends**: Thoughtful design decisions beat following trends
+2. **Performance Matters**: Beautiful but laggy UI fails; 60fps is non-negotiable
+3. **Platform Native First**: Respect iOS/Android conventions before breaking them
+4. **Accessibility is Design**: Touch targets, contrast, screen readers are core design constraints
+5. **Real Device Testing**: Simulators lie; test on actual phones
+
+## Feedback Log
+
+### Template for New Entries
+```
+[YYYY-MM-DD] - [SUCCESS/FAILURE/PARTIAL] - [Impact: HIGH/MEDIUM/LOW]
+Context: [What UI/screen was being designed]
+Outcome: [What was created, how it performed]
+Learning: [Design insights gained]
+Action: [How SKILL.md should be updated, if at all]
+```
+
+### Entries
+
+---
+
+**Awaiting first feedback entry...**
+
+When the frontend-design skill is used to create mobile UIs, outcomes should be recorded here. Track what works, what doesn't, and how mobile design thinking evolves.
+
+---
+
+## Pattern Recognition
+
+As feedback accumulates, look for:
+- **Delightful Patterns**: UI techniques that consistently impress → promote in SKILL.md
+- **Performance Pitfalls**: Design choices that cause jank → warn against in SKILL.md
+- **Platform Friction**: Patterns that fight iOS/Android conventions → document better approaches
+- **Accessibility Wins**: Techniques that improve usability → emphasize in SKILL.md
+- **2025 Evolution**: As mobile design evolves → keep skill current
+
+## Design Decisions Archive
+
+Track significant design decisions and their outcomes:
+
+**None yet** - Will be populated with real design choices and results
+
+## Pending SKILL.md Updates
+
+Track recommended updates here before they're applied:
+
+**None yet** - Will be populated based on feedback patterns
+
+## Changelog of Memory-Driven Updates
+
+Track when learnings from this memory file resulted in SKILL.md changes:
+
+**None yet** - This is the initial version
+
+---
+
+## Usage Notes for Agents
+
+When you use the frontend-design skill:
+1. After implementing a UI, document how well the guidance worked
+2. Note any design decisions that deviated from SKILL.md and why
+3. Record user feedback or performance issues if available
+4. Track which examples/patterns from SKILL.md were most useful
+5. Propose specific improvements to design guidance based on real outcomes
+
+## Mobile-Specific Learnings to Watch For
+
+Pay special attention to feedback about:
+- **Touch Interactions**: Did 44pt minimum feel right? Any gesture conflicts?
+- **Typography**: Were the size recommendations readable on actual devices?
+- **Animations**: Did spring physics feel natural? Any jank detected?
+- **Dark Mode**: Did the color systems work well in both themes?
+- **Platform Differences**: Where did iOS and Android require different approaches?
+
+The skill memory evolves mobile design thinking through practice, not theory.
