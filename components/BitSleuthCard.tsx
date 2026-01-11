@@ -1,4 +1,4 @@
-import { createCardShadow, createCardStyle } from '@/constants/themes';
+import { createCardStyle, lightTheme } from '@/constants/themes';
 import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -43,7 +43,7 @@ export default function BitSleuthCard({
   const shadowOpacity = useSharedValue(0.15);
 
   // Color mapping for fun variants
-  const funColors = {
+  const funColors: Record<string, readonly [string, string, ...string[]]> = {
     purple: ['#9B59B6', '#8E44AD'],
     yellow: ['#F1C40F', '#F39C12'],
     pink: ['#E91E63', '#C2185B'],
@@ -84,9 +84,11 @@ export default function BitSleuthCard({
   };
 
   // Card style
+  // Map variant to theme variant
+  const themeVariant = variant === 'gradient' ? 'elevated' : variant as 'default' | 'elevated' | 'fun';
+  
   const cardStyle = [
-    createCardStyle({ colors: {}, shadows: {} }, variant),
-    createCardShadow({ shadows: {} }, shadowElevation),
+    createCardStyle(lightTheme, themeVariant),
     style,
     animatedStyle,
   ];

@@ -1,5 +1,6 @@
 import TransactionItem from '@/components/TransactionItem';
 import { useWallet } from '@/hooks/wallet-store';
+import { Transaction } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
 import React from 'react';
@@ -134,7 +135,7 @@ export default function TransactionHistoryScreen() {
         {/* Transaction List */}
         {transactions.length > 0 && (
           <View style={styles.transactionsList}>
-            {transactions.map((transaction, index) => (
+            {transactions.map((transaction: Transaction, index: number) => (
               <TransactionItem
                 key={`${transaction.txid}-${index}`}
                 transaction={transaction}

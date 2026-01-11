@@ -1,5 +1,6 @@
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
+import { Transaction } from '@/types/wallet';
 import { WifiOff } from 'lucide-react-native';
 import React, { useRef, useState } from 'react';
 import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
@@ -69,7 +70,7 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
         case '1M': return 30;
         case '1Y': return 365;
         case 'All': return Math.max(365, transactions.length > 0 ? 
-          Math.ceil((Date.now() - Math.min(...transactions.map(tx => tx.timestamp))) / (24 * 60 * 60 * 1000)) : 365);
+          Math.ceil((Date.now() - Math.min(...transactions.map((tx: Transaction) => tx.timestamp))) / (24 * 60 * 60 * 1000)) : 365);
         default: return 30;
       }
     };

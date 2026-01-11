@@ -1,4 +1,4 @@
-import { createButtonStyle } from '@/constants/themes';
+import { createButtonStyle, lightTheme } from '@/constants/themes';
 import { HapticService } from '@/services/haptic-service';
 import { LinearGradient } from 'expo-linear-gradient';
 import React from 'react';
@@ -127,8 +127,26 @@ export default function BitSleuthButton({
   };
 
   // Button style
+  // Map variant to theme variant
+  const themeVariant = (() => {
+    switch (variant) {
+      case 'accent':
+      case 'success':
+      case 'warning':
+      case 'error':
+      case 'ghost':
+        return 'primary';
+      case 'secondary':
+        return 'secondary';
+      case 'fun':
+        return 'fun';
+      default:
+        return variant as 'primary' | 'secondary' | 'outline' | 'gradient' | 'fun';
+    }
+  })();
+  
   const buttonStyle = [
-    createButtonStyle({ colors: {}, shadows: {} }, variant),
+    createButtonStyle(lightTheme, themeVariant),
     currentSize,
     style,
     animatedStyle,

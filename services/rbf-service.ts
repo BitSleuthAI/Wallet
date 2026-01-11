@@ -372,8 +372,9 @@ export async function createReplacementTransaction(
       // We just need to verify that our ECC library works correctly
       console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
       try {
-        // Reuse the testPrivateKey defined earlier
-        // (already set to a valid value)
+        // Define test private key for verification
+        const testPrivateKey = new Uint8Array(32);
+        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
         
         // Test if our ECC library can create a public key
         const publicKey = ecc.pointFromScalar(testPrivateKey, true);
@@ -903,6 +904,8 @@ async function createCancellationTransaction(
       // We just need to verify that our ECC library works correctly
       console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
       try {
+        // Define test private key for verification
+        const testPrivateKey = new Uint8Array(32);
         testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
         
         // Test if our ECC library can create a public key
@@ -1239,8 +1242,12 @@ export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddr
   try {
     // Check cache first
     if (addressIndexCache.has(targetAddress)) {
-      const cachedIndex = addressIndexCache.get(targetAddress)!;
-      console.log(`✅ Found cached BIP32 index ${cachedIndex} for address: ${targetAddress}`);
+      const cachedValue = addressIndexCache.get(targetAddress)!;
+      console.log(`✅ Found cached BIP32 index ${cachedValue} for address: ${targetAddress}`);
+      // If cached value is a string, parse the index from it
+      const cachedIndex = typeof cachedValue === 'string' 
+        ? parseInt(cachedValue.split(':')[1], 10)
+        : cachedValue;
       return cachedIndex;
     }
     

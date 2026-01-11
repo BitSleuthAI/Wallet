@@ -442,7 +442,7 @@ export const createNobleECC = () => {
             const parity = resultBytes[0] === 0x03 ? 1 : 0;
             const xOnlyResult = resultBytes.slice(1);
             
-            console.log(`🔧 xOnlyPointAddTweak: even y-coordinate result parity=${parity}, xOnlyPubkey=${Array.from(xOnlyResult).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+            console.log(`🔧 xOnlyPointAddTweak: even y-coordinate result parity=${parity}, xOnlyPubkey=${Array.from(xOnlyResult).map((b: unknown) => (b as number).toString(16).padStart(2, '0')).join('')}`);
             
             return {
               parity,
@@ -468,7 +468,7 @@ export const createNobleECC = () => {
               const parity = resultBytes[0] === 0x03 ? 1 : 0;
               const xOnlyResult = resultBytes.slice(1);
               
-              console.log(`🔧 xOnlyPointAddTweak: odd y-coordinate result parity=${parity}, xOnlyPubkey=${Array.from(xOnlyResult).map(b => b.toString(16).padStart(2, '0')).join('')}`);
+              console.log(`🔧 xOnlyPointAddTweak: odd y-coordinate result parity=${parity}, xOnlyPubkey=${Array.from(xOnlyResult).map((b: unknown) => (b as number).toString(16).padStart(2, '0')).join('')}`);
               
               return {
                 parity,
