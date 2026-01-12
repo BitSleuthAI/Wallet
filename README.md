@@ -33,6 +33,26 @@ BitSleuth Wallet is a client-side Bitcoin wallet built with React Native and Exp
 
 ---
 
+## 📱 Screenshots
+
+### iOS (iPhone)
+
+<div align="center">
+  <img src="docs/images/ios-dashboard.png" alt="iOS Dashboard" width="250" />
+  <img src="docs/images/ios-send.png" alt="iOS Send" width="250" />
+  <img src="docs/images/ios-settings.png" alt="iOS Settings" width="250" />
+</div>
+
+### Android
+
+<div align="center">
+  <img src="docs/images/android-dashboard.png" alt="Android Dashboard" width="250" />
+  <img src="docs/images/android-send.png" alt="Android Send" width="250" />
+  <img src="docs/images/android-settings.png" alt="Android Settings" width="250" />
+</div>
+
+---
+
 ## ✨ Features
 
 ### Core Wallet Features
