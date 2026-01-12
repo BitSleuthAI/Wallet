@@ -93,7 +93,7 @@ This document outlines the comprehensive UI/UX improvements made to the BitSleut
 
 #### Theme Consistency
 - Maintained existing gradient system (coral/cyan themes)
-- Enhanced glassmorphism effects (iOS 18 liquid glass preserved)
+- Enhanced glassmorphism effects (iOS 26 liquid glass preserved)
 - Better color harmony across light and dark modes
 
 ### Phase 5: Component Polish ✅

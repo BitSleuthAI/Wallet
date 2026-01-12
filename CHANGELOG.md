@@ -54,7 +54,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Proper SafeAreaView integration for content padding
 - See [ANDROID_EDGE_TO_EDGE.md](docs/ANDROID_EDGE_TO_EDGE.md) for implementation details
 
-#### 🎨 iOS Liquid Glass Tabs (iOS 18+)
+#### 🎨 iOS Liquid Glass Tabs (iOS 26+)
 - **Migrated to Expo Router NativeTabs** for native iOS liquid glass effect
 - Advanced iOS features:
   - Automatic tab bar minimize behavior on scroll
@@ -239,7 +239,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Platform Support
 
 #### 📱 iOS Support
-- iOS 18+ with liquid glass tabs and advanced blur effects
+- iOS 26+ with liquid glass tabs and advanced blur effects
 - Automatic tab minimize behavior support
 - Face ID and Touch ID support
 - Native SegWit address support

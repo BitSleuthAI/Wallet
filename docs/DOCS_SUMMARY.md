@@ -121,13 +121,13 @@
    - Consistent color system
    - Modern component styling
 
-### iOS 18 Liquid Glass UI
+### iOS 26 Liquid Glass UI
 
 **Key Documents:**
-- `iOS18_LIQUID_GLASS.md`
+- `iOS26_LIQUID_GLASS.md`
 - `LIQUID_GLASS_TABS.md`
 
-**Feature:** iOS 18 system blur materials creating "liquid glass" effect
+**Feature:** iOS 26 system blur materials creating "liquid glass" effect
 
 **Implementation:**
 - Platform detection using React Native `Platform` API
@@ -740,7 +740,7 @@
 
 ### Platform Optimization
 - Edge-to-edge on Android 15+
-- Liquid glass on iOS 18+
+- Liquid glass on iOS 26+
 - New Architecture enabled
 - Platform-specific blur materials
 - Safe area insets handling
