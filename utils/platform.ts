@@ -1,10 +1,10 @@
 import { Platform } from 'react-native';
 
 /**
- * Check if the device is running iOS 18 or higher
- * @returns {boolean} True if iOS 18+, false otherwise
+ * Check if the device is running iOS 26 or higher
+ * @returns {boolean} True if iOS 26+, false otherwise
  */
-export function isIOS18OrHigher(): boolean {
+export function isIOS26OrHigher(): boolean {
   if (Platform.OS !== 'ios') {
     return false;
   }
@@ -12,12 +12,12 @@ export function isIOS18OrHigher(): boolean {
   // Get iOS version
   const version = Platform.Version;
   
-  // Platform.Version on iOS returns a string like "18.0" or a number
+  // Platform.Version on iOS returns a string like "26.0" or a number
   const majorVersion = typeof version === 'string' 
     ? parseInt(version.split('.')[0], 10) 
     : version;
   
-  return majorVersion >= 18;
+  return majorVersion >= 26;
 }
 
 /**
@@ -30,17 +30,17 @@ export function isIOS(): boolean {
 
 /**
  * Get the appropriate blur tint based on iOS version and theme
- * For iOS 18+, use the new system materials for liquid glass effect
+ * For iOS 26+, use the new system materials for liquid glass effect
  * @param isDark - Whether dark mode is enabled
  * @returns {string} The blur tint to use
  */
 export function getLiquidGlassTint(isDark: boolean): string {
-  if (isIOS18OrHigher()) {
-    // Use the new iOS 18 system materials for liquid glass effect
+  if (isIOS26OrHigher()) {
+    // Use the new iOS 26 system materials for liquid glass effect
     return isDark ? 'systemChromeMaterialDark' : 'systemChromeMaterialLight';
   }
   
-  // Fallback to standard blur for iOS < 18
+  // Fallback to standard blur for iOS < 26
   return isDark ? 'dark' : 'light';
 }
 
@@ -50,7 +50,7 @@ export function getLiquidGlassTint(isDark: boolean): string {
  * @returns {string} The blur tint to use
  */
 export function getUltraThinMaterialTint(isDark: boolean): string {
-  if (isIOS18OrHigher()) {
+  if (isIOS26OrHigher()) {
     return isDark ? 'systemUltraThinMaterialDark' : 'systemUltraThinMaterialLight';
   }
   
@@ -63,7 +63,7 @@ export function getUltraThinMaterialTint(isDark: boolean): string {
  * @returns {string} The blur tint to use
  */
 export function getThinMaterialTint(isDark: boolean): string {
-  if (isIOS18OrHigher()) {
+  if (isIOS26OrHigher()) {
     return isDark ? 'systemThinMaterialDark' : 'systemThinMaterialLight';
   }
   

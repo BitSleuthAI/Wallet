@@ -9,7 +9,7 @@ import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { Wallet } from '@/types/wallet';
-import { isIOS18OrHigher } from '@/utils/platform';
+import { isIOS26OrHigher } from '@/utils/platform';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
@@ -577,7 +577,7 @@ function WalletScreenContent() {
         animationType="slide"
         onRequestClose={handleCancelEdit}
       >
-        {isIOS18OrHigher() ? (
+        {isIOS26OrHigher() ? (
           <LiquidGlassView variant="ultraThin" intensity={95} style={styles.modalOverlay}>
             <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
               <View style={styles.editModalHeader}>
