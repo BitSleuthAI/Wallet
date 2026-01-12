@@ -64,7 +64,7 @@ Focus on mobile-native excellence:
 - **Layering**: Use shadows, borders, and blur to create hierarchy without heavy decoration
 - **Blur effects**: Platform-specific blur (iOS: `expo-blur`, Android: subtle overlays) for modern depth
 - **Card design**: Rounded corners (16-24pt radius), subtle shadows, proper elevation
-- **Glass morphism**: Translucent surfaces with backdrop blur for premium feel (iOS 18+ liquid glass tabs)
+- **Glass morphism**: Translucent surfaces with backdrop blur for premium feel (iOS 26+ liquid glass tabs)
 
 ### Platform-Specific Excellence
 - **iOS Fluidity**:

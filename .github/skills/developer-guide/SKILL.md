@@ -151,7 +151,7 @@ This document outlines the technical skills, knowledge areas, and competencies r
 - **iOS Keychain**: Secure data storage (via expo-secure-store)
 - **Face ID / Touch ID**: Biometric authentication integration
 - **App Store Guidelines**: Submission requirements and policies
-- **iOS 18+ Features**: Liquid glass effects, material blur (via expo-glass-effect)
+- **iOS 26+ Features**: Liquid glass effects, material blur (via expo-glass-effect)
 - **Provisioning Profiles**: Code signing and distribution
 
 ### Android Development (Intermediate)
