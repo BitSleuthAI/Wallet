@@ -319,7 +319,7 @@ This document outlines the technical skills, knowledge areas, and competencies r
 - **Layout Animations**: Animating component layout changes
 - **Spring Animations**: Natural, physics-based animations
 
-### Expo Glass Effect (iOS 18+)
+### Expo Glass Effect (iOS 26+)
 - **Material Blur**: Native iOS liquid glass effects
 - **Tab Bar**: Auto-minimizing tabs with glass effect
 - **Platform-Specific**: iOS-only feature with fallbacks
