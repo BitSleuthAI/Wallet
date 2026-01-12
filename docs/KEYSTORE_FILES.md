@@ -1,23 +1,23 @@
 # Keystore Files in BitSleuth Wallet
 
-This document provides a comprehensive overview of keystore files found in the BitSleuth Wallet repository and their purposes.
+This document provides a comprehensive overview of keystore file configuration in the BitSleuth Wallet repository.
 
 ## Overview
 
-Keystores are used in Android development to sign applications. This repository contains a debug keystore for development purposes. Production keystores are intentionally excluded from version control for security reasons.
+Keystores are used in Android development to sign applications. This repository does **not** include keystore files in version control. Each developer generates their own debug keystore locally for development purposes. Production keystores are intentionally excluded from version control for security reasons.
 
-## Keystore Files Found
+## Keystore Files Configuration
 
 ### 1. Android Debug Keystore
-**Location:** `android/app/debug.keystore`
+**Location:** `android/app/debug.keystore` (not included in repository)
 
 **Type:** Java KeyStore (JKS)
 
-**Size:** 2.3 KB
+**Status:** This file is **NOT** tracked in version control and is excluded via `.gitignore`. Each developer generates their own debug keystore locally.
 
 **Purpose:** Used for signing debug and development builds of the Android application.
 
-**Credentials:**
+**Default Credentials:**
 - **Store Password:** `android`
 - **Key Alias:** `androiddebugkey`
 - **Key Password:** `android`
@@ -32,6 +32,14 @@ signingConfigs {
         keyPassword 'android'
     }
 }
+```
+
+**How to Generate:** Android Studio and Gradle automatically generate a debug keystore when building the app if one doesn't exist. Alternatively, you can manually create one using:
+```bash
+keytool -genkey -v -keystore android/app/debug.keystore \
+  -alias androiddebugkey -keyalg RSA -keysize 2048 \
+  -validity 10000 -storepass android -keypass android \
+  -dname "CN=Android Debug,O=Android,C=US"
 ```
 
 **Security Note:** This is a standard Android debug keystore with default credentials. It should **NEVER** be used for production releases. These default credentials are publicly known and are only suitable for development and testing purposes.
@@ -107,8 +115,8 @@ The repository's `.gitignore` file includes the following keystore-related exclu
 ```gitignore
 # Android keystores
 *.jks                          # Java KeyStore files (Android production keystores)
-*.keystore                     # Android keystore files
-!android/app/debug.keystore    # Exception: Allow debug keystore (safe, uses default credentials)
+*.keystore                     # Android keystore files (including debug.keystore)
+android/app/debug.keystore     # Explicitly ignore debug keystore
 
 # iOS certificates and provisioning
 *.p12                          # PKCS12 certificate files
@@ -117,13 +125,13 @@ The repository's `.gitignore` file includes the following keystore-related exclu
 *.mobileprovision              # iOS provisioning profiles
 ```
 
-These patterns ensure that production keystores and other sensitive key material are never accidentally committed to version control, while allowing the debug keystore to remain tracked since it uses publicly-known default credentials.
+These patterns ensure that **all keystore files**, including debug.keystore, are never accidentally committed to version control. While the debug keystore uses default, publicly-known credentials, it is still excluded from version control to prevent confusion and maintain consistency.
 
-**Important:** The `debug.keystore` is explicitly allowed via the negation pattern `!android/app/debug.keystore` because it's safe for version control.
+**Important:** The `debug.keystore` is **NOT** tracked in version control. Each developer should generate their own debug keystore locally, or Android Studio will generate one automatically when building the app.
 
 ## Android-Specific Gitignore
 
-The `android/.gitignore` file does not explicitly exclude keystore files, as the root `.gitignore` covers them through the `*.keystore` and `*.jks` patterns. The debug keystore is intentionally tracked in version control (via the negation pattern `!android/app/debug.keystore`) as it uses default, publicly-known credentials and is safe to share.
+The `android/.gitignore` file also explicitly excludes `debug.keystore` to ensure it is never tracked, regardless of where it is generated within the Android project directory. This provides defense-in-depth against accidentally committing keystore files.
 
 ## iOS-Specific Gitignore
 
@@ -178,7 +186,8 @@ For production builds with EAS:
 
 ## Summary
 
-The BitSleuth Wallet repository contains only one keystore file:
-- **`android/app/debug.keystore`**: Standard Android debug keystore for development
+The BitSleuth Wallet repository **does not contain any keystore files in version control**:
+- **`android/app/debug.keystore`**: Generated locally by each developer for debug builds (not tracked in git)
+- All keystore files (`.keystore`, `.jks`) are excluded via `.gitignore`
 
-Production keystores are intentionally excluded and must be generated separately with secure credentials before releasing the application to end users.
+Production keystores must be generated separately with secure credentials and stored securely outside version control before releasing the application to end users.

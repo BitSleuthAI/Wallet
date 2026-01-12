@@ -15,7 +15,9 @@ expo-env.d.ts
 *.p8
 *.p12
 *.key
+# Ignore all keystore files (including debug.keystore)
 *.keystore
+# Explicitly ignore Android debug keystore
 android/app/debug.keystore
 *.mobileprovision
 

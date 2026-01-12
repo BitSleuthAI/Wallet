@@ -15,4 +15,6 @@ local.properties
 # Bundle artifacts
 *.jsbundle
 
+# Keystore files - never commit these to version control
 debug.keystore
+*.keystore
