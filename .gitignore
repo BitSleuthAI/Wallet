@@ -16,7 +16,7 @@ expo-env.d.ts
 *.p12
 *.key
 *.keystore
-!android/app/debug.keystore
+android/app/debug.keystore
 *.mobileprovision
 
 # Metro
