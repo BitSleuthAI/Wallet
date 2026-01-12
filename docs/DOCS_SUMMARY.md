@@ -131,7 +131,7 @@
 
 **Implementation:**
 - Platform detection using React Native `Platform` API
-- Helper functions: `isIOS18OrHigher()`, `getLiquidGlassTint(isDark)`
+- Helper functions: `isIOS26OrHigher()`, `getLiquidGlassTint(isDark)`
 - `LiquidGlassView` component for translucent backgrounds
 - Migration from `expo-router` Tabs to NativeTabs for iOS 26+ support
 
