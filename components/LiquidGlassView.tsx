@@ -35,7 +35,7 @@ interface LiquidGlassViewProps {
 /**
  * LiquidGlassView component
  * 
- * Renders a blur effect with iOS 18+ liquid glass materials when available.
+ * Renders a blur effect with iOS 26+ liquid glass materials when available.
  * Falls back to standard blur on older iOS versions and renders a semi-transparent
  * view on Android.
  * 
