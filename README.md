@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="docs/images/social-preview.png" alt="BitSleuth Wallet" />
+</div>
+
 # BitSleuth Wallet
 
 <div align="center">
