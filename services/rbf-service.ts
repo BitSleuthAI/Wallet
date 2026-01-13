@@ -3,7 +3,7 @@
  * Implements RBF functionality using Blockstream API
  */
 
-import { Transaction, UTXO } from '@/types/wallet';
+import { UTXO } from '@/types/wallet';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
