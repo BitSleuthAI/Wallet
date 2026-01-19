@@ -18,6 +18,8 @@ jobs:
   update-pods:
     name: Run pod install
     runs-on: macos-latest
+    permissions:
+      contents: write
     timeout-minutes: 15
     
     steps:
