@@ -1,0 +1,80 @@
+# This workflow adds React Native support to Dependabot by automatically running pod install
+# after Dependabot upgrades an npm package.
+# 
+# Background: When npm packages are updated (especially React Native or Expo packages),
+# the iOS Podfile.lock may need to be regenerated to ensure Cocoapods dependencies are in sync.
+# This workflow automates that process.
+#
+# Related Dependabot issue: https://github.com/dependabot/dependabot-core/issues/935
+
+name: Update Cocoapods after Dependabot npm upgrade
+
+on:
+  push:
+    branches:
+      - 'dependabot/npm_and_yarn/**'
+  pull_request:
+    branches:
+      - 'dependabot/npm_and_yarn/**'
+
+jobs:
+  update-pods:
+    name: Run pod install
+    runs-on: macos-latest
+    timeout-minutes: 15
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          # Use a token that can trigger workflows
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: 'package.json'
+          cache: 'npm'
+
+      - name: Install npm packages
+        run: npm ci
+
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ios/Pods
+          key: ${{ runner.os }}-pods-${{ hashFiles('**/Podfile.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-pods-
+
+      - name: Install CocoaPods dependencies
+        run: |
+          cd ios
+          pod install --verbose
+          cd ..
+
+      - name: Generate commit message
+        id: commit_message
+        run: |
+          # Extract package name from branch (e.g., dependabot/npm_and_yarn/package-name-1.2.3)
+          branch=${GITHUB_REF#refs/heads/}
+          package_info=${branch#dependabot/npm_and_yarn/}
+          
+          # Create commit message
+          # Add [dependabot skip] prefix so Dependabot doesn't rebase over our changes
+          commit_message="chore(deps-ios): Update Podfile.lock for ${package_info}
+
+[dependabot skip]"
+          
+          # Use proper output syntax for GitHub Actions
+          echo "message<<EOF" >> $GITHUB_OUTPUT
+          echo "$commit_message" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Commit and push Podfile.lock changes
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: ${{ steps.commit_message.outputs.message }}
+          file_pattern: 'ios/Podfile.lock'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
