@@ -60,16 +60,15 @@ jobs:
           branch=${GITHUB_REF#refs/heads/}
           package_info=${branch#dependabot/npm_and_yarn/}
           
-          # Create commit message
+          # Create commit message using heredoc
           # Add [dependabot skip] prefix so Dependabot doesn't rebase over our changes
-          commit_message="chore(deps-ios): Update Podfile.lock for ${package_info}
-
-[dependabot skip]"
-          
-          # Use proper output syntax for GitHub Actions
-          echo "message<<EOF" >> $GITHUB_OUTPUT
-          echo "$commit_message" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          {
+            echo "message<<EOF"
+            echo "chore(deps-ios): Update Podfile.lock for ${package_info}"
+            echo ""
+            echo "[dependabot skip]"
+            echo "EOF"
+          } >> $GITHUB_OUTPUT
 
       - name: Commit and push Podfile.lock changes
         uses: stefanzweifel/git-auto-commit-action@v5
