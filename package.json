@@ -47,7 +47,7 @@
     "bitcoinjs-lib": "^6.1.7",
     "bs58check": "^4.0.0",
     "events": "^3.3.0",
-    "expo": "54.0.23",
+    "expo": "~54.0.31",
     "expo-asset": "~12.0.9",
     "expo-blur": "~15.0.7",
     "expo-build-properties": "~1.0.9",
@@ -106,7 +106,7 @@
     "eas-cli-local-build-plugin": "^1.0.240",
     "eslint": "^9.35.0",
     "eslint-config-expo": "~10.0.0",
-    "expo-mcp": "^0.1.13",
+    "expo-mcp": "^0.2.1",
     "patch-package": "^8.0.1",
     "typescript": "~5.9.2"
   },
