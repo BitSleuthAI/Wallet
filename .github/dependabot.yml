@@ -100,7 +100,7 @@ updates:
     directory: "/android"
     schedule:
       interval: "weekly"
-      day: "tuesday"
+      day: "monday"
       time: "09:00"
     open-pull-requests-limit: 3
     labels:
