@@ -13,9 +13,6 @@ on:
   push:
     branches:
       - 'dependabot/npm_and_yarn/**'
-  pull_request:
-    branches:
-      - 'dependabot/npm_and_yarn/**'
 
 jobs:
   update-pods:
@@ -33,7 +30,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version-file: 'package.json'
+          node-version: '20'
           cache: 'npm'
 
       - name: Install npm packages
