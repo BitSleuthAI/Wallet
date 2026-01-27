@@ -97,26 +97,49 @@ target 'BitSleuthWallet' do
           # Suppress non-modular include warnings
           config.build_settings['OTHER_CFLAGS'] ||= ['$(inherited)']
           config.build_settings['OTHER_CFLAGS'] << '-Wno-non-modular-include-in-framework-module'
-          
+
           # Enable module definitions for proper header imports
           config.build_settings['DEFINES_MODULE'] = 'YES'
-          
+
           # Ensure proper header search paths for React Native headers
           config.build_settings['HEADER_SEARCH_PATHS'] ||= ['$(inherited)']
           config.build_settings['HEADER_SEARCH_PATHS'] += react_native_headers
-          
+
           # Add specific paths for React Native core headers
           config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_ROOT}/Headers/Public/React-Codegen/react/renderer/components/rncore"'
           config.build_settings['HEADER_SEARCH_PATHS'] << '"${PODS_CONFIGURATION_BUILD_DIR}/React-Codegen/React_Codegen.framework/Headers"'
-          
+
           # Allow non-modular includes in framework modules for compatibility
           config.build_settings['CLANG_ALLOW_NON_MODULAR_INCLUDES_IN_FRAMEWORK_MODULES'] = 'YES'
-          
+
           # Disable strict module context checking for Firebase modules
           config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
           config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
         end
       end
+    end
+
+  end
+
+  # post_integrate runs AFTER CocoaPods integrates with the main project
+  # This is when the RNFB script phases have been added
+  post_integrate do |installer|
+    # Fix RNFB script phases in main project missing outputPaths (causes Xcode error 65)
+    main_project_path = File.join(__dir__, 'BitSleuthWallet.xcodeproj')
+    if File.exist?(main_project_path)
+      main_project = Xcodeproj::Project.open(main_project_path)
+      main_project.targets.each do |target|
+        next unless target.name == 'BitSleuthWallet'
+        target.build_phases.each do |phase|
+          next unless phase.is_a?(Xcodeproj::Project::Object::PBXShellScriptBuildPhase)
+          if phase.name&.include?('[RNFB] Core Configuration')
+            phase.output_paths = ['$(DERIVED_FILE_DIR)/rnfb-core-config-dummy']
+          elsif phase.name&.include?('[RNFB] Crashlytics Configuration')
+            phase.output_paths = ['$(DERIVED_FILE_DIR)/rnfb-crashlytics-config-dummy']
+          end
+        end
+      end
+      main_project.save
     end
   end
 end
