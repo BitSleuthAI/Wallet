@@ -61,7 +61,7 @@ export default function SuccessAnimation({
     );
 
     // Call onComplete after animation
-    let completeTimeout: NodeJS.Timeout | undefined;
+    let completeTimeout: ReturnType<typeof setTimeout> | undefined;
     if (onComplete) {
       completeTimeout = setTimeout(onComplete, 1000);
     }
