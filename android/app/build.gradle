@@ -121,10 +121,10 @@ android {
             crunchPngs enablePngCrunchInRelease.toBoolean()
         }
     }
-    packagingOptions {
+    packaging {
         jniLibs {
             def enableLegacyPackaging = findProperty('expo.useLegacyPackaging') ?: 'false'
-            useLegacyPackaging enableLegacyPackaging.toBoolean()
+            useLegacyPackaging = enableLegacyPackaging.toBoolean()
         }
     }
     androidResources {
@@ -132,10 +132,10 @@ android {
     }
 }
 
-// Apply static values from `gradle.properties` to the `android.packagingOptions`
+// Apply static values from `gradle.properties` to the `android.packaging`
 // Accepts values in comma delimited lists, example:
 // android.packagingOptions.pickFirsts=/LICENSE,**/picasa.ini
-["pickFirsts", "excludes", "merges", "doNotStrip"].each { prop ->
+["pickFirsts", "excludes", "merges"].each { prop ->
     // Split option: 'foo,bar' -> ['foo', 'bar']
     def options = (findProperty("android.packagingOptions.$prop") ?: "").split(",");
     // Trim all elements in place.
@@ -144,11 +144,22 @@ android {
     options -= ""
 
     if (options.length > 0) {
-        println "android.packagingOptions.$prop += $options ($options.length)"
-        // Ex: android.packagingOptions.pickFirsts += '**/SCCS/**'
+        println "android.packaging.resources.$prop += $options ($options.length)"
+        // Ex: android.packaging.resources.pickFirsts += '**/SCCS/**'
         options.each {
-            android.packagingOptions[prop] += it
+            android.packaging.resources[prop] += it
         }
+    }
+}
+
+// Handle doNotStrip separately (now keepDebugSymbols on jniLibs)
+def doNotStripOptions = (findProperty("android.packagingOptions.doNotStrip") ?: "").split(",");
+for (i in 0..<doNotStripOptions.size()) doNotStripOptions[i] = doNotStripOptions[i].trim();
+doNotStripOptions -= ""
+if (doNotStripOptions.length > 0) {
+    println "android.packaging.jniLibs.keepDebugSymbols += $doNotStripOptions ($doNotStripOptions.length)"
+    doNotStripOptions.each {
+        android.packaging.jniLibs.keepDebugSymbols += it
     }
 }
 
