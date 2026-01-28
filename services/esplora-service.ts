@@ -19,13 +19,14 @@ const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
 
 const ESPLORA_BASES = [BLOCKSTREAM_API_BASE, MEMPOOL_SPACE_API_BASE];
 
-// Rate limiting configuration - PRODUCTION OPTIMIZED
-// Based on Blockstream Green (1000ms), Trust Wallet (1500ms), and Bluewallet (800ms) best practices
-// Blockstream public API allows ~10 req/sec = 100ms, but bursts cause 429s
-// Conservative approach: 1000ms base delay with exponential backoff for retries
-const RATE_LIMIT_DELAY_MS = 1000; // Increased from 400ms to 1000ms - more conservative
-const MAX_CONCURRENT_REQUESTS = 1; // Reduced to 1 to completely avoid race conditions and 429s
-const RATE_LIMIT_JITTER_MS = 200; // Add random jitter to avoid thundering herd
+// Rate limiting configuration - OPTIMIZED FOR WALLET IMPORT PERFORMANCE
+// Blockstream public API allows ~10 req/sec = 100ms, mempool.space is similar
+// Previous: 1000ms delay + 1 concurrent = ~1 req/sec (too slow for wallet import)
+// New: 350ms delay + 3 concurrent = ~8.5 req/sec (within limits, much faster import)
+// Circuit breaker + exponential backoff handles any 429 errors gracefully
+const RATE_LIMIT_DELAY_MS = 350; // Reduced from 1000ms - balance of speed and reliability
+const MAX_CONCURRENT_REQUESTS = 3; // Increased from 1 - allows parallel requests for faster discovery
+const RATE_LIMIT_JITTER_MS = 100; // Reduced jitter for more predictable timing
 
 // Request queue for rate limiting with deduplication
 class RequestQueue {
