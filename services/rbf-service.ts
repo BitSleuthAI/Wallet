@@ -8,12 +8,9 @@ import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
 import {
-  validateECCLibrary,
   validateECCLibraryFull,
   estimateTransactionSize,
   deriveAddressIndexAndChainFromAddress,
-  deriveAddressIndexFromAddress,
-  findNextUnusedAddressIndex,
   generateCancellationAddress,
   clearAddressIndexCache,
 } from './ecc-utils';
@@ -34,8 +31,6 @@ const NON_RBF_SEQUENCE = 0xFFFFFFFF;
  * For example, 0.1 means a 10% minimum fee increase.
  */
 const MIN_RBF_FEE_INCREASE_RATE = 0.1;
-
-// validateECCLibrary is imported from ecc-utils.ts
 
 export interface EsploraTransactionVin {
   txid?: string;
