@@ -101,25 +101,56 @@ export const ensureECC = async () => {
 };
 
 /**
- * Validate Bitcoin address format
+ * Validate Bitcoin address format with proper checksum verification
+ * Supports: P2WPKH (bc1q), P2WSH (bc1q 62 chars), P2TR (bc1p), P2PKH (1...), P2SH (3...)
  */
 export const isValidBitcoinAddress = (address: string): boolean => {
   try {
-    // Basic validation for bech32 addresses (P2WPKH)
-    if (address.startsWith('bc1q') && address.length === 42) {
-      return true;
+    if (!address || typeof address !== 'string') {
+      return false;
     }
-    
-    // Basic validation for legacy addresses (P2PKH)
-    if (address.startsWith('1') && address.length >= 26 && address.length <= 35) {
-      return true;
+
+    const trimmed = address.trim();
+
+    // Bech32/Bech32m addresses (SegWit v0 and v1/Taproot)
+    if (trimmed.toLowerCase().startsWith('bc1')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Use bitcoinjs-lib's address validation which handles both bech32 and bech32m
+        bitcoin.address.fromBech32(trimmed);
+        return true;
+      } catch {
+        // Bech32 decoding failed - invalid checksum or format
+        return false;
+      }
     }
-    
-    // Basic validation for P2SH addresses
-    if (address.startsWith('3') && address.length >= 26 && address.length <= 35) {
-      return true;
+
+    // Legacy P2PKH addresses (start with '1')
+    if (trimmed.startsWith('1')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Validate Base58Check encoding
+        const decoded = bitcoin.address.fromBase58Check(trimmed);
+        // P2PKH version byte is 0x00 for mainnet
+        return decoded.version === 0x00;
+      } catch {
+        return false;
+      }
     }
-    
+
+    // P2SH addresses (start with '3')
+    if (trimmed.startsWith('3')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Validate Base58Check encoding
+        const decoded = bitcoin.address.fromBase58Check(trimmed);
+        // P2SH version byte is 0x05 for mainnet
+        return decoded.version === 0x05;
+      } catch {
+        return false;
+      }
+    }
+
     return false;
   } catch (error) {
     console.error('❌ Address validation failed:', error);
@@ -475,7 +506,8 @@ async function generateChangeAddress(mnemonic: string, changeIndex: number = 0):
     // Derive private key for change address (chain 1)
     const seed = await bip39.mnemonicToSeed(mnemonic);
     const root = bip32Instance.fromSeed(seed);
-    const child = root.derive(`m/84'/0'/0'/1/${changeIndex}`);
+    // Use derivePath for path strings, not derive (which takes a number)
+    const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
     
     if (!child.publicKey) {
       throw new Error('Failed to derive public key for change address');
@@ -763,7 +795,8 @@ async function createTransaction(
       
       // Derive private key for this specific address index and chain
       // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
-      const child = root.derive(`m/84'/0'/0'/${utxoChain}/${utxoAddressIndex}`);
+      // Use derivePath for path strings, not derive (which takes a single index number)
+      const child = root.derivePath(`m/84'/0'/0'/${utxoChain}/${utxoAddressIndex}`);
       
       if (!child.privateKey) {
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
