@@ -1,16 +1,14 @@
 {
-  "version": "1.0.0",
-  "organization": "Engineering",
+  "version": "2.0.0",
+  "organization": "BitSleuth",
   "date": "January 2026",
-  "abstract": "Comprehensive performance optimization guide for React Native applications, designed for AI agents and LLMs. Contains 35+ rules across 13 categories, prioritized by impact from critical (core rendering, list performance) to incremental (fonts, imports). Each rule includes detailed explanations, real-world examples comparing incorrect vs. correct implementations, and specific impact metrics to guide automated refactoring and code generation.",
+  "abstract": "Performance and best practices guide for React Native and Expo mobile applications targeting iOS and Android. Contains 25+ rules across 11 categories covering core rendering, list performance, animations with Reanimated, navigation with Expo Router, styling with NativeWind, and platform-specific optimizations. Each rule includes detailed explanations, incorrect vs. correct code examples, and impact assessments.",
   "references": [
     "https://react.dev",
     "https://reactnative.dev",
+    "https://docs.expo.dev",
     "https://docs.swmansion.com/react-native-reanimated",
     "https://docs.swmansion.com/react-native-gesture-handler",
-    "https://docs.expo.dev",
-    "https://legendapp.com/open-source/legend-list",
-    "https://github.com/nandorojo/galeria",
-    "https://zeego.dev"
+    "https://www.nativewind.dev"
   ]
 }

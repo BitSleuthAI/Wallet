@@ -1,143 +1,91 @@
 ---
-title: Use Native Navigators for Navigation
+title: Use Expo Router for File-Based Navigation
 impact: HIGH
 impactDescription: native performance, platform-appropriate UI
-tags: navigation, react-navigation, expo-router, native-stack, tabs
+tags: navigation, expo-router, native-stack, tabs, ios, android
 ---
 
-## Use Native Navigators for Navigation
+## Use Expo Router for File-Based Navigation
 
-Always use native navigators instead of JS-based ones. Native navigators use
-platform APIs (UINavigationController on iOS, Fragment on Android) for better
+Use Expo Router for file-based navigation. Expo Router uses native navigators
+under the hood (UINavigationController on iOS, Fragment on Android) for better
 performance and native behavior.
-
-**For stacks:** Use `@react-navigation/native-stack` or expo-router's default
-stack (which uses native-stack). Avoid `@react-navigation/stack`.
-
-**For tabs:** Use `react-native-bottom-tabs` (native) or expo-router's native
-tabs. Avoid `@react-navigation/bottom-tabs` when native feel matters.
 
 ### Stack Navigation
 
-**Incorrect (JS stack navigator):**
-
-```tsx
-import { createStackNavigator } from '@react-navigation/stack'
-
-const Stack = createStackNavigator()
-
-function App() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name='Home' component={HomeScreen} />
-      <Stack.Screen name='Details' component={DetailsScreen} />
-    </Stack.Navigator>
-  )
-}
-```
-
-**Correct (native stack with react-navigation):**
-
-```tsx
-import { createNativeStackNavigator } from '@react-navigation/native-stack'
-
-const Stack = createNativeStackNavigator()
-
-function App() {
-  return (
-    <Stack.Navigator>
-      <Stack.Screen name='Home' component={HomeScreen} />
-      <Stack.Screen name='Details' component={DetailsScreen} />
-    </Stack.Navigator>
-  )
-}
-```
-
-**Correct (expo-router uses native stack by default):**
+Expo Router uses native stack by default:
 
 ```tsx
 // app/_layout.tsx
 import { Stack } from 'expo-router'
 
-export default function Layout() {
-  return <Stack />
+export default function RootLayout() {
+  return (
+    <Stack>
+      <Stack.Screen name="index" options={{ title: 'Home' }} />
+      <Stack.Screen name="transaction-details" options={{ title: 'Details' }} />
+    </Stack>
+  )
 }
 ```
 
 ### Tab Navigation
 
-**Incorrect (JS bottom tabs):**
-
-```tsx
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
-
-const Tab = createBottomTabNavigator()
-
-function App() {
-  return (
-    <Tab.Navigator>
-      <Tab.Screen name='Home' component={HomeScreen} />
-      <Tab.Screen name='Settings' component={SettingsScreen} />
-    </Tab.Navigator>
-  )
-}
-```
-
-**Correct (native bottom tabs with react-navigation):**
-
-```tsx
-import { createNativeBottomTabNavigator } from '@bottom-tabs/react-navigation'
-
-const Tab = createNativeBottomTabNavigator()
-
-function App() {
-  return (
-    <Tab.Navigator>
-      <Tab.Screen
-        name='Home'
-        component={HomeScreen}
-        options={{
-          tabBarIcon: () => ({ sfSymbol: 'house' }),
-        }}
-      />
-      <Tab.Screen
-        name='Settings'
-        component={SettingsScreen}
-        options={{
-          tabBarIcon: () => ({ sfSymbol: 'gear' }),
-        }}
-      />
-    </Tab.Navigator>
-  )
-}
-```
-
-**Correct (expo-router native tabs):**
+Use the Tabs component for bottom tab navigation:
 
 ```tsx
 // app/(tabs)/_layout.tsx
-import { NativeTabs } from 'expo-router/unstable-native-tabs'
+import { Tabs } from 'expo-router'
 
 export default function TabLayout() {
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name='index'>
-        <NativeTabs.Trigger.Label>Home</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf='house.fill' md='home' />
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name='settings'>
-        <NativeTabs.Trigger.Label>Settings</NativeTabs.Trigger.Label>
-        <NativeTabs.Trigger.Icon sf='gear' md='settings' />
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <Tabs>
+      <Tabs.Screen
+        name="index"
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ color }) => <HomeIcon color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="send"
+        options={{
+          title: 'Send',
+          tabBarIcon: ({ color }) => <SendIcon color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="receive"
+        options={{
+          title: 'Receive',
+          tabBarIcon: ({ color }) => <ReceiveIcon color={color} />,
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: 'Settings',
+          tabBarIcon: ({ color }) => <SettingsIcon color={color} />,
+        }}
+      />
+    </Tabs>
   )
 }
 ```
 
-On iOS, native tabs automatically enable `contentInsetAdjustmentBehavior` on the
-first `ScrollView` at the root of each tab screen, so content scrolls correctly
-behind the translucent tab bar. If you need to disable this, use
-`disableAutomaticContentInsets` on the trigger.
+### Modal Screens
+
+Use presentation: 'modal' for modal screens:
+
+```tsx
+<Stack.Screen
+  name="wallet-setup"
+  options={{
+    presentation: 'modal',
+    title: 'Setup Wallet',
+  }}
+/>
+```
 
 ### Prefer Native Header Options Over Custom Components
 
@@ -145,10 +93,9 @@ behind the translucent tab bar. If you need to disable this, use
 
 ```tsx
 <Stack.Screen
-  name='Profile'
-  component={ProfileScreen}
+  name="profile"
   options={{
-    header: () => <CustomHeader title='Profile' />,
+    header: () => <CustomHeader title="Profile" />,
   }}
 />
 ```
@@ -157,11 +104,10 @@ behind the translucent tab bar. If you need to disable this, use
 
 ```tsx
 <Stack.Screen
-  name='Profile'
-  component={ProfileScreen}
+  name="profile"
   options={{
     title: 'Profile',
-    headerLargeTitleEnabled: true,
+    headerLargeTitle: true,
     headerSearchBarOptions: {
       placeholder: 'Search',
     },
@@ -172,17 +118,36 @@ behind the translucent tab bar. If you need to disable this, use
 Native headers support iOS large titles, search bars, blur effects, and proper
 safe area handling automatically.
 
-### Why Native Navigators
+### Programmatic Navigation
 
-- **Performance**: Native transitions and gestures run on the UI thread
-- **Platform behavior**: Automatic iOS large titles, Android material design
-- **System integration**: Scroll-to-top on tab tap, PiP avoidance, proper safe
-  areas
-- **Accessibility**: Platform accessibility features work automatically
+```tsx
+import { router } from 'expo-router'
+
+// Navigate to a screen
+router.push('/transaction-details')
+
+// Navigate with params
+router.push({
+  pathname: '/transaction-details',
+  params: { txid: '...' },
+})
+
+// Go back
+router.back()
+
+// Replace current screen
+router.replace('/home')
+```
+
+### Why Expo Router
+
+- **File-based routing**: Routes are defined by file structure
+- **Native performance**: Uses native stack and tab navigators
+- **Type safety**: Full TypeScript support for routes
+- **Deep linking**: Built-in deep linking support
+- **Platform behavior**: Automatic iOS/Android platform conventions
 
 Reference:
 
-- [React Navigation Native Stack](https://reactnavigation.org/docs/native-stack-navigator)
-- [React Native Bottom Tabs with React Navigation](https://oss.callstack.com/react-native-bottom-tabs/docs/guides/usage-with-react-navigation)
-- [React Native Bottom Tabs with Expo Router](https://oss.callstack.com/react-native-bottom-tabs/docs/guides/usage-with-expo-router)
-- [Expo Router Native Tabs](https://docs.expo.dev/router/advanced/native-tabs)
+- [Expo Router Documentation](https://docs.expo.dev/router/introduction/)
+- [Expo Router Native Tabs](https://docs.expo.dev/router/advanced/native-tabs/)
