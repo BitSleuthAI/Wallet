@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "organization": "BitSleuth",
+  "date": "January 2026",
+  "abstract": "Performance and best practices guide for React Native and Expo mobile applications targeting iOS and Android. Contains 25+ rules across 11 categories covering core rendering, list performance, animations with Reanimated, navigation with Expo Router, styling with NativeWind, and platform-specific optimizations. Each rule includes detailed explanations, incorrect vs. correct code examples, and impact assessments.",
+  "references": [
+    "https://react.dev",
+    "https://reactnative.dev",
+    "https://docs.expo.dev",
+    "https://docs.swmansion.com/react-native-reanimated",
+    "https://docs.swmansion.com/react-native-gesture-handler",
+    "https://www.nativewind.dev"
+  ]
+}
