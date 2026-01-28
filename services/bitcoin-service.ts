@@ -5,6 +5,11 @@
 
 import { BitcoinPrice, UTXO } from '@/types/wallet';
 import { loadBip32Module } from './bip32-loader';
+import {
+  validateECCLibraryFull,
+  estimateTransactionSize,
+  generateChangeAddress,
+} from './ecc-utils';
 
 // Use centralized bip32 loader
 let bip32: any = null;
@@ -101,25 +106,56 @@ export const ensureECC = async () => {
 };
 
 /**
- * Validate Bitcoin address format
+ * Validate Bitcoin address format with proper checksum verification
+ * Supports: P2WPKH (bc1q), P2WSH (bc1q 62 chars), P2TR (bc1p), P2PKH (1...), P2SH (3...)
  */
 export const isValidBitcoinAddress = (address: string): boolean => {
   try {
-    // Basic validation for bech32 addresses (P2WPKH)
-    if (address.startsWith('bc1q') && address.length === 42) {
-      return true;
+    if (!address || typeof address !== 'string') {
+      return false;
     }
-    
-    // Basic validation for legacy addresses (P2PKH)
-    if (address.startsWith('1') && address.length >= 26 && address.length <= 35) {
-      return true;
+
+    const trimmed = address.trim();
+
+    // Bech32/Bech32m addresses (SegWit v0 and v1/Taproot)
+    if (trimmed.toLowerCase().startsWith('bc1')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Use bitcoinjs-lib's address validation which handles both bech32 and bech32m
+        bitcoin.address.fromBech32(trimmed);
+        return true;
+      } catch {
+        // Bech32 decoding failed - invalid checksum or format
+        return false;
+      }
     }
-    
-    // Basic validation for P2SH addresses
-    if (address.startsWith('3') && address.length >= 26 && address.length <= 35) {
-      return true;
+
+    // Legacy P2PKH addresses (start with '1')
+    if (trimmed.startsWith('1')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Validate Base58Check encoding
+        const decoded = bitcoin.address.fromBase58Check(trimmed);
+        // P2PKH version byte is 0x00 for mainnet
+        return decoded.version === 0x00;
+      } catch {
+        return false;
+      }
     }
-    
+
+    // P2SH addresses (start with '3')
+    if (trimmed.startsWith('3')) {
+      try {
+        const bitcoin = require('bitcoinjs-lib');
+        // Validate Base58Check encoding
+        const decoded = bitcoin.address.fromBase58Check(trimmed);
+        // P2SH version byte is 0x05 for mainnet
+        return decoded.version === 0x05;
+      } catch {
+        return false;
+      }
+    }
+
     return false;
   } catch (error) {
     console.error('❌ Address validation failed:', error);
@@ -437,67 +473,9 @@ function calculateOutputCount(changeAmount: number): number {
   return outputCount;
 }
 
-/**
- * Estimate transaction size in bytes
- */
-function estimateTransactionSize(inputCount: number, outputCount: number): number {
-  // Base transaction size
-  let size = 10; // version (4) + input count (1) + output count (1) + locktime (4)
-  
-  // P2WPKH input size (68 bytes each)
-  size += inputCount * 68;
-  
-  // P2WPKH output size (34 bytes each)
-  size += outputCount * 34;
-  
-  return size;
-}
+// estimateTransactionSize is imported from ecc-utils.ts
 
-/**
- * Generate a change address using the wallet's derivation path
- */
-async function generateChangeAddress(mnemonic: string, changeIndex: number = 0): Promise<string> {
-  try {
-    console.log('🔧 Generating change address for index:', changeIndex);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
-    }
-    
-    if (!bip32 || !bip32.BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    
-    // Derive private key for change address (chain 1)
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const child = root.derive(`m/84'/0'/0'/1/${changeIndex}`);
-    
-    if (!child.publicKey) {
-      throw new Error('Failed to derive public key for change address');
-    }
-    
-    // Generate P2WPKH address
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const sha256Hash = sha256(child.publicKey);
-    const hash160 = ripemd160(sha256Hash);
-    const words = bech32.bech32.toWords(hash160);
-    const address = bech32.bech32.encode('bc', [0, ...words]);
-    
-    console.log('✅ Generated change address:', address);
-    return address;
-  } catch (error) {
-    console.error('❌ Failed to generate change address:', error);
-    throw error;
-  }
-}
+// generateChangeAddress is imported from ecc-utils.ts
 
 /**
  * Create and sign transaction
@@ -522,113 +500,34 @@ async function createTransaction(
     if (!ecc) {
       throw new Error('ECC library not available');
     }
-    
-    // Validate ECC library before using it
+
+    // Validate ECC library and initialize bitcoinjs-lib using shared utility
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
-    
-    // Test basic ECC functionality
-    const testPrivateKey = new Uint8Array(32);
-    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-    
+
     try {
-      // Test private key validation
-      if (!ecc.isPrivate(testPrivateKey)) {
-        throw new Error('ECC private key validation failed');
-      }
-      
-      // Test point generation
-      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-      if (!publicKey || publicKey.length !== 33) {
-        throw new Error('ECC point generation failed');
-      }
-      
-      // Test signing and verification
-      const testHash = new Uint8Array(32);
-      testHash.fill(0xaa); // Fill with test data
-      
-      const signature = ecc.sign(testHash, testPrivateKey);
-      if (!signature || signature.length === 0) {
-        throw new Error('ECC signing failed');
-      }
-      
-      const isValid = ecc.verify(testHash, publicKey, signature);
-      if (!isValid) {
-        throw new Error('ECC signature verification failed');
-      }
-      
+      validateECCLibraryFull(ecc);
       console.log('✅ ECC library validation passed');
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
     }
-    
+
     // Initialize bitcoinjs-lib with ECC
     try {
       console.log('🔧 Initializing bitcoinjs-lib with ECC...');
-      console.log('🔧 ECC object keys:', Object.keys(ecc));
-      console.log('🔧 ECC object type:', typeof ecc);
-      
-      // Check if bitcoinjs-lib has the initEccLib method
+
       if (typeof bitcoin.initEccLib !== 'function') {
         throw new Error('bitcoinjs-lib.initEccLib is not a function');
       }
-      
-      // No arbitrary delay; rely on synchronous/asynchronous initEccLib
-      
-      console.log('🔧 Calling bitcoin.initEccLib...');
+
       const initResult = bitcoin.initEccLib(ecc);
       if (initResult instanceof Promise) {
         await initResult;
       }
-      
-      // Verify the initialization worked by checking if ECC is properly set
-      console.log('🔧 Verifying ECC initialization...');
-      
-      // Log what's available on the bitcoin object for debugging
-      console.log('🔧 Available bitcoin object keys:', Object.keys(bitcoin));
-      console.log('🔧 bitcoin.ECPair:', typeof bitcoin.ECPair);
-      console.log('🔧 bitcoin.ECPairFactory:', typeof bitcoin.ECPairFactory);
-      
-      // In bitcoinjs-lib 7.0.0, ECPair was removed and is no longer exported
-      // The library works with PSBT (Partially Signed Bitcoin Transactions) instead
-      // We just need to verify that our ECC library works correctly
-      console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
-      try {
-        const testPrivateKey = new Uint8Array(32);
-        testPrivateKey[31] = 1;
-        
-        // Test if our ECC library can create a public key
-        const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-        if (!publicKey || publicKey.length !== 33) {
-          throw new Error('ECC library cannot create valid public keys');
-        }
-        
-        // Test signing
-        const testHash = new Uint8Array(32);
-        testHash.fill(0xaa);
-        const signature = ecc.sign(testHash, testPrivateKey);
-        if (!signature || signature.length === 0) {
-          throw new Error('ECC library cannot create signatures');
-        }
-        
-        // Test verification
-        const isValid = ecc.verify(testHash, publicKey, signature);
-        if (!isValid) {
-          throw new Error('ECC library signature verification failed');
-        }
-        
-        console.log('✅ ECC library verification successful - ready for transaction signing');
-      } catch (eccTestError) {
-        console.error('❌ ECC library test failed:', eccTestError);
-        throw new Error(`ECC library not working properly: ${eccTestError instanceof Error ? eccTestError.message : 'Unknown error'}`);
-      }
-      
+
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
     } catch (initError) {
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
-      console.error('❌ Error type:', typeof initError);
-      console.error('❌ Error message:', initError instanceof Error ? initError.message : 'Unknown error');
-      console.error('❌ Error stack:', initError instanceof Error ? initError.stack : 'No stack');
       throw new Error(`Failed to initialize bitcoinjs-lib: ${initError instanceof Error ? initError.message : 'Unknown error'}`);
     }
     
@@ -763,7 +662,8 @@ async function createTransaction(
       
       // Derive private key for this specific address index and chain
       // Chain 0 = external/receiving addresses, Chain 1 = internal/change addresses
-      const child = root.derive(`m/84'/0'/0'/${utxoChain}/${utxoAddressIndex}`);
+      // Use derivePath for path strings, not derive (which takes a single index number)
+      const child = root.derivePath(`m/84'/0'/0'/${utxoChain}/${utxoAddressIndex}`);
       
       if (!child.privateKey) {
         throw new Error(`Failed to derive private key for address index ${utxoAddressIndex}`);
