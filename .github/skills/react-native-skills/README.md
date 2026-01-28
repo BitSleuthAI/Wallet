@@ -1,18 +1,28 @@
-# React Native Guidelines
+# React Native & Expo Skills
 
-A structured repository for creating and maintaining React Native Best Practices
-optimized for agents and LLMs.
+Best practices for React Native and Expo mobile applications targeting iOS and
+Android. Optimized for AI agents and LLMs working on this codebase.
+
+## Tech Stack
+
+- React Native 0.81+ with New Architecture
+- Expo SDK 54+
+- Expo Router 5.1 (file-based navigation)
+- NativeWind 4.1 (Tailwind CSS)
+- React Native Reanimated 4.1
+- TypeScript 5.9
 
 ## Structure
 
 - `rules/` - Individual rule files (one per rule)
   - `_sections.md` - Section metadata (titles, impacts, descriptions)
   - `_template.md` - Template for creating new rules
-  - `area-description.md` - Individual rule files
+  - `{prefix}-{description}.md` - Individual rule files
 - `metadata.json` - Document metadata (version, organization, abstract)
-- **`AGENTS.md`** - Compiled output (generated)
+- `SKILL.md` - Skill overview and quick reference
+- **`AGENTS.md`** - Compiled output for agents (generated)
 
-## Rules
+## Rules by Category
 
 ### Core Rendering (CRITICAL)
 
@@ -21,8 +31,7 @@ optimized for agents and LLMs.
 
 ### List Performance (HIGH)
 
-- `list-performance-virtualize.md` - Use virtualized lists (LegendList,
-  FlashList)
+- `list-performance-virtualize.md` - Use FlashList for lists
 - `list-performance-function-references.md` - Keep stable object references
 - `list-performance-callbacks.md` - Hoist callbacks to list root
 - `list-performance-inline-objects.md` - Avoid inline objects in renderItem
@@ -33,10 +42,9 @@ optimized for agents and LLMs.
 
 ### Animation (HIGH)
 
-- `animation-gpu-properties.md` - Animate transform/opacity instead of layout
+- `animation-gpu-properties.md` - Animate transform/opacity only
 - `animation-gesture-detector-press.md` - Use GestureDetector for press
-  animations
-- `animation-derived-value.md` - Prefer useDerivedValue over useAnimatedReaction
+- `animation-derived-value.md` - Prefer useDerivedValue
 
 ### Scroll Performance (HIGH)
 
@@ -44,13 +52,13 @@ optimized for agents and LLMs.
 
 ### Navigation (HIGH)
 
-- `navigation-native-navigators.md` - Use native stack and native tabs
+- `navigation-native-navigators.md` - Use Expo Router
 
 ### React State (MEDIUM)
 
 - `react-state-dispatcher.md` - Use functional setState updates
-- `react-state-fallback.md` - State should represent user intent only
-- `react-state-minimize.md` - Minimize state variables, derive values
+- `react-state-fallback.md` - State represents user intent only
+- `react-state-minimize.md` - Minimize state, derive values
 
 ### State Architecture (MEDIUM)
 
@@ -59,33 +67,18 @@ optimized for agents and LLMs.
 ### React Compiler (MEDIUM)
 
 - `react-compiler-destructure-functions.md` - Destructure functions early
-- `react-compiler-reanimated-shared-values.md` - Use .get()/.set() for shared
-  values
+- `react-compiler-reanimated-shared-values.md` - Use .get()/.set()
 
 ### User Interface (MEDIUM)
 
-- `ui-expo-image.md` - Use expo-image for optimized images
-- `ui-image-gallery.md` - Use Galeria for lightbox/galleries
-- `ui-menus.md` - Native dropdown and context menus with Zeego
+- `ui-expo-image.md` - Use expo-image for images
+- `ui-menus.md` - Native dropdown and context menus
 - `ui-native-modals.md` - Use native Modal with formSheet
-- `ui-pressable.md` - Use Pressable instead of TouchableOpacity
+- `ui-pressable.md` - Use Pressable over TouchableOpacity
 - `ui-measure-views.md` - Measuring view dimensions
 - `ui-safe-area-scroll.md` - Use contentInsetAdjustmentBehavior
-- `ui-scrollview-content-inset.md` - Use contentInset for dynamic spacing
-- `ui-styling.md` - Modern styling patterns (gap, boxShadow, gradients)
-
-### Design System (MEDIUM)
-
-- `design-system-compound-components.md` - Use compound components
-
-### Monorepo (LOW)
-
-- `monorepo-native-deps-in-app.md` - Install native deps in app directory
-- `monorepo-single-dependency-versions.md` - Single dependency versions
-
-### Third-Party Dependencies (LOW)
-
-- `imports-design-system-folder.md` - Import from design system folder
+- `ui-scrollview-content-inset.md` - Use contentInset for spacing
+- `ui-styling.md` - NativeWind styling patterns
 
 ### JavaScript (LOW)
 
@@ -97,30 +90,14 @@ optimized for agents and LLMs.
 
 ## Creating a New Rule
 
-1. Copy `rules/_template.md` to `rules/area-description.md`
-2. Choose the appropriate area prefix:
-   - `rendering-` for Core Rendering
-   - `list-performance-` for List Performance
-   - `animation-` for Animation
-   - `scroll-` for Scroll Performance
-   - `navigation-` for Navigation
-   - `react-state-` for React State
-   - `state-` for State Architecture
-   - `react-compiler-` for React Compiler
-   - `ui-` for User Interface
-   - `design-system-` for Design System
-   - `monorepo-` for Monorepo
-   - `imports-` for Third-Party Dependencies
-   - `js-` for JavaScript
-   - `fonts-` for Fonts
+1. Copy `rules/_template.md` to `rules/{prefix}-{description}.md`
+2. Choose the appropriate prefix from `_sections.md`
 3. Fill in the frontmatter and content
-4. Ensure you have clear examples with explanations
+4. Include clear incorrect/correct examples
 
 ## Rule File Structure
 
-Each rule file should follow this structure:
-
-````markdown
+```markdown
 ---
 title: Rule Title Here
 impact: MEDIUM
@@ -132,34 +109,24 @@ tags: tag1, tag2, tag3
 
 Brief explanation of the rule and why it matters.
 
-**Incorrect (description of what's wrong):**
+**Incorrect (description):**
 
-```tsx
+\`\`\`tsx
 // Bad code example
-```
-````
+\`\`\`
 
-**Correct (description of what's right):**
+**Correct (description):**
 
-```tsx
+\`\`\`tsx
 // Good code example
-```
+\`\`\`
 
 Reference: [Link](https://example.com)
-
 ```
-
-## File Naming Convention
-
-- Files starting with `_` are special (excluded from build)
-- Rule files: `area-description.md` (e.g., `animation-gpu-properties.md`)
-- Section is automatically inferred from filename prefix
-- Rules are sorted alphabetically by title within each section
 
 ## Impact Levels
 
-- `CRITICAL` - Highest priority, causes crashes or broken UI
+- `CRITICAL` - Causes crashes or broken UI
 - `HIGH` - Significant performance improvements
-- `MEDIUM` - Moderate performance improvements
+- `MEDIUM` - Moderate improvements
 - `LOW` - Incremental improvements
-```

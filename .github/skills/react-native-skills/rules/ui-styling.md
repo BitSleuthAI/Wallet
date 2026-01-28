@@ -1,87 +1,180 @@
 ---
-title: Modern React Native Styling Patterns
+title: Styling with NativeWind and Modern Patterns
 impact: MEDIUM
-impactDescription: consistent design, smoother borders, cleaner layouts
-tags: styling, css, layout, shadows, gradients
+impactDescription: consistent design, cleaner layouts, better DX
+tags: styling, nativewind, tailwind, css, layout, shadows
 ---
 
-## Modern React Native Styling Patterns
+## Styling with NativeWind and Modern Patterns
 
-Follow these styling patterns for cleaner, more consistent React Native code.
+This project uses NativeWind (Tailwind CSS for React Native). Follow these
+patterns for consistent, maintainable styling.
 
-**Always use `borderCurve: 'continuous'` with `borderRadius`:**
+### NativeWind Basics
+
+Use Tailwind classes via the `className` prop:
 
 ```tsx
-// Incorrect
-{ borderRadius: 12 }
+import { View, Text } from 'react-native'
 
-// Correct – smoother iOS-style corners
-{ borderRadius: 12, borderCurve: 'continuous' }
+function Card({ title, children }: Props) {
+  return (
+    <View className="bg-white rounded-xl p-4 shadow-md">
+      <Text className="text-lg font-semibold text-gray-900">{title}</Text>
+      {children}
+    </View>
+  )
+}
 ```
 
-**Use `gap` instead of margin for spacing between elements:**
+### Prefer NativeWind Over StyleSheet
+
+**Incorrect (verbose StyleSheet):**
 
 ```tsx
-// Incorrect – margin on children
-<View>
-  <Text style={{ marginBottom: 8 }}>Title</Text>
-  <Text style={{ marginBottom: 8 }}>Subtitle</Text>
-</View>
+import { View, Text, StyleSheet } from 'react-native'
 
-// Correct – gap on parent
-<View style={{ gap: 8 }}>
+function Card({ title }: Props) {
+  return (
+    <View style={styles.container}>
+      <Text style={styles.title}>{title}</Text>
+    </View>
+  )
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#111',
+  },
+})
+```
+
+**Correct (concise NativeWind):**
+
+```tsx
+import { View, Text } from 'react-native'
+
+function Card({ title }: Props) {
+  return (
+    <View className="bg-white rounded-xl p-4">
+      <Text className="text-lg font-semibold text-gray-900">{title}</Text>
+    </View>
+  )
+}
+```
+
+### Use gap for Spacing
+
+**Incorrect (margin on children):**
+
+```tsx
+<View>
+  <Text className="mb-2">Title</Text>
+  <Text className="mb-2">Subtitle</Text>
+</View>
+```
+
+**Correct (gap on parent):**
+
+```tsx
+<View className="gap-2">
   <Text>Title</Text>
   <Text>Subtitle</Text>
 </View>
 ```
 
-**Use `padding` for space within, `gap` for space between:**
+### Combining Static and Dynamic Styles
+
+For conditional styling, combine NativeWind classes with template literals:
 
 ```tsx
-<View style={{ padding: 16, gap: 12 }}>
-  <Text>First</Text>
-  <Text>Second</Text>
+function Button({ variant, disabled }: Props) {
+  return (
+    <Pressable
+      className={`px-4 py-2 rounded-lg ${
+        variant === 'primary' ? 'bg-blue-600' : 'bg-gray-200'
+      } ${disabled ? 'opacity-50' : ''}`}
+    >
+      <Text className={variant === 'primary' ? 'text-white' : 'text-gray-900'}>
+        Press me
+      </Text>
+    </Pressable>
+  )
+}
+```
+
+### Platform-Specific Styles
+
+Use platform prefixes for platform-specific styles:
+
+```tsx
+<View className="ios:pt-12 android:pt-4">
+  <Text>Content</Text>
 </View>
 ```
 
-**Use `experimental_backgroundImage` for linear gradients:**
+### Dark Mode Support
+
+Use dark mode variants:
 
 ```tsx
-// Incorrect – third-party gradient library
-<LinearGradient colors={['#000', '#fff']} />
-
-// Correct – native CSS gradient syntax
-<View
-  style={{
-    experimental_backgroundImage: 'linear-gradient(to bottom, #000, #fff)',
-  }}
-/>
+<View className="bg-white dark:bg-gray-900">
+  <Text className="text-gray-900 dark:text-white">Content</Text>
+</View>
 ```
 
-**Use CSS `boxShadow` string syntax for shadows:**
+### Modern React Native Style Properties
+
+When using inline styles (for animations or dynamic values), use modern patterns:
+
+**Use `borderCurve: 'continuous'` with borderRadius:**
 
 ```tsx
-// Incorrect – legacy shadow objects or elevation
-{ shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.1 }
-{ elevation: 4 }
+// Smoother iOS-style corners
+{ borderRadius: 12, borderCurve: 'continuous' }
+```
 
-// Correct – CSS box-shadow syntax
+**Use CSS boxShadow syntax:**
+
+```tsx
+// Modern shadow syntax
 { boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }
 ```
 
-**Avoid multiple font sizes – use weight and color for emphasis:**
+**Use experimental_backgroundImage for gradients:**
 
 ```tsx
-// Incorrect – varying font sizes for hierarchy
-<Text style={{ fontSize: 18 }}>Title</Text>
-<Text style={{ fontSize: 14 }}>Subtitle</Text>
-<Text style={{ fontSize: 12 }}>Caption</Text>
-
-// Correct – consistent size, vary weight and color
-<Text style={{ fontWeight: '600' }}>Title</Text>
-<Text style={{ color: '#666' }}>Subtitle</Text>
-<Text style={{ color: '#999' }}>Caption</Text>
+// Native gradient support
+{
+  experimental_backgroundImage: 'linear-gradient(to bottom, #000, #fff)'
+}
 ```
 
-Limiting font sizes creates visual consistency. Use `fontWeight` (bold/semibold)
-and grayscale colors for hierarchy instead.
+### Common NativeWind Patterns
+
+**Flex layout:**
+```tsx
+<View className="flex-1 flex-row items-center justify-between">
+```
+
+**Safe area padding:**
+```tsx
+<View className="pt-safe pb-safe">
+```
+
+**Responsive spacing:**
+```tsx
+<View className="p-4 md:p-6 lg:p-8">
+```
+
+Reference:
+
+- [NativeWind Documentation](https://www.nativewind.dev/)
+- [Tailwind CSS](https://tailwindcss.com/docs)
