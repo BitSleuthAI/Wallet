@@ -7,6 +7,16 @@ import { UTXO } from '@/types/wallet';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
+import {
+  validateECCLibrary,
+  validateECCLibraryFull,
+  estimateTransactionSize,
+  deriveAddressIndexAndChainFromAddress,
+  deriveAddressIndexFromAddress,
+  findNextUnusedAddressIndex,
+  generateCancellationAddress,
+  clearAddressIndexCache,
+} from './ecc-utils';
 
 // Use centralized bip32 loader
 let bip32Module: unknown = null;
@@ -25,30 +35,7 @@ const NON_RBF_SEQUENCE = 0xFFFFFFFF;
  */
 const MIN_RBF_FEE_INCREASE_RATE = 0.1;
 
-/**
- * Validates the given ECC library by checking basic functionality.
- * Throws an error if validation fails.
- */
-interface ECCLibrary {
-  isPrivate(privKey: Uint8Array): boolean;
-  pointFromScalar(scalar: Uint8Array, compressed: boolean): Uint8Array | null;
-}
-
-function validateECCLibrary(ecc: ECCLibrary): void {
-  const testPrivateKey = new Uint8Array(32);
-  testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-
-  // Test private key validation
-  if (!ecc.isPrivate(testPrivateKey)) {
-    throw new Error('ECC private key validation failed');
-  }
-
-  // Test point generation
-  const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-  if (!publicKey || publicKey.length !== 33) {
-    throw new Error('ECC point generation failed');
-  }
-}
+// validateECCLibrary is imported from ecc-utils.ts
 
 export interface EsploraTransactionVin {
   txid?: string;
@@ -392,64 +379,22 @@ export async function createReplacementTransaction(
     if (!ecc) {
       throw new Error('ECC library not available');
     }
-    
-    // Validate ECC library before using it
+
+    // Validate ECC library and initialize bitcoinjs-lib using shared utilities
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
-    
-    // Validate ECC library using reusable function
+
     try {
-      validateECCLibrary(ecc);
+      validateECCLibraryFull(ecc);
+      console.log('✅ ECC library validation passed');
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
     }
-    
+
     // Initialize bitcoinjs-lib with ECC
     try {
       console.log('🔧 Initializing bitcoinjs-lib with ECC...');
       bitcoin.initEccLib(ecc);
-      
-      // Verify the initialization worked by checking if ECC is properly set
-      console.log('🔧 Verifying ECC initialization...');
-      
-      // Add a small delay to ensure ECC is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // In bitcoinjs-lib 7.0.0, ECPair was removed and is no longer exported
-      // The library works with PSBT (Partially Signed Bitcoin Transactions) instead
-      // We just need to verify that our ECC library works correctly
-      console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
-      try {
-        // Define test private key for verification
-        const testPrivateKey = new Uint8Array(32);
-        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-        
-        // Test if our ECC library can create a public key
-        const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-        if (!publicKey || publicKey.length !== 33) {
-          throw new Error('ECC library cannot create valid public keys');
-        }
-        
-        // Test signing
-        const testHash = new Uint8Array(32);
-        testHash.fill(0xaa);
-        const signature = ecc.sign(testHash, testPrivateKey);
-        if (!signature || signature.length === 0) {
-          throw new Error('ECC library cannot create signatures');
-        }
-        
-        // Test verification
-        const isValid = ecc.verify(testHash, publicKey, signature);
-        if (!isValid) {
-          throw new Error('ECC library signature verification failed');
-        }
-        
-        console.log('✅ ECC library verification successful - ready for RBF transaction');
-      } catch (verifyError) {
-        console.error('❌ ECC verification failed:', verifyError);
-        throw new Error(`ECC library not working properly: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
-      }
-      
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
     } catch (initError) {
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
@@ -929,64 +874,22 @@ async function createCancellationTransaction(
     if (!ecc) {
       throw new Error('ECC library not available');
     }
-    
-    // Validate ECC library before using it
+
+    // Validate ECC library and initialize bitcoinjs-lib using shared utilities
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
-    
-    // Validate ECC library using reusable function
+
     try {
-      validateECCLibrary(ecc);
+      validateECCLibraryFull(ecc);
+      console.log('✅ ECC library validation passed');
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
     }
-    
+
     // Initialize bitcoinjs-lib with ECC
     try {
       console.log('🔧 Initializing bitcoinjs-lib with ECC...');
       bitcoin.initEccLib(ecc);
-      
-      // Verify the initialization worked by checking if ECC is properly set
-      console.log('🔧 Verifying ECC initialization...');
-      
-      // Add a small delay to ensure ECC is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // In bitcoinjs-lib 7.0.0, ECPair was removed and is no longer exported
-      // The library works with PSBT (Partially Signed Bitcoin Transactions) instead
-      // We just need to verify that our ECC library works correctly
-      console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
-      try {
-        // Define test private key for verification
-        const testPrivateKey = new Uint8Array(32);
-        testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-        
-        // Test if our ECC library can create a public key
-        const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-        if (!publicKey || publicKey.length !== 33) {
-          throw new Error('ECC library cannot create valid public keys');
-        }
-        
-        // Test signing
-        const testHash = new Uint8Array(32);
-        testHash.fill(0xaa);
-        const signature = ecc.sign(testHash, testPrivateKey);
-        if (!signature || signature.length === 0) {
-          throw new Error('ECC library cannot create signatures');
-        }
-        
-        // Test verification
-        const isValid = ecc.verify(testHash, publicKey, signature);
-        if (!isValid) {
-          throw new Error('ECC library signature verification failed');
-        }
-        
-        console.log('✅ ECC library verification successful - ready for RBF transaction');
-      } catch (verifyError) {
-        console.error('❌ ECC verification failed:', verifyError);
-        throw new Error(`ECC library not working properly: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
-      }
-      
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
     } catch (initError) {
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
@@ -1170,406 +1073,6 @@ async function createCancellationTransaction(
   }
 }
 
-// Cache for address-to-index mappings to avoid redundant derivations
-const addressIndexCache = new Map<string, number | string>();
-
-/**
- * Clear the address index cache
- * Call this when switching wallets or when cache becomes stale
- */
-export function clearAddressIndexCache(): void {
-  addressIndexCache.clear();
-  console.log(`🧹 Cleared address index cache`);
-}
-
-/**
- * Derive the BIP32 address index from an address by testing derivation paths
- * This is necessary because walletAddresses array order doesn't correspond to BIP32 indices
- * 
- * Performance improvements:
- * 1. Uses caching to avoid redundant derivations
- * 2. Implements optimized linear search with batching
- * 3. Removes arbitrary 1000 address limit
- * 4. Optimizes imports to avoid repeated dynamic imports
- * 5. Adds small delays between batches to prevent UI blocking
- */
-/**
- * Derive the BIP32 address index and chain from an address by testing derivation paths
- * Returns { index, chain } where chain is 0 for external/receiving, 1 for internal/change
- */
-export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, targetAddress: string): Promise<{ index: number; chain: number }> {
-  try {
-    // Check cache first (need to cache both index and chain)
-    const cacheKey = `${targetAddress}_full`;
-    if (addressIndexCache.has(cacheKey)) {
-      const cached = addressIndexCache.get(cacheKey)!;
-      console.log(`✅ Found cached BIP32 index ${cached} for address: ${targetAddress}`);
-      // Parse the cached value (format: "chain:index")
-      const [chain, index] = cached.toString().split(':').map(Number);
-      return { index, chain };
-    }
-    
-    console.log(`🔍 Deriving BIP32 index and chain for address: ${targetAddress}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32Module) {
-      bip32Module = await loadBip32Module();
-    }
-    
-    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip32 = bip32Module as any;
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    
-    // Check both external (chain 0) and internal/change (chain 1) chains
-    for (const chain of [0, 1]) {
-      const chainNode = root.derivePath(`m/84'/0'/0'/${chain}`);
-      
-      // Use optimized linear search with batching to prevent UI blocking
-      let foundIndex = -1;
-      const batchSize = 50;
-      const batchDelay = 5;
-      let currentIndex = 0;
-      const maxSearchRange = 10000;
-      
-      while (foundIndex === -1 && currentIndex < maxSearchRange) {
-        const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
-        
-        for (let i = currentIndex; i < endIndex; i++) {
-          try {
-            const child = chainNode.derive(i);
-            if (!child.publicKey) continue;
-            
-            // Generate P2WPKH address
-            const sha256Hash = sha256(child.publicKey);
-            const hash160 = ripemd160(sha256Hash);
-            const words = bech32.bech32.toWords(hash160);
-            const address = bech32.bech32.encode('bc', [0, ...words]);
-            
-            if (address === targetAddress) {
-              foundIndex = i;
-              break;
-            }
-          } catch (error) {
-            console.warn(`⚠️ Failed to derive address at chain ${chain}, index ${i}:`, error);
-            continue;
-          }
-        }
-        
-        currentIndex = endIndex;
-        
-        // Small delay between batches to prevent UI blocking
-        if (foundIndex === -1 && currentIndex < maxSearchRange) {
-          await new Promise(resolve => setTimeout(resolve, batchDelay));
-        }
-      }
-      
-      if (foundIndex !== -1) {
-        // Cache the result
-        addressIndexCache.set(cacheKey, `${chain}:${foundIndex}`);
-        console.log(`✅ Found BIP32 chain ${chain}, index ${foundIndex} for address: ${targetAddress}`);
-        return { index: foundIndex, chain };
-      }
-    }
-    
-    throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched both chains up to index ${10000})`);
-  } catch (error) {
-    console.error(`❌ Failed to derive address index and chain:`, error);
-    throw error;
-  }
-}
-
-/**
- * Derive the BIP32 address index from an address by testing derivation paths
- * Legacy function - prefer deriveAddressIndexAndChainFromAddress for new code
- */
-export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
-  try {
-    // Check cache first
-    if (addressIndexCache.has(targetAddress)) {
-      const cachedValue = addressIndexCache.get(targetAddress)!;
-      console.log(`✅ Found cached BIP32 index ${cachedValue} for address: ${targetAddress}`);
-      // If cached value is a string, parse the index from it
-      const cachedIndex = typeof cachedValue === 'string' 
-        ? parseInt(cachedValue.split(':')[1], 10)
-        : cachedValue;
-      return cachedIndex;
-    }
-    
-    console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32Module) {
-      bip32Module = await loadBip32Module();
-    }
-    
-    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip32 = bip32Module as any;
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
-    
-    // Use optimized linear search with batching to prevent UI blocking
-    let foundIndex = -1;
-    const batchSize = 50; // Smaller batches for better responsiveness
-    const batchDelay = 5; // 5ms delay between batches
-    let currentIndex = 0;
-    const maxSearchRange = 10000; // Reasonable limit for most wallets
-    
-    while (foundIndex === -1 && currentIndex < maxSearchRange) {
-      const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
-      
-      for (let i = currentIndex; i < endIndex; i++) {
-        try {
-          const child = externalChain.derive(i);
-          if (!child.publicKey) continue;
-          
-          // Generate P2WPKH address
-          const sha256Hash = sha256(child.publicKey);
-          const hash160 = ripemd160(sha256Hash);
-          const words = bech32.bech32.toWords(hash160);
-          const address = bech32.bech32.encode('bc', [0, ...words]);
-          
-          if (address === targetAddress) {
-            foundIndex = i;
-            break;
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
-          continue;
-        }
-      }
-      
-      currentIndex = endIndex;
-      
-      // Small delay between batches to prevent UI blocking
-      if (foundIndex === -1 && currentIndex < maxSearchRange) {
-        await new Promise(resolve => setTimeout(resolve, batchDelay));
-      }
-    }
-    
-    // If not found in the initial range, expand the search with larger delays
-    if (foundIndex === -1) {
-      console.log(`🔍 Address not found in initial range, expanding search...`);
-      
-      // Expand search range with larger delays for better responsiveness
-      let expandedHigh = maxSearchRange * 2;
-      const expandedBatchSize = 25; // Smaller batches for expanded search
-      const expandedBatchDelay = 10; // Longer delays for expanded search
-      
-      while (foundIndex === -1 && expandedHigh <= 100000) { // Cap at 100k for safety
-        console.log(`🔍 Searching range ${currentIndex} to ${expandedHigh}...`);
-        
-        for (let i = currentIndex; i < expandedHigh; i += expandedBatchSize) {
-          const endIndex = Math.min(i + expandedBatchSize, expandedHigh);
-          
-          for (let j = i; j < endIndex; j++) {
-            try {
-              const child = externalChain.derive(j);
-              if (!child.publicKey) continue;
-              
-              const sha256Hash = sha256(child.publicKey);
-              const hash160 = ripemd160(sha256Hash);
-              const words = bech32.bech32.toWords(hash160);
-              const address = bech32.bech32.encode('bc', [0, ...words]);
-              
-              if (address === targetAddress) {
-                foundIndex = j;
-                break;
-              }
-            } catch (error) {
-              console.warn(`⚠️ Failed to derive address at index ${j}:`, error);
-              continue;
-            }
-          }
-          
-          if (foundIndex !== -1) break;
-          
-          // Delay between batches in expanded search
-          if (endIndex < expandedHigh) {
-            await new Promise(resolve => setTimeout(resolve, expandedBatchDelay));
-          }
-        }
-        
-        currentIndex = expandedHigh;
-        expandedHigh *= 2;
-      }
-    }
-    
-    if (foundIndex === -1) {
-      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${currentIndex})`);
-    }
-    
-    // Cache the result
-    addressIndexCache.set(targetAddress, foundIndex);
-    console.log(`✅ Found BIP32 index ${foundIndex} for address: ${targetAddress}`);
-    return foundIndex;
-  } catch (error) {
-    console.error(`❌ Failed to derive address index:`, error);
-    throw error;
-  }
-}
-
-/**
- * Find the next unused address index for generating new addresses
- * This ensures we don't reuse addresses and follow proper BIP32 gap limit
- * 
- * Fix: Instead of assuming sequential usage (max + 1), we now find the actual
- * next unused index by checking for gaps in the address sequence. This prevents
- * address reuse when there are gaps in the wallet's address usage.
- * 
- * Performance improvements:
- * 1. Uses cached results from deriveAddressIndexFromAddress
- * 2. Processes addresses sequentially to prevent app freezing
- * 3. Provides better error handling and fallback logic
- * 4. Handles non-sequential address usage properly
- * 5. Uses batching with small delays to prevent UI blocking
- */
-export async function findNextUnusedAddressIndex(mnemonic: string, walletAddresses: string[]): Promise<number> {
-  try {
-    console.log(`🔍 Finding next unused address index for ${walletAddresses.length} addresses...`);
-    
-    // Process addresses sequentially in small batches to prevent app freezing
-    const usedIndices = new Set<number>();
-    let successfulDerivations = 0;
-    const batchSize = 5; // Process 5 addresses at a time
-    const batchDelay = 10; // 10ms delay between batches
-    
-    for (let i = 0; i < walletAddresses.length; i += batchSize) {
-      const batch = walletAddresses.slice(i, i + batchSize);
-      
-      // Process batch sequentially to avoid overwhelming the system
-      for (const address of batch) {
-        try {
-          const index = await deriveAddressIndexFromAddress(mnemonic, address);
-          usedIndices.add(index);
-          successfulDerivations++;
-        } catch (error) {
-          console.warn(`⚠️ Could not derive index for address ${address}:`, error);
-        }
-      }
-      
-      // Small delay between batches to prevent UI blocking
-      if (i + batchSize < walletAddresses.length) {
-        await new Promise(resolve => setTimeout(resolve, batchDelay));
-      }
-    }
-    
-    // If we couldn't derive any addresses, fall back to 0
-    if (successfulDerivations === 0) {
-      console.warn(`⚠️ Could not derive any address indices, using fallback index 0`);
-      return 0;
-    }
-    
-    // Find the next unused index by looking for the first gap or the next index after max
-    let nextIndex = 0;
-    while (usedIndices.has(nextIndex)) {
-      nextIndex++;
-    }
-    
-    const maxUsedIndex = Math.max(...usedIndices);
-    const hasGaps = nextIndex < maxUsedIndex;
-    
-    console.log(`✅ Next unused address index: ${nextIndex} (max used: ${maxUsedIndex}, ${successfulDerivations}/${walletAddresses.length} addresses processed${hasGaps ? ', gaps detected' : ''})`);
-    return nextIndex;
-  } catch (error) {
-    console.error(`❌ Failed to find next unused address index:`, error);
-    // Fallback to 0 if we can't determine the next index
-    console.warn(`⚠️ Using fallback index 0`);
-    return 0;
-  }
-}
-
-/**
- * Generate a cancellation address using the wallet's derivation path
- */
-async function generateCancellationAddress(mnemonic: string, walletAddresses: string[]): Promise<string> {
-  try {
-    console.log(`🔧 Generating cancellation address...`);
-    
-    // Find the next unused address index instead of using array length
-    const addressIndex = await findNextUnusedAddressIndex(mnemonic, walletAddresses);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32Module) {
-      bip32Module = await loadBip32Module();
-    }
-    
-    if (!bip32Module || !(bip32Module as any).BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip32 = bip32Module as any;
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    
-    // Derive private key for cancellation address
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const child = root.derivePath(`m/84'/0'/0'/0/${addressIndex}`);
-    
-    if (!child.publicKey) {
-      throw new Error('Failed to derive public key for cancellation address');
-    }
-    
-    // Generate P2WPKH address
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const sha256Hash = sha256(child.publicKey);
-    const hash160 = ripemd160(sha256Hash);
-    const words = bech32.bech32.toWords(hash160);
-    const address = bech32.bech32.encode('bc', [0, ...words]);
-    
-    console.log(`✅ Generated cancellation address: ${address} (index: ${addressIndex})`);
-    return address;
-  } catch (error) {
-    console.error(`❌ Failed to generate cancellation address:`, error);
-    throw error;
-  }
-}
-
-/**
- * Estimate transaction size in bytes
- *
- * Assumes all inputs/outputs are SegWit v0 P2WPKH type.
- */
-
-// Standard SegWit v0 P2WPKH input size: 68 bytes
-// Derived from: 32 (txid) + 4 (vout) + 1 (scriptSig length) + 4 (sequence) + 
-// 1 (witness item count) + 72 (signature) + 33 (pubkey), weighted by witness discount
-const P2WPKH_INPUT_SIZE = 68;
-// Standard SegWit v0 P2WPKH output size: 34 bytes
-// Derived from: 8 (value) + 1 (scriptPubKey length) + 25 (scriptPubKey for P2WPKH)
-const P2WPKH_OUTPUT_SIZE = 34;
-
-function estimateTransactionSize(inputCount: number, outputCount: number): number {
-  // Base transaction size: 10 bytes
-  // (version [4 bytes] + input count [1 byte] + output count [1 byte] + locktime [4 bytes])
-  let size = 10;
-
-  // Add inputs and outputs (SegWit v0 P2WPKH only)
-  size += inputCount * P2WPKH_INPUT_SIZE;
-  size += outputCount * P2WPKH_OUTPUT_SIZE;
-
-  return size;
-}
+// Address derivation utilities and estimateTransactionSize are imported from ecc-utils.ts
+// Re-export clearAddressIndexCache for backward compatibility
+export { clearAddressIndexCache };

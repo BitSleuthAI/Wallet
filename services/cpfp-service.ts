@@ -7,6 +7,13 @@ import { CPFPOptions, CPFPTransaction, CPFPValidationResult, UTXO } from '@/type
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
 import { esploraGet } from './esplora-service';
+import {
+  validateECCLibraryFull,
+  estimateTransactionSize,
+  deriveAddressIndexAndChainFromAddress,
+  generateChangeAddress,
+  clearAddressIndexCache as clearCacheFromUtils,
+} from './ecc-utils';
 
 // Use centralized bip32 loader
 let bip32: any = null;
@@ -213,77 +220,22 @@ export async function createCPFPTransaction(
     if (!ecc) {
       throw new Error('ECC library not available');
     }
-    
-    // Validate ECC library before using it
+
+    // Validate ECC library and initialize bitcoinjs-lib using shared utilities
     console.log('🔧 Validating ECC library before bitcoinjs-lib initialization...');
-    
-    // Test basic ECC functionality
-    const testPrivateKey = new Uint8Array(32);
-    testPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-    
+
     try {
-      // Test private key validation
-      if (!ecc.isPrivate(testPrivateKey)) {
-        throw new Error('ECC private key validation failed');
-      }
-      
-      // Test point generation
-      const publicKey = ecc.pointFromScalar(testPrivateKey, true);
-      if (!publicKey || publicKey.length !== 33) {
-        throw new Error('ECC point generation failed');
-      }
-      
+      validateECCLibraryFull(ecc);
       console.log('✅ ECC library validation passed');
     } catch (eccError) {
       console.error('❌ ECC library validation failed:', eccError);
       throw new Error(`ECC library invalid: ${eccError instanceof Error ? eccError.message : 'Unknown error'}`);
     }
-    
+
     // Initialize bitcoinjs-lib with ECC
     try {
       console.log('🔧 Initializing bitcoinjs-lib with ECC...');
       bitcoin.initEccLib(ecc);
-      
-      // Verify the initialization worked by checking if ECC is properly set
-      console.log('🔧 Verifying ECC initialization...');
-      
-      // Add a small delay to ensure ECC is fully initialized
-      await new Promise(resolve => setTimeout(resolve, 200));
-      
-      // In bitcoinjs-lib 7.0.0, ECPair was removed and is no longer exported
-      // The library works with PSBT (Partially Signed Bitcoin Transactions) instead
-      // We just need to verify that our ECC library works correctly
-      console.log('🔧 Testing ECC library functionality (bitcoinjs-lib 7.x compatible)...');
-      try {
-        const verifyPrivateKey = new Uint8Array(32);
-        verifyPrivateKey[31] = 1; // Set to 1 to ensure it's a valid private key
-          
-        // Test if our ECC library can create a public key
-        const publicKey = ecc.pointFromScalar(verifyPrivateKey, true);
-        if (!publicKey || publicKey.length !== 33) {
-          throw new Error('ECC library cannot create valid public keys');
-        }
-        
-        // Test signing
-        const testHash = new Uint8Array(32);
-        testHash.fill(0xaa);
-        const signature = ecc.sign(testHash, verifyPrivateKey);
-        if (!signature || signature.length === 0) {
-          throw new Error('ECC library cannot create signatures');
-        }
-        
-        // Test verification
-        const isValid = ecc.verify(testHash, publicKey, signature);
-        if (!isValid) {
-          throw new Error('ECC library signature verification failed');
-        }
-          
-        console.log('✅ ECC library verification successful - ready for CPFP transaction');
-      } catch (verifyError) {
-        console.error('❌ ECC verification failed:', verifyError);
-        throw new Error(`ECC library not working properly: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
-      }
-      
       console.log('✅ bitcoinjs-lib initialized with ECC successfully');
     } catch (initError) {
       console.error('❌ Failed to initialize bitcoinjs-lib with ECC:', initError);
@@ -567,262 +519,13 @@ function calculateParentFee(parentTx: any): number {
   return totalInputValue - totalOutputValue;
 }
 
-/**
- * Estimate transaction size in bytes
- */
-function estimateTransactionSize(inputCount: number, outputCount: number): number {
-  // Base transaction size
-  let size = 10; // version (4) + input count (1) + output count (1) + locktime (4)
-  
-  // P2WPKH input size (68 bytes each)
-  size += inputCount * 68;
-  
-  // P2WPKH output size (34 bytes each)
-  size += outputCount * 34;
-  
-  return size;
-}
+// estimateTransactionSize, deriveAddressIndexAndChainFromAddress, and generateChangeAddress
+// are imported from ecc-utils.ts
 
-// Cache for address-to-index mappings to avoid redundant derivations
-const addressIndexCache = new Map<string, number | string>();
-
-/**
- * Clear the address index cache
- */
+// Re-export clearCPFPAddressIndexCache for backward compatibility
 export function clearCPFPAddressIndexCache(): void {
-  addressIndexCache.clear();
-  console.log(`🧹 Cleared CPFP address index cache`);
-}
-
-/**
- * Derive the BIP32 address index and chain from an address by testing derivation paths
- * Returns { index, chain } where chain is 0 for external/receiving, 1 for internal/change
- */
-export async function deriveAddressIndexAndChainFromAddress(mnemonic: string, targetAddress: string): Promise<{ index: number; chain: number }> {
-  try {
-    // Check cache first (need to cache both index and chain)
-    const cacheKey = `${targetAddress}_full`;
-    if (addressIndexCache.has(cacheKey)) {
-      const cached = addressIndexCache.get(cacheKey)!;
-      console.log(`✅ Found cached BIP32 index ${cached} for address: ${targetAddress}`);
-      // Parse the cached value (format: "chain:index")
-      const [chain, index] = cached.toString().split(':').map(Number);
-      return { index, chain };
-    }
-    
-    console.log(`🔍 Deriving BIP32 index and chain for address: ${targetAddress}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
-    }
-    
-    if (!bip32 || !bip32.BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    
-    // Check both external (chain 0) and internal/change (chain 1) chains
-    for (const chain of [0, 1]) {
-      const chainNode = root.derivePath(`m/84'/0'/0'/${chain}`);
-      
-      // Use optimized linear search with batching to prevent UI blocking
-      let foundIndex = -1;
-      const batchSize = 50;
-      const batchDelay = 5;
-      let currentIndex = 0;
-      const maxSearchRange = 10000;
-      
-      while (foundIndex === -1 && currentIndex < maxSearchRange) {
-        const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
-        
-        for (let i = currentIndex; i < endIndex; i++) {
-          try {
-            const child = chainNode.derive(i);
-            if (!child.publicKey) continue;
-            
-            // Generate P2WPKH address
-            const sha256Hash = sha256(child.publicKey);
-            const hash160 = ripemd160(sha256Hash);
-            const words = bech32.bech32.toWords(hash160);
-            const address = bech32.bech32.encode('bc', [0, ...words]);
-            
-            if (address === targetAddress) {
-              foundIndex = i;
-              break;
-            }
-          } catch (error) {
-            console.warn(`⚠️ Failed to derive address at chain ${chain}, index ${i}:`, error);
-            continue;
-          }
-        }
-        
-        currentIndex = endIndex;
-        
-        // Small delay between batches to prevent UI blocking
-        if (foundIndex === -1 && currentIndex < maxSearchRange) {
-          await new Promise(resolve => setTimeout(resolve, batchDelay));
-        }
-      }
-      
-      if (foundIndex !== -1) {
-        // Cache the result
-        addressIndexCache.set(cacheKey, `${chain}:${foundIndex}`);
-        console.log(`✅ Found BIP32 chain ${chain}, index ${foundIndex} for address: ${targetAddress}`);
-        return { index: foundIndex, chain };
-      }
-    }
-    
-    throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched both chains up to index ${10000})`);
-  } catch (error) {
-    console.error(`❌ Failed to derive address index and chain:`, error);
-    throw error;
-  }
-}
-
-/**
- * Derive the BIP32 address index from an address by testing derivation paths
- * Legacy function - prefer deriveAddressIndexAndChainFromAddress for new code
- */
-export async function deriveAddressIndexFromAddress(mnemonic: string, targetAddress: string): Promise<number> {
-  try {
-    // Check cache first
-    if (addressIndexCache.has(targetAddress)) {
-      const cachedValue = addressIndexCache.get(targetAddress)!;
-      console.log(`✅ Found cached BIP32 index ${cachedValue} for address: ${targetAddress}`);
-      // If cached value is a string, parse the index from it
-      const cachedIndex = typeof cachedValue === 'string' 
-        ? parseInt(cachedValue.split(':')[1], 10)
-        : cachedValue;
-      return cachedIndex;
-    }
-    
-    console.log(`🔍 Deriving BIP32 index for address: ${targetAddress}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
-    }
-    
-    if (!bip32 || !bip32.BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const externalChain = root.derivePath(`m/84'/0'/0'/0`);
-    
-    // Use optimized linear search with batching to prevent UI blocking
-    let foundIndex = -1;
-    const batchSize = 50;
-    const batchDelay = 5;
-    let currentIndex = 0;
-    const maxSearchRange = 10000;
-    
-    while (foundIndex === -1 && currentIndex < maxSearchRange) {
-      const endIndex = Math.min(currentIndex + batchSize, maxSearchRange);
-      
-      for (let i = currentIndex; i < endIndex; i++) {
-        try {
-          const child = externalChain.derive(i);
-          if (!child.publicKey) continue;
-          
-          // Generate P2WPKH address
-          const sha256Hash = sha256(child.publicKey);
-          const hash160 = ripemd160(sha256Hash);
-          const words = bech32.bech32.toWords(hash160);
-          const address = bech32.bech32.encode('bc', [0, ...words]);
-          
-          if (address === targetAddress) {
-            foundIndex = i;
-            break;
-          }
-        } catch (error) {
-          console.warn(`⚠️ Failed to derive address at index ${i}:`, error);
-          continue;
-        }
-      }
-      
-      currentIndex = endIndex;
-      
-      // Small delay between batches to prevent UI blocking
-      if (foundIndex === -1 && currentIndex < maxSearchRange) {
-        await new Promise(resolve => setTimeout(resolve, batchDelay));
-      }
-    }
-    
-    if (foundIndex === -1) {
-      throw new Error(`Could not find BIP32 index for address: ${targetAddress} (searched up to index ${currentIndex})`);
-    }
-    
-    // Cache the result
-    addressIndexCache.set(targetAddress, foundIndex);
-    console.log(`✅ Found BIP32 index ${foundIndex} for address: ${targetAddress}`);
-    return foundIndex;
-  } catch (error) {
-    console.error(`❌ Failed to derive address index:`, error);
-    throw error;
-  }
-}
-
-/**
- * Generate a change address using the wallet's derivation path
- */
-async function generateChangeAddress(mnemonic: string, changeIndex: number = 0): Promise<string> {
-  try {
-    console.log(`🔧 Generating change address for index: ${changeIndex}`);
-    
-    // Ensure bip32 module is loaded
-    if (!bip32) {
-      bip32 = await loadBip32Module();
-    }
-    
-    if (!bip32 || !bip32.BIP32Factory) {
-      throw new Error('BIP32 module or BIP32Factory not available');
-    }
-    const bip39 = require('bip39');
-    const ecc = (global as any).ecc;
-    const bip32Instance = bip32.BIP32Factory(ecc);
-    
-    // Derive private key for change address (chain 1)
-    const seed = await bip39.mnemonicToSeed(mnemonic);
-    const root = bip32Instance.fromSeed(seed);
-    const child = root.derivePath(`m/84'/0'/0'/1/${changeIndex}`);
-    
-    if (!child.publicKey) {
-      throw new Error('Failed to derive public key for change address');
-    }
-    
-    // Generate P2WPKH address
-    const bech32 = await import('bech32');
-    const { sha256 } = await import('@noble/hashes/sha256');
-    const { ripemd160 } = await import('@noble/hashes/ripemd160');
-    
-    const sha256Hash = sha256(child.publicKey);
-    const hash160 = ripemd160(sha256Hash);
-    const words = bech32.bech32.toWords(hash160);
-    const address = bech32.bech32.encode('bc', [0, ...words]);
-    
-    console.log(`✅ Generated change address: ${address}`);
-    return address;
-  } catch (error) {
-    console.error(`❌ Failed to generate change address:`, error);
-    throw error;
-  }
+  clearCacheFromUtils();
+  console.log('🧹 Cleared CPFP address index cache (via ecc-utils)');
 }
 
 /**
