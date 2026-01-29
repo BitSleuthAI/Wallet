@@ -160,78 +160,88 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
       throw new Error('Upstream data provider is temporarily unavailable. Please try again in a moment.');
     }
 
-    // Check both external (0) and internal (1) chains
-    for (const chain of [0, 1]) {
-      console.log(`🔍 Checking ${chain === 0 ? 'external' : 'internal'} chain...`);
+    // Helper function to discover addresses for a single chain
+    async function discoverChain(chain: number): Promise<{
+      usedAddresses: string[];
+      metadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }>;
+    }> {
+      const chainName = chain === 0 ? 'external' : 'internal';
+      console.log(`🔍 Checking ${chainName} chain...`);
+
+      const chainUsedAddresses: string[] = [];
+      const chainMetadata: Array<{ address: string; index: number; chain: number; isUsed: boolean }> = [];
       let gap = 0;
       let index = 0;
-      
+
       while (gap < GAP_LIMIT) {
         const batch = await deriveAddressBatch(node, chain, index, index + GAP_LIMIT);
-        console.log(`🔍 Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
-        
-        // OPTIMIZED: Sequential requests with aggressive rate limiting (1000ms+ per request)
-        // Based on best practices from Blockstream Green, Trust Wallet, and Bluewallet
-        // Using sequential requests to completely avoid 429 errors
-        // The request queue in esplora-service handles deduplication and rate limiting
-        const addressTxs: any[] = new Array(batch.length);
-        
-        // Process addresses sequentially (not in parallel)
-        for (let i = 0; i < batch.length; i++) {
-          const addr = batch[i];
+        console.log(`🔍 [${chainName}] Checking batch ${index}-${index + GAP_LIMIT - 1} (${batch.length} addresses)`);
+
+        // OPTIMIZED: Fetch transaction counts for batch in parallel
+        // Rate limiting is handled at the request queue level
+        const addressTxsPromises = batch.map(async (addr, i) => {
           const addressIndex = index + i;
-          
           try {
             const result = await esploraGet(`/address/${addr}/txs`, 900000, xpub);
             const txCount = Array.isArray(result) ? result.length : 0;
             if (txCount > 0) {
-              console.log(`✅ Address ${addressIndex}: ${txCount} transactions`);
+              console.log(`✅ [${chainName}] Address ${addressIndex}: ${txCount} transactions`);
             }
-            addressTxs[i] = result;
+            return result;
           } catch (error) {
-            console.warn(`⚠️ Failed to check address ${addressIndex}:`, error);
-            addressTxs[i] = [];
+            console.warn(`⚠️ [${chainName}] Failed to check address ${addressIndex}:`, error);
+            return [];
           }
-          
-          // No additional delay needed - rate limiting is handled in esplora-service
-          // The request queue enforces 1000-1200ms between requests automatically (1000ms base + 0-200ms jitter)
-        }
-        
+        });
+
+        const addressTxs = await Promise.all(addressTxsPromises);
+
         // Process addresses in order and track gap correctly
         for (let i = 0; i < addressTxs.length; i++) {
           const addressTxsResult = addressTxs[i];
           const isUsed = addressTxsResult && Array.isArray(addressTxsResult) && addressTxsResult.length > 0;
           const addressIndex = index + i;
-          
-          if (returnMetadata) {
-            allAddressMetadata.push({
-              address: batch[i],
-              index: addressIndex,
-              chain,
-              isUsed
-            });
-          }
-          
+
+          chainMetadata.push({
+            address: batch[i],
+            index: addressIndex,
+            chain,
+            isUsed
+          });
+
           if (isUsed) {
-            allUsedAddresses.push(batch[i]);
+            chainUsedAddresses.push(batch[i]);
             gap = 0; // Reset gap when we find a used address
-            console.log(`✅ Found used address at index ${addressIndex}: ${batch[i].substring(0, 10)}... (${addressTxsResult.length} txs)`);
+            console.log(`✅ [${chainName}] Found used address at index ${addressIndex}: ${batch[i].substring(0, 10)}... (${addressTxsResult.length} txs)`);
           } else {
             gap++; // Increment gap for unused address
           }
         }
-        
+
         // Check if we've reached the gap limit
         if (gap >= GAP_LIMIT) {
-          console.log(`🔍 Gap limit reached for ${chain === 0 ? 'external' : 'internal'} chain at index ${index + gap - 1}`);
+          console.log(`🔍 [${chainName}] Gap limit reached at index ${index + gap - 1}`);
           break;
         }
 
         index += GAP_LIMIT;
-
-        // No additional delay needed between batches
-        // The request queue in esplora-service handles all rate limiting (1000-1200ms per request)
       }
+
+      return { usedAddresses: chainUsedAddresses, metadata: chainMetadata };
+    }
+
+    // OPTIMIZATION: Discover both chains in parallel
+    // External chain (0) for receiving addresses, internal chain (1) for change addresses
+    console.log(`🔍 Starting parallel chain discovery...`);
+    const [externalResult, internalResult] = await Promise.all([
+      discoverChain(0),
+      discoverChain(1)
+    ]);
+
+    // Merge results from both chains
+    allUsedAddresses = [...externalResult.usedAddresses, ...internalResult.usedAddresses];
+    if (returnMetadata) {
+      allAddressMetadata = [...externalResult.metadata, ...internalResult.metadata];
     }
     
     // Cache the metadata for future use
@@ -303,18 +313,21 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     const utxos: any[] = [];
     const addressInfos: any[] = [];
 
-    // Process addresses sequentially (not in parallel)
+    // Process addresses with parallelized API calls per address
+    // Rate limiting is handled at the request queue level in esplora-service
     for (let idx = 0; idx < usedAddresses.length; idx++) {
       const address = usedAddresses[idx];
       try {
         console.log(`📊 Processing address ${idx + 1}/${usedAddresses.length}: ${address.substring(0, 10)}...`);
-        
-        // Fetch UTXOs first (most important for balance)
-        // Then fetch transactions and stats
-        // Sequential to respect rate limits
-        const utxosResult = await getAddressUTXOs(address, xpub);
-        const txsResult = await getAddressTransactions(address, xpub);
-        const statsResult = await getAddressStats(address, xpub);
+
+        // OPTIMIZATION: Fetch UTXOs, transactions, and stats in parallel
+        // These are independent requests for the same address
+        // Rate limiting is enforced by the request queue, not here
+        const [utxosResult, txsResult, statsResult] = await Promise.all([
+          getAddressUTXOs(address, xpub),
+          getAddressTransactions(address, xpub),
+          getAddressStats(address, xpub)
+        ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
             // Add all transactions to the map
