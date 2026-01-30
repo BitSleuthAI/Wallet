@@ -6,9 +6,9 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
-import { Stack, router, useFocusEffect } from 'expo-router';
+import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Animated,
@@ -59,58 +59,70 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
   const [isLoadingAddress, setIsLoadingAddress] = useState<boolean>(true);
   const [lastGenTime, setLastGenTime] = useState<number>(0);
 
-  // Clear address cache when screen becomes focused to ensure fresh data
-  // This prevents showing used addresses after receiving funds
-  useFocusEffect(
-    useCallback(() => {
-      if (currentWallet?.xpub && walletService.clearAddressCache) {
-        console.log('🔄 Receive screen focused - clearing address cache for fresh data');
-        walletService.clearAddressCache(currentWallet.xpub);
-      }
-    }, [currentWallet?.xpub])
-  );
+  // NOTE: Removed aggressive cache clearing on focus - this was causing slow load times
+  // Cache TTL (2 minutes) provides sufficient freshness while maintaining performance
+  // The address discovery service handles cache invalidation appropriately
 
-  // Load first unused address when wallet changes
-  // Note: We track the xpub to detect wallet switches. The effect will also run when
-  // addresses change, which is acceptable because the getFirstUnusedReceivingAddress
-  // function uses cached discovery data, making subsequent calls efficient.
+  // Load receiving address when wallet changes
+  // OPTIMIZED: Show wallet's last address immediately for instant UI, then verify in background
+  // This eliminates the 5-15 second delay while still ensuring address freshness
   useEffect(() => {
-    const loadFirstUnusedAddress = async () => {
-      if (!currentWallet?.xpub) {
-        setIsLoadingAddress(false);
-        return;
-      }
+    if (!currentWallet?.xpub) {
+      setIsLoadingAddress(false);
+      return;
+    }
 
+    // INSTANT: Use wallet's last address immediately (no API calls)
+    // This ensures the QR code appears instantly when opening the Receive tab
+    const lastAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
+    if (lastAddress) {
+      console.log('⚡ Showing wallet address instantly:', lastAddress.substring(0, 20) + '...');
+      setCurrentAddress(lastAddress);
+      setIsLoadingAddress(false);
+    }
+
+    // BACKGROUND: Verify/find first unused address (non-blocking)
+    // This runs after the UI is already displayed
+    const verifyAddressInBackground = async () => {
       try {
-        setIsLoadingAddress(true);
-        console.log('🔍 Loading first unused receiving address...');
-        
-        // Get first unused address within gap limit
-        const unusedAddress = walletService.getFirstUnusedReceivingAddress 
+        console.log('🔍 Background: Verifying first unused receiving address...');
+
+        const unusedAddress = walletService.getFirstUnusedReceivingAddress
           ? await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub)
           : null;
-        
-        if (unusedAddress) {
-          console.log('✅ Found first unused address:', unusedAddress.substring(0, 20) + '...');
+
+        if (unusedAddress && unusedAddress !== lastAddress) {
+          console.log('✅ Background: Found different unused address:', unusedAddress.substring(0, 20) + '...');
           setCurrentAddress(unusedAddress);
         } else {
-          // Fallback to last wallet address if no unused found
-          console.log('⚠️ No unused address found, using last wallet address');
-          const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
-          setCurrentAddress(fallbackAddress);
+          console.log('✅ Background: Current address is valid');
         }
       } catch (error) {
-        console.error('❌ Failed to load first unused address:', error);
-        // Use same fallback logic as above
-        const fallbackAddress = currentWallet.addresses?.[currentWallet.addresses.length - 1] || '';
-        setCurrentAddress(fallbackAddress);
-      } finally {
-        setIsLoadingAddress(false);
+        console.error('⚠️ Background verification failed (keeping current address):', error);
+        // Keep the current address on error - don't disrupt the UI
       }
     };
 
-    loadFirstUnusedAddress();
-  }, [currentWallet]);
+    // Only run background verification if we have an address to verify
+    if (lastAddress) {
+      verifyAddressInBackground();
+    } else {
+      // No addresses in wallet yet - need to wait for initial address generation
+      setIsLoadingAddress(true);
+      walletService.getFirstUnusedReceivingAddress?.(currentWallet.xpub)
+        .then(unusedAddress => {
+          if (unusedAddress) {
+            setCurrentAddress(unusedAddress);
+          }
+        })
+        .catch(error => {
+          console.error('❌ Failed to load initial address:', error);
+        })
+        .finally(() => {
+          setIsLoadingAddress(false);
+        });
+    }
+  }, [currentWallet?.xpub, currentWallet?.addresses?.length]);
 
   // Spin animation for the refresh icon
   useEffect(() => {
@@ -166,35 +178,31 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
     
     try {
       setIsGeneratingAddress(true);
-      // setLastGenTime(now); // Moved to finally block to ensure cooldown only after attempt
       console.log('🔄 Generating new address...');
       const result = await generateNewAddress(currentWallet);
       if (result.success && result.wallet) {
-        console.log('✅ New address generated:', result.wallet.addresses[result.wallet.addresses.length - 1]);
-        
+        // Get the newly generated address - this is guaranteed to be unused
+        const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
+        console.log('✅ New address generated:', newlyGeneratedAddress);
+
+        // FIXED: Directly use the newly generated address instead of calling getFirstUnusedReceivingAddress
+        // The previous approach used stale cache that didn't include the new address
+        setCurrentAddress(newlyGeneratedAddress);
+
+        // Clear the address metadata cache so future lookups get fresh data
+        if (walletService.clearAddressCache) {
+          walletService.clearAddressCache(currentWallet.xpub);
+        }
+
         // Check if user has generated many unused addresses (gap limit warning)
         const addressCount = result.wallet.addresses.length;
-        
+
         if (addressCount >= GAP_LIMIT_WARNING_THRESHOLD) {
           Alert.alert(
             'Address Limit Warning',
             `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,
             [{ text: 'OK', style: 'default' }]
           );
-        }
-        
-        // Fallback address in case first unused lookup fails
-        const newlyGeneratedAddress = result.wallet.addresses[result.wallet.addresses.length - 1];
-        
-        // Reload the first unused address after generating a new one
-        try {
-          const unusedAddress = walletService.getFirstUnusedReceivingAddress
-            ? await walletService.getFirstUnusedReceivingAddress(currentWallet.xpub)
-            : null;
-          setCurrentAddress(unusedAddress || newlyGeneratedAddress);
-        } catch (error) {
-          console.error('❌ Failed to reload first unused address:', error);
-          setCurrentAddress(newlyGeneratedAddress);
         }
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
