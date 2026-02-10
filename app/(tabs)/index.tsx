@@ -2,12 +2,14 @@ import FeedbackPopup from '@/components/FeedbackPopup';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import BalanceChart from '@/components/PriceChart';
+import { HomeScreenSkeleton, TransactionListSkeleton } from '@/components/SkeletonLoader';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import { HapticService } from '@/services/haptic-service';
 import { Wallet } from '@/types/wallet';
 import { isIOS26OrHigher } from '@/utils/platform';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -96,10 +98,11 @@ function WalletScreenContent() {
   const carouselRef = useRef<FlatList<CarouselItem>>(null);
 
   const onRefresh = useCallback(async () => {
+    HapticService.medium();
     setRefreshing(true);
     await refreshData();
+    HapticService.success();
     setRefreshing(false);
-    // Track usage when user refreshes data
     incrementUsageCount('data_refresh');
   }, [refreshData, incrementUsageCount]);
 
@@ -232,20 +235,15 @@ function WalletScreenContent() {
     );
   }, [theme.colors.surface, theme.colors.primary, currentWalletId, switchWallet, handleEditWallet, incrementUsageCount]);
 
-  // Show loading state while wallet is being loaded
+  // Show skeleton loading state while wallet is being loaded
   if (isLoading) {
     return (
       <GradientBackground theme={theme} variant="primary" direction="vertical">
         <SafeAreaView style={styles.container}>
           <Stack.Screen options={{ title: 'Wallet', headerShown: false }} />
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
-              Loading Wallet...
-            </Text>
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              Please wait while we load your wallet
-            </Text>
-          </View>
+          <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
+            <HomeScreenSkeleton />
+          </ScrollView>
         </SafeAreaView>
       </GradientBackground>
     );
@@ -403,9 +401,10 @@ function WalletScreenContent() {
             ) : (
               <>
                 <View style={styles.balanceContainer}>
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
                     onPress={() => {
+                      HapticService.light();
                       setHideBalanceSetting(!hideBalance);
                       incrementUsageCount('settings_interaction');
                     }}
@@ -463,6 +462,7 @@ function WalletScreenContent() {
                   },
                 ]}
                 onPress={() => {
+                  HapticService.light();
                   setSelectedPeriod(period);
                   incrementUsageCount('settings_interaction');
                 }}
@@ -492,23 +492,31 @@ function WalletScreenContent() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               createButtonStyle(theme, 'primary'),
               styles.sendButton,
             ]}
-            onPress={() => router.push('/(tabs)/send')}
+            onPress={() => {
+              HapticService.medium();
+              router.push('/(tabs)/send');
+            }}
+            activeOpacity={0.85}
           >
             <ArrowUpRight color="white" size={20} />
             <Text style={styles.actionButtonText}>Send</Text>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
+
+          <TouchableOpacity
             style={[
               createButtonStyle(theme, 'secondary'),
               styles.receiveButton,
             ]}
-            onPress={() => router.push('/(tabs)/receive')}
+            onPress={() => {
+              HapticService.medium();
+              router.push('/(tabs)/receive');
+            }}
+            activeOpacity={0.85}
           >
             <ArrowDownLeft color={theme.colors.text} size={20} />
             <Text style={[styles.receiveButtonText, { color: theme.colors.text }]}>Receive</Text>
@@ -559,10 +567,11 @@ function WalletScreenContent() {
               </Text>
             </View>
           ) : (
-            transactions.slice(0, 5).map((transaction: any) => (
+            transactions.slice(0, 5).map((transaction: any, idx: number) => (
               <TransactionItem
                 key={transaction.txid}
                 transaction={transaction}
+                index={idx}
               />
             ))
           )}

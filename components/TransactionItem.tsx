@@ -4,68 +4,86 @@ import { HapticService } from '@/services/haptic-service';
 import { Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
-    useAnimatedStyle,
-    useSharedValue,
-    withSequence,
-    withSpring,
-    withTiming,
+  Easing,
+  FadeInDown,
+  useAnimatedStyle,
+  useSharedValue,
+  withSequence,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 
 interface TransactionItemProps {
   transaction: Transaction;
+  index?: number;
 }
 
 // Wrapper component that checks for context availability
-export default function TransactionItem({ transaction }: TransactionItemProps) {
+export default function TransactionItem({ transaction, index = 0 }: TransactionItemProps) {
   const walletContext = useWallet();
-  
-  // Safety check: if context is not available yet, return null
+
   if (!walletContext) {
     return null;
   }
-  
-  return <TransactionItemContent transaction={transaction} />;
+
+  return <TransactionItemContent transaction={transaction} index={index} />;
 }
 
-// Main component with all hooks
-function TransactionItemContent({ transaction }: TransactionItemProps) {
-  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet()!; // Non-null assertion is safe here because wrapper checked
-  
+function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps) {
+  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet()!;
+
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
-  
+
   // Animation values
   const scale = useSharedValue(1);
   const translateX = useSharedValue(0);
-  const opacity = useSharedValue(1);
+
+  // Icon entrance animation
+  const iconScale = useSharedValue(0);
+  useEffect(() => {
+    iconScale.value = withSpring(1, { damping: 12, stiffness: 200, mass: 0.8 });
+  }, [iconScale]);
+
+  const iconAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: iconScale.value }],
+  }));
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
       { scale: scale.value },
       { translateX: translateX.value },
     ],
-    opacity: opacity.value,
   }));
-  
+
   const formatDate = (timestamp: number) => {
     const date = new Date(timestamp);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    if (diffDays < 7) return `${diffDays}d ago`;
+
     return date.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+      year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined,
     });
   };
 
   const truncateAddress = (address: string) => {
     if (!address) return '';
-    return `${address.slice(0, 8)}...${address.slice(-8)}`;
+    return `${address.slice(0, 6)}...${address.slice(-6)}`;
   };
 
   const handlePressIn = useCallback(() => {
@@ -79,10 +97,10 @@ function TransactionItemContent({ transaction }: TransactionItemProps) {
 
   const handlePress = useCallback(() => {
     HapticService.medium();
-    
-    // Subtle slide animation on press
+
+    const direction = isReceived ? -4 : 4;
     translateX.value = withSequence(
-      withTiming(4, { duration: 100 }),
+      withTiming(direction, { duration: 100, easing: Easing.out(Easing.ease) }),
       withSpring(0, { damping: 15, stiffness: 300 })
     );
 
@@ -90,14 +108,7 @@ function TransactionItemContent({ transaction }: TransactionItemProps) {
       pathname: '/transaction-explorer',
       params: { txid: transaction.txid },
     });
-  }, [translateX, transaction.txid]);
-
-  const getStatusIcon = () => {
-    if (transaction.status === 'confirmed') {
-      return <CheckCircle color="white" size={16} />;
-    }
-    return <Clock color="white" size={16} />;
-  };
+  }, [translateX, transaction.txid, isReceived]);
 
   const getStatusColor = () => {
     if (transaction.status === 'confirmed') {
@@ -106,132 +117,143 @@ function TransactionItemContent({ transaction }: TransactionItemProps) {
     return theme.colors.warning;
   };
 
-  return (
-    <AnimatedTouchable 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: theme.colors.surface,
-        },
-        animatedStyle,
-      ]}
-      onPressIn={handlePressIn}
-      onPressOut={handlePressOut}
-      onPress={handlePress}
-      activeOpacity={0.9}
-    >
-      <View style={[
-        styles.iconContainer,
-        { 
-          backgroundColor: isReceived ? theme.colors.success : theme.colors.error,
-          shadowColor: isReceived ? theme.colors.success : theme.colors.error,
-        }
-      ]}>
-        {isReceived ? (
-          <ArrowDownLeft color="white" size={18} />
-        ) : (
-          <ArrowUpRight color="white" size={18} />
-        )}
-      </View>
+  // Staggered entrance animation
+  const enteringAnimation = FadeInDown.delay(index * 60).duration(400).springify().damping(15);
 
-      <View style={styles.content}>
-        <View style={styles.header}>
-          <View style={styles.typeContainer}>
+  return (
+    <Animated.View entering={enteringAnimation}>
+      <AnimatedTouchable
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.colors.surface,
+          },
+          animatedStyle,
+        ]}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={handlePress}
+        activeOpacity={0.9}
+      >
+        {/* Transaction direction icon */}
+        <Animated.View
+          style={[
+            styles.iconContainer,
+            {
+              backgroundColor: isReceived
+                ? theme.colors.success + '15'
+                : theme.colors.error + '15',
+            },
+            iconAnimatedStyle,
+          ]}
+        >
+          {isReceived ? (
+            <ArrowDownLeft color={theme.colors.success} size={20} strokeWidth={2.5} />
+          ) : (
+            <ArrowUpRight color={theme.colors.error} size={20} strokeWidth={2.5} />
+          )}
+        </Animated.View>
+
+        <View style={styles.content}>
+          {/* Top row: Type + Amount */}
+          <View style={styles.header}>
             <Text style={[styles.type, { color: theme.colors.text }]}>
               {isReceived ? 'Received' : 'Sent'}
             </Text>
+            <Text style={[
+              styles.amount,
+              { color: isReceived ? theme.colors.success : theme.colors.error }
+            ]}>
+              {isReceived ? '+' : '-'}{transaction.amount.toFixed(8)} BTC
+            </Text>
           </View>
-          <Text style={[
-            styles.amount,
-            { color: isReceived ? theme.colors.success : theme.colors.error }
-          ]}>
-            {isReceived ? '+' : '-'}{transaction.amount.toFixed(8)} BTC
+
+          {/* Middle row: Date + USD amount */}
+          <View style={styles.details}>
+            <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
+              {formatDate(transaction.timestamp)}
+            </Text>
+            {!hasPriceError && amountUSD > 0 ? (
+              <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
+                {isReceived ? '+' : '-'}{formatCurrency(amountUSD)}
+              </Text>
+            ) : (
+              <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
+                Fiat unavailable
+              </Text>
+            )}
+          </View>
+
+          {/* Bottom row: Status + Features */}
+          <View style={styles.statusRow}>
+            <View style={[
+              styles.statusBadge,
+              {
+                backgroundColor: getStatusColor() + '15',
+              }
+            ]}>
+              {transaction.status === 'confirmed' ? (
+                <CheckCircle color={getStatusColor()} size={12} />
+              ) : (
+                <Clock color={getStatusColor()} size={12} />
+              )}
+              <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                {transaction.status === 'confirmed' ? 'Confirmed' : 'Pending'}
+              </Text>
+            </View>
+
+            {/* Feature indicators */}
+            <View style={styles.featureIndicators}>
+              {transaction.rbf && (
+                <View style={[styles.featureBadge, { backgroundColor: theme.colors.warning + '15' }]}>
+                  <Zap color={theme.colors.warning} size={10} />
+                  <Text style={[styles.featureText, { color: theme.colors.warning }]}>RBF</Text>
+                </View>
+              )}
+              {transaction.cpfp && (
+                <View style={[styles.featureBadge, { backgroundColor: theme.colors.success + '15' }]}>
+                  <DollarSign color={theme.colors.success} size={10} />
+                  <Text style={[styles.featureText, { color: theme.colors.success }]}>CPFP</Text>
+                </View>
+              )}
+              {transaction.childTxids && transaction.childTxids.length > 0 && (
+                <View style={[styles.featureBadge, { backgroundColor: theme.colors.primary + '15' }]}>
+                  <DollarSign color={theme.colors.primary} size={10} />
+                  <Text style={[styles.featureText, { color: theme.colors.primary }]}>Parent</Text>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* Address */}
+          <Text style={[styles.address, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+            {isReceived ? 'From' : 'To'}: {truncateAddress(transaction.address)}
           </Text>
         </View>
-
-        <View style={styles.details}>
-          <Text style={[styles.date, { color: theme.colors.textSecondary }]}>
-            {formatDate(transaction.timestamp)}
-          </Text>
-          {!hasPriceError && amountUSD > 0 ? (
-            <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-              {isReceived ? '+' : '-'}{formatCurrency(amountUSD)}
-            </Text>
-          ) : (
-            <Text style={[styles.amountUSD, { color: theme.colors.textSecondary }]}>
-              Fiat unavailable
-            </Text>
-          )}
-        </View>
-
-        <View style={styles.statusRow}>
-          <View style={[
-            styles.statusBadge,
-            { backgroundColor: getStatusColor() }
-          ]}>
-            {getStatusIcon()}
-            <Text style={styles.statusText}>
-              {transaction.status === 'confirmed' ? 'Completed' : 'Pending'}
-            </Text>
-          </View>
-          
-          {/* RBF and CPFP Indicators */}
-          <View style={styles.featureIndicators}>
-            {transaction.rbf && (
-              <View style={[styles.featureBadge, { backgroundColor: theme.colors.warning + '20' }]}>
-                <Zap color={theme.colors.warning} size={12} />
-                <Text style={[styles.featureText, { color: theme.colors.warning }]}>
-                  RBF
-                </Text>
-              </View>
-            )}
-            {transaction.cpfp && (
-              <View style={[styles.featureBadge, { backgroundColor: theme.colors.success + '20' }]}>
-                <DollarSign color={theme.colors.success} size={12} />
-                <Text style={[styles.featureText, { color: theme.colors.success }]}>
-                  CPFP
-                </Text>
-              </View>
-            )}
-            {transaction.childTxids && transaction.childTxids.length > 0 && (
-              <View style={[styles.featureBadge, { backgroundColor: theme.colors.primary + '20' }]}>
-                <DollarSign color={theme.colors.primary} size={12} />
-                <Text style={[styles.featureText, { color: theme.colors.primary }]}>
-                  Parent
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        <Text style={[styles.address, { color: theme.colors.textSecondary }]}>
-          {isReceived ? 'From' : 'To'}: {truncateAddress(transaction.address)}
-        </Text>
-      </View>
-    </AnimatedTouchable>
+      </AnimatedTouchable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.xl, // Increased from lg
-    marginVertical: platformStyles.spacing.sm, // Increased from xs
+    padding: platformStyles.spacing.lg,
+    marginVertical: platformStyles.spacing.xs,
     marginHorizontal: platformStyles.spacing.xs,
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
+    borderRadius: platformStyles.borderRadius.xl,
     alignItems: 'flex-start',
     ...platformStyles.shadow,
     position: 'relative',
     overflow: 'hidden',
   },
   iconContainer: {
-    width: 48, // Increased from 44
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: platformStyles.spacing.lg, // Increased from md
-    ...platformStyles.shadow,
+    marginRight: platformStyles.spacing.md,
   },
   content: {
     flex: 1,
@@ -240,87 +262,82 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.sm, // Increased from xs
-  },
-  typeContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8, // Increased from 6
+    marginBottom: 4,
   },
   type: {
-    fontSize: 17, // Increased from 16
-    lineHeight: 22, // Increased from 20
-    fontWeight: '700', // Increased from 600
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
     letterSpacing: 0.1,
   },
   amount: {
-    fontSize: 17, // Increased from 16
-    lineHeight: 22, // Increased from 20
-    fontWeight: '700', // Increased from 600
-    letterSpacing: 0.1,
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
+    letterSpacing: -0.2,
   },
   details: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.md, // Increased from sm
+    marginBottom: platformStyles.spacing.sm,
   },
   date: {
-    fontSize: 14, // Increased from 13
-    lineHeight: 18, // Increased from 16
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: '500',
     letterSpacing: 0.2,
   },
   amountUSD: {
-    fontSize: 14, // Increased from 13
-    lineHeight: 18, // Increased from 16
-    fontWeight: '600', // Increased from 500
+    fontSize: 13,
+    lineHeight: 18,
+    fontWeight: '600',
     letterSpacing: 0.2,
   },
   statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: platformStyles.spacing.sm, // Increased from xs
+    marginBottom: 4,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.md + 2, // Increased
-    paddingVertical: platformStyles.spacing.xs + 3, // Increased
-    borderRadius: platformStyles.borderRadius.large, // Increased from medium
-    gap: 5, // Increased from 4
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    gap: 4,
   },
   statusText: {
-    color: 'white',
-    fontSize: 13, // Increased from 12
-    lineHeight: 16,
-    fontWeight: '700', // Increased from 600
+    fontSize: 11,
+    lineHeight: 14,
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
   featureIndicators: {
     flexDirection: 'row',
-    gap: 6, // Increased from 4
+    gap: 4,
   },
   featureBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8, // Increased from 6
-    paddingVertical: 4, // Increased from 3
-    borderRadius: 10, // Increased from 8
-    gap: 3, // Increased from 2
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    gap: 2,
   },
   featureText: {
-    fontSize: 11, // Increased from 10
-    lineHeight: 14, // Increased from 12
-    fontWeight: '700', // Increased from 600
+    fontSize: 10,
+    lineHeight: 12,
+    fontWeight: '700',
     letterSpacing: 0.2,
   },
   address: {
-    fontSize: 13, // Increased from 12
-    lineHeight: 18, // Increased from 16
-    marginTop: platformStyles.spacing.sm, // Increased from xs
+    fontSize: 12,
+    lineHeight: 16,
+    marginTop: 2,
     fontWeight: '500',
-    letterSpacing: 0.2,
+    letterSpacing: 0.3,
+    fontFamily: 'monospace',
   },
 });

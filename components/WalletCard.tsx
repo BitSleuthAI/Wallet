@@ -4,21 +4,22 @@ import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Check, Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
+import { Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
   withSequence,
-  withSpring
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
 // Default gradient colors for fallback
-const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const; // Indigo gradient
+const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const;
 
 interface WalletCardProps {
   wallet?: Wallet;
@@ -30,90 +31,106 @@ interface WalletCardProps {
 // Wrapper component that checks for context availability
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
   const walletContext = useWallet();
-  
-  // Safety check: if context is not available yet, return null or loading
+
   if (!walletContext) {
     return null;
   }
-  
+
   return <WalletCardContent wallet={wallet} isActive={isActive} onPress={onPress} onEdit={onEdit} />;
 }
 
-// Main component with all hooks
 function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
-  
-  // Initialize all hooks
+  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet()!;
+
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const menuButtonRef = useRef<View>(null);
 
   // Animation values
   const scale = useSharedValue(1);
-  const elevation = useSharedValue(isActive ? 8 : 4);
+  const rotateX = useSharedValue(0);
+  const rotateY = useSharedValue(0);
   const glowOpacity = useSharedValue(isActive ? 0.3 : 0);
+  // Decorative circles parallax
+  const circleTranslateX = useSharedValue(0);
+  const circleTranslateY = useSharedValue(0);
 
   const animatedCardStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: scale.value }],
-    shadowOpacity: 0.2 + (glowOpacity.value * 0.3),
+    transform: [
+      { perspective: 800 },
+      { scale: scale.value },
+      { rotateX: `${rotateX.value}deg` },
+      { rotateY: `${rotateY.value}deg` },
+    ],
   }));
 
   const animatedGlowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
   }));
 
-  // Use provided wallet or fall back to current wallet
+  // Parallax effect for decorative circles
+  const animatedCircle1Style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: circleTranslateX.value * 0.8 },
+      { translateY: circleTranslateY.value * 0.8 },
+    ],
+  }));
+
+  const animatedCircle2Style = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: -circleTranslateX.value * 0.5 },
+      { translateY: -circleTranslateY.value * 0.5 },
+    ],
+  }));
+
   const displayWallet = wallet || currentWallet;
-  
-  // Memoize gradient colors to prevent recalculation on every render
-  // Only depends on color property to avoid unnecessary recalculations
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const gradientColors = useMemo(() => displayWallet ? getWalletGradient(displayWallet.color) : DEFAULT_GRADIENT, [displayWallet?.color]);
 
-  // Update glow effect when active state changes
   React.useEffect(() => {
     glowOpacity.value = withSpring(isActive ? 0.4 : 0, { damping: 15, stiffness: 200 });
-    elevation.value = withSpring(isActive ? 12 : 4, { damping: 15, stiffness: 200 });
-  }, [isActive, glowOpacity, elevation]);
+  }, [isActive, glowOpacity]);
 
-  // Menu button press handler
   const handleMenuPress = useCallback(() => {
+    HapticService.light();
     menuButtonRef.current?.measure((x: number, y: number, width: number, height: number, pageX: number, pageY: number) => {
       const menuWidth = 150;
       const padding = 20;
-      
-      // Always position menu to the left of the button with proper spacing
       const menuX = pageX - menuWidth + width - padding;
-      
-      setMenuPosition({ 
-        x: Math.max(padding, menuX), 
-        y: pageY + height + 5 
+
+      setMenuPosition({
+        x: Math.max(padding, menuX),
+        y: pageY + height + 5
       });
       setShowMenu(true);
     });
   }, []);
 
-  // Edit button press handler
   const handleEditPress = useCallback(() => {
     setShowMenu(false);
+    HapticService.light();
     if (onEdit && displayWallet) {
       onEdit(displayWallet);
     }
   }, [onEdit, displayWallet]);
 
-  // Delete button press handler
   const handleDeletePress = useCallback(() => {
     setShowMenu(false);
+    HapticService.warning();
     if (displayWallet) {
       Alert.alert(
         'Delete Wallet',
         `Are you sure you want to delete "${displayWallet.name}"? This action cannot be undone.`,
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Delete', 
+          {
+            text: 'Delete',
             style: 'destructive',
-            onPress: () => deleteWallet(displayWallet.id)
+            onPress: () => {
+              HapticService.error();
+              deleteWallet(displayWallet.id);
+            }
           }
         ]
       );
@@ -122,43 +139,55 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
 
   const handlePressIn = useCallback(() => {
     HapticService.light();
-    scale.value = withSpring(0.97, { damping: 15, stiffness: 400 });
-  }, [scale]);
+    scale.value = withSpring(0.96, { damping: 12, stiffness: 400 });
+    // Subtle 3D tilt on press
+    rotateX.value = withSpring(2, { damping: 15, stiffness: 300 });
+    circleTranslateX.value = withSpring(3, { damping: 15, stiffness: 300 });
+    circleTranslateY.value = withSpring(2, { damping: 15, stiffness: 300 });
+  }, [scale, rotateX, circleTranslateX, circleTranslateY]);
 
   const handlePressOut = useCallback(() => {
     scale.value = withSpring(1, { damping: 15, stiffness: 400 });
-  }, [scale]);
+    rotateX.value = withSpring(0, { damping: 15, stiffness: 300 });
+    rotateY.value = withSpring(0, { damping: 15, stiffness: 300 });
+    circleTranslateX.value = withSpring(0, { damping: 15, stiffness: 300 });
+    circleTranslateY.value = withSpring(0, { damping: 15, stiffness: 300 });
+  }, [scale, rotateX, rotateY, circleTranslateX, circleTranslateY]);
 
   const handlePress = useCallback(() => {
     if (onPress) {
       HapticService.medium();
-      // Subtle bounce animation
       scale.value = withSequence(
-        withSpring(1.02, { damping: 10, stiffness: 300 }),
+        withSpring(1.03, { damping: 8, stiffness: 300 }),
         withSpring(1, { damping: 15, stiffness: 400 })
+      );
+      // Quick tilt bounce on selection
+      rotateY.value = withSequence(
+        withTiming(3, { duration: 100 }),
+        withSpring(0, { damping: 12, stiffness: 300 })
       );
       onPress();
     }
-  }, [onPress, scale]);
-  
+  }, [onPress, scale, rotateY]);
+
   if (!displayWallet) return null;
 
   return (
-    <AnimatedTouchable 
+    <AnimatedTouchable
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
-      onPress={handlePress} 
+      onPress={handlePress}
       activeOpacity={0.95}
       style={animatedCardStyle}
     >
       {/* Glow effect for active card */}
       {isActive && (
-        <Animated.View 
+        <Animated.View
           style={[
-            styles.glowEffect, 
+            styles.glowEffect,
             { backgroundColor: gradientColors[1] + '40' },
             animatedGlowStyle,
-          ]} 
+          ]}
         />
       )}
       <AnimatedLinearGradient
@@ -167,24 +196,29 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
         end={{ x: 1, y: 1 }}
         style={[styles.card, isActive && styles.activeCard]}
       >
-        {/* Decorative elements */}
-        <View style={styles.decorativeCircle1} />
-        <View style={styles.decorativeCircle2} />
-        
+        {/* Animated decorative elements with parallax */}
+        <Animated.View style={[styles.decorativeCircle1, animatedCircle1Style]} />
+        <Animated.View style={[styles.decorativeCircle2, animatedCircle2Style]} />
+        {/* Additional decorative element for depth */}
+        <View style={styles.decorativeCircle3} />
+
         <View style={styles.header}>
           <View style={styles.walletInfo}>
-            <Text style={styles.walletName}>{displayWallet.name}</Text>
+            <Text style={styles.walletName} numberOfLines={1}>{displayWallet.name}</Text>
             <View style={styles.walletTypeContainer}>
-              <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
+              <View style={styles.walletTypePill}>
+                <Text style={styles.walletType}>{getWalletTypeDisplayName(displayWallet.type)}</Text>
+              </View>
             </View>
           </View>
-          <TouchableOpacity 
+          <TouchableOpacity
             ref={menuButtonRef}
             style={styles.menuButton}
-            onPress={handleMenuPress} 
+            onPress={handleMenuPress}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             testID="wallet-menu-button"
           >
-            <MoreHorizontal color="white" size={24} />
+            <MoreHorizontal color="white" size={22} />
           </TouchableOpacity>
         </View>
 
@@ -201,7 +235,9 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             </>
           ) : (
             <>
-              <Text style={styles.balance}>{balance.toFixed(8)} BTC</Text>
+              <Text style={styles.balance} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+                {balance.toFixed(8)} BTC
+              </Text>
               <Text style={styles.balanceUSD}>
                 {hasPriceError ? 'Fiat value unavailable' : formatCurrency(balanceUSD)}
               </Text>
@@ -212,22 +248,22 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
         <View style={styles.footer}>
           {isActive && (
             <View style={styles.activeIndicator}>
-              <Check color="white" size={16} />
+              <View style={styles.activeDot} />
               <Text style={styles.activeText}>Active</Text>
             </View>
           )}
         </View>
       </AnimatedLinearGradient>
-      
+
       <Modal
         visible={showMenu}
         transparent
         animationType="fade"
         onRequestClose={() => setShowMenu(false)}
       >
-        <TouchableOpacity 
-          style={styles.modalOverlay} 
-          activeOpacity={1} 
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
           onPress={() => setShowMenu(false)}
         >
           <View style={[styles.menuContainer, {
@@ -236,21 +272,27 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             left: menuPosition.x,
             backgroundColor: theme.colors.surface,
           }]}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={handleEditPress}
               testID="edit-wallet-button"
             >
-              <Edit3 color="#333333" size={20} />
-              <Text style={[styles.menuText, { color: '#333333' }]}>Edit</Text>
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
+                <Edit3 color={theme.colors.primary} size={16} />
+              </View>
+              <Text style={[styles.menuText, { color: theme.colors.text }]}>Edit</Text>
             </TouchableOpacity>
-            
-            <TouchableOpacity 
+
+            <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
+
+            <TouchableOpacity
               style={styles.menuItem}
               onPress={handleDeletePress}
               testID="delete-wallet-button"
             >
-              <Trash2 color="#FF3B30" size={20} />
+              <View style={[styles.menuIconContainer, { backgroundColor: '#FF3B3015' }]}>
+                <Trash2 color="#FF3B30" size={16} />
+              </View>
               <Text style={[styles.menuText, { color: '#FF3B30' }]}>Delete</Text>
             </TouchableOpacity>
           </View>
@@ -262,10 +304,10 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    width: 340, // Increased from 320 for better content space
-    height: 200, // Increased from 180 for better proportions
+    borderRadius: platformStyles.borderRadius.xxxl,
+    padding: platformStyles.spacing.xxl,
+    width: 340,
+    height: 200,
     justifyContent: 'space-between',
     position: 'relative',
     overflow: 'hidden',
@@ -290,7 +332,7 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   decorativeCircle2: {
     position: 'absolute',
@@ -299,7 +341,16 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    backgroundColor: 'rgba(255, 255, 255, 0.07)',
+  },
+  decorativeCircle3: {
+    position: 'absolute',
+    top: 60,
+    right: 40,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(255, 255, 255, 0.04)',
   },
   header: {
     flexDirection: 'row',
@@ -312,28 +363,35 @@ const styles = StyleSheet.create({
   },
   walletName: {
     color: 'white',
-    fontSize: 22, // Increased from 20
-    fontWeight: '800', // Increased from 700
-    maxWidth: 220, // Increased from 200
-    textShadowColor: 'rgba(0, 0, 0, 0.4)', // Slightly stronger shadow
+    fontSize: 22,
+    fontWeight: '800',
+    maxWidth: 220,
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4, // Increased from 3
+    textShadowRadius: 4,
     letterSpacing: 0.2,
   },
   walletTypeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: platformStyles.spacing.sm, // Increased from xs
-    gap: 8, // Increased from 6
+    marginTop: platformStyles.spacing.sm,
+    gap: 8,
+  },
+  walletTypePill: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    paddingHorizontal: 10,
+    paddingVertical: 3,
+    borderRadius: 10,
   },
   walletType: {
-    color: 'rgba(255, 255, 255, 0.9)', // Increased opacity from 0.85
-    fontSize: 14, // Increased from 13
-    fontWeight: '600', // Increased from 500
-    letterSpacing: 0.3,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   menuButton: {
-    padding: 6,
+    padding: 8,
     borderRadius: 20,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
   },
@@ -345,21 +403,21 @@ const styles = StyleSheet.create({
   },
   balance: {
     color: 'white',
-    fontSize: 30, // Increased from 26
+    fontSize: 28,
     fontWeight: '800',
-    textShadowColor: 'rgba(0, 0, 0, 0.4)', // Slightly stronger
+    textShadowColor: 'rgba(0, 0, 0, 0.4)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4, // Increased from 3
-    letterSpacing: -0.3, // Better readability for numbers
+    textShadowRadius: 4,
+    letterSpacing: -0.5,
   },
   balanceUSD: {
-    color: 'rgba(255, 255, 255, 0.95)', // Increased opacity from 0.9
-    fontSize: 18, // Increased from 17
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontSize: 17,
     fontWeight: '600',
-    marginTop: platformStyles.spacing.sm, // Increased from xs
-    textShadowColor: 'rgba(0, 0, 0, 0.3)', // Slightly stronger
+    marginTop: platformStyles.spacing.xs,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3, // Increased from 2
+    textShadowRadius: 3,
     letterSpacing: 0.2,
   },
   footer: {
@@ -369,16 +427,22 @@ const styles = StyleSheet.create({
   activeIndicator: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.25)', // Increased opacity from 0.2
-    paddingHorizontal: platformStyles.spacing.md + 2, // Increased
-    paddingVertical: platformStyles.spacing.xs + 3, // Increased
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+    paddingHorizontal: platformStyles.spacing.md + 2,
+    paddingVertical: platformStyles.spacing.xs + 3,
     borderRadius: platformStyles.borderRadius.round,
-    gap: 5, // Increased from 4
+    gap: 6,
+  },
+  activeDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#4ADE80',
   },
   activeText: {
     color: 'white',
-    fontSize: 14, // Increased from 13
-    fontWeight: '700', // Increased from 600
+    fontSize: 13,
+    fontWeight: '700',
     letterSpacing: 0.3,
   },
   modalOverlay: {
@@ -386,21 +450,32 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
   menuContainer: {
-    // backgroundColor will be set dynamically via theme.colors.surface
-    borderRadius: platformStyles.borderRadius.large,
+    borderRadius: platformStyles.borderRadius.xl,
     padding: platformStyles.spacing.sm,
-    minWidth: 150,
+    minWidth: 160,
     ...platformStyles.cardShadow,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: platformStyles.spacing.md,
-    paddingHorizontal: platformStyles.spacing.sm,
+    paddingHorizontal: platformStyles.spacing.md,
+    borderRadius: platformStyles.borderRadius.medium,
+  },
+  menuIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: platformStyles.spacing.md,
+  },
+  menuDivider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: platformStyles.spacing.md,
   },
   menuText: {
-    marginLeft: platformStyles.spacing.sm,
     ...platformStyles.typography.body,
-    fontWeight: '500',
+    fontWeight: '600',
   },
 });
