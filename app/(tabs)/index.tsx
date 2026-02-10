@@ -2,7 +2,7 @@ import FeedbackPopup from '@/components/FeedbackPopup';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import BalanceChart from '@/components/PriceChart';
-import { HomeScreenSkeleton, TransactionListSkeleton } from '@/components/SkeletonLoader';
+import { HomeScreenSkeleton } from '@/components/SkeletonLoader';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
