@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Clipboard,
@@ -57,7 +57,7 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'] as const;
+  const requiredFunctions: Array<keyof WalletService> = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -96,6 +96,18 @@ export default function WalletSetupScreen() {
   const [confirmationWords, setConfirmationWords] = useState<{word: string, position: number}[]>([]);
   const [userInputs, setUserInputs] = useState<string[]>(['', '']);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Ref to store clipboard timeout for cleanup
+  const clipboardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup clipboard timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clipboardTimeoutRef.current) {
+        clearTimeout(clipboardTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const openLink = async (url: string) => {
     try {
@@ -187,6 +199,11 @@ export default function WalletSetupScreen() {
   }, [mode, wordCount, generateNewMnemonic]);
 
   const copyToClipboard = async () => {
+    // Clear any existing timeout
+    if (clipboardTimeoutRef.current) {
+      clearTimeout(clipboardTimeoutRef.current);
+    }
+    
     if (Platform.OS === 'web') {
       try {
         await navigator.clipboard.writeText(generatedMnemonic);
@@ -207,11 +224,11 @@ export default function WalletSetupScreen() {
     }
     
     // Auto-clear clipboard after 60 seconds for security
-    setTimeout(() => {
+    clipboardTimeoutRef.current = setTimeout(() => {
       if (Platform.OS !== 'web') {
         Clipboard.setString('');
       }
-      // Note: Cannot reliably clear web clipboard, but inform user
+      // Note: Cannot reliably clear web clipboard, but user was informed
     }, 60000);
   };
 
