@@ -157,11 +157,11 @@ function SettingsScreenContent() {
     logoutScale.value = withSpring(1, { damping: 15, stiffness: 400 });
   };
 
-  const SettingItem = ({ 
-    icon: Icon, 
-    title, 
-    subtitle, 
-    onPress, 
+  const SettingItem = ({
+    icon: Icon,
+    title,
+    subtitle,
+    onPress,
     rightElement,
     iconColor = theme.colors.primary,
     showDivider = true,
@@ -177,7 +177,12 @@ function SettingsScreenContent() {
     <>
       <TouchableOpacity
         style={styles.settingItem}
-        onPress={onPress}
+        onPress={() => {
+          if (onPress) {
+            HapticService.light();
+            onPress();
+          }
+        }}
         disabled={!onPress}
         activeOpacity={onPress ? 0.7 : 1}
       >

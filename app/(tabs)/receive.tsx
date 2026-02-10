@@ -1,9 +1,11 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { toast } from '@/components/Toast';
 import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { createButtonStyle, platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
+import { HapticService } from '@/services/haptic-service';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
@@ -157,7 +159,8 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
   const hasValidAddress = currentAddress.trim().length > 0 && currentAddress !== 'No address available';
 
   const handleNewAddress = async () => {
-    if (isGeneratingAddress) return; // Prevent multiple simultaneous requests
+    if (isGeneratingAddress) return;
+    HapticService.medium();
     
     // Rate limiting: Prevent spam and API abuse
     const now = Date.now();
@@ -220,43 +223,42 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
   const handleCopy = async () => {
     try {
       if (!hasValidAddress) {
-        Alert.alert('Error', 'No address available to copy');
+        toast.error('No address available to copy');
         return;
       }
-      
+
       await Clipboard.setStringAsync(currentAddress);
-      Alert.alert('Copied', 'Address copied to clipboard');
+      toast.success('Copied!', 'Address copied to clipboard');
     } catch (error) {
       console.error('Error copying address:', error);
-      Alert.alert('Error', 'Failed to copy address to clipboard');
+      toast.error('Copy failed', 'Could not copy address to clipboard');
     }
   };
 
   const handleShare = async () => {
     try {
       if (!hasValidAddress) {
-        Alert.alert('Error', 'No address available to share');
+        toast.error('No address available to share');
         return;
       }
-      
-      // Native sharing
+
+      HapticService.light();
       await Share.share({
         message: `Bitcoin Address: ${currentAddress}`,
         title: 'Bitcoin Address',
       });
     } catch (error) {
       console.error('Error sharing:', error);
-      // Fallback to copy
       try {
         if (hasValidAddress) {
           await Clipboard.setStringAsync(currentAddress);
-          Alert.alert('Copied', 'Address copied to clipboard instead');
+          toast.info('Copied instead', 'Address copied to clipboard');
         } else {
-          Alert.alert('Error', 'No address available');
+          toast.error('No address available');
         }
       } catch (clipboardError) {
         console.error('Clipboard error:', clipboardError);
-        Alert.alert('Error', 'Unable to share or copy address');
+        toast.error('Share failed', 'Unable to share or copy address');
       }
     }
   };

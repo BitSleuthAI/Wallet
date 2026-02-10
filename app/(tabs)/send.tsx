@@ -1,6 +1,7 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
+import { toast } from '@/components/Toast';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
@@ -9,6 +10,7 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
+import { HapticService } from '@/services/haptic-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, ChevronRight, Coins, QrCode } from 'lucide-react-native';
@@ -106,6 +108,7 @@ function SendScreenContent() {
 
   // Memoize handlers to prevent recreation on every render
   const handleFeePresetChange = useCallback((preset: 'slow' | 'normal' | 'fast' | 'custom') => {
+    HapticService.light();
     console.log(`🔧 Send screen: Fee preset changed to ${preset}`);
     console.log(`🔧 Current feeSettings.defaultPreset: ${feeSettings?.defaultPreset}`);
 
@@ -353,6 +356,7 @@ function SendScreenContent() {
   }, [amount, feeRate]);
 
   const handleSendMax = useCallback(() => {
+    HapticService.light();
     try {
       if (balance > 0) {
         // Calculate more accurate fee estimate
@@ -700,6 +704,7 @@ function SendScreenContent() {
       );
 
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
+      HapticService.transactionSuccess();
 
       // Show success message with transaction details
       const feeFiat = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
@@ -771,6 +776,7 @@ function SendScreenContent() {
       }
 
       const errorMessageText = `Failed to send Bitcoin transaction:\n\n${userMessage}\n\nPlease check your inputs and try again.`;
+      HapticService.transactionError();
       Alert.alert(
         'Transaction Failed',
         errorMessageText,
@@ -782,9 +788,11 @@ function SendScreenContent() {
   };
 
   const handleReviewTransaction = () => {
+    HapticService.medium();
     try {
       // Validate inputs
       if (!recipientAddress.trim()) {
+        HapticService.warning();
         Alert.alert('Error', 'Please enter a recipient address');
         return;
       }
