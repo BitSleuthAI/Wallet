@@ -147,8 +147,6 @@ const AnimatedPressable = React.memo<AnimatedPressableProps>(({
         accessibilityHint={accessibilityHint}
         accessibilityState={{ disabled }}
         testID={testID}
-        // @ts-expect-error hitSlop is supported on View but not in types
-        hitSlop={hitSlop}
       >
         {children}
       </Animated.View>
