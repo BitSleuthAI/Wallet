@@ -1,7 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
-import { toast } from '@/components/Toast';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import WalletSelector from '@/components/WalletSelector';
 import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
