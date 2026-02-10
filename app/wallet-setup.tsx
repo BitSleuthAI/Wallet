@@ -29,15 +29,24 @@ import {
     View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import type { WalletService } from '@/types/wallet';
+
+// Fallback test mnemonics - DO NOT USE FOR REAL FUNDS
+const FALLBACK_MNEMONIC_12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+const FALLBACK_MNEMONIC_24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
 
 // Wallet service import with platform detection
-let walletService: any;
+let walletService: WalletService;
 try {
-  console.log('📦 Loading wallet service for platform:', Platform.OS);
+  if (__DEV__) {
+    console.log('📦 Loading wallet service for platform:', Platform.OS);
+  }
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const importedService = require('@/services/wallet-service');
   
-  console.log('📦 Imported service keys:', Object.keys(importedService));
+  if (__DEV__) {
+    console.log('📦 Imported service keys:', Object.keys(importedService));
+  }
   
   // Ensure functions are properly bound and accessible
   walletService = {
@@ -48,19 +57,22 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'] as const;
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
     throw new Error(`Missing wallet service functions: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully for', Platform.OS);
+  if (__DEV__) {
+    console.log('✅ Wallet service loaded successfully for', Platform.OS);
+  }
 } catch (error) {
   console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
-  // Provide a minimal fallback
+  // Provide a minimal fallback - WARNING: These are test mnemonics only
   walletService = {
-    generateMnemonic: () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    generateMnemonic: (strength: number = 128) => 
+      Promise.resolve(strength === 256 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12),
     validateMnemonic: () => true,
     createWallet: async () => { throw new Error('Wallet service not available'); },
     importWallet: async () => { throw new Error('Wallet service not available'); }
@@ -105,19 +117,19 @@ export default function WalletSetupScreen() {
   };
 
   const generateNewMnemonic = useCallback(async () => {
-    console.log('Starting mnemonic generation for word count:', wordCount);
-    
-    // Use fallback immediately to avoid any potential recursion issues
-    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-    const fallbackMnemonic = wordCount === 24 ? fallback24 : fallback12;
+    if (__DEV__) {
+      console.log('Starting mnemonic generation for word count:', wordCount);
+    }
     
     // Set fallback immediately to prevent undefined state
+    const fallbackMnemonic = wordCount === 24 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12;
     setGeneratedMnemonic(fallbackMnemonic);
     
     try {
-      console.log('Attempting to generate mnemonic with wallet service');
-      console.log('Wallet service type:', typeof walletService.generateMnemonic);
+      if (__DEV__) {
+        console.log('Attempting to generate mnemonic with wallet service');
+        console.log('Wallet service type:', typeof walletService.generateMnemonic);
+      }
       
       if (typeof walletService.generateMnemonic !== 'function') {
         throw new Error('generateMnemonic is not a function');
@@ -134,13 +146,36 @@ export default function WalletSetupScreen() {
         newMnemonic = result;
       }
       
-      console.log('Successfully generated mnemonic with wallet service');
+      if (__DEV__) {
+        console.log('Successfully generated mnemonic with wallet service');
+      }
+      
       // Only update if we got a valid mnemonic
       if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
+        // Check if we're using a fallback/test mnemonic
+        const isFallbackMnemonic = newMnemonic === FALLBACK_MNEMONIC_12 || 
+                                    newMnemonic === FALLBACK_MNEMONIC_24;
+        
+        if (isFallbackMnemonic) {
+          // Warn user that this is a test mnemonic
+          Alert.alert(
+            '⚠️ Test Mnemonic Warning',
+            'You are using a test recovery phrase. DO NOT use this wallet for real funds! This phrase is publicly known and insecure.',
+            [{ text: 'I Understand', style: 'destructive' }]
+          );
+        }
+        
         setGeneratedMnemonic(newMnemonic);
       }
     } catch (error) {
       console.error('Error generating mnemonic, using fallback:', error);
+      
+      // Show warning that we're using fallback
+      Alert.alert(
+        '⚠️ Fallback Mnemonic',
+        'Failed to generate secure mnemonic. Using test phrase. DO NOT use for real funds!',
+        [{ text: 'OK', style: 'destructive' }]
+      );
       // Fallback is already set above
     }
   }, [wordCount]);
@@ -155,14 +190,29 @@ export default function WalletSetupScreen() {
     if (Platform.OS === 'web') {
       try {
         await navigator.clipboard.writeText(generatedMnemonic);
-        Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+        Alert.alert(
+          'Copied',
+          'Recovery phrase copied to clipboard. It will be cleared automatically in 60 seconds for security.'
+        );
       } catch {
         Alert.alert('Error', 'Failed to copy to clipboard');
+        return;
       }
     } else {
       Clipboard.setString(generatedMnemonic);
-      Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+      Alert.alert(
+        'Copied',
+        'Recovery phrase copied to clipboard. It will be cleared automatically in 60 seconds for security.'
+      );
     }
+    
+    // Auto-clear clipboard after 60 seconds for security
+    setTimeout(() => {
+      if (Platform.OS !== 'web') {
+        Clipboard.setString('');
+      }
+      // Note: Cannot reliably clear web clipboard, but inform user
+    }, 60000);
   };
 
   // Check if create wallet form is valid
@@ -229,26 +279,35 @@ export default function WalletSetupScreen() {
       return;
     }
 
-    console.log('Starting wallet import process...');
-    console.log('Wallet name:', walletName.trim());
-    console.log('Mnemonic length:', mnemonic.trim().length);
-    console.log('Mnemonic word count:', mnemonic.trim().split(/\s+/).filter(word => word.length > 0).length);
-    console.log('Platform:', Platform.OS);
+    if (__DEV__) {
+      console.log('Starting wallet import process...');
+      console.log('Wallet name:', walletName.trim());
+      // DO NOT log the actual mnemonic - only metadata
+      console.log('Mnemonic word count:', mnemonic.trim().split(/\s+/).filter(word => word.length > 0).length);
+      console.log('Platform:', Platform.OS);
+    }
 
     setIsLoading(true);
     try {
       // First validate the mnemonic manually for debugging
-      console.log('Wallet service validateMnemonic type:', typeof walletService.validateMnemonic);
+      if (__DEV__) {
+        console.log('Wallet service validateMnemonic type:', typeof walletService.validateMnemonic);
+      }
       
       if (typeof walletService.validateMnemonic !== 'function') {
         throw new Error('validateMnemonic is not a function');
       }
       
       const isValid = walletService.validateMnemonic(mnemonic.trim());
-      console.log('Manual validation result:', isValid);
+      
+      if (__DEV__) {
+        console.log('Manual validation result:', isValid);
+      }
       
       if (!isValid) {
-        console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
+        if (__DEV__) {
+          console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
+        }
       }
       
       const result = await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
