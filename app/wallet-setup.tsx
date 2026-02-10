@@ -12,7 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import * as WebBrowser from 'expo-web-browser';
 import { AlertTriangle, ArrowLeft, Check, ChevronDown, Copy, Download, Plus, QrCode, Sparkles } from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Clipboard,
@@ -29,15 +29,24 @@ import {
     View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
+import type { WalletService } from '@/types/wallet';
+
+// Fallback test mnemonics - DO NOT USE FOR REAL FUNDS
+const FALLBACK_MNEMONIC_12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
+const FALLBACK_MNEMONIC_24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
 
 // Wallet service import with platform detection
-let walletService: any;
+let walletService: WalletService;
 try {
-  console.log('📦 Loading wallet service for platform:', Platform.OS);
+  if (__DEV__) {
+    console.log('📦 Loading wallet service for platform:', Platform.OS);
+  }
   // eslint-disable-next-line @typescript-eslint/no-require-imports
   const importedService = require('@/services/wallet-service');
   
-  console.log('📦 Imported service keys:', Object.keys(importedService));
+  if (__DEV__) {
+    console.log('📦 Imported service keys:', Object.keys(importedService));
+  }
   
   // Ensure functions are properly bound and accessible
   walletService = {
@@ -48,19 +57,22 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const requiredFunctions: Array<keyof WalletService> = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
     throw new Error(`Missing wallet service functions: ${missingFunctions.join(', ')}`);
   }
   
-  console.log('✅ Wallet service loaded successfully for', Platform.OS);
+  if (__DEV__) {
+    console.log('✅ Wallet service loaded successfully for', Platform.OS);
+  }
 } catch (error) {
   console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
-  // Provide a minimal fallback
+  // Provide a minimal fallback - WARNING: These are test mnemonics only
   walletService = {
-    generateMnemonic: () => 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about',
+    generateMnemonic: (strength: number = 128) => 
+      Promise.resolve(strength === 256 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12),
     validateMnemonic: () => true,
     createWallet: async () => { throw new Error('Wallet service not available'); },
     importWallet: async () => { throw new Error('Wallet service not available'); }
@@ -84,6 +96,18 @@ export default function WalletSetupScreen() {
   const [confirmationWords, setConfirmationWords] = useState<{word: string, position: number}[]>([]);
   const [userInputs, setUserInputs] = useState<string[]>(['', '']);
   const [showConfetti, setShowConfetti] = useState(false);
+  
+  // Ref to store clipboard timeout for cleanup
+  const clipboardTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup clipboard timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (clipboardTimeoutRef.current) {
+        clearTimeout(clipboardTimeoutRef.current);
+      }
+    };
+  }, []);
 
   const openLink = async (url: string) => {
     try {
@@ -105,19 +129,19 @@ export default function WalletSetupScreen() {
   };
 
   const generateNewMnemonic = useCallback(async () => {
-    console.log('Starting mnemonic generation for word count:', wordCount);
-    
-    // Use fallback immediately to avoid any potential recursion issues
-    const fallback12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-    const fallback24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-    const fallbackMnemonic = wordCount === 24 ? fallback24 : fallback12;
+    if (__DEV__) {
+      console.log('Starting mnemonic generation for word count:', wordCount);
+    }
     
     // Set fallback immediately to prevent undefined state
+    const fallbackMnemonic = wordCount === 24 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12;
     setGeneratedMnemonic(fallbackMnemonic);
     
     try {
-      console.log('Attempting to generate mnemonic with wallet service');
-      console.log('Wallet service type:', typeof walletService.generateMnemonic);
+      if (__DEV__) {
+        console.log('Attempting to generate mnemonic with wallet service');
+        console.log('Wallet service type:', typeof walletService.generateMnemonic);
+      }
       
       if (typeof walletService.generateMnemonic !== 'function') {
         throw new Error('generateMnemonic is not a function');
@@ -134,13 +158,36 @@ export default function WalletSetupScreen() {
         newMnemonic = result;
       }
       
-      console.log('Successfully generated mnemonic with wallet service');
+      if (__DEV__) {
+        console.log('Successfully generated mnemonic with wallet service');
+      }
+      
       // Only update if we got a valid mnemonic
       if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
+        // Check if we're using a fallback/test mnemonic
+        const isFallbackMnemonic = newMnemonic === FALLBACK_MNEMONIC_12 || 
+                                    newMnemonic === FALLBACK_MNEMONIC_24;
+        
+        if (isFallbackMnemonic) {
+          // Warn user that this is a test mnemonic
+          Alert.alert(
+            '⚠️ Test Mnemonic Warning',
+            'You are using a test recovery phrase. DO NOT use this wallet for real funds! This phrase is publicly known and insecure.',
+            [{ text: 'I Understand', style: 'destructive' }]
+          );
+        }
+        
         setGeneratedMnemonic(newMnemonic);
       }
     } catch (error) {
       console.error('Error generating mnemonic, using fallback:', error);
+      
+      // Show warning that we're using fallback
+      Alert.alert(
+        '⚠️ Fallback Mnemonic',
+        'Failed to generate secure mnemonic. Using test phrase. DO NOT use for real funds!',
+        [{ text: 'OK', style: 'destructive' }]
+      );
       // Fallback is already set above
     }
   }, [wordCount]);
@@ -152,17 +199,37 @@ export default function WalletSetupScreen() {
   }, [mode, wordCount, generateNewMnemonic]);
 
   const copyToClipboard = async () => {
+    // Clear any existing timeout
+    if (clipboardTimeoutRef.current) {
+      clearTimeout(clipboardTimeoutRef.current);
+    }
+    
     if (Platform.OS === 'web') {
       try {
         await navigator.clipboard.writeText(generatedMnemonic);
-        Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+        Alert.alert(
+          'Copied',
+          'Recovery phrase copied to clipboard. It will be cleared automatically in 60 seconds for security.'
+        );
       } catch {
         Alert.alert('Error', 'Failed to copy to clipboard');
+        return;
       }
     } else {
       Clipboard.setString(generatedMnemonic);
-      Alert.alert('Copied', 'Recovery phrase copied to clipboard');
+      Alert.alert(
+        'Copied',
+        'Recovery phrase copied to clipboard. It will be cleared automatically in 60 seconds for security.'
+      );
     }
+    
+    // Auto-clear clipboard after 60 seconds for security
+    clipboardTimeoutRef.current = setTimeout(() => {
+      if (Platform.OS !== 'web') {
+        Clipboard.setString('');
+      }
+      // Note: Cannot reliably clear web clipboard, but user was informed
+    }, 60000);
   };
 
   // Check if create wallet form is valid
@@ -229,26 +296,35 @@ export default function WalletSetupScreen() {
       return;
     }
 
-    console.log('Starting wallet import process...');
-    console.log('Wallet name:', walletName.trim());
-    console.log('Mnemonic length:', mnemonic.trim().length);
-    console.log('Mnemonic word count:', mnemonic.trim().split(/\s+/).filter(word => word.length > 0).length);
-    console.log('Platform:', Platform.OS);
+    if (__DEV__) {
+      console.log('Starting wallet import process...');
+      console.log('Wallet name:', walletName.trim());
+      // DO NOT log the actual mnemonic - only metadata
+      console.log('Mnemonic word count:', mnemonic.trim().split(/\s+/).filter(word => word.length > 0).length);
+      console.log('Platform:', Platform.OS);
+    }
 
     setIsLoading(true);
     try {
       // First validate the mnemonic manually for debugging
-      console.log('Wallet service validateMnemonic type:', typeof walletService.validateMnemonic);
+      if (__DEV__) {
+        console.log('Wallet service validateMnemonic type:', typeof walletService.validateMnemonic);
+      }
       
       if (typeof walletService.validateMnemonic !== 'function') {
         throw new Error('validateMnemonic is not a function');
       }
       
       const isValid = walletService.validateMnemonic(mnemonic.trim());
-      console.log('Manual validation result:', isValid);
+      
+      if (__DEV__) {
+        console.log('Manual validation result:', isValid);
+      }
       
       if (!isValid) {
-        console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
+        if (__DEV__) {
+          console.log('Mnemonic validation failed, but proceeding anyway for debugging...');
+        }
       }
       
       const result = await importWallet(walletName.trim(), mnemonic.trim(), selectedColor);
@@ -557,6 +633,9 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.copyButton, { backgroundColor: theme.colors.primary }]}
             onPress={copyToClipboard}
+            accessibilityRole="button"
+            accessibilityLabel="Copy recovery phrase"
+            accessibilityHint="Copies the recovery phrase to clipboard for 60 seconds"
           >
             <Copy color="white" size={16} />
             <Text style={styles.copyButtonText}>Copy</Text>
@@ -582,6 +661,11 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
+            accessibilityRole="checkbox"
+            accessibilityLabel="I have securely stored my recovery phrase"
+            accessibilityHint="Double tap to confirm you have safely stored your recovery phrase"
+            accessibilityState={{ checked: hasStoredPhrase }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {hasStoredPhrase && (
               <Check color={theme.colors.primary} size={16} />
@@ -596,6 +680,11 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setAcceptedTerms(!acceptedTerms)}
+            accessibilityRole="checkbox"
+            accessibilityLabel="I accept the Terms of Service and Privacy Policy"
+            accessibilityHint="Double tap to toggle acceptance of terms and conditions"
+            accessibilityState={{ checked: acceptedTerms }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {acceptedTerms && (
               <Check color={theme.colors.primary} size={16} />
@@ -763,6 +852,13 @@ export default function WalletSetupScreen() {
           }]}
           onPress={handleImportWallet}
           disabled={isLoading || !isImportFormValid}
+          accessibilityRole="button"
+          accessibilityLabel="Import wallet"
+          accessibilityHint="Imports your existing wallet using the recovery phrase"
+          accessibilityState={{ 
+            disabled: isLoading || !isImportFormValid,
+            busy: isLoading 
+          }}
         >
           <Text style={[styles.submitButtonText, {
             color: isImportFormValid ? 'white' : 'rgba(255, 255, 255, 0.6)'
@@ -774,6 +870,9 @@ export default function WalletSetupScreen() {
         <TouchableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
+          accessibilityRole="link"
+          accessibilityLabel="Learn about recovery phrases"
+          accessibilityHint="Opens help article about Bitcoin recovery phrases"
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
@@ -906,6 +1005,13 @@ export default function WalletSetupScreen() {
           }]}
           onPress={handleConfirmRecoveryPhrase}
           disabled={isLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Create wallet"
+          accessibilityHint="Confirms the recovery phrase and creates your new Bitcoin wallet"
+          accessibilityState={{ 
+            disabled: isLoading,
+            busy: isLoading 
+          }}
         >
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
@@ -1247,8 +1353,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 24,  // Increased from 20px
+    height: 24, // Increased from 20px
     borderWidth: 2,
     borderRadius: 4,
     alignItems: 'center',

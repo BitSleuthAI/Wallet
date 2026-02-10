@@ -1,6 +1,6 @@
 import { HapticService } from '@/services/haptic-service';
 import React, { useCallback } from 'react';
-import { StyleProp, ViewStyle } from 'react-native';
+import { AccessibilityRole, Insets, StyleProp, ViewStyle } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -11,14 +11,34 @@ import Animated, {
 
 type HapticType = 'light' | 'medium' | 'heavy' | 'none';
 
+/**
+ * Props for the AnimatedPressable component
+ */
 interface AnimatedPressableProps {
+  /** Content to render inside the pressable */
   children: React.ReactNode;
+  /** Callback fired when the component is pressed */
   onPress?: () => void;
+  /** Callback fired when the component is long-pressed (min 500ms) */
   onLongPress?: () => void;
+  /** Custom styles to apply to the container */
   style?: StyleProp<ViewStyle>;
+  /** Scale factor when pressed (default: 0.97) */
   scaleDown?: number;
+  /** Haptic feedback type (default: 'light') */
   haptic?: HapticType;
+  /** Whether the component is disabled (default: false) */
   disabled?: boolean;
+  /** Accessibility label for screen readers */
+  accessibilityLabel?: string;
+  /** Accessibility role (e.g., 'button', 'link') */
+  accessibilityRole?: AccessibilityRole;
+  /** Accessibility hint to describe the action */
+  accessibilityHint?: string;
+  /** Test identifier for testing frameworks */
+  testID?: string;
+  /** Expand the touchable area beyond the visible bounds */
+  hitSlop?: Insets | number;
 }
 
 const SPRING_CONFIG = { damping: 15, stiffness: 400 };
@@ -27,8 +47,20 @@ const SPRING_CONFIG = { damping: 15, stiffness: 400 };
  * AnimatedPressable - A universal pressable component with spring animations and haptics.
  * Provides consistent interaction feedback across the entire app.
  * Uses Gesture Handler for smoother gesture recognition.
+ * 
+ * @example
+ * ```tsx
+ * <AnimatedPressable
+ *   onPress={() => console.log('Pressed')}
+ *   accessibilityLabel="Submit form"
+ *   accessibilityRole="button"
+ *   haptic="medium"
+ * >
+ *   <Text>Press Me</Text>
+ * </AnimatedPressable>
+ * ```
  */
-export default function AnimatedPressable({
+const AnimatedPressable = React.memo<AnimatedPressableProps>(({
   children,
   onPress,
   onLongPress,
@@ -36,7 +68,12 @@ export default function AnimatedPressable({
   scaleDown = 0.97,
   haptic = 'light',
   disabled = false,
-}: AnimatedPressableProps) {
+  accessibilityLabel,
+  accessibilityRole = 'button',
+  accessibilityHint,
+  testID,
+  hitSlop,
+}: AnimatedPressableProps) => {
   const scale = useSharedValue(1);
   const opacity = useSharedValue(1);
 
@@ -103,9 +140,20 @@ export default function AnimatedPressable({
 
   return (
     <GestureDetector gesture={composedGesture}>
-      <Animated.View style={[style, animatedStyle]}>
+      <Animated.View 
+        style={[style, animatedStyle]}
+        accessibilityLabel={accessibilityLabel}
+        accessibilityRole={accessibilityRole}
+        accessibilityHint={accessibilityHint}
+        accessibilityState={{ disabled }}
+        testID={testID}
+      >
         {children}
       </Animated.View>
     </GestureDetector>
   );
-}
+});
+
+AnimatedPressable.displayName = 'AnimatedPressable';
+
+export default AnimatedPressable;

@@ -6,7 +6,9 @@ export class HapticService {
     try {
       await Haptics.selectionAsync();
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
@@ -15,7 +17,9 @@ export class HapticService {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
@@ -24,7 +28,9 @@ export class HapticService {
     try {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
@@ -33,7 +39,9 @@ export class HapticService {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
@@ -42,7 +50,9 @@ export class HapticService {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
@@ -51,7 +61,9 @@ export class HapticService {
     try {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
     } catch (error) {
-      console.log('Haptics not available:', error);
+      if (__DEV__) {
+        console.log('Haptics not available:', error);
+      }
     }
   }
 
