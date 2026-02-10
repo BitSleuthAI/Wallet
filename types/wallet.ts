@@ -2,6 +2,17 @@ export type WalletType = 'hd' | 'segwit-p2sh' | 'segwit-native' | 'legacy';
 export type AddressType = 'p2pkh' | 'p2sh-p2wpkh' | 'p2wpkh';
 export type FiatCurrency = 'USD' | 'EUR' | 'GBP';
 
+/**
+ * Interface for wallet service operations
+ * Ensures type safety when working with wallet creation, import, and mnemonic generation
+ */
+export interface WalletService {
+  generateMnemonic: (strength?: number) => Promise<string>;
+  validateMnemonic: (mnemonic: string) => boolean;
+  createWallet: (name: string, color?: string) => Promise<Wallet>;
+  importWallet: (name: string, mnemonic: string, color?: string) => Promise<Wallet>;
+}
+
 // Wallet type display names for consistent UI
 export const WALLET_TYPE_DISPLAY_NAMES: Record<WalletType, string> = {
   'segwit-native': 'Native SegWit (P2WPKH)',
