@@ -70,7 +70,6 @@ export default function AnimatedPressable({
   const tapGesture = Gesture.Tap()
     .enabled(!disabled)
     .onBegin(() => {
-      'worklet';
       scale.value = withSpring(scaleDown, SPRING_CONFIG);
       opacity.value = withSpring(0.9, SPRING_CONFIG);
       if (haptic !== 'none') {
@@ -78,11 +77,9 @@ export default function AnimatedPressable({
       }
     })
     .onEnd(() => {
-      'worklet';
       runOnJS(handlePress)();
     })
     .onFinalize(() => {
-      'worklet';
       scale.value = withSpring(1, SPRING_CONFIG);
       opacity.value = withSpring(1, SPRING_CONFIG);
     });
@@ -91,7 +88,6 @@ export default function AnimatedPressable({
     .enabled(!disabled && !!onLongPress)
     .minDuration(500)
     .onStart(() => {
-      'worklet';
       runOnJS(triggerHaptic)('medium');
       runOnJS(handleLongPress)();
     });
