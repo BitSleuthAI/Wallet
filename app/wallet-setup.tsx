@@ -663,6 +663,7 @@ export default function WalletSetupScreen() {
             onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
             accessibilityRole="checkbox"
             accessibilityLabel="I have securely stored my recovery phrase"
+            accessibilityHint="Double tap to confirm you have safely stored your recovery phrase"
             accessibilityState={{ checked: hasStoredPhrase }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
@@ -681,6 +682,7 @@ export default function WalletSetupScreen() {
             onPress={() => setAcceptedTerms(!acceptedTerms)}
             accessibilityRole="checkbox"
             accessibilityLabel="I accept the Terms of Service and Privacy Policy"
+            accessibilityHint="Double tap to toggle acceptance of terms and conditions"
             accessibilityState={{ checked: acceptedTerms }}
             hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
