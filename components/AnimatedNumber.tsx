@@ -5,9 +5,7 @@ import Animated, {
   useSharedValue,
   withSpring,
   withTiming,
-  useDerivedValue,
   useAnimatedProps,
-  runOnJS,
 } from 'react-native-reanimated';
 import { TextInput } from 'react-native';
 
