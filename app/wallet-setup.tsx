@@ -616,6 +616,9 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.copyButton, { backgroundColor: theme.colors.primary }]}
             onPress={copyToClipboard}
+            accessibilityRole="button"
+            accessibilityLabel="Copy recovery phrase"
+            accessibilityHint="Copies the recovery phrase to clipboard for 60 seconds"
           >
             <Copy color="white" size={16} />
             <Text style={styles.copyButtonText}>Copy</Text>
@@ -641,6 +644,10 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
+            accessibilityRole="checkbox"
+            accessibilityLabel="I have securely stored my recovery phrase"
+            accessibilityState={{ checked: hasStoredPhrase }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {hasStoredPhrase && (
               <Check color={theme.colors.primary} size={16} />
@@ -655,6 +662,10 @@ export default function WalletSetupScreen() {
           <TouchableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setAcceptedTerms(!acceptedTerms)}
+            accessibilityRole="checkbox"
+            accessibilityLabel="I accept the Terms of Service and Privacy Policy"
+            accessibilityState={{ checked: acceptedTerms }}
+            hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
           >
             {acceptedTerms && (
               <Check color={theme.colors.primary} size={16} />
@@ -822,6 +833,13 @@ export default function WalletSetupScreen() {
           }]}
           onPress={handleImportWallet}
           disabled={isLoading || !isImportFormValid}
+          accessibilityRole="button"
+          accessibilityLabel="Import wallet"
+          accessibilityHint="Imports your existing wallet using the recovery phrase"
+          accessibilityState={{ 
+            disabled: isLoading || !isImportFormValid,
+            busy: isLoading 
+          }}
         >
           <Text style={[styles.submitButtonText, {
             color: isImportFormValid ? 'white' : 'rgba(255, 255, 255, 0.6)'
@@ -833,6 +851,9 @@ export default function WalletSetupScreen() {
         <TouchableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
+          accessibilityRole="link"
+          accessibilityLabel="Learn about recovery phrases"
+          accessibilityHint="Opens help article about Bitcoin recovery phrases"
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
@@ -965,6 +986,13 @@ export default function WalletSetupScreen() {
           }]}
           onPress={handleConfirmRecoveryPhrase}
           disabled={isLoading}
+          accessibilityRole="button"
+          accessibilityLabel="Create wallet"
+          accessibilityHint="Confirms the recovery phrase and creates your new Bitcoin wallet"
+          accessibilityState={{ 
+            disabled: isLoading,
+            busy: isLoading 
+          }}
         >
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
@@ -1306,8 +1334,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   checkbox: {
-    width: 20,
-    height: 20,
+    width: 24,  // Increased from 20px
+    height: 24, // Increased from 20px
     borderWidth: 2,
     borderRadius: 4,
     alignItems: 'center',
