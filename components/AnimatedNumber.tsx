@@ -36,7 +36,8 @@ export default function AnimatedNumber({
 
   useEffect(() => {
     animatedValue.value = withTiming(value, { duration });
-  }, [value, duration, animatedValue]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value, duration]); // animatedValue is a stable shared value ref and should not be in deps
 
   // Scale animation on value change for emphasis
   const scale = useSharedValue(1);
@@ -45,7 +46,8 @@ export default function AnimatedNumber({
     scale.value = withSpring(1.02, { damping: 8, stiffness: 300 }, () => {
       scale.value = withSpring(1, { damping: 15, stiffness: 400 });
     });
-  }, [value, scale]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value]); // scale is a stable shared value ref and should not be in deps
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ scale: scale.value }],
@@ -57,7 +59,6 @@ export default function AnimatedNumber({
     const text = `${prefix}${format(animatedValue.value)}${suffix}`;
     return {
       text,
-      defaultValue: text,
     };
   });
 

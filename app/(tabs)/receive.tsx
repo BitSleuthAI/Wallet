@@ -125,7 +125,7 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
         });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWallet?.xpub, currentWallet?.addresses?.length]);
+  }, [currentWallet?.xpub, currentWallet?.addresses?.length]); // walletService and stable setters/callbacks are intentionally omitted to avoid unnecessary refetch loops
 
   // Spin animation for the refresh icon
   useEffect(() => {
