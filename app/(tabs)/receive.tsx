@@ -124,6 +124,7 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           setIsLoadingAddress(false);
         });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentWallet?.xpub, currentWallet?.addresses?.length]);
 
   // Spin animation for the refresh icon
