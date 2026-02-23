@@ -57,9 +57,7 @@ export default function AnimatedNumber({
 
   const animatedProps = useAnimatedProps(() => {
     const text = `${prefix}${format(animatedValue.value)}${suffix}`;
-    return {
-      text,
-    };
+    return { text, defaultValue: text };
   });
 
   return (
