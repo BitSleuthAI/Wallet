@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { StyleProp, TextStyle } from 'react-native';
+import { StyleProp, TextInput, TextStyle } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -7,7 +7,6 @@ import Animated, {
   withTiming,
   useAnimatedProps,
 } from 'react-native-reanimated';
-import { TextInput } from 'react-native';
 
 const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 

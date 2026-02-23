@@ -57,7 +57,7 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions: Array<keyof WalletService> = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const requiredFunctions: (keyof WalletService)[] = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
