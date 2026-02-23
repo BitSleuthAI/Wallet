@@ -8,7 +8,10 @@ import Animated, {
   useAnimatedProps,
 } from 'react-native-reanimated';
 
-const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
+// Extend TextInput props to include Reanimated's virtual 'text' prop for animating text content
+const AnimatedTextInput = Animated.createAnimatedComponent(
+  TextInput as React.ComponentType<React.ComponentProps<typeof TextInput> & { text?: string }>
+);
 
 interface AnimatedNumberProps {
   value: number;
