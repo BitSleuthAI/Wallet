@@ -7,7 +7,7 @@ PODS:
   - EXJSONUtils (0.15.0)
   - EXManifests (1.0.10):
     - ExpoModulesCore
-  - Expo (54.0.32):
+  - Expo (54.0.33):
     - ExpoModulesCore
     - hermes-engine
     - RCTRequired
@@ -222,7 +222,7 @@ PODS:
     - ExpoModulesCore
   - ExpoHaptics (15.0.8):
     - ExpoModulesCore
-  - ExpoHead (6.0.22):
+  - ExpoHead (6.0.23):
     - ExpoModulesCore
     - RNScreens
   - ExpoImage (3.0.11):
@@ -2112,7 +2112,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNFBApp (23.8.4):
+  - RNFBApp (23.8.6):
     - Firebase/CoreOnly (= 12.8.0)
     - hermes-engine
     - RCTRequired
@@ -2135,7 +2135,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNFBCrashlytics (23.8.4):
+  - RNFBCrashlytics (23.8.6):
     - Firebase/Crashlytics (= 12.8.0)
     - FirebaseCoreExtension
     - hermes-engine
@@ -2160,7 +2160,7 @@ PODS:
     - ReactNativeDependencies
     - RNFBApp
     - Yoga
-  - RNFBPerf (23.8.4):
+  - RNFBPerf (23.8.6):
     - Firebase/Performance (= 12.8.0)
     - hermes-engine
     - RCTRequired
@@ -2328,7 +2328,7 @@ PODS:
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
     - Yoga
-  - RNSVG (15.15.1):
+  - RNSVG (15.15.3):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2349,9 +2349,9 @@ PODS:
     - ReactCommon/turbomodule/bridging
     - ReactCommon/turbomodule/core
     - ReactNativeDependencies
-    - RNSVG/common (= 15.15.1)
+    - RNSVG/common (= 15.15.3)
     - Yoga
-  - RNSVG/common (15.15.1):
+  - RNSVG/common (15.15.3):
     - hermes-engine
     - RCTRequired
     - RCTTypeSafety
@@ -2837,7 +2837,7 @@ SPEC CHECKSUMS:
   EXImageLoader: e501c001bc40b8326605e82e6e80363c80fe06b5
   EXJSONUtils: 1d3e4590438c3ee593684186007028a14b3686cd
   EXManifests: 83ef0844fcf06d6099b12a7bdbd7d36fc0e1dd16
-  Expo: 7b40139dd13e65c0a0685d712b218add2d8b9ff8
+  Expo: 20986af30c0ecead9d1500bf989a6ceaa027bfaf
   expo-dev-client: 12ef7d5b14d93e309922acea78dcd851db583a87
   expo-dev-launcher: 6ce51bf060db8ffe742bdc2ac2cc20aad9669462
   expo-dev-menu: d09251b31cb394323f09de45764937ff4d340a32
@@ -2850,7 +2850,7 @@ SPEC CHECKSUMS:
   ExpoFont: c625dbd97ed57e9089b172b2a7bb99003d074664
   ExpoGlassEffect: 387b1124a00166283d9c762c4dc895e84fdb60e8
   ExpoHaptics: 7240781406f4563c3f4eb1e72864302a8c643fd0
-  ExpoHead: b691a2ed7ab02ed820b6c6468941832d34969c29
+  ExpoHead: 3f6ed6cbda48f13bcaddae98f8e5dc525dcfb34f
   ExpoImage: f6bcd30bb98d4c484869668fbc32834bb3ee5bfb
   ExpoImagePicker: 115fada5d2e90bf900dea64151953ca39f67b47b
   ExpoKeepAwake: 44bf6715bc1d2ddb17afe19d927cd039cda123f0
@@ -2956,13 +2956,13 @@ SPEC CHECKSUMS:
   ReactCommon: e6e232202a447d353e5531f2be82f50f47cbaa9a
   ReactNativeDependencies: 71ce9c28beb282aa720ea7b46980fff9669f428a
   RNCAsyncStorage: 0574155b95b96b89a51717c4dd42fb6057926bbc
-  RNFBApp: 47ce617b11851619d1a2088965c1d9cb0d54d735
-  RNFBCrashlytics: cfd4b6cffd3c5318824a0eef3a4116867ac45be4
-  RNFBPerf: 9f524b371620442da00bb5715997608f8edf759f
+  RNFBApp: d5b0e72c928d482e083ffd9f5a21ee5dcb67d5e6
+  RNFBCrashlytics: b745b8cdee29b053d38b9d31b4c83a69bfd86865
+  RNFBPerf: 0824a04a6570fbfdf4f4c478b504249f52a222f2
   RNGestureHandler: c971f0a10fdffe00dfb4c142e87f34cdcd704376
   RNReanimated: f6923d4159aab5c12a6fa54e468aee947c70750d
   RNScreens: e91463674394a1969b4688eb5db419d7045fce2d
-  RNSVG: 488933a1ce816d9462f045ed7979531cf2cf21db
+  RNSVG: 04aa45b3e3b399503fbe434a6c9b5638e6f25f80
   RNWorklets: 28ee7370ca8da356fcc914e3e68b97e9752196d2
   SDWebImage: e9c98383c7572d713c1a0d7dd2783b10599b9838
   SDWebImageAVIFCoder: afe194a084e851f70228e4be35ef651df0fc5c57
