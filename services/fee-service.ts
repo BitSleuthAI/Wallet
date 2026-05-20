@@ -6,6 +6,7 @@ import { Platform } from 'react-native';
 const BLOCKSTREAM_API = 'https://blockstream.info/api';
 const MEMPOOL_RECOMMENDED_API = 'https://mempool.space/api/v1/fees/recommended';
 const MEMPOOL_ESTIMATES_API = 'https://mempool.space/api/v1/fees/mempool-blocks';
+const SATOSHI_RECOMMENDED_API = 'https://bitcoinsapi.com/api/v1/compat/mempool/fees/recommended';
 
 // Rate limiting for fee API calls (250ms as per Blockstream docs)
 const FEE_API_DELAY_MS = 250;
@@ -59,6 +60,7 @@ export class FeeEstimationService {
   private async fetchFromMultipleSources(): Promise<FeeEstimate> {
     const sources = [
       () => this.fetchFromMempoolRecommended(),
+      () => this.fetchFromSatoshiRecommended(),
       () => this.fetchFromMempoolEstimates(), 
       () => this.fetchFromBlockstream(),
     ];
@@ -180,6 +182,45 @@ export class FeeEstimationService {
       return feeEstimate;
     } catch (error) {
       console.warn('❌ Failed to fetch from Mempool.space estimates:', error);
+      return null;
+    }
+  }
+
+  private async fetchFromSatoshiRecommended(): Promise<FeeEstimate | null> {
+    try {
+      console.log('📊 Fetching recommended fees from Satoshi API...');
+
+      const response = await rateLimitedFetch(SATOSHI_RECOMMENDED_API, {
+        method: 'GET',
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'BitcoinWallet/1.0',
+        },
+        ...(Platform.OS === 'web' ? {
+          mode: 'cors' as const,
+          credentials: 'omit' as const,
+        } : {}),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+
+      // Satoshi API compatibility route returns the mempool.space fee bucket shape.
+      const feeEstimate: FeeEstimate = {
+        fastestFee: Math.ceil(data.fastestFee || 20),
+        halfHourFee: Math.ceil(data.halfHourFee || 15),
+        hourFee: Math.ceil(data.hourFee || 10),
+        economyFee: Math.ceil(data.economyFee || 5),
+        minimumFee: Math.ceil(data.minimumFee || 1),
+      };
+
+      console.log('✅ Satoshi API recommended fees:', feeEstimate);
+      return feeEstimate;
+    } catch (error) {
+      console.warn('❌ Failed to fetch from Satoshi API recommended:', error);
       return null;
     }
   }
