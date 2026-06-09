@@ -127,7 +127,7 @@
   "overrides": {
     "react-native-randombytes": "^3.6.2",
     "react-native-renderer": "19.1.0",
-    "@xmldom/xmldom": ">=0.8.13",
+    "@xmldom/xmldom": "~0.8.13",
     "postcss": ">=8.5.10"
   },
   "resolutions": {
