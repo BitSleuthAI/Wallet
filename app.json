@@ -67,9 +67,7 @@
           },
           "ios": {
             "useFrameworks": "static",
-            "podfileProperties": {
-              "use_modular_headers!": true
-            }
+            "forceStaticLinking": ["RNFBApp", "RNFBCrashlytics", "RNFBPerf"]
           }
         }
       ],

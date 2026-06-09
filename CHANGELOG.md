@@ -29,9 +29,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **iOS Build Error**: Fixed build failure caused by non-modular header includes in React Native Firebase
-  - Removed `use_modular_headers!` from Podfile which was causing RNFBApp to fail when importing React-Core headers
-  - Firebase works correctly with static frameworks without requiring modular headers
-  - Resolves Xcode build errors: "include of non-modular header inside framework module"
+  - Resolves Xcode 26 build errors: "include of non-modular header inside framework module 'RNFBApp...'"
+  - Added `ios.forceStaticLinking` for `RNFBApp`, `RNFBCrashlytics` and `RNFBPerf` via `expo-build-properties` so the Firebase pods build as static libraries instead of static frameworks (Expo SDK 54 mechanism, expo/expo#39742)
+  - Removed the `@react-native-firebase` patch-package patches that previously attempted to work around the header errors (ineffective under Xcode 26 explicitly-built modules)
+  - Removed unused `use_modular_headers!` podfile property from app.json
 
 ## [1.2.0] - 2025-11-05
 
