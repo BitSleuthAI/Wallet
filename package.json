@@ -4,6 +4,9 @@
   "version": "1.2.1",
   "license": "AGPL-3.0",
   "packageManager": "npm@10.2.4",
+  "engines": {
+    "node": ">=20.18.0"
+  },
   "scripts": {
     "start": "expo start",
     "start-tunnel": "expo start --tunnel",

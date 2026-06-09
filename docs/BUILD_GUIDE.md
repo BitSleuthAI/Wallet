@@ -19,10 +19,15 @@ Before you begin, ensure you have the following installed:
 
 ### Required for All Platforms
 
-- **Node.js** 18.17+ (Node 20 recommended)
+- **Node.js** 20.18.0 or higher (**required**)
   ```bash
-  node --version  # Should be v18.17.0 or higher
+  node --version  # Should be v20.18.0 or higher
   ```
+  > Node 20+ is mandatory. Expo SDK 54 / React Native 0.81 ship a Metro
+  > config that uses `Array.prototype.toReversed()`, which only exists in
+  > Node 20+. Older Node versions fail at build time with
+  > `configs.toReversed is not a function`. The pinned version lives in
+  > `.nvmrc` and `package.json` (`engines.node`) — run `nvm use` to match it.
 
 - **npm** or **bun** package manager
   ```bash
@@ -296,7 +301,23 @@ npm run android --device
 
 ## Building for Production
 
-### Using Expo Application Services (EAS)
+> **Heads up — EAS *cloud* builds and Firebase config.**
+> The Firebase config files (`GoogleService-Info.plist`, `google-services.json`)
+> are intentionally gitignored and **never committed** to this open-source repo.
+> EAS *cloud* builds only receive committed files, so a plain
+> `eas build --platform ios` will fail while resolving the iOS Firebase config
+> with `ENOENT ... GoogleService-Info.plist`. Use **local builds** (below), where
+> your local Firebase files are present.
+>
+> If you do want to keep using EAS cloud builds, upload the Firebase files as
+> **EAS file environment variables / secrets** (stored on EAS, not in git) and
+> reference them from your config — see the Expo docs on
+> [environment variables and secrets](https://docs.expo.dev/eas/environment-variables/).
+
+### Local builds with EAS (recommended for this repo)
+
+Because the Firebase files stay on your machine, build locally and then submit the
+artifacts to Expo / the stores.
 
 1. **Install EAS CLI**
    ```bash
@@ -308,24 +329,34 @@ npm run android --device
    eas login
    ```
 
-3. **Configure EAS Build**
-   
-   The project already includes `eas.json` configuration.
+3. **Confirm your Firebase files are in place** (see [Firebase Configuration](#firebase-configuration)):
+   - `GoogleService-Info.plist` (root **and** `ios/BitSleuthWallet/`)
+   - `google-services.json` (root **and** `android/app/`)
 
-4. **Build for iOS**
+4. **Build locally** with the `--local` flag (uses your working tree, including the
+   gitignored Firebase files, and your local Node):
    ```bash
-   eas build --platform ios --profile production
+   eas build --platform android --profile production --local
+   eas build --platform ios --profile production --local
    ```
 
-5. **Build for Android**
+5. **Submit the resulting binary to Expo / the stores:**
    ```bash
-   eas build --platform android --profile production
+   eas submit --platform android --path <path-to-.aab>
+   eas submit --platform ios --path <path-to-.ipa>
    ```
 
-6. **Build for Both Platforms**
-   ```bash
-   eas build --platform all --profile production
-   ```
+### EAS cloud builds (only if Firebase secrets are configured)
+
+The project includes `eas.json` (which now pins Node `20.18.1` per profile). Cloud
+builds work **only** once the Firebase files are provided via EAS file environment
+variables/secrets as noted above:
+
+```bash
+eas build --platform ios --profile production
+eas build --platform android --profile production
+eas build --platform all --profile production
+```
 
 ### Local Production Builds
 
@@ -355,6 +386,18 @@ cd android
 ## Troubleshooting
 
 ### Common Issues
+
+#### `configs.toReversed is not a function`
+
+This means the build is running on Node < 20. Metro (Expo SDK 54 / RN 0.81)
+requires Node 20+.
+
+```bash
+node --version   # must be >= 20.18.0
+nvm use          # switch to the version pinned in .nvmrc
+```
+
+For EAS builds, the Node version is pinned in `eas.json` (`node: "20.18.1"`).
 
 #### Metro Bundler Won't Start
 
