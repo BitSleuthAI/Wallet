@@ -61,3 +61,5 @@ android/app/google-services.json
 ios/BitSleuthWallet/GoogleService-Info.plist
 ios/GoogleService-Info.plist
 ios/BitSleuthWallet.xcodeproj/GoogleService-Info.plist
+# Build archives
+*.tar.gz
