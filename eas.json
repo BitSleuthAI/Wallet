@@ -31,7 +31,8 @@
       "autoIncrement": true,
       "node": "20.19.4",
       "android": {
-        "image": "ubuntu-22.04-jdk-17-ndk-r25b"
+        "image": "ubuntu-22.04-jdk-17-ndk-r25b",
+        "buildType": "app-bundle"
       },
       "ios": {
         "simulator": false,
