@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.2] - 2026-06-10
+
 ### Added
 - **Open Source Release**: BitSleuth Wallet is now open source under AGPL-3.0 license
   - GitHub Actions workflows for CI/CD (lint, build verification, security scanning)
@@ -18,6 +20,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Security scanning with dependency review and secret detection
   - GitHub Discussions for community support
   - Issue and PR templates for structured contributions
+- **Satoshi API Fee Fallback**: Added a secondary fee-estimate source so fee recommendations remain available when the Esplora `/fee-estimates` endpoint fails
+- **Firebase Performance Monitoring**: Enabled app performance tracking alongside Crashlytics (crash reporting and performance only — no analytics)
+- **Automated GitHub Releases**: Pushing a version tag now creates the GitHub release automatically with notes extracted from this changelog
+- **UI Polish**: Premium animations, haptic feedback, and micro-interactions across wallet flows, plus refined theme and typography
+
+### Changed
+- Pinned `react-native-reanimated` to exact version 4.1.6 (with patch-package patch) to keep Android EAS builds reproducible
+- `patch-package` now fails loudly on local installs so broken patches are caught early
+- Raised the Node.js engine requirement to >=20.19.4 for Metro compatibility
+- Downgraded Gradle to 9.3 for Android build stability
+- Aligned dependency versions with Expo SDK 54 expectations
+- Updated `@react-native-firebase` packages to 23.8.x
+- Updated iOS liquid glass tab documentation and checks from iOS 18+ to iOS 26+
+- Routine dependency updates (yaml, tar, lodash, hono, react-native-svg, lucide, Gradle wrapper, firebase-crashlytics-gradle, GitHub Actions)
+
+### Fixed
+- **iOS Build Error**: Fixed build failure caused by non-modular header includes in React Native Firebase
+  - Resolves Xcode 26 build errors: "include of non-modular header inside framework module 'RNFBApp...'"
+  - Added `ios.forceStaticLinking` for `RNFBApp`, `RNFBCrashlytics` and `RNFBPerf` via `expo-build-properties` so the Firebase pods build as static libraries instead of static frameworks (Expo SDK 54 mechanism, expo/expo#39742)
+  - Removed the `@react-native-firebase` patch-package patches that previously attempted to work around the header errors (ineffective under Xcode 26 explicitly-built modules)
+  - Removed unused `use_modular_headers!` podfile property from app.json
+- **Android EAS Build**: Fixed build failure caused by Android build artifacts accidentally included in the reanimated patch
+- **Receive Tab Performance**: Fixed QR code rendering performance and New Address refresh behavior
+- **Wallet Import Speed**: Optimized transaction fetching during wallet import
+- **Address Validation**: Bitcoin address validation now performs proper checksum verification
+- Fixed TypeScript build errors in `AnimatedNumber` under Reanimated v4 and improved type safety in `rbf-service.ts`
 
 ### Security
 - **CVE-2025-55182**: Updated React to version 19.1.2 to address security vulnerability
@@ -26,13 +54,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Updated `@types/react` from ~19.1.10 to ~19.1.2 to align with React version
   - All peer dependencies remain compatible (React Native 0.81.5, Expo SDK 54, @tanstack/react-query, zustand, React Native Reanimated, Expo Router, NativeWind)
   - No breaking changes or compatibility issues
-
-### Fixed
-- **iOS Build Error**: Fixed build failure caused by non-modular header includes in React Native Firebase
-  - Resolves Xcode 26 build errors: "include of non-modular header inside framework module 'RNFBApp...'"
-  - Added `ios.forceStaticLinking` for `RNFBApp`, `RNFBCrashlytics` and `RNFBPerf` via `expo-build-properties` so the Firebase pods build as static libraries instead of static frameworks (Expo SDK 54 mechanism, expo/expo#39742)
-  - Removed the `@react-native-firebase` patch-package patches that previously attempted to work around the header errors (ineffective under Xcode 26 explicitly-built modules)
-  - Removed unused `use_modular_headers!` podfile property from app.json
+- **CVE-2026-2391**: Upgraded `qs` from 6.14.1 to 6.15.0
+- Forced `@xmldom/xmldom` (pinned to ~0.8.13) and `postcss` to patched versions via npm overrides
+- Resolved remaining high-severity advisories via `npm audit fix`
+- Removed Firebase config files and API keys from the repository; added example templates and setup documentation
+- Removed the debug keystore from the repository and added keystore patterns to `.gitignore`
 
 ## [1.2.0] - 2025-11-05
 
