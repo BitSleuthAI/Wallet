@@ -17,7 +17,7 @@
     "ios": "expo run:ios --dev-client",
     "android-debug": "expo run:android --dev-client --clear",
     "ios-debug": "expo run:ios --dev-client --clear",
-    "postinstall": "patch-package"
+    "postinstall": "patch-package --error-on-fail"
   },
   "dependencies": {
     "@babel/core": "^7.29.0",
