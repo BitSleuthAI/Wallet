@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { Circle, Path } from 'react-native-svg';
+import { APP_VERSION } from '@/constants/app-version';
 
 interface SplashScreenProps {
   onAnimationComplete?: () => void;
@@ -122,7 +123,7 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
 
           {/* Version and description */}
           <Animated.View style={[styles.versionContainer, { opacity: textOpacity }]}>
-            <Text style={styles.versionText}>v1.2.1</Text>
+            <Text style={styles.versionText}>{`v${APP_VERSION}`}</Text>
             <Text style={styles.walletText}>Bitcoin Wallet</Text>
           </Animated.View>
         </View>

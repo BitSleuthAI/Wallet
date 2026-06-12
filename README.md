@@ -8,7 +8,7 @@
 
 **A professional-grade, non-custodial Bitcoin wallet for iOS and Android**
 
-[![Version](https://img.shields.io/badge/version-1.2.1-blue.svg)](https://github.com/BitSleuthAI/Wallet)
+[![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)](https://github.com/BitSleuthAI/Wallet)
 [![Platform](https://img.shields.io/badge/platform-iOS%20%7C%20Android-lightgrey.svg)](https://github.com/BitSleuthAI/Wallet)
 [![License](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 [![React Native](https://img.shields.io/badge/React%20Native-0.81-61dafb.svg)](https://reactnative.dev/)
