@@ -69,7 +69,7 @@ body:
     attributes:
       label: App Version
       description: Which version of BitSleuth Wallet are you using?
-      placeholder: e.g., 1.2.1
+      placeholder: e.g., 1.2.2
     validations:
       required: true
 

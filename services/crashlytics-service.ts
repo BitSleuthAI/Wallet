@@ -1,4 +1,5 @@
 import { Platform } from 'react-native';
+import { APP_VERSION } from '@/constants/app-version';
 
 // Firebase Crashlytics with fallback for web/missing native module
 let crashlytics: any = null;
@@ -253,7 +254,7 @@ if (isInitialized && crashlytics && !isExpoGo) {
     crashlytics.setUserId('anonymous');
     crashlytics.setAttributes({
       platform: Platform.OS,
-      appVersion: '1.2.1',
+      appVersion: APP_VERSION,
       buildType: __DEV__ ? 'debug' : 'release',
       environment: 'development-build',
     });

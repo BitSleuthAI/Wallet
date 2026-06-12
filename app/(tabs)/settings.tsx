@@ -6,6 +6,7 @@ import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
+import { APP_VERSION } from '@/constants/app-version';
 
 import type { FiatCurrency } from '@/types/wallet';
 import { getWalletTypeDisplayName } from '@/types/wallet';
@@ -377,7 +378,7 @@ function SettingsScreenContent() {
             <SettingItem
               icon={Info}
               title="About BitSleuth Wallet"
-              subtitle="Version 1.2.1"
+              subtitle={`Version ${APP_VERSION}`}
               onPress={() => router.push('/about')}
             />
 

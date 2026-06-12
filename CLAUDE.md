@@ -208,6 +208,21 @@ node scripts/test-biometric.js
 | Constants | UPPER_SNAKE_CASE | `MAX_FEE_RATE` |
 | Types/Interfaces | PascalCase | `WalletState` |
 
+### Version Update Checklist (MUST FOLLOW)
+
+When asked to bump/update the app version, update **ALL** of the following:
+
+1. `app.json` (`expo.version`) — **drives all in-app version displays** (splash screen, About screen, Settings, Crashlytics) via `constants/app-version.ts`
+2. `package.json` (`version`)
+3. `android/app/build.gradle` (`versionName`, and bump `versionCode`)
+4. `ios/BitSleuthWallet/Info.plist` (`CFBundleShortVersionString`)
+5. `CHANGELOG.md` — add the new release entry
+6. `README.md` — version badge near the top
+7. `app/about.tsx` — add a "What's New in X.Y.Z?" `DropdownSection` at the top with `defaultExpanded={true}` (remove `defaultExpanded` from the previous version's section)
+8. `.github/ISSUE_TEMPLATE/bug_report.yml` — App Version placeholder example
+
+**NEVER hardcode the version number in components or services.** Always import `APP_VERSION` from `@/constants/app-version`, which reads it from `app.json` via `expo-constants`.
+
 ### Documentation Organization
 
 **All markdown files MUST go in the `docs/` folder**, with these exceptions:

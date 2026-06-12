@@ -15,6 +15,7 @@ import { useWallet } from '@/hooks/wallet-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import crashlyticsService from '@/services/crashlytics-service';
+import { APP_VERSION } from '@/constants/app-version';
 
 interface DropdownSectionProps {
   title: string;
@@ -103,11 +104,20 @@ export default function AboutScreen() {
             About BitSleuth Wallet
           </Text>
           <Text style={[styles.version, { color: theme.colors.textSecondary }]}>
-            Version 1.2.1
+            Version {APP_VERSION}
           </Text>
         </View>
 
-        <DropdownSection title="What's New in 1.2.1?" defaultExpanded={true}>
+        <DropdownSection title="What's New in 1.2.2?" defaultExpanded={true}>
+          <BulletPoint text="Open Source Release: BitSleuth Wallet is now open source under the AGPL-3.0 license, with CI/CD, documentation, and community contribution support." />
+          <BulletPoint text="Satoshi API Fee Fallback: Fee recommendations stay available even when the primary Esplora fee endpoint fails." />
+          <BulletPoint text="Firebase Performance Monitoring: App performance tracking alongside crash reporting (no analytics)." />
+          <BulletPoint text="UI Polish: Premium animations, haptic feedback, and micro-interactions across wallet flows." />
+          <BulletPoint text="Build Fixes: Resolved iOS (Xcode 26) build errors and Android EAS build failures." />
+          <BulletPoint text="Performance: Faster Receive tab QR rendering and wallet import, plus stricter Bitcoin address checksum validation." />
+        </DropdownSection>
+
+        <DropdownSection title="What's New in 1.2.1?">
           <BulletPoint text="Device Optimization: App now optimized exclusively for mobile phone screens (iPhone and Android phones only)." />
         </DropdownSection>
 
