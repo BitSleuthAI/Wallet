@@ -134,7 +134,9 @@
     "hono": "^4.12.27",
     "joi": "^17.13.4",
     "protobufjs": "^7.6.3",
-    "tar": "^7.5.16"
+    "tar": "^7.5.16",
+    "uuid": "^11.1.1",
+    "js-yaml": "^4.2.0"
   },
   "resolutions": {
     "@babel/traverse": "^7.29.0",
