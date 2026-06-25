@@ -115,8 +115,36 @@ target 'BitSleuthWallet' do
           # Disable strict module context checking for Firebase modules
           config.build_settings['CLANG_WARN_STRICT_PROTOTYPES'] = 'NO'
           config.build_settings['GCC_WARN_INHIBIT_ALL_WARNINGS'] = 'YES'
+
+          # RNFBCrashlytics/RNFBPerf use `@import RNFBApp;`. Because all pods build as
+          # static libraries here (Expo disables use_frameworks! for RNFB), forcing
+          # DEFINES_MODULE=YES generates RNFBApp.modulemap but does NOT tell the
+          # consumer targets where to find it, so clang reports "Module 'RNFBApp' not
+          # found". Explicitly hand them the module map so @import resolves.
+          unless target.name == 'RNFBApp'
+            config.build_settings['OTHER_CFLAGS'] << '-fmodule-map-file="${PODS_ROOT}/Target Support Files/RNFBApp/RNFBApp.modulemap"'
+          end
+
+          # CocoaPods generates RNFBApp.modulemap as a `framework module`, but Expo
+          # builds RNFBApp as a static library (no .framework bundle). The `framework`
+          # keyword makes clang look for the umbrella header inside a non-existent
+          # RNFBApp.framework, causing "Umbrella header 'RNFBApp-umbrella.h' not found".
+          # Point RNFBApp at its own module map so it is consumed as a plain module.
+          if target.name == 'RNFBApp'
+            config.build_settings['MODULEMAP_FILE'] = '${PODS_ROOT}/Target Support Files/RNFBApp/RNFBApp.modulemap'
+          end
         end
       end
+    end
+
+    # Rewrite the auto-generated RNFBApp module map from a `framework module` to a
+    # plain `module` so clang resolves the umbrella header relative to the module-map
+    # directory (where it actually lives) instead of inside a non-existent framework.
+    rnfb_modulemap = File.join(__dir__, 'Pods', 'Target Support Files', 'RNFBApp', 'RNFBApp.modulemap')
+    if File.exist?(rnfb_modulemap)
+      contents = File.read(rnfb_modulemap)
+      patched = contents.sub(/\Aframework module/, 'module')
+      File.write(rnfb_modulemap, patched) if patched != contents
     end
 
   end
