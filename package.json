@@ -128,7 +128,13 @@
     "react-native-randombytes": "^3.6.2",
     "react-native-renderer": "19.1.0",
     "@xmldom/xmldom": "~0.8.13",
-    "postcss": ">=8.5.10"
+    "postcss": ">=8.5.10",
+    "form-data": "^2.5.6",
+    "undici": "^6.27.0",
+    "hono": "^4.12.27",
+    "joi": "^17.13.4",
+    "protobufjs": "^7.6.3",
+    "tar": "^7.5.16"
   },
   "resolutions": {
     "@babel/traverse": "^7.29.0",
