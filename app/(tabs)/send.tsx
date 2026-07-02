@@ -1,3 +1,4 @@
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
@@ -37,11 +38,7 @@ export default function SendScreen() {
 
   // Safety check: if context is not available yet, show loading
   if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+    return <ScreenLoading />;
   }
 
   return <SendScreenContent />;
@@ -1060,13 +1057,13 @@ function SendScreenContent() {
                   <View style={styles.validationContainer}>
                     {addressValidation.isValid ? (
                       <View style={styles.validationRow}>
-                        <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                        <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>{addressValidation.message}</Text>
+                        <CheckCircle color={theme.colors.success} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.success }]}>{addressValidation.message}</Text>
                       </View>
                     ) : (
                       <View style={styles.validationRow}>
-                        <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                        <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>{addressValidation.message}</Text>
+                        <AlertCircle color={theme.colors.error} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.error }]}>{addressValidation.message}</Text>
                       </View>
                     )}
                   </View>
@@ -1324,15 +1321,15 @@ function SendScreenContent() {
                       <View style={styles.validationContainer}>
                         {customFeeValidation.isValid ? (
                           <View style={styles.validationRow}>
-                            <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                            <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
+                            <CheckCircle color={theme.colors.success} size={16} />
+                            <Text style={[styles.validationText, { color: theme.colors.success }]}>
                               {customFeeValidation.message}
                             </Text>
                           </View>
                         ) : (
                           <View style={styles.validationRow}>
-                            <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                            <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
+                            <AlertCircle color={theme.colors.error} size={16} />
+                            <Text style={[styles.validationText, { color: theme.colors.error }]}>
                               {customFeeValidation.message}
                             </Text>
                           </View>

@@ -171,14 +171,14 @@ export default function GenerateXPUBScreen() {
         </TouchableOpacity>
 
         {/* Privacy Warning */}
-        <View style={[styles.warningContainer, { backgroundColor: '#FEF2F2', borderColor: '#FECACA' }]}>
+        <View style={[styles.warningContainer, { backgroundColor: theme.colors.error + '15', borderColor: theme.colors.error + '40' }]}>
           <View style={styles.warningHeader}>
-            <AlertTriangle size={20} color="#DC2626" />
-            <Text style={[styles.warningTitle, { color: '#DC2626' }]}>
+            <AlertTriangle size={20} color={theme.colors.error} />
+            <Text style={[styles.warningTitle, { color: theme.colors.error }]}>
               Privacy Warning!
             </Text>
           </View>
-          <Text style={[styles.warningText, { color: '#7F1D1D' }]}>
+          <Text style={[styles.warningText, { color: theme.colors.text }]}>
             Sharing your XPUB allows anyone to monitor your entire wallet&apos;s transaction history (past, present, and future). Only share this with services you fully trust.
           </Text>
         </View>

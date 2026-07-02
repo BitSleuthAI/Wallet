@@ -109,17 +109,18 @@ class ErrorBoundary extends Component<
       // Use color scheme from state (reactive to changes)
       const isDark = this.state.colorScheme === 'dark';
       
-      // Theme-aware colors
+      // Brand palette, hardcoded because this boundary renders outside providers
+      // (values mirror lightTheme/darkTheme in constants/themes.ts)
       const colors = {
-        background: isDark ? '#0A0A0F' : '#FEFEFE',
-        surface: isDark ? '#1F1F33' : '#FFFFFF',
-        text: isDark ? '#F7FAFC' : '#1A1A1A',
-        textSecondary: isDark ? '#A0AEC0' : '#6B7280',
-        border: isDark ? '#2D3748' : '#FFE5DB',
-        gradientStart: isDark ? '#26F5FE' : '#FF8A65',
-        gradientEnd: isDark ? '#00BCD4' : '#FF6B6B',
-        iconBg: isDark ? '#252538' : '#FFF5F2',
-        iconColor: isDark ? '#26F5FE' : '#FF8A65',
+        background: isDark ? '#09090B' : '#F2F2F7',
+        surface: isDark ? '#18181B' : '#FFFFFF',
+        text: isDark ? '#FAFAFA' : '#18181B',
+        textSecondary: isDark ? '#A1A1AA' : '#8E8E93',
+        border: isDark ? '#27272A' : '#E5E5EA',
+        gradientStart: '#F7931A',
+        gradientEnd: '#FFAB40',
+        iconBg: isDark ? '#27272A' : '#FFF3E0',
+        iconColor: '#F7931A',
       };
       
       return (

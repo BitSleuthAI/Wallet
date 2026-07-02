@@ -1,4 +1,5 @@
 import FeedbackPopup from '@/components/FeedbackPopup';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import BalanceChart from '@/components/PriceChart';
@@ -49,11 +50,7 @@ export default function WalletScreen() {
   
   // Safety check: if context is not available yet, show loading
   if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+    return <ScreenLoading />;
   }
   
   return <WalletScreenContent />;

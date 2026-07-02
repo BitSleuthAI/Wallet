@@ -1,3 +1,4 @@
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { toast } from '@/components/Toast';
 import WalletSelector from '@/components/WalletSelector';
@@ -39,11 +40,7 @@ export default function ReceiveScreen() {
   
   // Safety check: if context is not available yet, show loading
   if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+    return <ScreenLoading />;
   }
   
   return <ReceiveScreenContent walletContext={walletContext} />;

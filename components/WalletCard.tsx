@@ -18,8 +18,8 @@ import Animated, {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-// Default gradient colors for fallback
-const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const;
+// Default gradient colors for fallback - Bitcoin orange, matching the brand
+const DEFAULT_GRADIENT = ['#FFAB40', '#F7931A'] as const;
 
 interface WalletCardProps {
   wallet?: Wallet;
@@ -290,10 +290,10 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
               onPress={handleDeletePress}
               testID="delete-wallet-button"
             >
-              <View style={[styles.menuIconContainer, { backgroundColor: '#FF3B3015' }]}>
-                <Trash2 color="#FF3B30" size={16} />
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.error + '15' }]}>
+                <Trash2 color={theme.colors.error} size={16} />
               </View>
-              <Text style={[styles.menuText, { color: '#FF3B30' }]}>Delete</Text>
+              <Text style={[styles.menuText, { color: theme.colors.error }]}>Delete</Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>

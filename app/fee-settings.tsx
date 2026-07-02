@@ -280,9 +280,9 @@ export default function FeeSettingsScreen() {
     
     const getCongestionColor = () => {
       switch (congestion) {
-        case 'low': return '#10B981'; // Green
-        case 'medium': return '#F59E0B'; // Yellow
-        case 'high': return '#EF4444'; // Red
+        case 'low': return theme.colors.success;
+        case 'medium': return theme.colors.warning;
+        case 'high': return theme.colors.error;
         default: return theme.colors.textSecondary;
       }
     };
