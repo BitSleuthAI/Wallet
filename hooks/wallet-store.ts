@@ -2,7 +2,7 @@ import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_GC_TIME } from '@/constants/cach
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
-import { clearAddressCache, getWalletData } from '@/services/wallet-service';
+import { clearAddressCache, clearWalletDataMemo, getWalletData } from '@/services/wallet-service';
 import { getPersistedBalance, getPersistedTransactions, getPersistedUTXOs, persistWalletData, clearPersistedWalletData, clearAllPersistedWalletData } from '@/services/wallet-persistence-service';
 import { useTheme } from '@/hooks/theme-store';
 import { FeeSettings, FiatCurrency, Transaction, UTXO, Wallet } from '@/types/wallet';
@@ -888,7 +888,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedBalances[currentWallet.id] || 0 : 0,
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -987,7 +987,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedTransactions[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1037,8 +1037,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
-    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch new addresses
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchInterval: 60 * 1000, // Address discovery is the most expensive call; new addresses only appear after user action or new txs
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1138,7 +1138,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedUtxos[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1815,7 +1815,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const refreshData = useCallback(async () => {
     try {
       console.log('🔄 Refreshing wallet data...');
-      
+
+      // Drop the getWalletData memo so the refetch below hits the network
+      clearWalletDataMemo();
+
       // Clear mock/test data
       await AsyncStorage.multiRemove([
         'mock_data', 'test_data', 'sample_data', 'dummy_data',
@@ -2043,6 +2046,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     try {
       const allKeys = await AsyncStorage.getAllKeys();
       console.log('📋 Found AsyncStorage keys:', allKeys);
+
+      clearWalletDataMemo();
 
       // Clear all persisted wallet data before clearing AsyncStorage
       await clearAllPersistedWalletData();

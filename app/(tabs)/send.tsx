@@ -535,25 +535,29 @@ function SendScreenContent() {
       }
 
       console.log('🚀 Starting real Bitcoin transaction send process...');
-      const truncatedAddress = recipientAddress.substring(0, 20) + '...';
-      console.log('Transaction details:', {
-        from: currentWallet?.name,
-        to: truncatedAddress,
-        amount: amountInBTC,
-        feeRate,
-        enableRBF,
-        network: 'mainnet',
-        enhancedSecurity: isEnhancedSecurityRequired
-      });
+      if (__DEV__) {
+        const truncatedAddress = recipientAddress.substring(0, 20) + '...';
+        console.log('Transaction details:', {
+          from: currentWallet?.name,
+          to: truncatedAddress,
+          amount: amountInBTC,
+          feeRate,
+          enableRBF,
+          network: 'mainnet',
+          enhancedSecurity: isEnhancedSecurityRequired
+        });
+      }
 
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
 
       // Validate wallet addresses and current index
-      console.log('🔍 Wallet validation - addresses count:', currentWallet.addresses?.length || 0);
-      console.log('🔍 Wallet validation - current address index:', currentWallet.currentAddressIndex);
-      console.log('🔍 Wallet validation - available UTXOs count:', availableUtxos.length);
-      console.log('🔍 Wallet validation - selected UTXOs count:', selected.length);
+      if (__DEV__) {
+        console.log('🔍 Wallet validation - addresses count:', currentWallet.addresses?.length || 0);
+        console.log('🔍 Wallet validation - current address index:', currentWallet.currentAddressIndex);
+        console.log('🔍 Wallet validation - available UTXOs count:', availableUtxos.length);
+        console.log('🔍 Wallet validation - selected UTXOs count:', selected.length);
+      }
 
       if (!currentWallet.addresses || currentWallet.addresses.length === 0) {
         console.error('❌ No addresses available in wallet');
@@ -578,21 +582,23 @@ function SendScreenContent() {
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;
 
-      console.log('🔍 Using current address:', currentAddress.substring(0, 10) + '...');
-      console.log('🔍 Send screen: Wallet addresses being passed to sendTransaction:', currentWallet.addresses.length);
-      console.log('🔍 Send screen: availableUtxos.length:', availableUtxos.length);
-      console.log('🔍 Send screen: selected.length:', selected.length);
-      console.log('🔍 Send screen: availableUtxos details:', availableUtxos.map(u => ({
-        txid: u.txid.substring(0, 10) + '...',
-        vout: u.vout,
-        value: u.value,
-        address: u.address?.substring(0, 10) + '...',
-        addressIndex: u.addressIndex,
-        frozen: u.frozen
-      })));
-      console.log('🔍 Send screen: selectedUtxoIds:', selectedUtxoIds);
-      console.log('🔍 Send screen: coinControl.getWalletUtxos result:', coinControl.getWalletUtxos(currentWallet.id));
-      console.log('🔍 Send screen: coinControl.isUtxosLoading result:', coinControl.isUtxosLoading(currentWallet.id));
+      if (__DEV__) {
+        console.log('🔍 Using current address:', currentAddress.substring(0, 10) + '...');
+        console.log('🔍 Send screen: Wallet addresses being passed to sendTransaction:', currentWallet.addresses.length);
+        console.log('🔍 Send screen: availableUtxos.length:', availableUtxos.length);
+        console.log('🔍 Send screen: selected.length:', selected.length);
+        console.log('🔍 Send screen: availableUtxos details:', availableUtxos.map(u => ({
+          txid: u.txid.substring(0, 10) + '...',
+          vout: u.vout,
+          value: u.value,
+          address: u.address?.substring(0, 10) + '...',
+          addressIndex: u.addressIndex,
+          frozen: u.frozen
+        })));
+        console.log('🔍 Send screen: selectedUtxoIds:', selectedUtxoIds);
+        console.log('🔍 Send screen: coinControl.getWalletUtxos result:', coinControl.getWalletUtxos(currentWallet.id));
+        console.log('🔍 Send screen: coinControl.isUtxosLoading result:', coinControl.isUtxosLoading(currentWallet.id));
+      }
 
       // If no UTXOs are selected via coin control, automatically select the most efficient UTXOs
       let utxosToUse: UTXO[];
@@ -607,14 +613,16 @@ function SendScreenContent() {
         }
 
         utxosToUse = unfrozenSelected;
-        console.log('🔍 Send screen: Using manually selected unfrozen UTXOs:', utxosToUse.length);
-        if (unfrozenSelected.length < selected.length) {
-          console.log('🔍 Send screen: Filtered out', selected.length - unfrozenSelected.length, 'frozen/unconfirmed UTXOs');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Using manually selected unfrozen UTXOs:', utxosToUse.length);
+          if (unfrozenSelected.length < selected.length) {
+            console.log('🔍 Send screen: Filtered out', selected.length - unfrozenSelected.length, 'frozen/unconfirmed UTXOs');
+          }
         }
       } else {
         // Automatic UTXO selection: choose confirmed UTXOs (not frozen) - BlueWallet approach
         const unfrozenUtxos = availableUtxos.filter(utxo => !utxo.frozen && utxo.status?.confirmed);
-        console.log('🔍 Send screen: Available confirmed unfrozen UTXOs:', unfrozenUtxos.length);
+        if (__DEV__) console.log('🔍 Send screen: Available confirmed unfrozen UTXOs:', unfrozenUtxos.length);
 
         if (unfrozenUtxos.length === 0) {
           console.warn('⚠️ No confirmed unfrozen UTXOs available for automatic selection');
@@ -629,9 +637,11 @@ function SendScreenContent() {
         const estimatedFeeSatoshis = Math.floor((estimatedFee || 0.0001) * 1e8);
         const totalNeeded = amountSatoshis + estimatedFeeSatoshis;
 
-        console.log('🔍 Send screen: Amount needed:', amountSatoshis, 'sats');
-        console.log('🔍 Send screen: Estimated fee:', estimatedFeeSatoshis, 'sats');
-        console.log('🔍 Send screen: Total needed:', totalNeeded, 'sats');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Amount needed:', amountSatoshis, 'sats');
+          console.log('🔍 Send screen: Estimated fee:', estimatedFeeSatoshis, 'sats');
+          console.log('🔍 Send screen: Total needed:', totalNeeded, 'sats');
+        }
 
         // Greedy selection: pick UTXOs until we have enough - BlueWallet approach
         const selectedUtxos: UTXO[] = [];
@@ -652,39 +662,28 @@ function SendScreenContent() {
         }
 
         utxosToUse = selectedUtxos;
-        console.log('🔍 Send screen: Automatically selected', utxosToUse.length, 'UTXOs');
-        console.log('🔍 Send screen: Total selected value:', totalSelected, 'sats');
-        console.log('🔍 Send screen: Change amount:', totalSelected - totalNeeded, 'sats');
-        console.log('🔍 Send screen: Sample selected UTXO:', utxosToUse[0] ? {
-          txid: utxosToUse[0].txid.substring(0, 10) + '...',
-          vout: utxosToUse[0].vout,
-          value: utxosToUse[0].value,
-          address: utxosToUse[0].address?.substring(0, 10) + '...'
-        } : 'No UTXOs');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Automatically selected', utxosToUse.length, 'UTXOs');
+          console.log('🔍 Send screen: Total selected value:', totalSelected, 'sats');
+          console.log('🔍 Send screen: Change amount:', totalSelected - totalNeeded, 'sats');
+          console.log('🔍 Send screen: Sample selected UTXO:', utxosToUse[0] ? {
+            txid: utxosToUse[0].txid.substring(0, 10) + '...',
+            vout: utxosToUse[0].vout,
+            value: utxosToUse[0].value,
+            address: utxosToUse[0].address?.substring(0, 10) + '...'
+          } : 'No UTXOs');
+        }
       }
 
-      console.log('🔍 Send screen: UTXOs to use for transaction:', utxosToUse.length);
-
-      // If we have UTXOs available, use them directly instead of fetching fresh
-      if (utxosToUse.length > 0) {
-        console.log('✅ Using pre-loaded UTXOs for transaction (automatic selection)');
-      } else {
-        console.log('⚠️ No UTXOs available in send screen, will let sendTransaction fetch fresh data');
-      }
-      console.log('🔍 Available UTXOs:', availableUtxos.length);
-      console.log('🔍 Selected UTXOs:', selected.length);
-      console.log('🔍 Sample UTXO:', utxosToUse[0] ? {
-        txid: utxosToUse[0].txid.substring(0, 10) + '...',
-        vout: utxosToUse[0].vout,
-        value: utxosToUse[0].value,
-        address: utxosToUse[0].address?.substring(0, 10) + '...'
-      } : 'No UTXOs');
-
-      // Debug: Check if we're passing UTXOs to sendTransaction
-      if (utxosToUse.length > 0) {
-        console.log('✅ Send screen: Passing', utxosToUse.length, 'UTXOs to sendTransaction');
-      } else {
-        console.log('⚠️ Send screen: No UTXOs to pass to sendTransaction, will let it fetch fresh');
+      if (__DEV__) {
+        console.log('🔍 Send screen: UTXOs to use for transaction:', utxosToUse.length);
+        console.log('🔍 Available UTXOs:', availableUtxos.length);
+        console.log('🔍 Selected UTXOs:', selected.length);
+        if (utxosToUse.length > 0) {
+          console.log('✅ Send screen: Passing', utxosToUse.length, 'UTXOs to sendTransaction');
+        } else {
+          console.log('⚠️ Send screen: No UTXOs to pass to sendTransaction, will let it fetch fresh');
+        }
       }
 
       const result = await sendTransaction(

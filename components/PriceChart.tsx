@@ -2,7 +2,7 @@ import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { WifiOff } from 'lucide-react-native';
-import React, { useRef, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
@@ -43,25 +43,12 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const tooltipOpacity = useRef(new Animated.Value(0)).current;
 
-  // Show error state only if balance data is unavailable
-  if (hasBalanceError) {
-    return (
-      <View style={[styles.container, styles.errorContainer, { backgroundColor: theme.colors.surface }]}>
-        <WifiOff color={theme.colors.error} size={32} />
-        <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
-          Balance Chart Unavailable
-        </Text>
-        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
-          Unable to load balance history
-        </Text>
-      </View>
-    );
-  }
-
-  // Generate balance history based on actual transactions
-  const generateBalanceHistory = (): DataPoint[] => {
+  // Generate balance history based on actual transactions.
+  // Memoized: this is the most expensive synchronous computation on the home
+  // screen and must not re-run on unrelated store updates (e.g. price polls).
+  const balanceHistory = useMemo((): DataPoint[] => {
     const currentBalance = balance;
-    
+
     // Calculate days based on selected period
     const getDaysForPeriod = (period: TimePeriod): number => {
       switch (period) {
@@ -69,19 +56,19 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
         case '1W': return 7;
         case '1M': return 30;
         case '1Y': return 365;
-        case 'All': return Math.max(365, transactions.length > 0 ? 
+        case 'All': return Math.max(365, transactions.length > 0 ?
           Math.ceil((Date.now() - Math.min(...transactions.map((tx: Transaction) => tx.timestamp))) / (24 * 60 * 60 * 1000)) : 365);
         default: return 30;
       }
     };
-    
+
     const days = getDaysForPeriod(selectedPeriod);
-    
+
     // If no transactions, show flat line at current balance
     if (transactions.length === 0) {
       const dataPoints = selectedPeriod === '1D' ? 24 : Math.min(days, 100); // Limit data points for performance
       const interval = selectedPeriod === '1D' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000; // 1 hour for 1D, 1 day for others
-      
+
       return Array.from({ length: dataPoints }, (_, i) => ({
         x: i,
         y: currentBalance,
@@ -89,32 +76,33 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
         date: new Date(Date.now() - (dataPoints - 1 - i) * interval)
       }));
     }
-    
+
     // Sort transactions by oldest first
     const sortedTransactions = [...transactions].sort((a, b) => a.timestamp - b.timestamp);
-    
+
     // Create balance history by walking through transactions
     const history: DataPoint[] = [];
     let runningBalance = 0;
-    
+
     // Calculate interval and data points based on period
     const dataPoints = selectedPeriod === '1D' ? 24 : Math.min(days, 100);
     const interval = selectedPeriod === '1D' ? 60 * 60 * 1000 : 24 * 60 * 60 * 1000;
-    
+
     // Start from the beginning of the period
     const startDate = new Date(Date.now() - (dataPoints - 1) * interval);
-    
+
+    // Single pass over the sorted transactions: advance a cursor as the date
+    // window moves forward instead of re-filtering the whole array per point
+    let txIndex = 0;
     for (let i = 0; i < dataPoints; i++) {
       const date = new Date(startDate.getTime() + i * interval);
-      
-      // Add transactions that occurred before or on this date
-      const transactionsUpToDate = sortedTransactions.filter(tx => tx.timestamp <= date.getTime());
-      
-      // Calculate balance at this point in time
-      runningBalance = transactionsUpToDate.reduce((balance, tx) => {
-        return tx.type === 'received' ? balance + tx.amount : balance - tx.amount;
-      }, 0);
-      
+
+      while (txIndex < sortedTransactions.length && sortedTransactions[txIndex].timestamp <= date.getTime()) {
+        const tx = sortedTransactions[txIndex];
+        runningBalance += tx.type === 'received' ? tx.amount : -tx.amount;
+        txIndex++;
+      }
+
       const balanceValue = Math.max(0, runningBalance);
       history.push({
         x: i,
@@ -123,11 +111,9 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
         date
       });
     }
-    
+
     return history;
-  };
-  
-  const balanceHistory = generateBalanceHistory();
+  }, [transactions, balance, selectedPeriod]);
 
   const createPath = (data: DataPoint[]) => {
     const maxY = Math.max(...data.map(d => d.y));
@@ -256,15 +242,31 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
   const chartColor = isDarkMode ? bitcoinGold : bitcoinOrange;
   const gradientStartColor = chartColor;
   const gradientEndColor = isDarkMode ? 'rgba(255, 184, 77, 0.1)' : 'rgba(247, 147, 26, 0.1)';
-  
+
   // Calculate balance change for display (but don't use it for coloring)
   const firstBalance = balanceHistory[0]?.y || 0;
   const lastBalance = balanceHistory[balanceHistory.length - 1]?.y || 0;
   const balanceChange = lastBalance - firstBalance;
-  
-  const { linePath, gradientPath } = createPath(balanceHistory);
-  const timeLabels = getTimeRangeLabels(balanceHistory);
-  
+
+  const { linePath, gradientPath } = useMemo(() => createPath(balanceHistory), [balanceHistory]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const timeLabels = useMemo(() => getTimeRangeLabels(balanceHistory), [balanceHistory, selectedPeriod]);
+
+  // Show error state only if balance data is unavailable
+  if (hasBalanceError) {
+    return (
+      <View style={[styles.container, styles.errorContainer, { backgroundColor: theme.colors.surface }]}>
+        <WifiOff color={theme.colors.error} size={32} />
+        <Text style={[styles.errorTitle, { color: theme.colors.error }]}>
+          Balance Chart Unavailable
+        </Text>
+        <Text style={[styles.errorText, { color: theme.colors.textSecondary }]}>
+          Unable to load balance history
+        </Text>
+      </View>
+    );
+  }
+
   const getSelectedPointPosition = () => {
     if (!selectedPoint) return { x: 0, y: 0 };
     

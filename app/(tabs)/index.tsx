@@ -348,8 +348,13 @@ function WalletScreenContent() {
             snapToInterval={CARD_SNAP_INTERVAL}
             snapToAlignment="start"
             data={walletDataForList}
-            keyExtractor={(item, index) => `${item.type}-${index}`}
+            keyExtractor={(item) => item.type === 'wallet' ? item.wallet.id : 'add'}
             renderItem={renderCarouselItem}
+            getItemLayout={(_, index) => ({
+              length: CARD_SNAP_INTERVAL,
+              offset: CARD_SNAP_INTERVAL * index,
+              index,
+            })}
             contentContainerStyle={styles.carouselContent}
             removeClippedSubviews={true}
             maxToRenderPerBatch={3}

@@ -1,7 +1,8 @@
 import { platformStyles } from '@/constants/themes';
+import { useTheme } from '@/hooks/theme-store';
 import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
-import { Transaction } from '@/types/wallet';
+import { BitcoinPrice, Theme, Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
 import React, { useCallback, useEffect } from 'react';
@@ -23,20 +24,44 @@ interface TransactionItemProps {
   index?: number;
 }
 
-// Wrapper component that checks for context availability
+interface TransactionItemContentProps extends TransactionItemProps {
+  theme: Theme;
+  bitcoinPrice: BitcoinPrice | null | undefined;
+  hasPriceError: boolean;
+  formatCurrency: (amount: number, showSymbol?: boolean) => string;
+}
+
+// Thin wrapper subscribes to the stores; the memoized content below only
+// re-renders when its own props actually change, so list rows stay idle
+// during the 30s wallet data polls.
 export default function TransactionItem({ transaction, index = 0 }: TransactionItemProps) {
   const walletContext = useWallet();
+  const { theme } = useTheme();
 
   if (!walletContext) {
     return null;
   }
 
-  return <TransactionItemContent transaction={transaction} index={index} />;
+  return (
+    <TransactionItemContent
+      transaction={transaction}
+      index={index}
+      theme={theme}
+      bitcoinPrice={walletContext.bitcoinPrice}
+      hasPriceError={walletContext.hasPriceError}
+      formatCurrency={walletContext.formatCurrency}
+    />
+  );
 }
 
-function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps) {
-  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet()!;
-
+const TransactionItemContent = React.memo(function TransactionItemContent({
+  transaction,
+  index = 0,
+  theme,
+  bitcoinPrice,
+  hasPriceError,
+  formatCurrency,
+}: TransactionItemContentProps) {
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
 
@@ -117,8 +142,9 @@ function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps
     return theme.colors.warning;
   };
 
-  // Staggered entrance animation
-  const enteringAnimation = FadeInDown.delay(index * 60).duration(400).springify().damping(15);
+  // Staggered entrance animation, capped so long lists don't queue
+  // multi-second delays as rows mount during scrolling
+  const enteringAnimation = FadeInDown.delay(Math.min(index, 8) * 60).duration(400).springify().damping(15);
 
   return (
     <Animated.View entering={enteringAnimation}>
@@ -233,7 +259,7 @@ function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps
       </AnimatedTouchable>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

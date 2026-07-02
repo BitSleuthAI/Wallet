@@ -267,10 +267,59 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   }
 }
 
+type WalletDataResult = { data: any | null; error: string | null };
+
+// Memoization for getWalletData: the balance, transactions, and UTXO queries in
+// wallet-store all call it independently on the same 30s poll cycle. Sharing
+// in-flight promises plus a TTL just under the poll interval collapses those
+// 3 pipeline runs into 1 without changing any query key or invalidation path.
+const WALLET_DATA_MEMO_TTL_MS = 25 * 1000;
+const walletDataInFlight = new Map<string, Promise<WalletDataResult>>();
+const walletDataMemo = new Map<string, { result: WalletDataResult; timestamp: number }>();
+
+// The "no transaction history" result comes from a completed, successful scan
+// of an empty wallet — memoizing it avoids rescanning 3x per poll. Real
+// failures (network, rate limit) are never memoized so retries stay immediate.
+function isMemoizableResult(result: WalletDataResult): boolean {
+  return !result.error || result.error.includes('no transaction history');
+}
+
+/** Drops memoized wallet data so the next getWalletData call hits the network (used by pull-to-refresh). */
+export function clearWalletDataMemo(): void {
+  walletDataInFlight.clear();
+  walletDataMemo.clear();
+}
+
+export async function getWalletData(xpub: string): Promise<WalletDataResult> {
+  const cached = walletDataMemo.get(xpub);
+  if (cached && Date.now() - cached.timestamp < WALLET_DATA_MEMO_TTL_MS) {
+    return cached.result;
+  }
+
+  const inFlight = walletDataInFlight.get(xpub);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const promise = fetchWalletDataUncached(xpub)
+    .then(result => {
+      if (isMemoizableResult(result)) {
+        walletDataMemo.set(xpub, { result, timestamp: Date.now() });
+      }
+      return result;
+    })
+    .finally(() => {
+      walletDataInFlight.delete(xpub);
+    });
+
+  walletDataInFlight.set(xpub, promise);
+  return promise;
+}
+
 /**
  * Get comprehensive wallet data using address discovery
  */
-export async function getWalletData(xpub: string): Promise<{ data: any | null; error: string | null }> {
+async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> {
   try {
     console.log(`🔄 Getting wallet data for xpub: ${xpub.substring(0, 20)}...`);
     
