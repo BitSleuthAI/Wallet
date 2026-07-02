@@ -1,26 +1,17 @@
-import { lightTheme } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Icon, Label, NativeTabs, VectorIcon } from 'expo-router/unstable-native-tabs';
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { Platform } from 'react-native';
 
 export default function TabLayout() {
-  // Use theme from WalletProvider context for consistency
-  // Fallback to lightTheme if context is not available yet
-  const walletContext = useWallet();
-  const theme = walletContext?.theme ?? lightTheme;
-  const [themeKey, setThemeKey] = useState(0);
-
-  // Force re-render when theme changes
-  useEffect(() => {
-    // Increment key to force NativeTabs remount with new theme
-    setThemeKey(prev => prev + 1);
-  }, [theme]);
+  const { theme, isDark } = useTheme();
 
   return (
     <NativeTabs
-      key={themeKey}
+      // NativeTabs needs a remount to fully re-apply colors, but only when the
+      // resolved appearance actually flips — not on every theme object change
+      key={isDark ? 'dark' : 'light'}
       // Tint color for active tabs
       tintColor={theme.colors.primary}
       // Icon colors for default and selected states

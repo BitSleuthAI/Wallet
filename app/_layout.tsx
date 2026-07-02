@@ -13,8 +13,9 @@ import SplashScreen from '@/components/SplashScreen';
 import { ToastProvider } from '@/components/Toast';
 import { platformStyles } from '@/constants/themes';
 import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
+import { ThemeProvider, useTheme } from '@/hooks/theme-store';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
-import { WalletProvider, useWallet } from '@/hooks/wallet-store';
+import { WalletProvider } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -234,7 +235,7 @@ const rootStyles = StyleSheet.create({
 });
 
 function AppContent() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   
   return (
     <Stack 
@@ -352,13 +353,15 @@ function RootLayoutNav() {
   
   return (
     <ErrorBoundary key={key}>
-      <WalletProvider>
-        <AutoLockProvider>
-          <ToastProvider>
-            <AppWithSplash />
-          </ToastProvider>
-        </AutoLockProvider>
-      </WalletProvider>
+      <ThemeProvider>
+        <WalletProvider>
+          <AutoLockProvider>
+            <ToastProvider>
+              <AppWithSplash />
+            </ToastProvider>
+          </AutoLockProvider>
+        </WalletProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

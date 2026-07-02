@@ -1,6 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import * as LocalAuthentication from 'expo-local-authentication';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Check, Fingerprint, Shield } from 'lucide-react-native';
@@ -16,7 +16,7 @@ import {
 } from 'react-native';
 
 export default function BiometricSetupScreen() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   const { biometricEnabled, enableBiometric } = useAutoLock();
   const [isSupported, setIsSupported] = useState(false);
   const [biometricType, setBiometricType] = useState<string>('');

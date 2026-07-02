@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ChevronDown, ChevronRight, ArrowLeft, AlertTriangle, Bug } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import crashlyticsService from '@/services/crashlytics-service';
@@ -29,7 +29,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
   defaultExpanded = false 
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const { theme } = useWallet();
+  const { theme } = useTheme();
 
   return (
     <View style={[styles.dropdownContainer, { backgroundColor: theme.colors.surface }]}>
@@ -56,7 +56,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
 };
 
 export default function AboutScreen() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
 
   const handleBack = () => {
     router.back();

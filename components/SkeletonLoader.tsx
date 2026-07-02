@@ -1,5 +1,5 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import React, { useEffect } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, {
@@ -23,8 +23,7 @@ interface SkeletonProps {
  * Replaces plain "Loading..." text with animated shimmer bars that match the layout.
  */
 function Skeleton({ width, height, borderRadius = 8, style }: SkeletonProps) {
-  const walletContext = useWallet();
-  const theme = walletContext?.theme;
+  const { theme } = useTheme();
   const shimmer = useSharedValue(0);
 
   useEffect(() => {
@@ -40,7 +39,7 @@ function Skeleton({ width, height, borderRadius = 8, style }: SkeletonProps) {
     return { opacity };
   });
 
-  const baseColor = theme?.isDark ? '#27272A' : '#E5E7EB';
+  const baseColor = theme.colors.border;
 
   return (
     <Animated.View
@@ -62,11 +61,10 @@ function Skeleton({ width, height, borderRadius = 8, style }: SkeletonProps) {
  * WalletCardSkeleton - Skeleton placeholder for the wallet card carousel.
  */
 export function WalletCardSkeleton() {
-  const walletContext = useWallet();
-  const theme = walletContext?.theme;
+  const { theme } = useTheme();
 
   return (
-    <View style={[skeletonStyles.walletCard, { backgroundColor: theme?.isDark ? '#18181B' : '#F3F4F6' }]}>
+    <View style={[skeletonStyles.walletCard, { backgroundColor: theme.colors.surface }]}>
       <View style={skeletonStyles.walletCardHeader}>
         <Skeleton width={120} height={20} borderRadius={10} />
         <Skeleton width={32} height={32} borderRadius={16} />
@@ -99,11 +97,10 @@ export function BalanceSkeleton() {
  * TransactionSkeleton - Skeleton placeholder for a single transaction item.
  */
 export function TransactionSkeleton() {
-  const walletContext = useWallet();
-  const theme = walletContext?.theme;
+  const { theme } = useTheme();
 
   return (
-    <View style={[skeletonStyles.transactionItem, { backgroundColor: theme?.isDark ? '#18181B' : '#FFFFFF' }]}>
+    <View style={[skeletonStyles.transactionItem, { backgroundColor: theme.colors.surface }]}>
       <Skeleton width={48} height={48} borderRadius={24} />
       <View style={skeletonStyles.transactionContent}>
         <View style={skeletonStyles.transactionRow}>
@@ -139,11 +136,10 @@ export function TransactionListSkeleton({ count = 3 }: { count?: number }) {
  * ChartSkeleton - Skeleton placeholder for the price chart area.
  */
 export function ChartSkeleton() {
-  const walletContext = useWallet();
-  const theme = walletContext?.theme;
+  const { theme } = useTheme();
 
   return (
-    <View style={[skeletonStyles.chartContainer, { backgroundColor: theme?.isDark ? '#18181B' : '#FFFFFF' }]}>
+    <View style={[skeletonStyles.chartContainer, { backgroundColor: theme.colors.surface }]}>
       <Skeleton width="100%" height={180} borderRadius={16} />
     </View>
   );

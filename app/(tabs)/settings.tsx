@@ -3,6 +3,7 @@ import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
@@ -31,6 +32,7 @@ import {
     Scale,
     Settings,
     Shield,
+    Smartphone,
     Sun,
     UserX,
     Wallet,
@@ -75,6 +77,7 @@ export default function SettingsScreen() {
 function SettingsScreenContent() {
   const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
   const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { themeMode, setThemeMode } = useTheme();
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   
   // Initialize all state hooks
@@ -307,6 +310,24 @@ function SettingsScreenContent() {
                   onValueChange={setHideBalanceSetting}
                   theme={theme}
                   testID="hide-balance-switch"
+                />
+              </View>
+            }
+            />
+
+            <SettingItem
+              icon={Smartphone}
+              title="Match System Appearance"
+              subtitle="Follow your device's light/dark setting"
+              rightElement={
+              <View style={styles.themeToggle}>
+                <ThemedSwitch
+                  value={themeMode === 'system'}
+                  onValueChange={(followSystem) =>
+                    setThemeMode(followSystem ? 'system' : (theme.isDark ? 'dark' : 'light'))
+                  }
+                  theme={theme}
+                  testID="system-theme-switch"
                 />
               </View>
             }

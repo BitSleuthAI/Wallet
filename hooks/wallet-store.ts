@@ -1,11 +1,11 @@
-import { darkTheme, lightTheme } from '@/constants/themes';
 import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
 import { clearAddressCache, getWalletData } from '@/services/wallet-service';
 import { getPersistedBalance, getPersistedTransactions, getPersistedUTXOs, persistWalletData, clearPersistedWalletData, clearAllPersistedWalletData } from '@/services/wallet-persistence-service';
-import { FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
+import { useTheme } from '@/hooks/theme-store';
+import { FeeSettings, FiatCurrency, Transaction, UTXO, Wallet } from '@/types/wallet';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -205,7 +205,10 @@ const feeSettingsMapsEqual = (a: Record<string, FeeSettings>, b: Record<string, 
 export const [WalletProvider, useWallet] = createContextHook(() => {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<Theme>(lightTheme);
+  // Theme lives in its own low-churn context (hooks/theme-store.tsx) so
+  // theme-only consumers don't re-render on wallet data polls; it is
+  // re-exported here to keep the existing useWallet() API intact.
+  const { theme, toggleTheme, setThemeMode } = useTheme();
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
@@ -540,22 +543,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     gcTime: Infinity,
   });
 
-  // Load theme from storage
-  const themeQuery = useQuery({
-    queryKey: ['theme'],
-    queryFn: async () => {
-      try {
-        const stored = await AsyncStorage.getItem('theme');
-        return stored === 'dark' ? darkTheme : lightTheme;
-      } catch (err) {
-        console.warn('Failed to load theme:', err);
-        return lightTheme;
-      }
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-
   // Load currency from storage
   const currencyQuery = useQuery({
     queryKey: ['currency'],
@@ -670,12 +657,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setCoinControlFrozenState(coinControlFrozenQuery.data);
     }
   }, [coinControlFrozenQuery.data]);
-
-  useEffect(() => {
-    if (themeQuery.data !== undefined) {
-      setTheme(themeQuery.data);
-    }
-  }, [themeQuery.data]);
 
   useEffect(() => {
     if (currencyQuery.data !== undefined) {
@@ -1264,19 +1245,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
   const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
-
-  // Save theme mutation
-  useMutation({
-    mutationFn: async (isDark: boolean) => {
-      const newTheme = isDark ? darkTheme : lightTheme;
-      await AsyncStorage.setItem('theme', isDark ? 'dark' : 'light');
-      return newTheme;
-    },
-    onSuccess: (newTheme) => {
-      setTheme(newTheme);
-      queryClient.invalidateQueries({ queryKey: ['theme'] });
-    },
-  });
 
   // Save currency mutation
   const saveCurrencyMutation = useMutation({
@@ -2093,7 +2061,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
 
       setWallets([]);
       setCurrentWalletId(null);
-      setTheme(lightTheme);
+      setThemeMode('system');
       setSelectedCurrency('USD');
       setHideBalance(false);
       setAutoLockTimeout(15);
@@ -2300,13 +2268,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrentFeeSettings,
     setFeeSettings,
   }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsLoading, getCurrentFeeSettings, setFeeSettings]);
-
-  // Theme toggle function
-  const toggleTheme = useCallback(() => {
-    const newTheme = theme === lightTheme ? darkTheme : lightTheme;
-    setTheme(newTheme);
-    AsyncStorage.setItem('theme', theme === lightTheme ? 'dark' : 'light');
-  }, [theme]);
 
   // Set currency function
   const setCurrency = useCallback((currency: FiatCurrency) => {
