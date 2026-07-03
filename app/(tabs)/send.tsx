@@ -12,15 +12,26 @@ import {
 import WalletSelector from '@/components/WalletSelector';
 import { createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import {
+  WalletsContext,
+  useCoinControl,
+  useFeedback,
+  useWalletActions,
+  useWalletBalance,
+  useWalletMeta,
+  useWalletSettings,
+  useWalletUtxos,
+  useWallets,
+} from '@/hooks/wallet-contexts';
 import { isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 import { HapticService } from '@/services/haptic-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, ChevronRight, Coins, QrCode } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -36,40 +47,35 @@ import {
   View,
 } from 'react-native';
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function SendScreen() {
   if (__DEV__) {
     console.log('🔍 Send screen: Component mounted/rendered');
   }
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
 
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
+  if (!walletData) {
     return <ScreenLoading />;
   }
 
   return <SendScreenContent />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. Narrow subscriptions: the form no longer
+// re-renders mid-typing when unrelated slices (transactions, addresses) poll.
 function SendScreenContent() {
   const { animatedStyle } = useTabAnimation(1);
-  const {
-    currentWallet,
-    balance,
-    theme,
-    coinControl,
-    selectedCurrency,
-    getCurrencySymbol,
-    bitcoinPrice: walletBitcoinPrice,
-    feeSettings,
-    setFeeSettings,
-    feeSettingsLoading,
-    incrementUsageCount,
-    utxos: walletUtxos,
-    refreshData,
-    getMnemonic,
-  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { currentWallet } = useWallets();
+  const { balance, bitcoinPrice: walletBitcoinPrice } = useWalletBalance();
+  const coinControl = useCoinControl();
+  const { selectedCurrency, feeSettings, setFeeSettings, feeSettingsLoading } = useWalletSettings();
+  const { getCurrencySymbol, refreshData } = useWalletActions();
+  const { incrementUsageCount } = useFeedback();
+  const { utxos: walletUtxos } = useWalletUtxos();
+  const { getMnemonic } = useWalletMeta();
+  const { theme } = useTheme();
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
 
   // Initialize all state hooks

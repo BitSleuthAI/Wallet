@@ -49,7 +49,7 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache, priceQuery, selectedCurrency, getCurrencySymbol } = useWallet();
+  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache, bitcoinPrice, selectedCurrency, getCurrencySymbol } = useWallet();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
@@ -169,8 +169,8 @@ export default function AddressDetailsScreen() {
   const formatFiat = (satoshis: number) => {
     // Use real exchange rate from wallet store based on selected currency
     const btcAmount = satoshis / 100000000;
-    // Get rate for selected currency from price query, fallback to USD if specific currency not available
-    const priceData = priceQuery?.data as any;
+    // Get rate for selected currency from price data, fallback to USD if specific currency not available
+    const priceData = bitcoinPrice as any;
     const rate = priceData?.[selectedCurrency]?.last || priceData?.USD?.last || 0;
     return rate > 0 ? (btcAmount * rate).toFixed(2) : '0.00';
   };

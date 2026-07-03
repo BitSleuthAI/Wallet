@@ -2,7 +2,8 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useCoinControl, useWalletActions, useWalletUtxos, useWallets } from '@/hooks/wallet-contexts';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -32,14 +33,13 @@ type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 
 export default function CoinControlScreen() {
-  const { 
-    theme, 
-    currentWallet, 
-    coinControl,
-    utxos: walletUtxos,
-    isLoadingUtxos,
-    refreshData,
-  } = useWallet();
+  // Narrow subscriptions: sheds balance/transaction/price churn while keeping
+  // the UTXO and coin-control slices this screen actually renders
+  const { currentWallet } = useWallets();
+  const coinControl = useCoinControl();
+  const { utxos: walletUtxos, isLoadingUtxos } = useWalletUtxos();
+  const { refreshData } = useWalletActions();
+  const { theme } = useTheme();
   const router = useRouter();
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('value');

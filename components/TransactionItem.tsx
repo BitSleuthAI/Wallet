@@ -1,11 +1,11 @@
 import { platformStyles } from '@/constants/themes';
 import { useTheme } from '@/hooks/theme-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { BalanceContext, useWalletActions } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { BitcoinPrice, Theme, Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useContext, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
@@ -31,14 +31,15 @@ interface TransactionItemContentProps extends TransactionItemProps {
   formatCurrency: (amount: number, showSymbol?: boolean) => string;
 }
 
-// Thin wrapper subscribes to the stores; the memoized content below only
-// re-renders when its own props actually change, so list rows stay idle
-// during the 30s wallet data polls.
+// Thin wrapper subscribes to only the balance/price and actions slices; the
+// memoized content below re-renders only when its own props actually change,
+// so list rows stay idle during the 30s wallet data polls.
 export default function TransactionItem({ transaction, index = 0 }: TransactionItemProps) {
-  const walletContext = useWallet();
+  const balanceData = useContext(BalanceContext);
+  const { formatCurrency } = useWalletActions();
   const { theme } = useTheme();
 
-  if (!walletContext) {
+  if (!balanceData) {
     return null;
   }
 
@@ -47,9 +48,9 @@ export default function TransactionItem({ transaction, index = 0 }: TransactionI
       transaction={transaction}
       index={index}
       theme={theme}
-      bitcoinPrice={walletContext.bitcoinPrice}
-      hasPriceError={walletContext.hasPriceError}
-      formatCurrency={walletContext.formatCurrency}
+      bitcoinPrice={balanceData.bitcoinPrice}
+      hasPriceError={balanceData.hasPriceError}
+      formatCurrency={formatCurrency}
     />
   );
 }

@@ -1,11 +1,12 @@
 import { platformStyles } from '@/constants/themes';
 import { getWalletGradient } from '@/constants/wallet-colors';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext, useWalletActions, useWalletBalance, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -28,11 +29,12 @@ interface WalletCardProps {
   onEdit?: (wallet: Wallet) => void;
 }
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
 
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
 
@@ -40,7 +42,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
 }
 
 function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet()!;
+  // Narrow subscriptions: keeps genuine balance churn, sheds tx/utxo/feedback churn
+  const { currentWallet } = useWallets();
+  const { balance, balanceUSD, hasBalanceError, hasPriceError } = useWalletBalance();
+  const { formatCurrency, deleteWallet } = useWalletActions();
+  const { hideBalance } = useWalletSettings();
+  const { theme } = useTheme();
 
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });

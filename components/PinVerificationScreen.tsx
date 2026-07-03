@@ -1,5 +1,5 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { getPin as getSecurePin } from '@/services/secure-pin-service';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Delete } from 'lucide-react-native';
@@ -26,7 +26,7 @@ export default function PinVerificationScreen({
   onSuccess,
   onBack,
 }: PinVerificationScreenProps) {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);

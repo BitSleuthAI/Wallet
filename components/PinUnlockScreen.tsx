@@ -1,7 +1,8 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions } from '@/hooks/wallet-contexts';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import { Delete, Fingerprint, Lock, Shield } from 'lucide-react-native';
@@ -18,7 +19,8 @@ import {
 } from 'react-native';
 
 export default function PinUnlockScreen() {
-  const { theme, logoutAndEraseWallet } = useWallet();
+  const { theme } = useTheme();
+  const { logoutAndEraseWallet } = useWalletActions();
   const { unlock, biometricEnabled, biometricType, authenticateWithBiometric } = useAutoLock();
   const [pin, setPin] = useState('');
   const [attempts, setAttempts] = useState(0);

@@ -2222,11 +2222,13 @@ function useWalletStoreState() {
   const balanceData = useMemo(() => {
     const balance = balanceQuery.data ?? lastBalanceRef.current ?? 0;
 
+    // Note: only granular priceQuery fields belong here — putting the query
+    // object itself in the value/deps would give this memo a new identity on
+    // every store render, making BalanceContext churn for all its readers.
     return {
       balance,
       balanceUSD: balance * (priceQuery.data?.usd || 0),
       bitcoinPrice: priceQuery.data,
-      priceQuery,
       isLoadingBalance: balanceQuery.isLoading && lastBalanceRef.current === null,
       isRefreshingBalance: balanceQuery.isFetching && lastBalanceRef.current !== null,
       isLoadingPrice: priceQuery.isLoading,
@@ -2235,7 +2237,8 @@ function useWalletStoreState() {
       balanceError: balanceQuery.error,
       priceError: priceQuery.error,
     };
-  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error, priceQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
 
   const stableTransactions = transactionsQuery.data ?? lastTransactionsRef.current;
   useEffect(() => {

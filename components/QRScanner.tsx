@@ -1,8 +1,9 @@
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext } from '@/hooks/wallet-contexts';
 import { googlePlayServicesService } from '@/services/google-play-services';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Alert,
     Platform,
@@ -20,10 +21,10 @@ interface QRScannerProps {
 
 // Wrapper component that checks for context availability
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
   
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
   
@@ -32,7 +33,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
 // Main component with all hooks
 function QRScannerContent({ onScan, onClose }: QRScannerProps) {
-  const { theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [playServicesAvailable, setPlayServicesAvailable] = useState<boolean | null>(null);

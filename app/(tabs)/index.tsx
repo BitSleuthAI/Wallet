@@ -9,14 +9,23 @@ import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
 import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import {
+  WalletsContext,
+  useFeedback,
+  useWalletActions,
+  useWalletBalance,
+  useWalletSettings,
+  useWalletTransactions,
+  useWallets,
+} from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -44,46 +53,36 @@ const WALLET_CARD_WIDTH = 340;
 const WALLET_CARD_MARGIN = 16;
 const CARD_SNAP_INTERVAL = WALLET_CARD_WIDTH + WALLET_CARD_MARGIN; // 356px
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletScreen() {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
+  if (!walletData) {
     return <ScreenLoading />;
   }
-  
+
   return <WalletScreenContent />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. This screen legitimately renders balance and
+// transactions (keeps that churn) but sheds address/utxo/feedback-state churn.
 function WalletScreenContent() {
   const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
+  const { wallets, currentWallet, currentWalletId, isLoading } = useWallets();
+  const { balance, balanceUSD, bitcoinPrice, hasBalanceError, hasPriceError } = useWalletBalance();
+  const { transactions, hasTransactionsError } = useWalletTransactions();
+  const { switchWallet, editWallet, refreshData, formatCurrency, setHideBalanceSetting } = useWalletActions();
+  const { hideBalance } = useWalletSettings();
   const {
-    wallets,
-    currentWallet,
-    currentWalletId,
-    switchWallet,
-    editWallet,
-    balance,
-    balanceUSD,
-    bitcoinPrice,
-    transactions,
-    theme,
-    refreshData,
-    hasBalanceError,
-    hasTransactionsError,
-    hasPriceError,
-    isLoading,
-    formatCurrency,
-    hideBalance,
-    setHideBalanceSetting,
     shouldShowFeedbackPrompt,
     markFeedbackPromptShown,
     markFeedbackPromptDismissed,
     markFeedbackSubmitted,
     incrementUsageCount,
-  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  } = useFeedback();
+  const { theme } = useTheme();
   
   // Initialize all state hooks
   const [refreshing, setRefreshing] = useState(false);

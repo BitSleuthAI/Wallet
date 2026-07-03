@@ -1,8 +1,9 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext, useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { Wallet } from '@/types/wallet';
 import { Check, ChevronDown } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
     FlatList,
     Modal,
@@ -18,21 +19,25 @@ interface WalletSelectorProps {
   onWalletChange?: (wallet: Wallet) => void;
 }
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletSelector({ label, onWalletChange }: WalletSelectorProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
+
   return <WalletSelectorContent label={label} onWalletChange={onWalletChange} />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. Narrow subscriptions: none of these slices
+// change on the 30s data polls, so this component stays idle between them.
 function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
-  const { wallets, currentWallet, switchWallet, theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { wallets, currentWallet } = useWallets();
+  const { switchWallet } = useWalletActions();
+  const { theme } = useTheme();
   
   // Initialize state hooks
   const [isModalVisible, setIsModalVisible] = useState(false);
