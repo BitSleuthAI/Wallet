@@ -1,9 +1,10 @@
+import { AppButton } from '@/components/AppButton';
 import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { toast } from '@/components/Toast';
 import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
-import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { platformStyles } from '@/constants/themes';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
@@ -20,7 +21,6 @@ import {
     Share,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -279,12 +279,12 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               Create or import a wallet to receive funds
             </Text>
-            <TouchableOpacity
-              style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
+            <AppButton
+              title="Setup Wallet"
               onPress={() => router.push('/wallet-setup')}
-            >
-              <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+              style={styles.setupButton}
+              testID="receive-setup-wallet-button"
+            />
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -354,67 +354,49 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           </View>
 
           {/* New Address Button */}
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'primary'),
-              styles.newAddressButton,
-              { 
-                alignSelf: 'center',
-              }
-            ]}
+          <AppButton
+            title={isGeneratingAddress ? 'Generating...' : 'New Address'}
+            icon={
+              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+                <RefreshCw color="white" size={20} />
+              </Animated.View>
+            }
             onPress={() => {
               handleNewAddress();
               incrementUsageCount('receive_interaction');
             }}
             disabled={isGeneratingAddress}
-            activeOpacity={0.8}
-          >
-            <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <RefreshCw color="white" size={20} />
-            </Animated.View>
-            <Text style={styles.newAddressText}>
-              {isGeneratingAddress ? 'Generating...' : 'New Address'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.newAddressButton}
+            testID="receive-new-address-button"
+          />
         </View>
         
         {/* Action Buttons - Positioned at bottom */}
         <View style={styles.bottomActionButtons}>
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.actionButton,
-            ]}
+          <AppButton
+            title="Copy"
+            variant="secondary"
+            icon={<Copy color={theme.colors.text} size={20} />}
             onPress={() => {
               handleCopy();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
-            activeOpacity={0.7}
-          >
-            <Copy color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Copy
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.actionButton,
-            ]}
+            style={styles.actionButton}
+            testID="receive-copy-button"
+          />
+          <AppButton
+            title="Share"
+            variant="secondary"
+            icon={<ShareIcon color={theme.colors.text} size={20} />}
             onPress={() => {
               handleShare();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
-            activeOpacity={0.7}
-          >
-            <ShareIcon color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Share
-            </Text>
-          </TouchableOpacity>
+            style={styles.actionButton}
+            testID="receive-share-button"
+          />
         </View>
         </Animated.View>
       </SafeAreaView>
@@ -467,20 +449,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   newAddressButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xxxl, // Increased from xxl
-    paddingVertical: platformStyles.spacing.lg, // Increased from md
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
+    alignSelf: 'center',
+    paddingHorizontal: platformStyles.spacing.xxxl,
+    borderRadius: platformStyles.borderRadius.xxl,
     marginBottom: platformStyles.spacing.xxxl,
-    ...platformStyles.buttonShadow,
-  },
-  newAddressText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.3,
   },
   bottomActionButtons: {
     flexDirection: 'row',
@@ -491,18 +463,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    ...platformStyles.shadow,
-  },
-  actionButtonText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
+    borderRadius: platformStyles.borderRadius.xl,
   },
   emptyState: {
     flex: 1,
@@ -524,15 +485,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   setupButton: {
-    paddingHorizontal: platformStyles.spacing.huge, // Increased from xxxl
-    paddingVertical: platformStyles.spacing.lg + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
-  },
-  setupButtonText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    letterSpacing: 0.3,
+    paddingHorizontal: platformStyles.spacing.huge,
+    borderRadius: platformStyles.borderRadius.xxl,
   },
   qrPlaceholder: {
     width: 240, // Increased from 220

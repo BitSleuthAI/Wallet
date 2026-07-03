@@ -1,4 +1,5 @@
 import FeedbackPopup from '@/components/FeedbackPopup';
+import { AppButton } from '@/components/AppButton';
 import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
@@ -6,7 +7,7 @@ import BalanceChart from '@/components/PriceChart';
 import { HomeScreenSkeleton } from '@/components/SkeletonLoader';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
-import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
@@ -494,35 +495,27 @@ function WalletScreenContent() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'primary'),
-              styles.sendButton,
-            ]}
+          <AppButton
+            title="Send"
+            icon={<ArrowUpRight color="white" size={20} />}
             onPress={() => {
               HapticService.medium();
               router.push('/(tabs)/send');
             }}
-            activeOpacity={0.85}
-          >
-            <ArrowUpRight color="white" size={20} />
-            <Text style={styles.actionButtonText}>Send</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.receiveButton,
-            ]}
+            style={styles.actionButton}
+            testID="home-send-button"
+          />
+          <AppButton
+            title="Receive"
+            variant="secondary"
+            icon={<ArrowDownLeft color={theme.colors.text} size={20} />}
             onPress={() => {
               HapticService.medium();
               router.push('/(tabs)/receive');
             }}
-            activeOpacity={0.85}
-          >
-            <ArrowDownLeft color={theme.colors.text} size={20} />
-            <Text style={[styles.receiveButtonText, { color: theme.colors.text }]}>Receive</Text>
-          </TouchableOpacity>
+            style={styles.actionButton}
+            testID="home-receive-button"
+          />
         </View>
 
         {/* Recent Transactions */}
@@ -895,36 +888,9 @@ const styles = StyleSheet.create({
     marginTop: platformStyles.spacing.xxxl, // Increased from xxl
     gap: platformStyles.spacing.lg,
   },
-  sendButton: {
+  actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
-    ...platformStyles.buttonShadow,
-  },
-  receiveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
-    ...platformStyles.shadow,
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
-  },
-  receiveButtonText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
+    borderRadius: platformStyles.borderRadius.xxl,
   },
   transactionsSection: {
     marginTop: platformStyles.spacing.xl,

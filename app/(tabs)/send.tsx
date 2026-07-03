@@ -1,10 +1,11 @@
+import { AppButton } from '@/components/AppButton';
 import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import WalletSelector from '@/components/WalletSelector';
-import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
+import { createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
@@ -1440,26 +1441,14 @@ function SendScreenContent() {
               </LiquidGlassView>
 
               {/* Review Button */}
-              <TouchableOpacity
-                style={[
-                  createButtonStyle(theme, 'primary'),
-                  styles.reviewButton,
-                  (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && {
-                    ...styles.reviewButtonDisabled,
-                    backgroundColor: theme.isDark ? theme.colors.surfaceDark : theme.colors.border
-                  }
-                ]}
+              <AppButton
+                title={isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
                 onPress={handleReviewTransaction}
-                disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.reviewButtonText,
-                  (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonTextDisabled
-                ]}>
-                  {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
-                </Text>
-              </TouchableOpacity>
+                disabled={!recipientAddress || !amount || !addressValidation.isValid}
+                loading={isLoading}
+                style={styles.reviewButton}
+                testID="review-send-button"
+              />
             </View>
           </ScrollView>
         </Animated.View>
@@ -1746,20 +1735,6 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     alignItems: 'center',
     ...platformStyles.buttonShadow,
-  },
-  reviewButtonDisabled: {
-    // backgroundColor will be set dynamically via theme.colors.border
-    shadowOpacity: 0,
-    elevation: 0,
-    opacity: 0.5,
-  },
-  reviewButtonText: {
-    color: 'white',
-    fontSize: 19,
-    fontWeight: '600',
-  },
-  reviewButtonTextDisabled: {
-    color: '#6B7280',
   },
   emptyState: {
     flex: 1,
