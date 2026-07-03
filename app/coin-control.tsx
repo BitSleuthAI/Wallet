@@ -19,9 +19,9 @@ import {
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
+    FlatList,
     Platform,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -551,8 +551,15 @@ export default function CoinControlScreen() {
       )}
       
       {/* UTXO List */}
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
+        data={filteredAndSortedUtxos}
+        keyExtractor={(utxo: UTXO) => `${utxo.txid}:${utxo.vout}`}
+        renderItem={({ item }) => <UtxoItem utxo={item} />}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -560,14 +567,35 @@ export default function CoinControlScreen() {
             tintColor={theme.colors.primary}
           />
         }
-      >
-        {isLoading ? (
+        ListHeaderComponent={filteredAndSortedUtxos.length > 0 ? (
+          <View style={styles.quickActions}>
+            <Text style={[{ marginRight: 12, fontWeight: '600' }, { color: theme.colors.text }]}>
+              {selectedUtxos.size} selected
+            </Text>
+            <TouchableOpacity
+              style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
+              onPress={selectAllUtxos}
+            >
+              <CheckCircle color={theme.colors.primary} size={16} />
+              <Text style={[styles.quickActionText, { color: theme.colors.primary }]}>Select All</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
+              onPress={deselectAllUtxos}
+            >
+              <Circle color={theme.colors.textSecondary} size={16} />
+              <Text style={[styles.quickActionText, { color: theme.colors.textSecondary }]}>Deselect All</Text>
+            </TouchableOpacity>
+          </View>
+        ) : null}
+        ListEmptyComponent={isLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
               Loading UTXOs...
             </Text>
           </View>
-        ) : filteredAndSortedUtxos.length === 0 ? (
+        ) : (
           <View style={styles.emptyContainer}>
             <Coins color={theme.colors.textSecondary} size={48} />
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
@@ -577,69 +605,40 @@ export default function CoinControlScreen() {
               {filterBy === 'all' ? 'Your wallet has no unspent outputs' : `No UTXOs match the current filter: ${filterBy}`}
             </Text>
           </View>
-        ) : (
-          <>
-            {/* Quick Actions */}
-            <View style={styles.quickActions}>
-              <Text style={[{ marginRight: 12, fontWeight: '600' }, { color: theme.colors.text }]}>
-                {selectedUtxos.size} selected
-              </Text>
-              <TouchableOpacity
-                style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
-                onPress={selectAllUtxos}
-              >
-                <CheckCircle color={theme.colors.primary} size={16} />
-                <Text style={[styles.quickActionText, { color: theme.colors.primary }]}>Select All</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
-                onPress={deselectAllUtxos}
-              >
-                <Circle color={theme.colors.textSecondary} size={16} />
-                <Text style={[styles.quickActionText, { color: theme.colors.textSecondary }]}>Deselect All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* UTXO Items */}
-            {filteredAndSortedUtxos.map((utxo: UTXO) => (
-              <UtxoItem key={`${utxo.txid}:${utxo.vout}`} utxo={utxo} />
-            ))}
-            
-            {/* Coin Control Educational Section */}
-            <View style={[styles.educationCard, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.educationHeader}>
-                <View style={[styles.educationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-                  <Info color={theme.colors.primary} size={20} />
-                </View>
-                <Text style={[styles.educationTitle, { color: theme.colors.text }]}>
-                  How Coin Control Works
-                </Text>
-              </View>
-              <Text style={[styles.educationText, { color: theme.colors.textSecondary }]}>
-                Coin control gives you precise control over which UTXOs (Unspent Transaction Outputs) to use in transactions:
-              </Text>
-              <View style={styles.educationFeatures}>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate &quot;coin&quot; that can be spent
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Privacy:</Text> Avoid linking different Bitcoin sources together
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Frozen UTXOs:</Text> Temporarily prevent UTXOs from being automatically selected
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Change Management:</Text> Control how much Bitcoin you send back to yourself
-                </Text>
-              </View>
-            </View>
-          </>
         )}
-      </ScrollView>
+        ListFooterComponent={filteredAndSortedUtxos.length > 0 ? (
+          <View style={[styles.educationCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.educationHeader}>
+              <View style={[styles.educationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Info color={theme.colors.primary} size={20} />
+              </View>
+              <Text style={[styles.educationTitle, { color: theme.colors.text }]}>
+                How Coin Control Works
+              </Text>
+            </View>
+            <Text style={[styles.educationText, { color: theme.colors.textSecondary }]}>
+              Coin control gives you precise control over which UTXOs (Unspent Transaction Outputs) to use in transactions:
+            </Text>
+            <View style={styles.educationFeatures}>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate &quot;coin&quot; that can be spent
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Privacy:</Text> Avoid linking different Bitcoin sources together
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Frozen UTXOs:</Text> Temporarily prevent UTXOs from being automatically selected
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Change Management:</Text> Control how much Bitcoin you send back to yourself
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      />
       </AndroidSafeContainer>
     </GradientBackground>
   );

@@ -164,16 +164,13 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
     const now = Date.now();
     if (now - lastGenTime < ADDRESS_GENERATION_COOLDOWN_MS) {
       const waitTime = Math.ceil((ADDRESS_GENERATION_COOLDOWN_MS - (now - lastGenTime)) / 1000);
-      Alert.alert(
-        'Please Wait', 
-        `Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address.`
-      );
+      toast.info('Please wait', `Wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address`);
       return;
     }
-    
+
     if (!currentWallet) {
       console.error('❌ No current wallet available');
-      Alert.alert('Error', 'No wallet selected');
+      toast.error('No wallet selected');
       return;
     }
     
@@ -195,10 +192,14 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           walletService.clearAddressCache(currentWallet.xpub);
         }
 
+        toast.success('New address ready');
+
         // Check if user has generated many unused addresses (gap limit warning)
         const addressCount = result.wallet.addresses.length;
 
         if (addressCount >= GAP_LIMIT_WARNING_THRESHOLD) {
+          // Kept as an alert: the gap-limit explanation is too long for a toast
+          // and the user should read it before generating more addresses
           Alert.alert(
             'Address Limit Warning',
             `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,
@@ -207,11 +208,11 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
         }
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
-        Alert.alert('Warning', result.error || 'Address generation failed');
+        toast.warning('Address generation failed', result.error || undefined);
       }
     } catch (error) {
       console.error('❌ Unexpected error generating new address:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      toast.error('Something went wrong', 'Please try again');
     } finally {
       setIsGeneratingAddress(false);
       setLastGenTime(now); // Cooldown set after address generation attempt (regardless of success)
