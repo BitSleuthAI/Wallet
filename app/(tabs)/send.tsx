@@ -4,6 +4,11 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
+import {
+  TransactionReviewDetails,
+  TransactionReviewSheet,
+  TransactionSuccessDetails,
+} from '@/components/TransactionReviewSheet';
 import WalletSelector from '@/components/WalletSelector';
 import { createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
@@ -19,6 +24,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   SafeAreaView,
@@ -90,6 +96,9 @@ function SendScreenContent() {
     isValid: boolean;
     message: string | null;
   }>({ isValid: true, message: null });
+  const [reviewDetails, setReviewDetails] = useState<TransactionReviewDetails | null>(null);
+  const [successDetails, setSuccessDetails] = useState<TransactionSuccessDetails | null>(null);
+  const [showReviewSheet, setShowReviewSheet] = useState(false);
 
   // Memoize computed values from feeSettings to prevent unnecessary re-renders
   const selectedFeeType = useMemo(() =>
@@ -702,58 +711,16 @@ function SendScreenContent() {
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       HapticService.transactionSuccess();
 
-      // Show success message with transaction details
-      const feeFiat = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
-      const amountFiat = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
-
-      const amountBTC = amountInBTC.toFixed(8);
-      const feeBTC = result.fee.toFixed(8);
-      const feeRateText = feeRate.toString();
-
-      const successMessage = `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
-        `Transaction ID: ${result.txid}\n\n` +
-        `Amount: ${amountBTC} BTC (${getCurrencySymbol()}${amountFiat})\n` +
-        `Fee: ${feeBTC} BTC (${getCurrencySymbol()}${feeFiat})\n` +
-        `Fee Rate: ${feeRateText} sat/vB\n\n` +
-        `The transaction will appear in your wallet once it receives confirmations. ` +
-        `This typically takes 10-60 minutes depending on network congestion.`;
-
       // Refresh transaction history and balance to show the new transaction
       console.log('🔄 Refreshing wallet data after successful transaction...');
       await refreshData();
 
-      Alert.alert(
-        'Transaction Broadcast Successfully! 🎉',
-        successMessage,
-        [{
-          text: 'View Transaction',
-          onPress: () => {
-            // Clear form
-            setRecipientAddress('');
-            setAmount('');
-            setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: null });
-
-            // Navigate directly to transaction explorer with the txid
-            router.push({
-              pathname: '/transaction-explorer',
-              params: { txid: result.txid },
-            });
-          }
-        }, {
-          text: 'Done',
-          onPress: () => {
-            // Clear form
-            setRecipientAddress('');
-            setAmount('');
-            setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: null });
-
-            // Navigate to home to see updated balance
-            router.push('/');
-          }
-        }]
-      );
+      // Flip the review sheet to its success state (copyable txid + actions)
+      setSuccessDetails({
+        txid: result.txid,
+        amountBTC: `${amountInBTC.toFixed(8)} BTC`,
+        feeBTC: `${result.fee.toFixed(8)} BTC`,
+      });
 
     } catch (error) {
       console.error('❌ Error sending Bitcoin transaction:', error);
@@ -806,26 +773,15 @@ function SendScreenContent() {
 
       // Convert amount to BTC for display
       let amountInBTC: number;
-      let displayAmount: string;
 
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
-        const btcText = `${amount} BTC`;
-        displayAmount = btcText;
-        if (bitcoinPrice && bitcoinPrice > 0) {
-          const fiatValue = (amountInBTC * bitcoinPrice).toFixed(2);
-          const fiatDisplay = ` (${getCurrencySymbol()}${fiatValue})`;
-          displayAmount += fiatDisplay;
-        }
       } else {
         if (!bitcoinPrice || bitcoinPrice <= 0) {
           Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
           return;
         }
         amountInBTC = parseFloat(amount) / bitcoinPrice;
-        const btcAmount = amountInBTC.toFixed(8);
-        const fiatBtcText = `${getCurrencySymbol()}${amount} (${btcAmount} BTC)`;
-        displayAmount = fiatBtcText;
       }
 
       // Validate amount
@@ -865,75 +821,90 @@ function SendScreenContent() {
         }
       }
 
-      // Format fee display
-      const feeDisplay = estimatedFee ? (() => {
-        const feeAmount = estimatedFee.toFixed(8);
-        const feeText = `${feeAmount} BTC`;
-        return feeText;
-      })() : 'Calculating...';
-      const feeFiatDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
-        const fiatAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-        const fiatText = ` (${getCurrencySymbol()}${fiatAmount})`;
-        return fiatText;
-      })() : '';
+      // Open the native review sheet with the full transaction summary
+      const amountFiat = bitcoinPrice && bitcoinPrice > 0
+        ? `${getCurrencySymbol()}${(amountInBTC * bitcoinPrice).toFixed(2)}`
+        : null;
+      const feeFiat = estimatedFee && bitcoinPrice && bitcoinPrice > 0
+        ? `${getCurrencySymbol()}${(estimatedFee * bitcoinPrice).toFixed(2)}`
+        : null;
 
-      // Show comprehensive transaction review
-      const feeDisplayText = feeFiatDisplay ? (() => {
-        const combinedText = `${feeDisplay}${feeFiatDisplay}`;
-        return combinedText;
-      })() : feeDisplay;
-
-      const recipientPreview = recipientAddress.slice(0, 30);
-      const feeRateText = feeRate.toString();
-      const rbfStatus = enableRBF ? 'Enabled' : 'Disabled';
-
-      const reviewMessage = `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
-        `📤 Send: ${displayAmount}\n` +
-        `📍 To: ${recipientPreview}...\n\n` +
-        `💰 Network Fee: ${feeDisplayText}\n` +
-        `⚡ Fee Rate: ${feeRateText} sat/vB\n` +
-        `🔄 RBF: ${rbfStatus}\n\n` +
-        `⚠️ WARNING: This transaction cannot be reversed once broadcast!`;
-
-      Alert.alert(
-        '⚠️ Review Bitcoin Transaction',
-        reviewMessage,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Send Bitcoin',
-            style: 'destructive',
-            onPress: async () => {
-              // Calculate amount for authentication
-              const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
-
-              // Always use enhanced security service to ensure MFA enforcement
-              console.log('🔐 Checking if biometric authentication is required before final confirmation...');
-
-              const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
-
-              if (requireBiometricAuth) {
-                const biometricSuccess = await authenticateForTransactionEnhanced(true);
-
-                if (!biometricSuccess) {
-                  Alert.alert(
-                    'Biometric Required',
-                    'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
-                    [{ text: 'OK' }]
-                  );
-                  return;
-                }
-              }
-
-              handleSendTransaction();
-            }
-          },
-        ]
-      );
+      setReviewDetails({
+        amountBTC: `${amountInBTC.toFixed(8)} BTC`,
+        amountFiat,
+        recipient: recipientAddress.trim(),
+        feeBTC: estimatedFee ? `${estimatedFee.toFixed(8)} BTC` : 'Calculating...',
+        feeFiat,
+        feeRate,
+        timeEstimate: getTimeEstimateForFeeRate(feeRate),
+        rbfEnabled: enableRBF,
+        totalBTC: `${(amountInBTC + (estimatedFee || 0)).toFixed(8)} BTC`,
+      });
+      setSuccessDetails(null);
+      setShowReviewSheet(true);
     } catch (error) {
       console.error('Error reviewing transaction:', error);
       Alert.alert('Error', 'Failed to review transaction. Please try again.');
     }
+  };
+
+  // Confirm handler for the review sheet. The biometric gate below is the
+  // same sequence the old Alert confirmation ran before handleSendTransaction.
+  const handleConfirmSend = async () => {
+    // Calculate amount for authentication
+    const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
+
+    // Always use enhanced security service to ensure MFA enforcement
+    console.log('🔐 Checking if biometric authentication is required before final confirmation...');
+
+    const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
+
+    if (requireBiometricAuth) {
+      const biometricSuccess = await authenticateForTransactionEnhanced(true);
+
+      if (!biometricSuccess) {
+        Alert.alert(
+          'Biometric Required',
+          'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
+    handleSendTransaction();
+  };
+
+  const closeSheetAndClearForm = () => {
+    setShowReviewSheet(false);
+    setReviewDetails(null);
+    setSuccessDetails(null);
+    setRecipientAddress('');
+    setAmount('');
+    setEstimatedFee(null);
+    setAddressValidation({ isValid: false, message: null });
+  };
+
+  const handleViewTransaction = () => {
+    const txid = successDetails?.txid;
+    closeSheetAndClearForm();
+    if (txid) {
+      router.push({
+        pathname: '/transaction-explorer',
+        params: { txid },
+      });
+    }
+  };
+
+  const handleDoneAfterSend = () => {
+    closeSheetAndClearForm();
+    router.push('/');
+  };
+
+  const handleCancelReview = () => {
+    if (isLoading) return;
+    setShowReviewSheet(false);
+    setReviewDetails(null);
   };
 
   const getTimeEstimateForFeeRate = useCallback((rate: number): string => {
@@ -1015,10 +986,15 @@ function SendScreenContent() {
         />
 
         <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoiding}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.content}>
               {/* From Section */}
@@ -1451,6 +1427,7 @@ function SendScreenContent() {
               />
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
         </Animated.View>
 
         {/* QR Scanner Modal */}
@@ -1464,6 +1441,18 @@ function SendScreenContent() {
             onClose={() => setShowQRScanner(false)}
           />
         </Modal>
+
+        {/* Transaction Review / Success Sheet */}
+        <TransactionReviewSheet
+          visible={showReviewSheet}
+          details={reviewDetails}
+          success={successDetails}
+          sending={isLoading}
+          onConfirm={handleConfirmSend}
+          onCancel={handleCancelReview}
+          onViewTransaction={handleViewTransaction}
+          onDone={handleDoneAfterSend}
+        />
       </SafeAreaView>
     </GradientBackground>
   );
@@ -1727,6 +1716,9 @@ const styles = StyleSheet.create({
   coinControlAction: {
     fontSize: 15,
     fontWeight: '600',
+  },
+  keyboardAvoiding: {
+    flex: 1,
   },
   reviewButton: {
     marginTop: platformStyles.spacing.xl,
