@@ -5,11 +5,22 @@ import { clearAllCache } from '@/services/transaction-cache-service';
 import { clearAddressCache, clearWalletDataMemo, getWalletData } from '@/services/wallet-service';
 import { getPersistedBalance, getPersistedTransactions, getPersistedUTXOs, persistWalletData, clearPersistedWalletData, clearAllPersistedWalletData } from '@/services/wallet-persistence-service';
 import { useTheme } from '@/hooks/theme-store';
+import {
+  ActionsContext,
+  AddressesContext,
+  BalanceContext,
+  CoinControlContext,
+  FeedbackContext,
+  SettingsContext,
+  TransactionsContext,
+  UtxosContext,
+  WalletMetaContext,
+  WalletsContext,
+} from '@/hooks/wallet-contexts';
 import { FeeSettings, FiatCurrency, Transaction, UTXO, Wallet } from '@/types/wallet';
-import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -202,7 +213,11 @@ const feeSettingsMapsEqual = (a: Record<string, FeeSettings>, b: Record<string, 
   return true;
 };
 
-export const [WalletProvider, useWallet] = createContextHook(() => {
+// The store body: every query, mutation, and piece of state the app's wallet
+// layer owns. It runs exactly once, inside WalletProvider below; its memoized
+// slices are published through separate churn-domain contexts so components
+// can subscribe to only the data they render.
+function useWalletStoreState() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
   // Theme lives in its own low-churn context (hooks/theme-store.tsx) so
@@ -2519,22 +2534,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, []);
 
-  // Memoize the final returned object to prevent unnecessary re-renders
-  const walletStoreData = useMemo(() => ({
-    ...walletData,
-    ...balanceData,
-    ...transactionData,
-    ...addressesData,
-    ...utxosData,
-    ...settingsData,
-    ...actionsData,
-    coinControl: coinControlData,
-    ...feedbackData,
+  // Loose fields that don't belong to any data slice
+  const metaData = useMemo(() => ({
     isCreatingWallet: saveWalletsMutation.isPending,
     setAddressStatsCache,
     getAddressStatsCacheValue,
     getMnemonic, // Helper to retrieve mnemonic from secure storage
-  }), [
+  }), [saveWalletsMutation.isPending, setAddressStatsCache, getAddressStatsCacheValue, getMnemonic]);
+
+  return {
     walletData,
     balanceData,
     transactionData,
@@ -2544,11 +2552,111 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     actionsData,
     coinControlData,
     feedbackData,
-    saveWalletsMutation.isPending,
-    setAddressStatsCache,
-    getAddressStatsCacheValue,
-    getMnemonic,
-  ]);
+    metaData,
+  };
+}
 
-  return walletStoreData;
-});
+export type WalletStoreSlices = ReturnType<typeof useWalletStoreState>;
+
+/** The legacy combined store shape returned by useWallet(). */
+export type WalletStore =
+  WalletStoreSlices['walletData'] &
+  WalletStoreSlices['balanceData'] &
+  WalletStoreSlices['transactionData'] &
+  WalletStoreSlices['addressesData'] &
+  WalletStoreSlices['utxosData'] &
+  WalletStoreSlices['settingsData'] &
+  WalletStoreSlices['actionsData'] &
+  WalletStoreSlices['feedbackData'] &
+  WalletStoreSlices['metaData'] &
+  { coinControl: WalletStoreSlices['coinControlData'] };
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  const s = useWalletStoreState();
+
+  // Each slice is an already-memoized object from the store body, so a
+  // context only notifies its readers when that slice actually changed.
+  // `children` identity is stable (created in app/_layout.tsx), so React
+  // bails out of re-rendering the subtree except for context readers.
+  return (
+    <WalletsContext.Provider value={s.walletData}>
+      <BalanceContext.Provider value={s.balanceData}>
+        <TransactionsContext.Provider value={s.transactionData}>
+          <AddressesContext.Provider value={s.addressesData}>
+            <UtxosContext.Provider value={s.utxosData}>
+              <SettingsContext.Provider value={s.settingsData}>
+                <ActionsContext.Provider value={s.actionsData}>
+                  <CoinControlContext.Provider value={s.coinControlData}>
+                    <FeedbackContext.Provider value={s.feedbackData}>
+                      <WalletMetaContext.Provider value={s.metaData}>
+                        {children}
+                      </WalletMetaContext.Provider>
+                    </FeedbackContext.Provider>
+                  </CoinControlContext.Provider>
+                </ActionsContext.Provider>
+              </SettingsContext.Provider>
+            </UtxosContext.Provider>
+          </AddressesContext.Provider>
+        </TransactionsContext.Provider>
+      </BalanceContext.Provider>
+    </WalletsContext.Provider>
+  );
+}
+
+/**
+ * Legacy compatibility hook: the combined store object, subscribed to every
+ * slice — consumers re-render on any wallet-data change, exactly as before
+ * the context split. Prefer the narrow hooks in hooks/wallet-contexts.tsx
+ * (useWallets, useWalletBalance, ...) so components only re-render for the
+ * data they actually use.
+ *
+ * Matches the old createContextHook behavior of returning undefined (typed
+ * as WalletStore) when rendered outside WalletProvider — several screens
+ * gate on a falsy result to show a loading fallback.
+ */
+export function useWallet(): WalletStore {
+  const walletData = useContext(WalletsContext);
+  const balanceData = useContext(BalanceContext);
+  const transactionData = useContext(TransactionsContext);
+  const addressesData = useContext(AddressesContext);
+  const utxosData = useContext(UtxosContext);
+  const settingsData = useContext(SettingsContext);
+  const actionsData = useContext(ActionsContext);
+  const coinControlData = useContext(CoinControlContext);
+  const feedbackData = useContext(FeedbackContext);
+  const metaData = useContext(WalletMetaContext);
+
+  return useMemo(() => {
+    if (
+      !walletData || !balanceData || !transactionData || !addressesData ||
+      !utxosData || !settingsData || !actionsData || !coinControlData ||
+      !feedbackData || !metaData
+    ) {
+      return undefined as unknown as WalletStore;
+    }
+
+    return {
+      ...walletData,
+      ...balanceData,
+      ...transactionData,
+      ...addressesData,
+      ...utxosData,
+      ...settingsData,
+      ...actionsData,
+      coinControl: coinControlData,
+      ...feedbackData,
+      ...metaData,
+    };
+  }, [
+    walletData,
+    balanceData,
+    transactionData,
+    addressesData,
+    utxosData,
+    settingsData,
+    actionsData,
+    coinControlData,
+    feedbackData,
+    metaData,
+  ]);
+}
