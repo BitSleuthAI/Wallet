@@ -28,7 +28,6 @@ import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, Wifi
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
   FlatList,
   Modal,
   Platform,
@@ -41,6 +40,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
 

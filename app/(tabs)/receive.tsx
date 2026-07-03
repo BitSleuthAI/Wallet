@@ -5,17 +5,17 @@ import { toast } from '@/components/Toast';
 import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
 import { platformStyles } from '@/constants/themes';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import { WalletsContext, useFeedback, useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Alert,
-    Animated,
     Platform,
     SafeAreaView,
     Share,
@@ -24,6 +24,14 @@ import {
     View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Animated, {
+    Easing,
+    cancelAnimation,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
 
 // Define Android-specific bottom padding for action buttons area
 const ANDROID_BOTTOM_PADDING = 120;
@@ -34,23 +42,28 @@ const walletService = loadWalletService([
   'clearAddressCache',
 ]);
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function ReceiveScreen() {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
+  if (!walletData) {
     return <ScreenLoading />;
   }
-  
-  return <ReceiveScreenContent walletContext={walletContext} />;
+
+  return <ReceiveScreenContent />;
 }
 
-// Main component with all hooks
-function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typeof useWallet> }) {
+// Main component with all hooks. Narrow subscriptions: this screen renders no
+// polled data, so it stays idle across the 30s balance/tx/utxo refreshes.
+function ReceiveScreenContent() {
   const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
-  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = walletContext; // Context is guaranteed non-null by wrapper
-  const spinValue = useRef(new Animated.Value(0)).current;
+  const { currentWallet } = useWallets();
+  const { generateNewAddress } = useWalletActions();
+  const { incrementUsageCount } = useFeedback();
+  const { theme } = useTheme();
+  const spinDeg = useSharedValue(0);
   
   // Initialize state hooks with empty string, will be loaded async
   const [currentAddress, setCurrentAddress] = useState<string>('');
@@ -126,33 +139,27 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
 
   // Spin animation for the refresh icon
   useEffect(() => {
-    let spinAnimation: Animated.CompositeAnimation | null = null;
-    
     if (isGeneratingAddress) {
-      spinAnimation = Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        })
+      spinDeg.value = 0;
+      spinDeg.value = withRepeat(
+        withTiming(360, { duration: 1000, easing: Easing.linear }),
+        -1,
+        false
       );
-      spinAnimation.start();
     } else {
-      spinValue.setValue(0);
+      cancelAnimation(spinDeg);
+      spinDeg.value = 0;
     }
-    
+
     // Cleanup: stop the animation when component unmounts or isGeneratingAddress changes
     return () => {
-      if (spinAnimation) {
-        spinAnimation.stop();
-      }
+      cancelAnimation(spinDeg);
     };
-  }, [isGeneratingAddress, spinValue]);
+  }, [isGeneratingAddress, spinDeg]);
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spinDeg.value}deg` }],
+  }));
 
   const hasValidAddress = currentAddress.trim().length > 0 && currentAddress !== 'No address available';
 
@@ -358,7 +365,7 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           <AppButton
             title={isGeneratingAddress ? 'Generating...' : 'New Address'}
             icon={
-              <Animated.View style={{ transform: [{ rotate: spin }] }}>
+              <Animated.View style={spinStyle}>
                 <RefreshCw color="white" size={20} />
               </Animated.View>
             }

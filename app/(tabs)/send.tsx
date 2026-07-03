@@ -34,7 +34,6 @@ import { AlertCircle, ArrowUpRight, CheckCircle, ChevronRight, Coins, QrCode } f
 import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Animated,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -46,6 +45,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 // Wrapper component that checks for context availability. Subscribes only to
 // the low-churn wallets slice so the gate itself doesn't re-render on polls.

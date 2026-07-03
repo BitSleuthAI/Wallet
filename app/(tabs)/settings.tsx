@@ -44,7 +44,6 @@ import {
     Alert,
     Modal,
     Platform,
-    Animated as RNAnimated,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -240,7 +239,7 @@ function SettingsScreenContent() {
           }} 
         />
         
-        <RNAnimated.View style={[styles.animatedContainer, animatedStyle]}>
+        <ReanimatedAnimated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView 
           style={styles.scrollView} 
           contentContainerStyle={styles.scrollContent}
@@ -457,7 +456,7 @@ function SettingsScreenContent() {
             </View>
           </AnimatedTouchable>
         </ScrollView>
-      </RNAnimated.View>
+      </ReanimatedAnimated.View>
 
       {/* Currency Selection Modal */}
       <Modal

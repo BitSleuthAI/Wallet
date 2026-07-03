@@ -2,8 +2,14 @@ import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { WifiOff } from 'lucide-react-native';
-import React, { useMemo, useRef, useState } from 'react';
-import { Animated, Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useMemo, useState } from 'react';
+import { Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Path, Stop } from 'react-native-svg';
 
 const { width } = Dimensions.get('window');
@@ -41,7 +47,16 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
   const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = useWallet()!; // Non-null assertion is safe here because wrapper checked
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
-  const tooltipOpacity = useRef(new Animated.Value(0)).current;
+  const tooltipOpacity = useSharedValue(0);
+
+  const tooltipAnimatedStyle = useAnimatedStyle(() => ({
+    opacity: tooltipOpacity.value,
+  }));
+
+  const hideTooltip = useCallback(() => {
+    setShowTooltip(false);
+    setSelectedPoint(null);
+  }, []);
 
   // Generate balance history based on actual transactions.
   // Memoized: this is the most expensive synchronous computation on the home
@@ -164,11 +179,7 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
       const point = getPointAtX(locationX, balanceHistory);
       setSelectedPoint(point);
       setShowTooltip(true);
-      Animated.timing(tooltipOpacity, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }).start();
+      tooltipOpacity.value = withTiming(1, { duration: 200 });
     },
     onPanResponderMove: (evt) => {
       const { locationX } = evt.nativeEvent;
@@ -176,13 +187,10 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
       setSelectedPoint(point);
     },
     onPanResponderRelease: () => {
-      Animated.timing(tooltipOpacity, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }).start(() => {
-        setShowTooltip(false);
-        setSelectedPoint(null);
+      tooltipOpacity.value = withTiming(0, { duration: 200 }, (finished) => {
+        if (finished) {
+          runOnJS(hideTooltip)();
+        }
       });
     },
   });
@@ -335,11 +343,11 @@ function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
         
         {/* Tooltip */}
         {showTooltip && selectedPoint && (
-          <Animated.View 
+          <Animated.View
             style={[
               styles.tooltip,
+              tooltipAnimatedStyle,
               {
-                opacity: tooltipOpacity,
                 left: Math.max(10, Math.min(getSelectedPointPosition().x - 60, chartWidth - 130)),
                 top: Math.max(10, getSelectedPointPosition().y - 80),
                 backgroundColor: theme.colors.surface,
