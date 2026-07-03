@@ -31,10 +31,6 @@ import {
 import ConfettiCannon from 'react-native-confetti-cannon';
 import type { WalletService } from '@/types/wallet';
 
-// Fallback test mnemonics - DO NOT USE FOR REAL FUNDS
-const FALLBACK_MNEMONIC_12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-const FALLBACK_MNEMONIC_24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
-
 // Wallet service import with platform detection
 let walletService: WalletService;
 try {
@@ -57,7 +53,7 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions: Array<keyof WalletService> = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const requiredFunctions: (keyof WalletService)[] = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -69,13 +65,16 @@ try {
   }
 } catch (error) {
   console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
-  // Provide a minimal fallback - WARNING: These are test mnemonics only
+  // Fail closed: never hand out a predictable mnemonic or accept an invalid
+  // one just because the crypto module failed to load
+  const serviceUnavailable = async (): Promise<never> => {
+    throw new Error('Wallet service not available. Please restart the app.');
+  };
   walletService = {
-    generateMnemonic: (strength: number = 128) => 
-      Promise.resolve(strength === 256 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12),
-    validateMnemonic: () => true,
-    createWallet: async () => { throw new Error('Wallet service not available'); },
-    importWallet: async () => { throw new Error('Wallet service not available'); }
+    generateMnemonic: serviceUnavailable,
+    validateMnemonic: () => false,
+    createWallet: serviceUnavailable,
+    importWallet: serviceUnavailable,
   };
 }
 
@@ -132,23 +131,14 @@ export default function WalletSetupScreen() {
     if (__DEV__) {
       console.log('Starting mnemonic generation for word count:', wordCount);
     }
-    
-    // Set fallback immediately to prevent undefined state
-    const fallbackMnemonic = wordCount === 24 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12;
-    setGeneratedMnemonic(fallbackMnemonic);
-    
+
     try {
-      if (__DEV__) {
-        console.log('Attempting to generate mnemonic with wallet service');
-        console.log('Wallet service type:', typeof walletService.generateMnemonic);
-      }
-      
       if (typeof walletService.generateMnemonic !== 'function') {
         throw new Error('generateMnemonic is not a function');
       }
-      
+
       const strength = wordCount === 24 ? 256 : 128;
-      
+
       // Handle both sync and async versions of generateMnemonic
       let newMnemonic: string;
       const result = walletService.generateMnemonic(strength);
@@ -157,38 +147,26 @@ export default function WalletSetupScreen() {
       } else {
         newMnemonic = result;
       }
-      
+
+      if (!newMnemonic || typeof newMnemonic !== 'string' || !newMnemonic.trim()) {
+        throw new Error('Generated mnemonic was empty');
+      }
+
       if (__DEV__) {
         console.log('Successfully generated mnemonic with wallet service');
       }
-      
-      // Only update if we got a valid mnemonic
-      if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
-        // Check if we're using a fallback/test mnemonic
-        const isFallbackMnemonic = newMnemonic === FALLBACK_MNEMONIC_12 || 
-                                    newMnemonic === FALLBACK_MNEMONIC_24;
-        
-        if (isFallbackMnemonic) {
-          // Warn user that this is a test mnemonic
-          Alert.alert(
-            '⚠️ Test Mnemonic Warning',
-            'You are using a test recovery phrase. DO NOT use this wallet for real funds! This phrase is publicly known and insecure.',
-            [{ text: 'I Understand', style: 'destructive' }]
-          );
-        }
-        
-        setGeneratedMnemonic(newMnemonic);
-      }
+
+      setGeneratedMnemonic(newMnemonic);
     } catch (error) {
-      console.error('Error generating mnemonic, using fallback:', error);
-      
-      // Show warning that we're using fallback
+      console.error('Error generating mnemonic:', error);
+      // Fail closed: never substitute a publicly-known test phrase.
+      // An empty mnemonic blocks wallet creation until generation succeeds.
+      setGeneratedMnemonic('');
       Alert.alert(
-        '⚠️ Fallback Mnemonic',
-        'Failed to generate secure mnemonic. Using test phrase. DO NOT use for real funds!',
-        [{ text: 'OK', style: 'destructive' }]
+        'Unable to Generate Recovery Phrase',
+        'Secure key generation failed, so no wallet was created. Please restart the app and try again.',
+        [{ text: 'OK' }]
       );
-      // Fallback is already set above
     }
   }, [wordCount]);
 

@@ -1,6 +1,6 @@
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getPin as getSecurePin } from '@/services/secure-pin-service';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Delete } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -45,7 +45,7 @@ export default function PinVerificationScreen({
   const verifyPin = useCallback(async (enteredPin: string) => {
     setIsLoading(true);
     try {
-      const storedPin = await AsyncStorage.getItem('pin');
+      const storedPin = await getSecurePin();
       
       if (storedPin === enteredPin) {
         // Trigger success haptic feedback asynchronously

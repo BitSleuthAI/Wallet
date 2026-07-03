@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { secureAuthService } from './secure-auth-service';
+import { getPin as getSecurePin } from './secure-pin-service';
 
 export interface SecurityTestResult {
   testName: string;
@@ -102,7 +103,7 @@ export class SecurityTestService {
    */
   private async testPINSecurity(): Promise<SecurityTestResult> {
     try {
-      const pin = await AsyncStorage.getItem('pin');
+      const pin = await getSecurePin();
       
       if (!pin) {
         return {

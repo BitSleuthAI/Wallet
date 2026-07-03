@@ -2061,7 +2061,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       } catch (e) {
         console.warn('Failed to delete mnemonics from secure storage:', e);
       }
-      
+
+      // The PIN lives in SecureStore, which AsyncStorage.clear() below doesn't touch
+      try {
+        const { deletePin } = await import('@/services/secure-pin-service');
+        await deletePin();
+      } catch (e) {
+        console.warn('Failed to delete PIN from secure storage:', e);
+      }
+
       await AsyncStorage.clear();
 
       setWallets([]);
