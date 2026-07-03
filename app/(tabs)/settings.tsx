@@ -458,13 +458,12 @@ function SettingsScreenContent() {
       {/* Currency Selection Modal */}
       <Modal
         visible={showCurrencyModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowCurrencyModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Currency
               </Text>
@@ -487,6 +486,7 @@ function SettingsScreenContent() {
                     },
                   ]}
                   onPress={() => {
+                    HapticService.light();
                     setCurrency(currency);
                     setShowCurrencyModal(false);
                   }}
@@ -506,19 +506,17 @@ function SettingsScreenContent() {
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
 
       {/* Auto-Lock Selection Modal */}
       <Modal
         visible={showAutoLockModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowAutoLockModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Auto-Lock Timer
               </Text>
@@ -548,6 +546,7 @@ function SettingsScreenContent() {
                   ]}
                   onPress={async () => {
                     try {
+                      HapticService.light();
                       await setAutoLockTimeout(option.value);
                       setShowAutoLockModal(false);
                     } catch (error) {
@@ -574,19 +573,17 @@ function SettingsScreenContent() {
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
 
       {/* Wallet Selection Modal */}
       <Modal
         visible={showWalletModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowWalletModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Wallet
               </Text>
@@ -609,6 +606,7 @@ function SettingsScreenContent() {
                     },
                   ]}
                   onPress={() => {
+                    HapticService.light();
                     switchWallet(wallet.id);
                     setShowWalletModal(false);
                   }}
@@ -632,7 +630,6 @@ function SettingsScreenContent() {
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
     </SafeAreaView>
     </GradientBackground>
@@ -753,25 +750,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', // Always white on colored logout button
     letterSpacing: 0.5, // Increased from 0.3
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased from 0.5
-    justifyContent: 'flex-end',
-  },
   modalContent: {
-    borderTopLeftRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    borderTopRightRadius: platformStyles.borderRadius.xxxl,
-    paddingTop: platformStyles.spacing.xxl, // Increased from xl
-    maxHeight: '70%',
+    flex: 1,
+    paddingTop: platformStyles.spacing.xxl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xxl, // Increased from xl
-    paddingBottom: platformStyles.spacing.xxl, // Increased from xl
+    paddingHorizontal: platformStyles.spacing.xxl,
+    paddingBottom: platformStyles.spacing.xxl,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalTitle: {
     fontSize: 24, // Increased from 21

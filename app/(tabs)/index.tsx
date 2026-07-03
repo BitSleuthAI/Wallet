@@ -13,7 +13,6 @@ import { useTabAnimation } from '@/hooks/use-tab-animation';
 import { useWallet } from '@/hooks/wallet-store';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet } from '@/types/wallet';
-import { isIOS26OrHigher } from '@/utils/platform';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
@@ -577,155 +576,82 @@ function WalletScreenContent() {
       {/* Edit Wallet Modal */}
       <Modal
         visible={!!editingWallet}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={handleCancelEdit}
       >
-        {isIOS26OrHigher() ? (
-          <LiquidGlassView variant="ultraThin" intensity={95} style={styles.modalOverlay}>
-            <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.editModalHeader}>
-                <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-                <TouchableOpacity onPress={handleCancelEdit}>
-                  <X color={theme.colors.textSecondary} size={24} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.editModalContent}>
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
-                <TextInput
-                  style={[styles.editInput, { 
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text 
-                  }]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter wallet name"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  underlineColorAndroid="transparent"
-                />
-                
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
-                <View style={styles.colorPicker}>
-                  {WALLET_COLOR_PALETTE.map((colorOption) => {
-                    const gradientColors = colorOption.gradient;
-                    return (
-                      <TouchableOpacity
-                        key={colorOption.id}
-                        style={[
-                          styles.colorOption,
-                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
-                        ]}
-                        onPress={() => setEditColor(colorOption.base)}
-                      >
-                        <LinearGradient
-                          colors={gradientColors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.colorGradient}
-                        />
-                        {editColor === colorOption.base && (
-                          <View style={styles.colorCheckmark}>
-                            <Check color="white" size={16} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-              
-              <View style={styles.editModalActions}>
-                <TouchableOpacity
-                  style={[styles.editCancelButton, { borderColor: theme.colors.border }]}
-                  onPress={handleCancelEdit}
-                >
-                  <Text style={[styles.editCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.editSaveButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleSaveEdit}
-                >
-                  <Text style={styles.editSaveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </LiquidGlassView>
-        ) : (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.editModalHeader}>
-                <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-                <TouchableOpacity onPress={handleCancelEdit}>
-                  <X color={theme.colors.textSecondary} size={24} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.editModalContent}>
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
-                <TextInput
-                  style={[styles.editInput, { 
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text 
-                  }]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter wallet name"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  underlineColorAndroid="transparent"
-                />
-                
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
-                <View style={styles.colorPicker}>
-                  {WALLET_COLOR_PALETTE.map((colorOption) => {
-                    const gradientColors = colorOption.gradient;
-                    return (
-                      <TouchableOpacity
-                        key={colorOption.id}
-                        style={[
-                          styles.colorOption,
-                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
-                        ]}
-                        onPress={() => setEditColor(colorOption.base)}
-                      >
-                        <LinearGradient
-                          colors={gradientColors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.colorGradient}
-                        />
-                        {editColor === colorOption.base && (
-                          <View style={styles.colorCheckmark}>
-                            <Check color="white" size={16} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-              
-              <View style={styles.editModalActions}>
-                <TouchableOpacity
-                  style={[styles.editCancelButton, { borderColor: theme.colors.border }]}
-                  onPress={handleCancelEdit}
-                >
-                  <Text style={[styles.editCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.editSaveButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleSaveEdit}
-                >
-                  <Text style={styles.editSaveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
+        <View style={[styles.editModal, { backgroundColor: theme.colors.background }]}>
+          <View style={styles.editModalHeader}>
+            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
+            <TouchableOpacity onPress={handleCancelEdit}>
+              <X color={theme.colors.textSecondary} size={24} />
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.editModalContent}>
+            <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
+            <TextInput
+              style={[styles.editInput, {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                color: theme.colors.text
+              }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter wallet name"
+              placeholderTextColor={theme.colors.textSecondary}
+              underlineColorAndroid="transparent"
+            />
+
+            <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
+            <View style={styles.colorPicker}>
+              {WALLET_COLOR_PALETTE.map((colorOption) => {
+                const gradientColors = colorOption.gradient;
+                return (
+                  <TouchableOpacity
+                    key={colorOption.id}
+                    style={[
+                      styles.colorOption,
+                      editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
+                    ]}
+                    onPress={() => {
+                      HapticService.light();
+                      setEditColor(colorOption.base);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={gradientColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.colorGradient}
+                    />
+                    {editColor === colorOption.base && (
+                      <View style={styles.colorCheckmark}>
+                        <Check color="white" size={16} />
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
-        )}
+
+          <View style={styles.editModalActions}>
+            <AppButton
+              title="Cancel"
+              variant="secondary"
+              onPress={handleCancelEdit}
+              style={styles.editActionButton}
+              testID="edit-wallet-cancel"
+            />
+            <AppButton
+              title="Save"
+              onPress={handleSaveEdit}
+              style={styles.editActionButton}
+              testID="edit-wallet-save"
+            />
+          </View>
+        </View>
       </Modal>
       
       {/* Feedback Popup */}
@@ -1033,27 +959,14 @@ const styles = StyleSheet.create({
     fontWeight: '600', // Increased from 500
     letterSpacing: 0.2,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased opacity from 0.5 for better focus
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-  },
   editModal: {
-    width: '100%',
-    maxWidth: 420, // Increased from 400
-    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    padding: 0,
-    ...platformStyles.cardShadow,
+    flex: 1,
   },
   editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    padding: platformStyles.spacing.xxl,
   },
   editModalTitle: {
     fontSize: 22, // Increased from 19
@@ -1113,36 +1026,11 @@ const styles = StyleSheet.create({
   },
   editModalActions: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    gap: platformStyles.spacing.lg, // Increased from md
+    padding: platformStyles.spacing.xxl,
+    gap: platformStyles.spacing.lg,
   },
-  editCancelButton: {
+  editActionButton: {
     flex: 1,
-    paddingVertical: platformStyles.spacing.md + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    borderWidth: 2, // Increased from 1.5
-    alignItems: 'center',
-    // borderColor will be set dynamically via theme.colors.border
-  },
-  editCancelText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '600', // Increased from 500
-    letterSpacing: 0.2,
-    // color will be set dynamically via theme.colors.textSecondary
-  },
-  editSaveButton: {
-    flex: 1,
-    paddingVertical: platformStyles.spacing.md + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    // backgroundColor will be set dynamically via theme.colors.primary
-    alignItems: 'center',
-    ...platformStyles.buttonShadow,
-  },
-  editSaveText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    color: 'white',
-    letterSpacing: 0.3,
   },
   chartContainer: {
     marginTop: platformStyles.spacing.xl,

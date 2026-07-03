@@ -237,13 +237,12 @@ export default function ManageWalletsScreen() {
       {/* Edit Wallet Modal */}
       <Modal
         visible={showEditModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowEditModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
               <TouchableOpacity
                 onPress={() => setShowEditModal(false)}
@@ -307,7 +306,6 @@ export default function ManageWalletsScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
       </Modal>
       </AndroidSafeContainer>
     </GradientBackground>
@@ -404,18 +402,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   modalContent: {
-    width: '90%',
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: 0,
-    overflow: 'hidden',
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
@@ -423,7 +411,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalTitle: {
     fontSize: 20,
