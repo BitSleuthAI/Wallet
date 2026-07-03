@@ -38,6 +38,30 @@ onRequestClose still required for Android back).
 
 ---
 
+[2026-07-03] - SUCCESS - Impact: HIGH
+Context: Deferred-items pass — store re-render fix, N+1 request reduction,
+legacy Animated migration, app-wide Pressable sweep.
+Outcome: (1) Splitting a single-context "God store" into churn-domain
+contexts (one context per already-memoized slice) delivered selector-like
+subscriptions without moving any query/mutation logic — a much safer path
+than a Zustand bridge, which would have introduced one-commit lag between
+data slices. (2) Rule §9.3 was completed repo-wide via a drop-in
+`PressableOpacity` (Pressable mimicking activeOpacity), converting 32 files
+mechanically with zero type errors; only `createAnimatedComponent(TouchableOpacity)`
+bases remain. (3) All legacy `Animated` code migrated to Reanimated —
+notably, an unmemoized `useFocusEffect(fn)` (no useCallback) had been
+replaying the tab entrance animation on every re-render while focused;
+the Reanimated rewrite with a memoized callback fixed it.
+Learning: For context-hook stores, publish each memoized slice through its
+own context and keep the legacy hook as a compat shim; convert consumers
+incrementally. Never place whole React Query objects in a slice memo's
+value/deps — identity churns every render.
+Action: Consider adding a rule about churn-domain context splitting for
+large context stores, and a note that useFocusEffect callbacks must be
+memoized.
+
+---
+
 ## Pending SKILL.md Updates
 
 - Consider a migration checklist for JS `<Modal transparent>` → `presentationStyle="formSheet"` (see 2026-07-03 entry).

@@ -54,6 +54,23 @@ single ScreenLoading-style fallback component per app.
 
 ---
 
+[2026-07-03] - SUCCESS - Impact: MEDIUM
+Context: Interaction-polish follow-up: unified press feedback across the
+whole app and finished the animation-system consolidation.
+Outcome: Two-tier press-feedback system — AppButton (spring scale +
+haptics) for real CTAs, PressableOpacity (opacity dim) for rows and icon
+buttons — gives every tap target consistent feedback without redesigning
+bespoke layouts. Migrating the last legacy Animated code to Reanimated
+means one animation vocabulary (shared values + withTiming/withSpring)
+across splash, tab transitions, charts, and list rows.
+Learning: A mechanical drop-in wrapper (PressableOpacity) converts a large
+legacy surface safely; reserving the expressive primitive (AppButton) for
+deliberate CTAs keeps visual hierarchy meaningful.
+Action: Document the two-tier press-feedback convention as the default
+pattern for new screens.
+
+---
+
 ## Pattern Recognition
 
 As feedback accumulates, look for:

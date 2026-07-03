@@ -33,10 +33,34 @@ the wallet data pipeline, or the send flow.
 - Default wallet color is Bitcoin orange (`#F7931A`, palette id `'bitcoin'`
   in `constants/wallet-colors.ts`).
 
-## getWalletData memo contract (services/wallet-service.ts)
+## Store architecture (hooks/wallet-store.tsx + hooks/wallet-contexts.tsx)
+
+The store body (`useWalletStoreState()` in `wallet-store.tsx`) owns every
+query, mutation, and piece of wallet state, and runs exactly once inside
+`WalletProvider`. Its memoized slices are published through separate
+churn-domain contexts in `hooks/wallet-contexts.tsx`:
+
+- **Narrow hooks are the preferred API**: `useWallets`, `useWalletBalance`,
+  `useWalletTransactions`, `useWalletAddresses`, `useWalletUtxos`,
+  `useWalletSettings`, `useWalletActions`, `useCoinControl`, `useFeedback`,
+  `useWalletMeta`. Subscribe to only what the component renders — a
+  component using `useWallets` + `useWalletActions` does not re-render on
+  the 30s data polls. These hooks throw outside `WalletProvider`.
+- **`useWallet()` is a compatibility hook**: the legacy combined shape,
+  subscribed to every slice (re-renders on any wallet-data change). It
+  returns `undefined` (cast) outside the provider — the older wrapper
+  screens gate on that. New code should not use it; ~25 low-heat call
+  sites still do.
+- Wrapper "context available?" gates should read `useContext(WalletsContext)`
+  so the gate itself stays low-churn.
+- Do not put whole React Query objects into a slice memo's value or deps
+  (they change identity every render and would make that context churn
+  constantly) — expose granular fields instead, as `balanceData` does.
+
+## Data pipeline (services/wallet-service.ts)
 
 `getWalletData(xpub)` is called independently by the balance, transactions,
-and UTXO queries every 30s poll. The exported function now:
+and UTXO queries every 30s poll. The exported function:
 
 - shares one in-flight promise per xpub (concurrent callers get the same run);
 - memoizes **successful** results (and the benign "no transaction history"
@@ -46,6 +70,24 @@ and UTXO queries every 30s poll. The exported function now:
 `clearWalletDataMemo()` drops both maps and is called by `refreshData`
 (pull-to-refresh) and `logoutAndEraseWallet`. If you add another "force
 fresh data" path, call it there too.
+
+Per-address wire cost is 1 request (UTXOs): the txs read is a cache hit
+from discovery, and there is **no per-address stats call** — the wallet
+balance comes from UTXOs and address activity from the txs response. The
+addresses screen (`generateAddressesForView`) keeps its `chain_stats`
+calls because those are exact even for >50-tx addresses (the `/txs`
+endpoint truncates at ~50 and is not paginated — known gap).
+
+Refresh/cold-start behavior:
+
+- Pull-to-refresh clears only the load-bearing caches for the current
+  wallet (`clearWalletDataMemo`, `clearCacheForWalletXpub`,
+  `clearAddressCache`) then invalidates+refetches the queries. Other
+  wallets' caches and the global tx-body cache stay (confirmed tx bodies
+  are immutable).
+- Cold starts wipe caches **only on app-version change**; otherwise the
+  per-key TTLs (metadata 2m, txids/stats 5m, utxos 2m) guarantee
+  freshness within 5 minutes.
 
 Polling: all four wallet queries use `refetchIntervalInBackground: false`
 (foregrounding is covered by `refetchOnWindowFocus: true`); address
@@ -69,27 +111,31 @@ discovery polls at 60s, the rest at 30s.
 - Wallet erase must call `deletePin()` (AsyncStorage.clear() does not touch
   SecureStore); `logoutAndEraseWallet` already does.
 
-## Shared UI primitives
+## Shared UI primitives & conventions
 
 - `components/AppButton.tsx` — the button primitive (Pressable + spring
   scale + haptics; variants primary/secondary/outline/destructive; loading/
-  disabled; icon slot). Prefer it over ad-hoc TouchableOpacity for CTAs.
+  disabled; icon slot). Use it for real CTAs.
+- `components/PressableOpacity.tsx` — drop-in Pressable replacement for
+  TouchableOpacity (mirrors `activeOpacity`). Use it for rows, icon
+  buttons, and other tap targets; do not import TouchableOpacity in new
+  code. The only remaining TouchableOpacity references are the three
+  `createAnimatedComponent(TouchableOpacity)` bases (settings logout,
+  WalletCard, TransactionItem), which have custom Reanimated feedback.
+- **Animations are Reanimated-only.** No component imports the legacy
+  react-native `Animated` API; keep it that way.
 - `components/ScreenLoading.tsx` — the pre-context loading fallback.
 - Picker/edit modals use `presentationStyle="formSheet"` per
   `.github/skills/react-native-skills/rules/ui-native-modals.md`.
 
 ## Deferred (known, intentional)
 
-- Full God-store → Zustand (selector-based) migration; the theme extraction
-  removed the worst re-render fanout, but data consumers still re-render per
-  poll.
-- `wallet-service.ts` per-address N+1 request restructure (3 API calls per
-  address per scan).
-- `refreshData`/`initializeWallets` cache-nuking strategy (full re-discovery
-  on pull-to-refresh and >5-min cold starts).
-- Legacy `Animated` → Reanimated migrations (`use-tab-animation`,
-  `SplashScreen`, `PriceChart` tooltip, receive spin).
-- App-wide TouchableOpacity → Pressable sweep (only high-traffic CTAs done).
+- Store stage 3: ~25 low-heat screens still use the compat `useWallet()`;
+  converting them to narrow hooks (and then deleting `useWallet()`) is
+  mechanical follow-up.
+- Esplora `/address/{addr}/txs` pagination: responses truncate at ~50
+  confirmed txs and the app does not fetch continuation pages — addresses
+  with deep history show partial tx lists (pre-existing behavior).
 - `expo-image` is installed but unused; it was kept because it is a native
   module already linked in the committed ios/android projects — removing it
   requires a prebuild. Either adopt it for QR/logo rendering or remove it in
