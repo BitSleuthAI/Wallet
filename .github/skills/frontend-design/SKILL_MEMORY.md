@@ -35,9 +35,22 @@ Action: [How SKILL.md should be updated, if at all]
 
 ---
 
-**Awaiting first feedback entry...**
-
-When the frontend-design skill is used to create mobile UIs, outcomes should be recorded here. Track what works, what doesn't, and how mobile design thinking evolves.
+[2026-07-03] - SUCCESS - Impact: HIGH
+Context: Brand/color unification pass across the whole app (light-mode
+gradients, error boundary, toasts, skeletons, default wallet color) plus a
+new transaction review sheet and shared button primitive.
+Outcome: The app previously shipped two palettes at once — a Bitcoin-orange
+theme in constants/themes.ts and a legacy cyan/coral set hardcoded in
+components. Deriving every surface from theme tokens (and mirroring the
+dark-branch gradient structure in light mode) made light and dark feel like
+one product. System-appearance-driven theming (light/dark/system, default
+system) replaced the manual-only toggle.
+Learning: Hardcoded hex "hotspots" cluster in three places: loading/empty
+fallbacks copy-pasted across screens, error/warning cards, and orphaned
+"delight" components that were built against an older brand and never
+imported. A grep for the legacy hex values is a fast completeness check.
+Action: Emphasize "no raw hex where a theme token exists" and recommend a
+single ScreenLoading-style fallback component per app.
 
 ---
 
