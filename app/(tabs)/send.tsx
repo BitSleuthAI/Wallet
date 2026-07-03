@@ -1,4 +1,5 @@
 import { AppButton } from '@/components/AppButton';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
@@ -42,7 +43,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -947,12 +947,12 @@ function SendScreenContent() {
           <View style={styles.emptyState}>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Wallet Found</Text>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Create or import a wallet to send funds</Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => router.push('/wallet-setup')}
             >
               <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -1023,7 +1023,7 @@ function SendScreenContent() {
                     multiline
                     underlineColorAndroid="transparent"
                   />
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={styles.qrCodeButton}
                     onPress={() => {
                       setShowQRScanner(true);
@@ -1031,7 +1031,7 @@ function SendScreenContent() {
                     }}
                   >
                     <QrCode color={theme.colors.primary} size={24} />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </View>
 
                 {/* Address Validation Indicator */}
@@ -1100,13 +1100,13 @@ function SendScreenContent() {
                   );
                 })()}
 
-                <TouchableOpacity
+                <PressableOpacity
                   onPress={handleSendMax}
                   style={styles.sendMaxButton}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>Send Max</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               </View>
 
               {/* Fee Section */}
@@ -1131,7 +1131,7 @@ function SendScreenContent() {
                 </View>
 
                 <View style={styles.feeButtons}>
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1152,9 +1152,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.economyFee || 1)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1175,9 +1175,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.halfHourFee || 5)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1198,9 +1198,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.fastestFee || 15)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1232,7 +1232,7 @@ function SendScreenContent() {
                       styles.feeButtonText,
                       { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
                     ]}>Custom</Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </View>
 
                 {/* Custom Fee Input */}
@@ -1386,7 +1386,7 @@ function SendScreenContent() {
                   backgroundColor: theme.colors.surface,
                 }
               ]}>
-                <TouchableOpacity
+                <PressableOpacity
                   style={styles.coinControlSection}
                   onPress={() => {
                     router.push('/coin-control');
@@ -1419,7 +1419,7 @@ function SendScreenContent() {
                     </Text>
                     <ChevronRight color={theme.colors.textSecondary} size={20} />
                   </View>
-                </TouchableOpacity>
+                </PressableOpacity>
               </LiquidGlassView>
 
               {/* Review Button */}

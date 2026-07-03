@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useWallet } from '@/hooks/wallet-store';
@@ -12,7 +13,6 @@ import {
     SafeAreaView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     Vibration,
     View
 } from 'react-native';
@@ -169,7 +169,7 @@ export default function PinSetupScreen() {
               
               if (item === 'delete') {
                 return (
-                  <TouchableOpacity
+                  <PressableOpacity
                     key={itemIndex}
                     style={[
                       styles.numberButton,
@@ -179,12 +179,12 @@ export default function PinSetupScreen() {
                     activeOpacity={0.6}
                   >
                     <Delete color="white" size={24} />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 );
               }
               
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={itemIndex}
                   style={[
                     styles.numberButton,
@@ -194,7 +194,7 @@ export default function PinSetupScreen() {
                   activeOpacity={0.6}
                 >
                   <Text style={styles.numberButtonText}>{item}</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               );
             })}
           </View>
@@ -208,13 +208,13 @@ export default function PinSetupScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
         
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
           activeOpacity={0.7}
         >
           <ArrowLeft color={theme.colors.text} size={24} />
-        </TouchableOpacity>
+        </PressableOpacity>
 
         <View style={styles.content}>
           <View style={styles.header}>

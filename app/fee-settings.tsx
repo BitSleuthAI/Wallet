@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
@@ -26,7 +27,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View
 } from 'react-native';
 
@@ -143,7 +143,7 @@ export default function FeeSettingsScreen() {
     const estimatedCost = estimateTransactionCost(info.rate);
     
     return (
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.presetCard,
           {
@@ -205,7 +205,7 @@ export default function FeeSettingsScreen() {
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </PressableOpacity>
     );
   };
 
@@ -333,13 +333,13 @@ export default function FeeSettingsScreen() {
           
           {/* Custom Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.backButton}
               onPress={handleBack}
               testID="back-button"
             >
               <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
               Fee Settings
             </Text>
@@ -368,17 +368,17 @@ export default function FeeSettingsScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Fee Settings
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={refreshFeeEstimates}
             disabled={refreshing}
             style={styles.refreshButton}
@@ -388,7 +388,7 @@ export default function FeeSettingsScreen() {
               size={20} 
               style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
             />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
         
         <ScrollView style={styles.scrollView}>
@@ -452,7 +452,7 @@ export default function FeeSettingsScreen() {
             </Text>
           </View>
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[
               styles.customFeeButton,
               {
@@ -482,7 +482,7 @@ export default function FeeSettingsScreen() {
             ]}>
               Use Custom Rate
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {/* Advanced Settings */}

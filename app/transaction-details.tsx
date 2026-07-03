@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
 import { getTransactionDetails } from '@/services/esplora-service';
@@ -29,7 +30,6 @@ import {
   Share,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -229,9 +229,9 @@ export default function TransactionDetailsScreen() {
           headerTransparent: true,
           headerTintColor: theme.colors.text,
           headerRight: () => (
-            <TouchableOpacity onPress={shareTransaction} style={styles.headerButton}>
+            <PressableOpacity onPress={shareTransaction} style={styles.headerButton}>
               <ShareIcon color={theme.colors.text} size={20} />
-            </TouchableOpacity>
+            </PressableOpacity>
           ),
         }} 
       />
@@ -296,7 +296,7 @@ export default function TransactionDetailsScreen() {
           </View>
           
           {transaction.status === 'pending' && isRBFToggleEnabled && isRBFEligible && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.rbfButton, { backgroundColor: theme.colors.primary }]}
               onPress={handleRBF}
               disabled={false}
@@ -305,7 +305,7 @@ export default function TransactionDetailsScreen() {
               <Text style={styles.rbfButtonText}>
                 Speed Up (RBF)
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
         </View>
 
@@ -322,7 +322,7 @@ export default function TransactionDetailsScreen() {
           
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Address</Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.copyableValue}
               onPress={() => copyToClipboard(transaction.address, 'Address')}
             >
@@ -330,12 +330,12 @@ export default function TransactionDetailsScreen() {
                 {transaction.address}
               </Text>
               <Copy color={theme.colors.textSecondary} size={16} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           
           <View style={styles.detailRow}>
             <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Transaction ID</Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.copyableValue}
               onPress={() => copyToClipboard(transaction.txid, 'Transaction ID')}
             >
@@ -343,7 +343,7 @@ export default function TransactionDetailsScreen() {
                 {transaction.txid}
               </Text>
               <Copy color={theme.colors.textSecondary} size={16} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           
           {typeof transaction.fee === 'number' && transaction.fee > 0 && (
@@ -419,16 +419,16 @@ export default function TransactionDetailsScreen() {
         <View style={[styles.section, { backgroundColor: theme.colors.surface }]}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Actions</Text>
           
-          <TouchableOpacity style={styles.actionButton} onPress={openInExplorer}>
+          <PressableOpacity style={styles.actionButton} onPress={openInExplorer}>
             <ExternalLink color={theme.colors.primary} size={20} />
             <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
               View on Block Explorer
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
 
           {/* RBF Button for sent transactions */}
           {!isReceived && transaction.status === 'pending' && isRBFToggleEnabled && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.actionButton, !isRBFEligible && styles.disabledActionButton]}
               onPress={handleRBF}
               disabled={!isRBFEligible}
@@ -439,12 +439,12 @@ export default function TransactionDetailsScreen() {
               >
                 Replace-by-Fee (RBF)
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
 
           {/* CPFP Button for pending transactions when enabled */}
           {transaction.status === 'pending' && isCPFPToggleEnabled && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.actionButton, !isCPFPEligible && styles.disabledActionButton]}
               onPress={handleCPFP}
               disabled={!isCPFPEligible}
@@ -455,7 +455,7 @@ export default function TransactionDetailsScreen() {
               >
                 Child-Pays-for-Parent (CPFP)
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
         </View>
       </ScrollView>

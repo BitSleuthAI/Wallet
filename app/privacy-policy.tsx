@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useTheme } from '@/hooks/theme-store';
 import { Stack, router } from 'expo-router';
@@ -9,7 +10,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -51,13 +51,13 @@ export default function PrivacyPolicyScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Privacy Policy
           </Text>
@@ -179,11 +179,11 @@ export default function PrivacyPolicyScreen() {
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
               If you have any questions about this Privacy Policy, please contact us at:
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
+            <PressableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
               <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
                 📧 hello@bitsleuth.ai
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </Section>
 
           <View style={styles.copyright}>

@@ -1,9 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
 import { useTheme } from '@/hooks/theme-store';
 import { Link, Stack } from "expo-router";
 import { ArrowLeft, Bot } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function NotFoundScreen() {
   const { theme } = useTheme();
@@ -40,7 +41,7 @@ export default function NotFoundScreen() {
             </Text>
 
             <Link href="/" asChild>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.button,
                   { backgroundColor: theme.colors.primary }
@@ -48,7 +49,7 @@ export default function NotFoundScreen() {
               >
                 <ArrowLeft color="#FFFFFF" size={20} strokeWidth={2.5} />
                 <Text style={styles.buttonText}>Return to Dashboard</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </Link>
           </View>
         </View>

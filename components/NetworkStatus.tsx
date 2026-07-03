@@ -4,7 +4,8 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { NetworkDiagnosticResult, networkDiagnosticService } from '../services/network-diagnostic-service';
 
 interface NetworkStatusProps {
@@ -95,25 +96,25 @@ export const NetworkStatus: React.FC<NetworkStatusProps> = ({ onDiagnosticsCompl
       <View style={[styles.statusBar, { backgroundColor: getStatusColor() }]}>
         <Text style={styles.statusIcon}>{getStatusIcon()}</Text>
         <Text style={styles.statusText}>{getStatusText()}</Text>
-        <TouchableOpacity 
+        <PressableOpacity 
           style={styles.refreshButton} 
           onPress={checkConnectivity}
           disabled={isLoading}
         >
           <Text style={styles.refreshText}>⟳</Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
       
       {lastError && (
         <View style={styles.errorContainer}>
           <Text style={styles.errorText}>{lastError}</Text>
-          <TouchableOpacity 
+          <PressableOpacity 
             style={styles.diagnosticsButton} 
             onPress={runFullDiagnostics}
             disabled={isLoading}
           >
             <Text style={styles.diagnosticsText}>Run Diagnostics</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       )}
     </View>

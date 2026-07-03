@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import PinVerificationScreen from '@/components/PinVerificationScreen';
 import { platformStyles } from '@/constants/themes';
@@ -14,7 +15,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -101,13 +101,13 @@ export default function GenerateXPUBScreen() {
       
       {/* Custom Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.backButton}
           onPress={handleGoBack}
           testID="back-button"
         >
           <ArrowLeft size={24} color={theme.colors.text} />
-        </TouchableOpacity>
+        </PressableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           Extended Public Key (XPUB)
         </Text>
@@ -153,7 +153,7 @@ export default function GenerateXPUBScreen() {
         </View>
 
         {/* Copy Button */}
-        <TouchableOpacity
+        <PressableOpacity
           style={[
             styles.copyButton,
             {
@@ -168,7 +168,7 @@ export default function GenerateXPUBScreen() {
           <Text style={[styles.copyButtonText, { color: theme.colors.text }]}>
             {copied ? 'Copied!' : 'Copy XPUB'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
         {/* Privacy Warning */}
         <View style={[styles.warningContainer, { backgroundColor: theme.colors.error + '15', borderColor: theme.colors.error + '40' }]}>

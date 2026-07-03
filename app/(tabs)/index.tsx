@@ -1,4 +1,5 @@
 import FeedbackPopup from '@/components/FeedbackPopup';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { AppButton } from '@/components/AppButton';
 import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
@@ -37,7 +38,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -192,7 +192,7 @@ function WalletScreenContent() {
   const renderCarouselItem = useCallback(({ item }: { item: CarouselItem }) => {
     if (item.type === 'add') {
       return (
-        <TouchableOpacity 
+        <PressableOpacity 
           style={[
             styles.addWalletCard, 
             { 
@@ -209,7 +209,7 @@ function WalletScreenContent() {
             <Plus color="white" size={24} />
           </View>
           <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       );
     }
     return (
@@ -258,12 +258,12 @@ function WalletScreenContent() {
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               Create or import a wallet to get started
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => router.push('/wallet-setup')}
             >
               <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -392,17 +392,17 @@ function WalletScreenContent() {
                 <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
                   Bitcoin APIs are temporarily unavailable. Your wallet is safe.
                 </Text>
-                <TouchableOpacity 
+                <PressableOpacity 
                   style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
                   onPress={refreshData}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               </View>
             ) : (
               <>
                 <View style={styles.balanceContainer}>
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
                     onPress={() => {
                       HapticService.light();
@@ -415,7 +415,7 @@ function WalletScreenContent() {
                     ) : (
                       <Eye color={theme.colors.textSecondary} size={20} />
                     )}
-                  </TouchableOpacity>
+                  </PressableOpacity>
                   <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
                     {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
                   </Text>
@@ -446,7 +446,7 @@ function WalletScreenContent() {
         ]}>
           <View style={styles.periodSelectorInner}>
             {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
-              <TouchableOpacity
+              <PressableOpacity
                 key={period}
                 style={[
                   styles.periodButton,
@@ -475,7 +475,7 @@ function WalletScreenContent() {
                 ]}>
                   {period}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             ))}
           </View>
         </LiquidGlassView>
@@ -529,11 +529,11 @@ function WalletScreenContent() {
               Recent Transactions
             </Text>
             <View style={styles.transactionsHeaderActions}>
-              <TouchableOpacity onPress={() => router.push('/transaction-history')}>
+              <PressableOpacity onPress={() => router.push('/transaction-history')}>
                 <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
                   View All
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
 
@@ -546,12 +546,12 @@ function WalletScreenContent() {
               <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
                 Bitcoin APIs are temporarily unavailable. Your transactions are safe.
               </Text>
-              <TouchableOpacity 
+              <PressableOpacity 
                 style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
                 onPress={refreshData}
               >
                 <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           ) : transactions.length === 0 ? (
             <View style={styles.emptyTransactionsContainer}>
@@ -582,9 +582,9 @@ function WalletScreenContent() {
         <View style={[styles.editModal, { backgroundColor: theme.colors.background }]}>
           <View style={styles.editModalHeader}>
             <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-            <TouchableOpacity onPress={handleCancelEdit}>
+            <PressableOpacity onPress={handleCancelEdit}>
               <X color={theme.colors.textSecondary} size={24} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
 
           <View style={styles.editModalContent}>
@@ -607,7 +607,7 @@ function WalletScreenContent() {
               {WALLET_COLOR_PALETTE.map((colorOption) => {
                 const gradientColors = colorOption.gradient;
                 return (
-                  <TouchableOpacity
+                  <PressableOpacity
                     key={colorOption.id}
                     style={[
                       styles.colorOption,
@@ -629,7 +629,7 @@ function WalletScreenContent() {
                         <Check color="white" size={16} />
                       </View>
                     )}
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 );
               })}
             </View>

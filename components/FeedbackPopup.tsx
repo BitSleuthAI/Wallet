@@ -1,8 +1,9 @@
 import { platformStyles } from '@/constants/themes';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { useWallet } from '@/hooks/wallet-store';
 import { Mail, X } from 'lucide-react-native';
 import React from 'react';
-import { Linking, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import { Linking, Modal, Platform, Text, View } from 'react-native';
 
 interface FeedbackPopupProps {
   visible: boolean;
@@ -83,14 +84,14 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
             }}>
               Share Your Feedback
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               onPress={onDismiss}
               style={{
                 padding: 4,
               }}
             >
               <X size={24} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
 
           {/* Content */}
@@ -108,7 +109,7 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
             flexDirection: 'row',
             gap: 12,
           }}>
-            <TouchableOpacity
+            <PressableOpacity
               onPress={onDismiss}
               style={{
                 flex: 1,
@@ -128,9 +129,9 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
               }}>
                 Maybe Later
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
 
-            <TouchableOpacity
+            <PressableOpacity
               onPress={handleSubmitFeedback}
               style={{
                 flex: 1,
@@ -152,7 +153,7 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
               }}>
                 Send Feedback
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
       </View>

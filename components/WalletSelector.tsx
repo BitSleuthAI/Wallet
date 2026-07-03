@@ -1,4 +1,5 @@
 import { platformStyles } from '@/constants/themes';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { useTheme } from '@/hooks/theme-store';
 import { WalletsContext, useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { Wallet } from '@/types/wallet';
@@ -10,7 +11,6 @@ import {
     SafeAreaView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -56,7 +56,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
     const isSelected = item.id === currentWallet?.id;
     
     return (
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.walletItem,
           {
@@ -87,7 +87,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
         {isSelected && (
           <Check color={theme.colors.primary} size={20} />
         )}
-      </TouchableOpacity>
+      </PressableOpacity>
     );
   };
 
@@ -101,7 +101,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
         {label}
       </Text>
       
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.selector,
           {
@@ -122,7 +122,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
           </Text>
         </View>
         <ChevronDown color={theme.colors.textSecondary} size={20} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <Modal
         visible={isModalVisible}
@@ -135,14 +135,14 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               Select Wallet
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.closeButton}
               onPress={() => setIsModalVisible(false)}
             >
               <Text style={[styles.closeButtonText, { color: theme.colors.primary }]}>
                 Done
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           
           <FlatList

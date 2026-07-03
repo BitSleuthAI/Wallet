@@ -1,4 +1,5 @@
 import { ScreenLoading } from '@/components/ScreenLoading';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
@@ -179,7 +180,7 @@ function SettingsScreenContent() {
     showDivider?: boolean;
   }) => (
     <>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.settingItem}
         onPress={() => {
           if (onPress) {
@@ -204,7 +205,7 @@ function SettingsScreenContent() {
           )}
         </View>
         {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
-      </TouchableOpacity>
+      </PressableOpacity>
       {showDivider && (
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
       )}
@@ -470,17 +471,17 @@ function SettingsScreenContent() {
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Currency
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowCurrencyModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
               {(['USD', 'EUR', 'GBP'] as FiatCurrency[]).map((currency) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={currency}
                   style={[
                     styles.currencyItem,
@@ -505,7 +506,7 @@ function SettingsScreenContent() {
                   {selectedCurrency === currency && (
                     <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>
@@ -523,12 +524,12 @@ function SettingsScreenContent() {
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Auto-Lock Timer
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowAutoLockModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
@@ -539,7 +540,7 @@ function SettingsScreenContent() {
                 { value: 60, label: '1 hour' },
                 { value: -1, label: 'Never' },
               ].map((option) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={option.value}
                   style={[
                     styles.currencyItem,
@@ -572,7 +573,7 @@ function SettingsScreenContent() {
                   {autoLockTimeout === option.value && (
                     <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>
@@ -590,17 +591,17 @@ function SettingsScreenContent() {
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Wallet
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowWalletModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
               {wallets.map((wallet) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={wallet.id}
                   style={[
                     styles.walletItem,
@@ -629,7 +630,7 @@ function SettingsScreenContent() {
                   {currentWallet?.id === wallet.id && (
                     <Check color={theme.colors.primary} size={20} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>

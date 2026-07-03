@@ -1,4 +1,5 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTheme } from '@/hooks/theme-store';
@@ -13,7 +14,6 @@ import {
     SafeAreaView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     Vibration,
     View,
 } from 'react-native';
@@ -207,7 +207,7 @@ export default function PinUnlockScreen() {
               
               if (item === 'delete') {
                 return (
-                  <TouchableOpacity
+                  <PressableOpacity
                     key={itemIndex}
                     style={[
                       styles.numberButton, 
@@ -218,12 +218,12 @@ export default function PinUnlockScreen() {
                     activeOpacity={0.6}
                   >
                     <Delete color="white" size={24} />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 );
               }
               
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={itemIndex}
                   style={[
                     styles.numberButton,
@@ -233,7 +233,7 @@ export default function PinUnlockScreen() {
                   activeOpacity={0.6}
                 >
                   <Text style={styles.numberButtonText}>{item}</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               );
             })}
           </View>
@@ -264,7 +264,7 @@ export default function PinUnlockScreen() {
           )}
           
           {showBiometricButton && (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.biometricButton, { 
                 backgroundColor: theme.colors.primary + '20',
                 borderColor: theme.colors.primary
@@ -276,7 +276,7 @@ export default function PinUnlockScreen() {
               <Text style={[styles.biometricButtonText, { color: theme.colors.primary }]}>
                 Use {getBiometricText()}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           )}
         </View>
 
@@ -284,11 +284,11 @@ export default function PinUnlockScreen() {
       {renderNumberPad}
       
       <View style={styles.footer}>
-        <TouchableOpacity onPress={handleForgotPin} activeOpacity={0.7}>
+        <PressableOpacity onPress={handleForgotPin} activeOpacity={0.7}>
           <Text style={[styles.footerText, { color: theme.colors.primary }]}>
             Forgot PIN? Restore Wallet
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </View>
   );

@@ -1,4 +1,5 @@
 import { useWallet } from '@/hooks/wallet-store';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { transformAddressDataForUI, type AddressInfo } from '@/utils/address-transform';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import { useQuery } from '@tanstack/react-query';
@@ -12,7 +13,6 @@ import {
     Platform,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -151,7 +151,7 @@ export default function WalletAddressesScreen() {
   };
 
   const AddressItem = ({ addressInfo }: { addressInfo: AddressInfo }) => (
-    <TouchableOpacity
+    <PressableOpacity
       style={[styles.addressItem, { backgroundColor: theme.colors.surface }]}
       onPress={() => openAddressDetails(addressInfo.address)}
       activeOpacity={0.7}
@@ -218,7 +218,7 @@ export default function WalletAddressesScreen() {
           Balance: {formatBalance(addressInfo.balance)} BTC
         </Text>
         <View style={styles.actionButtons}>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={(e) => {
               e.stopPropagation();
               copyToClipboard(addressInfo.address);
@@ -226,8 +226,8 @@ export default function WalletAddressesScreen() {
             style={styles.actionButton}
           >
             <Copy color={theme.colors.textSecondary} size={16} />
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             onPress={(e) => {
               e.stopPropagation();
               openAddressDetails(addressInfo.address);
@@ -235,10 +235,10 @@ export default function WalletAddressesScreen() {
             style={styles.actionButton}
           >
             <ExternalLink color={theme.colors.primary} size={16} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 
   const TabButton = ({ 
@@ -250,7 +250,7 @@ export default function WalletAddressesScreen() {
     isActive: boolean; 
     onPress: () => void; 
   }) => (
-    <TouchableOpacity
+    <PressableOpacity
       style={[
         styles.tabButton,
         {
@@ -270,7 +270,7 @@ export default function WalletAddressesScreen() {
       ]}>
         {title}
       </Text>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 
   return (
@@ -284,17 +284,17 @@ export default function WalletAddressesScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             View Addresses
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={refreshAddresses}
             style={styles.refreshButton}
             disabled={generatingAddresses}
@@ -303,7 +303,7 @@ export default function WalletAddressesScreen() {
               color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
               size={20} 
             />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {/* Tab Navigation */}

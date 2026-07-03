@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
@@ -26,7 +27,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -174,7 +174,7 @@ const SettingItem: React.FC<{
     showDivider?: boolean;
 }> = ({ icon: Icon, title, subtitle, onPress, danger, showDivider = true }) => (
     <>
-        <TouchableOpacity
+        <PressableOpacity
             style={styles.settingItem}
             onPress={onPress}
             activeOpacity={0.7}
@@ -211,7 +211,7 @@ const SettingItem: React.FC<{
             {onPress && (
                 <ChevronRight size={20} color={theme.colors.textSecondary} />
             )}
-        </TouchableOpacity>
+        </PressableOpacity>
         {showDivider && (
             <View
                 style={[
@@ -249,13 +249,13 @@ const SectionHeader = ({ title }: { title: string }) => (
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Wallet Settings
           </Text>

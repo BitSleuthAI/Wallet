@@ -1,4 +1,5 @@
 import TransactionItem from '@/components/TransactionItem';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { useWallet } from '@/hooks/wallet-store';
 import { Transaction } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
@@ -11,7 +12,6 @@ import {
     RefreshControl,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -87,13 +87,13 @@ export default function TransactionHistoryScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Transaction History
           </Text>

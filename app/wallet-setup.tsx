@@ -1,5 +1,6 @@
 // Import crypto polyfill first
 import '@/services/crypto-polyfill';
+import { PressableOpacity } from '@/components/PressableOpacity';
 
 import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
@@ -25,7 +26,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
@@ -359,7 +359,7 @@ export default function WalletSetupScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backToDashboardButton}
         onPress={() => router.replace('/(tabs)')}
       >
@@ -367,7 +367,7 @@ export default function WalletSetupScreen() {
         <Text style={[styles.backToDashboardText, { color: theme.colors.text }]}>
           Back to Dashboard
         </Text>
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -413,7 +413,7 @@ export default function WalletSetupScreen() {
       </View>
 
       <View style={styles.options}>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.optionButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => setMode('create')}
         >
@@ -422,9 +422,9 @@ export default function WalletSetupScreen() {
           <Text style={styles.optionButtonSubtext}>
             Generate a new Bitcoin wallet with recovery phrase
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.optionButton, { backgroundColor: theme.colors.surface }]}
           onPress={() => setMode('import')}
         >
@@ -435,7 +435,7 @@ export default function WalletSetupScreen() {
           <Text style={[styles.optionButtonSubtext, { color: theme.colors.textSecondary }]}>
             Restore wallet using your recovery phrase
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       <View style={styles.termsContainer}>
@@ -480,13 +480,13 @@ export default function WalletSetupScreen() {
         Platform.OS === 'android' && { paddingBottom: 100 }
       ]}
     >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={handleBackFromCreate}
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -496,7 +496,7 @@ export default function WalletSetupScreen() {
           Select 12 or 24 word generation, enter your wallet name and select a color
         </Text>
         <View style={styles.wordCountSelector}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.wordCountButton, { 
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border
@@ -508,14 +508,14 @@ export default function WalletSetupScreen() {
               {wordCount} words
             </Text>
             <ChevronDown color={theme.colors.text} size={16} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
         {showWordCountDropdown && (
           <View style={[styles.dropdownOverlay, { 
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border
           }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.dropdownItem, wordCount === 12 && { backgroundColor: theme.colors.primary + '20' }]}
               onPress={() => {
                 setWordCount(12);
@@ -525,8 +525,8 @@ export default function WalletSetupScreen() {
             >
               <Text style={[styles.dropdownText, { color: theme.colors.text }]}>12 words</Text>
               {wordCount === 12 && <Check color={theme.colors.primary} size={16} />}
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               style={[styles.dropdownItem, wordCount === 24 && { backgroundColor: theme.colors.primary + '20' }]}
               onPress={() => {
                 setWordCount(24);
@@ -536,7 +536,7 @@ export default function WalletSetupScreen() {
             >
               <Text style={[styles.dropdownText, { color: theme.colors.text }]}>24 words</Text>
               {wordCount === 24 && <Check color={theme.colors.primary} size={16} />}
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         )}
       </View>
@@ -563,7 +563,7 @@ export default function WalletSetupScreen() {
         </Text>
         <View style={styles.colorPicker}>
           {WALLET_COLOR_PALETTE.map((colorOption) => (
-            <TouchableOpacity
+            <PressableOpacity
               key={colorOption.id}
               style={styles.colorOptionContainer}
               onPress={() => setSelectedColor(colorOption.base)}
@@ -578,7 +578,7 @@ export default function WalletSetupScreen() {
                   <Check color="white" size={20} />
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
 
@@ -608,7 +608,7 @@ export default function WalletSetupScreen() {
               </View>
             ))}
           </View>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.copyButton, { backgroundColor: theme.colors.primary }]}
             onPress={copyToClipboard}
             accessibilityRole="button"
@@ -617,7 +617,7 @@ export default function WalletSetupScreen() {
           >
             <Copy color="white" size={16} />
             <Text style={styles.copyButtonText}>Copy</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         <View style={[styles.backupWarning, { 
@@ -636,7 +636,7 @@ export default function WalletSetupScreen() {
         </View>
 
         <View style={styles.checkboxContainer}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
             accessibilityRole="checkbox"
@@ -648,14 +648,14 @@ export default function WalletSetupScreen() {
             {hasStoredPhrase && (
               <Check color={theme.colors.primary} size={16} />
             )}
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
             I have securely stored my recovery phrase
           </Text>
         </View>
 
         <View style={styles.checkboxContainer}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setAcceptedTerms(!acceptedTerms)}
             accessibilityRole="checkbox"
@@ -667,7 +667,7 @@ export default function WalletSetupScreen() {
             {acceptedTerms && (
               <Check color={theme.colors.primary} size={16} />
             )}
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
             I accept the{' '}
             <Text 
@@ -680,7 +680,7 @@ export default function WalletSetupScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: isCreateFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
@@ -693,16 +693,16 @@ export default function WalletSetupScreen() {
           }]}>
             {isLoading ? 'Creating...' : 'Confirm'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </ScrollView>
   );
@@ -719,7 +719,7 @@ export default function WalletSetupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={() => {
           console.log('Import back button pressed');
@@ -732,7 +732,7 @@ export default function WalletSetupScreen() {
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -765,7 +765,7 @@ export default function WalletSetupScreen() {
         </Text>
         <View style={styles.colorPicker}>
           {WALLET_COLOR_PALETTE.map((colorOption) => (
-            <TouchableOpacity
+            <PressableOpacity
               key={colorOption.id}
               style={styles.colorOptionContainer}
               onPress={() => setSelectedColor(colorOption.base)}
@@ -780,7 +780,7 @@ export default function WalletSetupScreen() {
                   <Check color="white" size={20} />
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
 
@@ -789,7 +789,7 @@ export default function WalletSetupScreen() {
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Recovery Phrase (12 or 24 words)
             </Text>
-            <TouchableOpacity 
+            <PressableOpacity 
               style={[styles.scanQrButton, { borderColor: theme.colors.border }]}
               onPress={() => {
                 if (Platform.OS === 'web') {
@@ -801,7 +801,7 @@ export default function WalletSetupScreen() {
             >
               <QrCode color={theme.colors.text} size={16} />
               <Text style={[styles.scanQrText, { color: theme.colors.text }]}>Scan QR</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           <TextInput
             style={[styles.textArea, { 
@@ -823,7 +823,7 @@ export default function WalletSetupScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: isImportFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
@@ -843,9 +843,9 @@ export default function WalletSetupScreen() {
           }]}>
             {isLoading ? 'Importing...' : 'Import Wallet'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
           accessibilityRole="link"
@@ -855,7 +855,7 @@ export default function WalletSetupScreen() {
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -933,13 +933,13 @@ export default function WalletSetupScreen() {
 
   const renderConfirmMode = () => (
     <ScrollView style={styles.content}>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={() => setMode('create')}
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -976,7 +976,7 @@ export default function WalletSetupScreen() {
           </View>
         ))}
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: theme.colors.primary,
             opacity: isLoading ? 0.6 : 1
@@ -994,16 +994,16 @@ export default function WalletSetupScreen() {
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </ScrollView>
   );

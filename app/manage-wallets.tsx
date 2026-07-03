@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
@@ -23,7 +24,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -133,14 +133,14 @@ export default function ManageWalletsScreen() {
         </View>
       </View>
       <View style={styles.walletActions}>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.actionButton, { backgroundColor: theme.colors.primary + '20' }]}
           onPress={() => handleEditWallet(wallet)}
           disabled={isDeleting}
         >
           <Edit3 color={theme.colors.primary} size={18} />
-        </TouchableOpacity>
-        <TouchableOpacity
+        </PressableOpacity>
+        <PressableOpacity
           style={[styles.actionButton, { backgroundColor: theme.colors.error + '20' }]}
           onPress={() => handleDeleteWallet(wallet)}
           disabled={isDeleting || wallets.length <= 1}
@@ -149,7 +149,7 @@ export default function ManageWalletsScreen() {
             color={wallets.length <= 1 ? theme.colors.textSecondary : theme.colors.error} 
             size={18} 
           />
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </View>
   );
@@ -159,7 +159,7 @@ export default function ManageWalletsScreen() {
       <Text style={[styles.colorPickerLabel, { color: theme.colors.text }]}>Color</Text>
       <View style={styles.colorOptions}>
         {WALLET_COLOR_PALETTE.map((colorOption) => (
-          <TouchableOpacity
+          <PressableOpacity
             key={colorOption.id}
             style={styles.colorOptionContainer}
             onPress={() => setEditColor(colorOption.base)}
@@ -174,7 +174,7 @@ export default function ManageWalletsScreen() {
                 <Check color="white" size={16} />
               )}
             </LinearGradient>
-          </TouchableOpacity>
+          </PressableOpacity>
         ))}
       </View>
     </View>
@@ -195,13 +195,13 @@ export default function ManageWalletsScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Manage Wallets
           </Text>
@@ -217,7 +217,7 @@ export default function ManageWalletsScreen() {
         </ScrollView>
 
       <View style={styles.bottomContainer}>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.addButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => {
             if (hasPin) {
@@ -231,7 +231,7 @@ export default function ManageWalletsScreen() {
         >
           <Plus color="white" size={20} />
           <Text style={styles.addButtonText}>Add Wallet</Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       {/* Edit Wallet Modal */}
@@ -244,12 +244,12 @@ export default function ManageWalletsScreen() {
           <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
             <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowEditModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
 
             <View style={styles.modalBody}>
@@ -277,13 +277,13 @@ export default function ManageWalletsScreen() {
             </View>
 
             <View style={styles.modalActions}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.modalButton, { backgroundColor: theme.colors.border }]}
                 onPress={() => setShowEditModal(false)}
               >
                 <Text style={[styles.modalButtonText, { color: theme.colors.text }]}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </PressableOpacity>
+              <PressableOpacity
                 style={[
                   styles.modalButton,
                   {
@@ -303,7 +303,7 @@ export default function ManageWalletsScreen() {
                 >
                   Save
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
       </Modal>

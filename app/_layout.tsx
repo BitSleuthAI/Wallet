@@ -1,5 +1,6 @@
 // CRITICAL: Polyfills must be imported first, before any other imports
 import '../polyfills';
+import { PressableOpacity } from '@/components/PressableOpacity';
 
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
@@ -23,7 +24,7 @@ import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View, NativeEventSubscription, NativeModules } from 'react-native';
+import { Appearance, Platform, StyleSheet, Text, View, NativeEventSubscription, NativeModules } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -141,7 +142,7 @@ class ErrorBoundary extends Component<
               The app encountered an error. You can try again, or if the issue persists, please force close and restart BitSleuth Wallet.
             </Text>
             
-            <TouchableOpacity
+            <PressableOpacity
               style={errorStyles.buttonContainer}
               onPress={() => {
                 this.setState({ hasError: false });
@@ -157,7 +158,7 @@ class ErrorBoundary extends Component<
               >
                 <Text style={errorStyles.buttonText}>Try Again</Text>
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
       );
@@ -265,13 +266,13 @@ function AppContent() {
         gestureEnabled: true,
         animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade_from_bottom',
         headerLeft: () => (
-          <TouchableOpacity
+          <PressableOpacity
             style={rootStyles.headerBackButton}
             onPress={() => router.back()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <ArrowLeft size={24} color={theme.colors.text} strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PressableOpacity>
         ),
       }}
     >

@@ -1,4 +1,5 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useWallet } from '@/hooks/wallet-store';
@@ -15,7 +16,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -226,13 +226,13 @@ export default function AddressDetailsScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Address</Text>
           </View>
@@ -242,12 +242,12 @@ export default function AddressDetailsScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Address Header */}
           <View style={styles.addressHeader}>
-            <TouchableOpacity onPress={copyAddress} style={styles.addressContainer}>
+            <PressableOpacity onPress={copyAddress} style={styles.addressContainer}>
               <Text style={[styles.addressText, { color: theme.colors.text }]}>
                 {truncateAddress(address)}
               </Text>
               <Copy size={16} color={theme.colors.textSecondary} style={styles.copyIcon} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.addressSubtitle, { color: theme.colors.textSecondary }]}> 
               {`Balance: ${formatBTC(balance)} BTC • ${processedTransactions.length} transactions`}
             </Text>
@@ -368,7 +368,7 @@ export default function AddressDetailsScreen() {
           animationType="fade"
           onRequestClose={() => setShowCopiedModal(false)}
         >
-          <TouchableOpacity 
+          <PressableOpacity 
             style={styles.modalOverlay} 
             activeOpacity={1}
             onPress={() => setShowCopiedModal(false)}
@@ -376,14 +376,14 @@ export default function AddressDetailsScreen() {
             <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Copied</Text>
               <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>Copied to clipboard</Text>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.modalButton, { borderTopColor: theme.colors.border }]}
                 onPress={() => setShowCopiedModal(false)}
               >
                 <Text style={[styles.modalButtonText, { color: theme.colors.primary }]}>OK</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
-          </TouchableOpacity>
+          </PressableOpacity>
         </Modal>
       </AndroidSafeContainer>
     </GradientBackground>

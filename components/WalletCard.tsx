@@ -1,4 +1,5 @@
 import { platformStyles } from '@/constants/themes';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { getWalletGradient } from '@/constants/wallet-colors';
 import { useTheme } from '@/hooks/theme-store';
 import { WalletsContext, useWalletActions, useWalletBalance, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
@@ -218,7 +219,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
               </View>
             </View>
           </View>
-          <TouchableOpacity
+          <PressableOpacity
             ref={menuButtonRef}
             style={styles.menuButton}
             onPress={handleMenuPress}
@@ -226,7 +227,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             testID="wallet-menu-button"
           >
             <MoreHorizontal color="white" size={22} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         <View style={styles.balanceContainer}>
@@ -268,7 +269,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
         animationType="fade"
         onRequestClose={() => setShowMenu(false)}
       >
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowMenu(false)}
@@ -279,7 +280,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             left: menuPosition.x,
             backgroundColor: theme.colors.surface,
           }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.menuItem}
               onPress={handleEditPress}
               testID="edit-wallet-button"
@@ -288,11 +289,11 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
                 <Edit3 color={theme.colors.primary} size={16} />
               </View>
               <Text style={[styles.menuText, { color: theme.colors.text }]}>Edit</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
 
             <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
 
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.menuItem}
               onPress={handleDeletePress}
               testID="delete-wallet-button"
@@ -301,9 +302,9 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
                 <Trash2 color={theme.colors.error} size={16} />
               </View>
               <Text style={[styles.menuText, { color: theme.colors.error }]}>Delete</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
-        </TouchableOpacity>
+        </PressableOpacity>
       </Modal>
     </AnimatedTouchable>
   );

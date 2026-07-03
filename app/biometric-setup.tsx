@@ -1,4 +1,6 @@
 import { GradientBackground } from '@/components/GradientBackground';
+import { AppButton } from '@/components/AppButton';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { useAutoLock } from '@/hooks/auto-lock-store';
 import { useTheme } from '@/hooks/theme-store';
 import * as LocalAuthentication from 'expo-local-authentication';
@@ -11,7 +13,6 @@ import {
     SafeAreaView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -242,13 +243,12 @@ export default function BiometricSetupScreen() {
               Your wallet is now secured with {Platform.OS === 'android' ? 'biometric authentication' : biometricType} and PIN protection.
             </Text>
             
-            <TouchableOpacity
-              style={[styles.continueButton, { backgroundColor: theme.colors.primary }]}
+            <AppButton
+              title="Continue to Wallet"
               onPress={() => router.replace('/(tabs)')}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.continueButtonText}>Continue to Wallet</Text>
-            </TouchableOpacity>
+              style={styles.continueButton}
+              testID="biometric-continue-button"
+            />
           </View>
         </View>
         </SafeAreaView>
@@ -261,13 +261,13 @@ export default function BiometricSetupScreen() {
       <SafeAreaView style={styles.container}>
         <Stack.Screen options={{ headerShown: false }} />
       
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={() => router.back()}
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.content}>
         <View style={styles.header}>
@@ -316,7 +316,7 @@ export default function BiometricSetupScreen() {
 
         <View style={styles.actions}>
           {isSupported ? (
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.enableButton, { 
                 backgroundColor: theme.colors.primary,
                 opacity: isLoading ? 0.6 : 1
@@ -328,7 +328,7 @@ export default function BiometricSetupScreen() {
               <Text style={styles.enableButtonText}>
                 {isLoading ? 'Setting up...' : getBiometricButtonText()}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           ) : (
             <View style={[styles.notAvailableContainer, { 
               backgroundColor: theme.colors.surface,
@@ -343,7 +343,7 @@ export default function BiometricSetupScreen() {
             </View>
           )}
           
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.skipButton}
             onPress={handleSkip}
             activeOpacity={0.7}
@@ -351,7 +351,7 @@ export default function BiometricSetupScreen() {
             <Text style={[styles.skipButtonText, { color: theme.colors.textSecondary }]}>
               Skip for now
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
       </SafeAreaView>
@@ -472,16 +472,7 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   continueButton: {
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 12,
-    alignItems: 'center',
     marginTop: 40,
     minWidth: 200,
-  },
-  continueButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
   },
 });

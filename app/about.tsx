@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Linking,
   Alert,
@@ -33,7 +33,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
 
   return (
     <View style={[styles.dropdownContainer, { backgroundColor: theme.colors.surface }]}>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.dropdownHeader}
         onPress={() => setIsExpanded(!isExpanded)}
       >
@@ -45,7 +45,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
         ) : (
           <ChevronRight color={theme.colors.textSecondary} size={20} />
         )}
-      </TouchableOpacity>
+      </PressableOpacity>
       {isExpanded && (
         <View style={styles.dropdownContent}>
           {children}
@@ -82,13 +82,13 @@ export default function AboutScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
           </Text>
@@ -178,7 +178,7 @@ export default function AboutScreen() {
               </Text>
               
               {/* Test Non-Fatal Error */}
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.testButton, { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }]}
                 onPress={() => {
                   Alert.alert(
@@ -207,10 +207,10 @@ export default function AboutScreen() {
                 <Text style={[styles.testButtonText, { color: theme.colors.primary }]}>
                   Test Non-Fatal Error
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {/* Test Fatal Crash */}
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.testButton, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
                 onPress={() => {
                   Alert.alert(
@@ -235,7 +235,7 @@ export default function AboutScreen() {
                 <Text style={[styles.testButtonText, { color: '#EF4444' }]}>
                   Test Fatal Crash
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {/* Crashlytics Status */}
               <View style={[styles.statusContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>
