@@ -360,22 +360,21 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
     // Sequential processing avoids race conditions and 429 errors
     const allTxs = new Map<string, any>();
     const utxos: any[] = [];
-    const addressInfos: any[] = [];
+    let activeAddressCount = 0;
 
-    // Process addresses with parallelized API calls per address
-    // Rate limiting is handled at the request queue level in esplora-service
+    // Process addresses with parallelized API calls per address.
+    // Rate limiting is handled at the request queue level in esplora-service.
+    // Note: no per-address /address/{addr} stats call — the wallet balance is
+    // computed from UTXOs below, and address activity is derivable from the
+    // txs response (which discovery just fetched, so this read is a cache hit).
     for (let idx = 0; idx < usedAddresses.length; idx++) {
       const address = usedAddresses[idx];
       try {
         console.log(`📊 Processing address ${idx + 1}/${usedAddresses.length}: ${address.substring(0, 10)}...`);
 
-        // OPTIMIZATION: Fetch UTXOs, transactions, and stats in parallel
-        // These are independent requests for the same address
-        // Rate limiting is enforced by the request queue, not here
-        const [utxosResult, txsResult, statsResult] = await Promise.all([
+        const [utxosResult, txsResult] = await Promise.all([
           getAddressUTXOs(address, xpub),
-          getAddressTransactions(address, xpub),
-          getAddressStats(address, xpub)
+          getAddressTransactions(address, xpub)
         ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
@@ -383,6 +382,9 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
             // Note: Caching is now handled transparently in esploraGet
             for (const tx of txsResult.data) {
               allTxs.set(tx.txid, tx);
+            }
+            if (txsResult.data.length > 0) {
+              activeAddressCount++;
             }
           }
 
@@ -397,10 +399,10 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
           if (utxosResult.data && Array.isArray(utxosResult.data)) {
             utxosResult.data.forEach((utxo: any) => {
               // Include all UTXO fields needed for transactions
-              utxos.push({ 
-                txid: utxo.txid, 
-                vout: utxo.vout, 
-                address, 
+              utxos.push({
+                txid: utxo.txid,
+                vout: utxo.vout,
+                address,
                 value: utxo.value,
                 status: utxo.status || { confirmed: false },
                 scriptPubKey: utxo.scriptpubkey
@@ -408,16 +410,8 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
             });
           }
 
-        if (statsResult.data && statsResult.data.chain_stats?.tx_count > 0) {
-          addressInfos.push({
-            address,
-            n_tx: statsResult.data.chain_stats.tx_count,
-            balance: statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum,
-          });
-        }
+        // No additional delay needed - rate limiting handled by request queue
 
-        // No additional delay needed - rate limiting handled by request queue (1000-1200ms per request)
-        
       } catch (error) {
         console.warn(`⚠️ Failed to process address ${address}:`, error);
       }
@@ -582,7 +576,7 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
       balanceUSD: balanceBTC * btcPrice,
       transactions: transactions.slice(0, 50), // Limit to 50 most recent
       usedAddresses,
-      addressCount: addressInfos.length,
+      addressCount: activeAddressCount,
       utxoCount: utxos.length,
       utxos, // Include full UTXO array for automatic polling updates
     };

@@ -1,4 +1,4 @@
-import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_GC_TIME } from '@/constants/cache';
+import { REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
@@ -364,28 +364,20 @@ function useWalletStoreState() {
         const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
         console.log('📱 Current app version:', currentVersion);
         
-        // Check stored version and last launch timestamp
+        // Check stored version
         const storedVersion = await AsyncStorage.getItem('app_version');
-        const lastLaunchTimestamp = await AsyncStorage.getItem('last_launch_timestamp');
         console.log('💾 Stored app version:', storedVersion);
-        console.log('💾 Last launch timestamp:', lastLaunchTimestamp);
-        
+
         // Detect if app was updated (version changed)
         const isAppUpdate = storedVersion !== null && storedVersion !== currentVersion;
-        
-        // Detect if this is a fresh app launch (check if significant time has passed)
-        const timeSinceLastLaunch = lastLaunchTimestamp 
-          ? Date.now() - parseInt(lastLaunchTimestamp, 10)
-          : Infinity;
-        const isFreshLaunch = timeSinceLastLaunch > FRESH_LAUNCH_THRESHOLD_MS;
-        
-        // Clear caches on app update OR fresh launch to ensure data freshness
-        if (isAppUpdate || isFreshLaunch) {
-          if (isAppUpdate) {
-            console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
-          } else {
-            console.log(`🔄 Fresh app launch detected (time since last launch: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
-          }
+
+        // Wipe caches only on app update (cache formats may have changed).
+        // Ordinary cold starts no longer wipe: every affected cache already
+        // self-expires within <=5 minutes (address metadata 2m, txids/stats
+        // 5m, utxos 2m) and confirmed transaction bodies are immutable, so
+        // startup is fast and correctness is guaranteed by the TTLs.
+        if (isAppUpdate) {
+          console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
           console.log('🧹 Clearing all cached wallet data to ensure fresh sync...');
           
           // Get all wallets to clear their caches
@@ -419,9 +411,9 @@ function useWalletStoreState() {
         } else if (storedVersion === null) {
           console.log('🆕 First launch or version not tracked yet');
         } else {
-          console.log(`✅ Recent launch - using cached data (time since last: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
+          console.log('✅ Same app version - using cached data (per-key TTLs keep it fresh)');
         }
-        
+
         // Update stored version and launch timestamp
         await AsyncStorage.setItem('app_version', currentVersion);
         await AsyncStorage.setItem('last_launch_timestamp', Date.now().toString());
@@ -1841,44 +1833,18 @@ function useWalletStoreState() {
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
 
-      // Clear ALL wallet-related caches and data to force completely fresh data
+      // Clear only the load-bearing caches for THIS wallet. These are the
+      // layers that would otherwise short-circuit the refetch below:
+      // - clearCacheForWalletXpub: persistent per-address txids/stats/utxos
+      //   (the address→txid list is what gates incoming-tx detection)
+      // - clearAddressCache: the in-memory discovery metadata (which
+      //   addresses get scanned at all)
+      // Other wallets' caches and the global tx-body cache stay intact —
+      // confirmed transaction bodies are immutable and never go stale.
       if (currentWallet?.xpub) {
-        console.log('🔄 Clearing ALL wallet data and caches...');
-        
-        // Clear address cache (both persistent and in-memory)
         await clearCacheForWalletXpub(currentWallet.xpub);
         clearAddressCache(currentWallet.xpub);
-        console.log('✅ Address cache cleared');
-        
-        // Clear empty UTXO caches that might be blocking fresh fetches
-        await clearEmptyUTXOCaches();
-        console.log('✅ Empty UTXO caches cleared');
-        
-        // Clear transaction cache to ensure fresh transaction data
-        await clearAllCache();
-        console.log('✅ Transaction cache cleared');
-        
-        // Clear ALL wallet-related AsyncStorage keys to ensure no stale data
-        const keysToRemove = [
-          // Address cache keys (constructed directly from xpub)
-          `addr_cache_${currentWallet.xpub}`,
-          `addr_wallet_${currentWallet.xpub}`,
-          `wallet_addrs_${currentWallet.xpub}`,
-          `wallet_txids_${currentWallet.xpub}`,
-          // Transaction cache keys
-          'tx_cache_confirmed',
-          'tx_cache_unconfirmed',
-          // General cache keys that might contain wallet data
-          // (Removed duplicate mock/test data keys already cleared earlier)
-        ];
-        
-        if (keysToRemove.length > 0) {
-          console.log(`🗑️ Removing ${keysToRemove.length} additional cache keys...`);
-          await AsyncStorage.multiRemove(keysToRemove);
-          console.log('✅ Additional cache keys cleared');
-        }
-        
-        console.log('✅ Complete wallet data refresh prepared');
+        console.log('✅ Wallet caches cleared for refresh');
       }
 
       // Invalidate and refetch React Query caches
