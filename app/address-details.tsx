@@ -4,7 +4,7 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useTheme } from '@/hooks/theme-store';
 import { useWalletActions, useWalletBalance, useWalletMeta, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
-import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
+import { getAddressStats, getAddressTransactionsPaginated } from '@/services/esplora-service';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -94,7 +94,7 @@ export default function AddressDetailsScreen() {
       if (!address) return [];
       
       console.log('📜 Fetching address transactions using Esplora service...');
-      const result = await getAddressTransactions(address, currentWallet?.xpub);
+      const result = await getAddressTransactionsPaginated(address, currentWallet?.xpub);
       
       if (result.error || !result.data) {
         console.warn('❌ Address transactions fetch failed:', result.error);

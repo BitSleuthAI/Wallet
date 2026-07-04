@@ -3,12 +3,12 @@
  * Uses BIP32 derivation and gap limit for proper address discovery
  */
 
-import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD } from '../constants/cache';
+import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD, WALLET_TRANSACTIONS_DISPLAY_LIMIT } from '../constants/cache';
 import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
-import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
+import { esploraGet, getAddressStats, getAddressTransactions, getAddressTransactionsPaginated, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
@@ -374,7 +374,7 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
 
         const [utxosResult, txsResult] = await Promise.all([
           getAddressUTXOs(address, xpub),
-          getAddressTransactions(address, xpub)
+          getAddressTransactionsPaginated(address, xpub)
         ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
@@ -574,7 +574,7 @@ async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> 
     const walletData = {
       balanceBTC,
       balanceUSD: balanceBTC * btcPrice,
-      transactions: transactions.slice(0, 50), // Limit to 50 most recent
+      transactions: transactions.slice(0, WALLET_TRANSACTIONS_DISPLAY_LIMIT), // Most recent first; history list is virtualized
       usedAddresses,
       addressCount: activeAddressCount,
       utxoCount: utxos.length,
