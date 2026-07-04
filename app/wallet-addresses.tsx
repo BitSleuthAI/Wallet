@@ -1,4 +1,5 @@
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWallets } from '@/hooks/wallet-contexts';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { transformAddressDataForUI, type AddressInfo } from '@/utils/address-transform';
 import { loadWalletService } from '@/utils/wallet-service-loader';
@@ -29,10 +30,8 @@ const walletService = loadWalletService([
 ]);
 
 export default function WalletAddressesScreen() {
-  const {
-    theme,
-    currentWallet,
-  } = useWallet();
+  const { theme } = useTheme();
+  const { currentWallet } = useWallets();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);

@@ -4,7 +4,8 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE, getWalletGradient } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, useRouter } from 'expo-router';
@@ -28,7 +29,6 @@ import {
 } from 'react-native';
 
 export default function ManageWalletsScreen() {
-  const walletContext = useWallet();
   const { hasPin } = useAutoLock();
   const router = useRouter();
   const [showEditModal, setShowEditModal] = useState<boolean>(false);
@@ -37,13 +37,9 @@ export default function ManageWalletsScreen() {
   const [editColor, setEditColor] = useState<string>('#8B5CF6');
   const [isDeleting, setIsDeleting] = useState<boolean>(false);
 
-  // Safely destructure with fallbacks to prevent crashes
-  const { 
-    theme, 
-    wallets = [], 
-    editWallet, 
-    deleteWallet 
-  } = walletContext || {};
+  const { theme } = useTheme();
+  const { wallets } = useWallets();
+  const { editWallet, deleteWallet } = useWalletActions();
 
   const handleEditWallet = (wallet: any) => {
     setEditingWallet(wallet);

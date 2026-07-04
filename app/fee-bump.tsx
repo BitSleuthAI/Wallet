@@ -3,7 +3,8 @@ import { AppButton } from '@/components/AppButton';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletMeta, useWalletSettings, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { feeEstimationService } from '@/services/fee-service';
 import { cancelTransaction, performRBF, validateRBFTransaction } from '@/services/rbf-service';
 import { Transaction } from '@/types/wallet';
@@ -29,7 +30,11 @@ type FeeOption = {
 
 export default function FeeBumpScreen() {
   const { txid, mode } = useLocalSearchParams<{ txid: string; mode?: 'rbf' | 'cpfp' }>();
-  const { theme, transactions, currentWallet, feeSettings, getMnemonic } = useWallet();
+  const { theme } = useTheme();
+  const { transactions } = useWalletTransactions();
+  const { currentWallet } = useWallets();
+  const { feeSettings } = useWalletSettings();
+  const { getMnemonic } = useWalletMeta();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');

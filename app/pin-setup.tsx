@@ -2,7 +2,8 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWallets } from '@/hooks/wallet-contexts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Haptics from 'expo-haptics';
 import { Stack, router } from 'expo-router';
@@ -18,7 +19,8 @@ import {
 } from 'react-native';
 
 export default function PinSetupScreen() {
-  const { theme, wallets } = useWallet();
+  const { theme } = useTheme();
+  const { wallets } = useWallets();
   const { savePin } = useAutoLock();
   const [pin, setPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');

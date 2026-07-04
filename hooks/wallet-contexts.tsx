@@ -3,11 +3,10 @@
  *
  * WalletProvider (hooks/wallet-store.tsx) runs the store body once and
  * publishes each of its memoized slices through one of these contexts.
- * Components should subscribe via the narrow hooks below so they only
- * re-render when the slice they render actually changes — e.g. a component
- * that shows only the wallet list stops re-rendering on the 30s balance/
- * transaction polls. The legacy useWallet() hook (wallet-store.tsx)
- * subscribes to everything and remains for compatibility.
+ * Components subscribe via the narrow hooks below so they only re-render
+ * when the slice they render actually changes — e.g. a component that shows
+ * only the wallet list stops re-rendering on the 30s balance/transaction
+ * polls. These hooks are the only store API; there is no combined hook.
  *
  * The import from wallet-store is type-only, so there is no runtime cycle.
  */

@@ -7,7 +7,8 @@ import QRScanner from '@/components/QRScanner';
 import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions } from '@/hooks/wallet-contexts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
@@ -79,7 +80,8 @@ try {
 }
 
 export default function WalletSetupScreen() {
-  const { theme, importWallet } = useWallet();
+  const { theme } = useTheme();
+  const { importWallet } = useWalletActions();
   const { hasPin, biometricEnabled } = useAutoLock();
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');

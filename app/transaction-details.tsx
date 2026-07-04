@@ -1,7 +1,8 @@
 import { GradientBackground } from '@/components/GradientBackground';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletBalance, useWalletSettings, useWalletTransactions } from '@/hooks/wallet-contexts';
 import { getTransactionDetails } from '@/services/esplora-service';
 import { Transaction } from '@/types/wallet';
 import { useQuery } from '@tanstack/react-query';
@@ -35,7 +36,11 @@ import {
 
 export default function TransactionDetailsScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, formatCurrency, bitcoinPrice, feeSettings } = useWallet();
+  const { theme } = useTheme();
+  const { transactions } = useWalletTransactions();
+  const { formatCurrency } = useWalletActions();
+  const { bitcoinPrice } = useWalletBalance();
+  const { feeSettings } = useWalletSettings();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const lastTxRef = useRef<Transaction | null>(null);
 

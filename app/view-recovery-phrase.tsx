@@ -1,7 +1,8 @@
 import PinVerificationScreen from '@/components/PinVerificationScreen';
 import { AppButton } from '@/components/AppButton';
 import { PressableOpacity } from '@/components/PressableOpacity';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletMeta, useWallets } from '@/hooks/wallet-contexts';
 import { Stack, router } from 'expo-router';
 import { AlertTriangle, ArrowLeft, Eye, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -18,7 +19,9 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ViewRecoveryPhrase() {
-  const { currentWallet, theme, getMnemonic } = useWallet();
+  const { currentWallet } = useWallets();
+  const { theme } = useTheme();
+  const { getMnemonic } = useWalletMeta();
   const [isRevealed, setIsRevealed] = useState(false);
   const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);

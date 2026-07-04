@@ -2,7 +2,8 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletBalance, useWalletMeta, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
 import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
@@ -49,7 +50,12 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache, bitcoinPrice, selectedCurrency, getCurrencySymbol } = useWallet();
+  const { theme } = useTheme();
+  const { currentWallet } = useWallets();
+  const { getAddressStatsCacheValue, setAddressStatsCache } = useWalletMeta();
+  const { bitcoinPrice } = useWalletBalance();
+  const { selectedCurrency } = useWalletSettings();
+  const { getCurrencySymbol } = useWalletActions();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);

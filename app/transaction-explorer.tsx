@@ -2,7 +2,8 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletBalance, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { getTransactionDetails } from '@/services/esplora-service';
 import { Transaction, Wallet } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
@@ -101,7 +102,11 @@ interface ExtendedTransactionDetails extends Omit<Transaction, 'status'> {
 
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, bitcoinPrice, currentWallet, formatCurrency } = useWallet();
+  const { theme } = useTheme();
+  const { transactions } = useWalletTransactions();
+  const { bitcoinPrice } = useWalletBalance();
+  const { currentWallet } = useWallets();
+  const { formatCurrency } = useWalletActions();
   const lastDetailsRef = useRef<Record<string, Transaction>>({});
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);

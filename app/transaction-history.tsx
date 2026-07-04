@@ -1,6 +1,7 @@
 import TransactionItem from '@/components/TransactionItem';
 import { PressableOpacity } from '@/components/PressableOpacity';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { Transaction } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
@@ -19,14 +20,10 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 export default function TransactionHistoryScreen() {
-  const { 
-    theme, 
-    transactions, 
-    isLoadingTransactions, 
-    hasTransactionsError,
-    refreshData,
-    currentWallet
-  } = useWallet();
+  const { theme } = useTheme();
+  const { transactions, isLoadingTransactions, hasTransactionsError } = useWalletTransactions();
+  const { refreshData } = useWalletActions();
+  const { currentWallet } = useWallets();
 
   const handleRefresh = async () => {
     await refreshData();

@@ -1,8 +1,9 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext, useWalletActions, useWalletBalance, useWalletTransactions } from '@/hooks/wallet-contexts';
 import { Transaction } from '@/types/wallet';
 import { WifiOff } from 'lucide-react-native';
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useState } from 'react';
 import { Dimensions, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Animated, {
   runOnJS,
@@ -32,19 +33,22 @@ interface BalanceChartProps {
 
 // Wrapper component that checks for context availability
 export default function BalanceChart({ selectedPeriod }: BalanceChartProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
+
   return <BalanceChartContent selectedPeriod={selectedPeriod} />;
 }
 
 // Main component with all hooks
 function BalanceChartContent({ selectedPeriod }: BalanceChartProps) {
-  const { theme, hasBalanceError, balance, transactions, bitcoinPrice, formatCurrency } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { theme } = useTheme();
+  const { hasBalanceError, balance, bitcoinPrice } = useWalletBalance();
+  const { transactions } = useWalletTransactions();
+  const { formatCurrency } = useWalletActions();
   const [selectedPoint, setSelectedPoint] = useState<DataPoint | null>(null);
   const [showTooltip, setShowTooltip] = useState<boolean>(false);
   const tooltipOpacity = useSharedValue(0);

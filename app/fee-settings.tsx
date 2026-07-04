@@ -3,7 +3,8 @@ import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletSettings } from '@/hooks/wallet-contexts';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
@@ -43,7 +44,8 @@ interface FeeSettings {
 }
 
 export default function FeeSettingsScreen() {
-  const { theme, feeSettings, setFeeSettings } = useWallet();
+  const { theme } = useTheme();
+  const { feeSettings, setFeeSettings } = useWalletSettings();
   const [feeEstimates, setFeeEstimates] = useState<FeeEstimate | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);

@@ -3,7 +3,8 @@ import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import PinVerificationScreen from '@/components/PinVerificationScreen';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWallets } from '@/hooks/wallet-contexts';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
 import { AlertTriangle, ArrowLeft, Copy } from 'lucide-react-native';
@@ -20,7 +21,8 @@ import {
 import QRCode from 'react-native-qrcode-svg';
 
 export default function GenerateXPUBScreen() {
-  const { currentWallet, theme } = useWallet();
+  const { currentWallet } = useWallets();
+  const { theme } = useTheme();
   const [copied, setCopied] = useState<boolean>(false);
   const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
 

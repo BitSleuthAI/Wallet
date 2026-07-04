@@ -3,7 +3,8 @@ import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { transformAddressDataForUI } from '@/utils/address-transform';
 import { loadWalletService } from '@/utils/wallet-service-loader';
@@ -34,16 +35,10 @@ import {
 const walletService = loadWalletService(['generateAddressesForView']);
 
 export default function WalletSettingsScreen() {
-  const walletContext = useWallet();
   const queryClient = useQueryClient();
-  
-  // Safely destructure with fallbacks to prevent crashes
-  const { 
-    theme, 
-    currentWallet, 
-    deleteWallet,
-    wallets = []
-  } = walletContext || {};
+  const { theme } = useTheme();
+  const { currentWallet, wallets } = useWallets();
+  const { deleteWallet } = useWalletActions();
 
   // Prefetch address data in the background when this screen loads
   // This ensures instant loading when user navigates to "View Addresses"

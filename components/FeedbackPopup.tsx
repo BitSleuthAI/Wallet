@@ -1,8 +1,9 @@
 import { platformStyles } from '@/constants/themes';
 import { PressableOpacity } from '@/components/PressableOpacity';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext } from '@/hooks/wallet-contexts';
 import { Mail, X } from 'lucide-react-native';
-import React from 'react';
+import React, { useContext } from 'react';
 import { Linking, Modal, Platform, Text, View } from 'react-native';
 
 interface FeedbackPopupProps {
@@ -12,14 +13,13 @@ interface FeedbackPopupProps {
 }
 
 export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: FeedbackPopupProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+  const { theme } = useTheme();
+
   // Safety check: if context is not available yet, don't render
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
-  const { theme } = walletContext;
 
   const handleSubmitFeedback = async () => {
     const email = 'feedback@bitsleuth.ai';
