@@ -62,6 +62,24 @@ memoized.
 
 ---
 
+[2026-07-04] - SUCCESS - Impact: MEDIUM
+Context: Final remainder pass — completed the narrow-hook migration
+(deleted the compat all-slices hook) and added Esplora confirmed-history
+pagination to the data pipeline.
+Outcome: Removing the combined hook after full conversion prevents new
+code from silently reintroducing app-wide re-render fanout. Pagination
+required a "raw page" mode in the fetch layer because the existing
+cache-merge on /txs responses would have poisoned the continuation
+cursor; raw requests also needed a distinct dedupe key.
+Learning: When a fetch layer transparently merges cache into responses,
+any cursor-based pagination built on top MUST bypass the merge for the
+page it derives cursors from. An early-stop on "full page of already
+cached items" is sound for append-only (prepend-only) histories.
+Action: Worth a data-layer rule: pagination cursors must come from raw
+provider responses, never cache-augmented ones.
+
+---
+
 ## Pending SKILL.md Updates
 
 - Consider a migration checklist for JS `<Modal transparent>` → `presentationStyle="formSheet"` (see 2026-07-03 entry).

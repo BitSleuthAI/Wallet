@@ -40,17 +40,14 @@ query, mutation, and piece of wallet state, and runs exactly once inside
 `WalletProvider`. Its memoized slices are published through separate
 churn-domain contexts in `hooks/wallet-contexts.tsx`:
 
-- **Narrow hooks are the preferred API**: `useWallets`, `useWalletBalance`,
+- **Narrow hooks are the only store API**: `useWallets`, `useWalletBalance`,
   `useWalletTransactions`, `useWalletAddresses`, `useWalletUtxos`,
   `useWalletSettings`, `useWalletActions`, `useCoinControl`, `useFeedback`,
   `useWalletMeta`. Subscribe to only what the component renders — a
   component using `useWallets` + `useWalletActions` does not re-render on
-  the 30s data polls. These hooks throw outside `WalletProvider`.
-- **`useWallet()` is a compatibility hook**: the legacy combined shape,
-  subscribed to every slice (re-renders on any wallet-data change). It
-  returns `undefined` (cast) outside the provider — the older wrapper
-  screens gate on that. New code should not use it; ~25 low-heat call
-  sites still do.
+  the 30s data polls. These hooks throw outside `WalletProvider`. The old
+  combined `useWallet()` hook has been removed; do not reintroduce an
+  all-slices hook.
 - Wrapper "context available?" gates should read `useContext(WalletsContext)`
   so the gate itself stays low-churn.
 - Do not put whole React Query objects into a slice memo's value or deps
@@ -71,12 +68,22 @@ and UTXO queries every 30s poll. The exported function:
 (pull-to-refresh) and `logoutAndEraseWallet`. If you add another "force
 fresh data" path, call it there too.
 
-Per-address wire cost is 1 request (UTXOs): the txs read is a cache hit
-from discovery, and there is **no per-address stats call** — the wallet
-balance comes from UTXOs and address activity from the txs response. The
-addresses screen (`generateAddressesForView`) keeps its `chain_stats`
-calls because those are exact even for >50-tx addresses (the `/txs`
-endpoint truncates at ~50 and is not paginated — known gap).
+Per-address wire cost is 1 request (UTXOs) for addresses whose txs are
+cached from discovery, and there is **no per-address stats call** — the
+wallet balance comes from UTXOs and address activity from the txs
+response. The addresses screen (`generateAddressesForView`) keeps its
+`chain_stats` calls because those are exact totals.
+
+**Confirmed history is paginated** (`getAddressTransactionsPaginated`):
+page 1 is fetched raw (its own dedupe key; no cached-body merge, so the
+continuation cursor is trustworthy), then `/txs/chain/{last_seen_txid}`
+pages up to `MAX_TX_CHAIN_PAGES_PER_ADDRESS`. A fresh combined txid-list
+cache serves with zero requests; after TTL expiry, pagination early-stops
+on the first full page of already-cached txs and reassembles deeper
+history from the permanent confirmed-body cache. Mid-pagination failures
+return a partial result. The merged wallet list caps at
+`WALLET_TRANSACTIONS_DISPLAY_LIMIT` (300). Mempool-only pagination does
+not exist in Esplora (>50 unconfirmed still truncates until confirmation).
 
 Refresh/cold-start behavior:
 
@@ -130,12 +137,6 @@ discovery polls at 60s, the rest at 30s.
 
 ## Deferred (known, intentional)
 
-- Store stage 3: ~25 low-heat screens still use the compat `useWallet()`;
-  converting them to narrow hooks (and then deleting `useWallet()`) is
-  mechanical follow-up.
-- Esplora `/address/{addr}/txs` pagination: responses truncate at ~50
-  confirmed txs and the app does not fetch continuation pages — addresses
-  with deep history show partial tx lists (pre-existing behavior).
 - `expo-image` is installed but unused; it was kept because it is a native
   module already linked in the committed ios/android projects — removing it
   requires a prebuild. Either adopt it for QR/logo rendering or remove it in
