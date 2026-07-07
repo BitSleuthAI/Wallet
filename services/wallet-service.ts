@@ -8,7 +8,7 @@ import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
-import { esploraGet, getAddressStats, getAddressTransactions, getAddressTransactionsPaginated, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
+import { esploraGet, getAddressStats, getAddressTransactionsPaginated, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
