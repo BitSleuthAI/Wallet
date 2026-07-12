@@ -1,8 +1,10 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext } from '@/hooks/wallet-contexts';
 import { Mail, X } from 'lucide-react-native';
-import React from 'react';
-import { Linking, Modal, Platform, Text, TouchableOpacity, View } from 'react-native';
+import React, { useContext } from 'react';
+import { Linking, Modal, Platform, Text, View } from 'react-native';
 
 interface FeedbackPopupProps {
   visible: boolean;
@@ -11,14 +13,13 @@ interface FeedbackPopupProps {
 }
 
 export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: FeedbackPopupProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+  const { theme } = useTheme();
+
   // Safety check: if context is not available yet, don't render
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
-  const { theme } = walletContext;
 
   const handleSubmitFeedback = async () => {
     const email = 'feedback@bitsleuth.ai';
@@ -83,14 +84,14 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
             }}>
               Share Your Feedback
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               onPress={onDismiss}
               style={{
                 padding: 4,
               }}
             >
               <X size={24} color={theme.colors.textSecondary} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
 
           {/* Content */}
@@ -108,7 +109,7 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
             flexDirection: 'row',
             gap: 12,
           }}>
-            <TouchableOpacity
+            <PressableOpacity
               onPress={onDismiss}
               style={{
                 flex: 1,
@@ -128,9 +129,9 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
               }}>
                 Maybe Later
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
 
-            <TouchableOpacity
+            <PressableOpacity
               onPress={handleSubmitFeedback}
               style={{
                 flex: 1,
@@ -152,7 +153,7 @@ export default function FeedbackPopup({ visible, onDismiss, onSubmitFeedback }: 
               }}>
                 Send Feedback
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
       </View>

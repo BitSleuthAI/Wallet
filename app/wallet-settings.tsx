@@ -1,8 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { getWalletTypeDisplayName } from '@/types/wallet';
 import { transformAddressDataForUI } from '@/utils/address-transform';
 import { loadWalletService } from '@/utils/wallet-service-loader';
@@ -26,7 +28,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -34,16 +35,10 @@ import {
 const walletService = loadWalletService(['generateAddressesForView']);
 
 export default function WalletSettingsScreen() {
-  const walletContext = useWallet();
   const queryClient = useQueryClient();
-  
-  // Safely destructure with fallbacks to prevent crashes
-  const { 
-    theme, 
-    currentWallet, 
-    deleteWallet,
-    wallets = []
-  } = walletContext || {};
+  const { theme } = useTheme();
+  const { currentWallet, wallets } = useWallets();
+  const { deleteWallet } = useWalletActions();
 
   // Prefetch address data in the background when this screen loads
   // This ensures instant loading when user navigates to "View Addresses"
@@ -174,7 +169,7 @@ const SettingItem: React.FC<{
     showDivider?: boolean;
 }> = ({ icon: Icon, title, subtitle, onPress, danger, showDivider = true }) => (
     <>
-        <TouchableOpacity
+        <PressableOpacity
             style={styles.settingItem}
             onPress={onPress}
             activeOpacity={0.7}
@@ -211,7 +206,7 @@ const SettingItem: React.FC<{
             {onPress && (
                 <ChevronRight size={20} color={theme.colors.textSecondary} />
             )}
-        </TouchableOpacity>
+        </PressableOpacity>
         {showDivider && (
             <View
                 style={[
@@ -249,13 +244,13 @@ const SectionHeader = ({ title }: { title: string }) => (
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Wallet Settings
           </Text>

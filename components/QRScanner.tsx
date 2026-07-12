@@ -1,15 +1,16 @@
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { WalletsContext } from '@/hooks/wallet-contexts';
 import { googlePlayServicesService } from '@/services/google-play-services';
 import { CameraType, CameraView, useCameraPermissions } from 'expo-camera';
 import { X } from 'lucide-react-native';
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Alert,
     Platform,
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -20,10 +21,10 @@ interface QRScannerProps {
 
 // Wrapper component that checks for context availability
 export default function QRScanner({ onScan, onClose }: QRScannerProps) {
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
   
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
   
@@ -32,7 +33,7 @@ export default function QRScanner({ onScan, onClose }: QRScannerProps) {
 
 // Main component with all hooks
 function QRScannerContent({ onScan, onClose }: QRScannerProps) {
-  const { theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { theme } = useTheme();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [playServicesAvailable, setPlayServicesAvailable] = useState<boolean | null>(null);
@@ -77,7 +78,7 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
             On web, you can manually enter the Bitcoin address below or use your device&apos;s camera to scan QR codes.
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
             onPress={() => {
               // Try to access camera on web
@@ -110,13 +111,13 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
             }}
           >
             <Text style={styles.buttonText}>Try Camera Access</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
             onPress={onClose}
           >
             <Text style={[styles.buttonText, { color: theme.colors.text }]}>Manual Entry</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
     );
@@ -154,18 +155,18 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
             Google Play Services is required for QR code scanning but is not available on this device. You can manually enter the Bitcoin address instead.
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
             onPress={() => setManualEntry(true)}
           >
             <Text style={styles.buttonText}>Manual Entry</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
             onPress={onClose}
           >
             <Text style={[styles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
     );
@@ -181,18 +182,18 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
             We need camera permission to scan QR codes containing Bitcoin addresses.
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
             onPress={requestPermission}
           >
             <Text style={styles.buttonText}>Grant Permission</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
             onPress={onClose}
           >
             <Text style={[styles.buttonText, { color: theme.colors.text }]}>Cancel</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
     );
@@ -236,12 +237,12 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
             <Text style={[styles.title, { color: theme.colors.text }]}>
               Manual Entry
             </Text>
-            <TouchableOpacity 
+            <PressableOpacity 
               style={[styles.manualCloseButton, { backgroundColor: theme.colors.background }]} 
               onPress={() => setManualEntry(false)}
             >
               <X color={theme.colors.text} size={20} />
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           
           <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
@@ -264,19 +265,19 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
             underlineColorAndroid="transparent"
           />
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.primary }]}
             onPress={handleManualSubmit}
           >
             <Text style={styles.buttonText}>Use Address</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.button, { backgroundColor: theme.colors.surface, borderWidth: 1, borderColor: theme.colors.border }]}
             onPress={() => setManualEntry(false)}
           >
             <Text style={[styles.buttonText, { color: theme.colors.text }]}>Back to Scanner</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
     );
@@ -364,9 +365,9 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
         }}
       >
         <View style={styles.overlay}>
-          <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+          <PressableOpacity style={styles.closeButton} onPress={onClose}>
             <X color="white" size={24} />
-          </TouchableOpacity>
+          </PressableOpacity>
           
           <View style={styles.scanArea}>
             <View style={styles.scanFrame} />
@@ -379,12 +380,12 @@ function QRScannerContent({ onScan, onClose }: QRScannerProps) {
           </View>
           
           <View style={styles.bottomButtons}>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.manualButton, { backgroundColor: 'rgba(0, 0, 0, 0.6)' }]}
               onPress={() => setManualEntry(true)}
             >
               <Text style={styles.manualButtonText}>Manual Entry</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
       </CameraView>

@@ -1,12 +1,14 @@
 // Import crypto polyfill first
 import '@/services/crypto-polyfill';
+import { PressableOpacity } from '@/components/PressableOpacity';
 
 import { GradientBackground } from '@/components/GradientBackground';
 import QRScanner from '@/components/QRScanner';
 import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions } from '@/hooks/wallet-contexts';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
@@ -25,15 +27,10 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View,
 } from 'react-native';
 import ConfettiCannon from 'react-native-confetti-cannon';
 import type { WalletService } from '@/types/wallet';
-
-// Fallback test mnemonics - DO NOT USE FOR REAL FUNDS
-const FALLBACK_MNEMONIC_12 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about';
-const FALLBACK_MNEMONIC_24 = 'abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon art';
 
 // Wallet service import with platform detection
 let walletService: WalletService;
@@ -57,7 +54,7 @@ try {
   };
   
   // Verify all required functions are available
-  const requiredFunctions: Array<keyof WalletService> = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
+  const requiredFunctions: (keyof WalletService)[] = ['generateMnemonic', 'validateMnemonic', 'createWallet', 'importWallet'];
   const missingFunctions = requiredFunctions.filter(func => typeof walletService[func] !== 'function');
   
   if (missingFunctions.length > 0) {
@@ -69,18 +66,22 @@ try {
   }
 } catch (error) {
   console.error('❌ Failed to load wallet service for', Platform.OS, ':', error);
-  // Provide a minimal fallback - WARNING: These are test mnemonics only
+  // Fail closed: never hand out a predictable mnemonic or accept an invalid
+  // one just because the crypto module failed to load
+  const serviceUnavailable = async (): Promise<never> => {
+    throw new Error('Wallet service not available. Please restart the app.');
+  };
   walletService = {
-    generateMnemonic: (strength: number = 128) => 
-      Promise.resolve(strength === 256 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12),
-    validateMnemonic: () => true,
-    createWallet: async () => { throw new Error('Wallet service not available'); },
-    importWallet: async () => { throw new Error('Wallet service not available'); }
+    generateMnemonic: serviceUnavailable,
+    validateMnemonic: () => false,
+    createWallet: serviceUnavailable,
+    importWallet: serviceUnavailable,
   };
 }
 
 export default function WalletSetupScreen() {
-  const { theme, importWallet } = useWallet();
+  const { theme } = useTheme();
+  const { importWallet } = useWalletActions();
   const { hasPin, biometricEnabled } = useAutoLock();
   const [mode, setMode] = useState<'select' | 'create' | 'import' | 'confirm'>('select');
   const [walletName, setWalletName] = useState('');
@@ -132,23 +133,14 @@ export default function WalletSetupScreen() {
     if (__DEV__) {
       console.log('Starting mnemonic generation for word count:', wordCount);
     }
-    
-    // Set fallback immediately to prevent undefined state
-    const fallbackMnemonic = wordCount === 24 ? FALLBACK_MNEMONIC_24 : FALLBACK_MNEMONIC_12;
-    setGeneratedMnemonic(fallbackMnemonic);
-    
+
     try {
-      if (__DEV__) {
-        console.log('Attempting to generate mnemonic with wallet service');
-        console.log('Wallet service type:', typeof walletService.generateMnemonic);
-      }
-      
       if (typeof walletService.generateMnemonic !== 'function') {
         throw new Error('generateMnemonic is not a function');
       }
-      
+
       const strength = wordCount === 24 ? 256 : 128;
-      
+
       // Handle both sync and async versions of generateMnemonic
       let newMnemonic: string;
       const result = walletService.generateMnemonic(strength);
@@ -157,38 +149,26 @@ export default function WalletSetupScreen() {
       } else {
         newMnemonic = result;
       }
-      
+
+      if (!newMnemonic || typeof newMnemonic !== 'string' || !newMnemonic.trim()) {
+        throw new Error('Generated mnemonic was empty');
+      }
+
       if (__DEV__) {
         console.log('Successfully generated mnemonic with wallet service');
       }
-      
-      // Only update if we got a valid mnemonic
-      if (newMnemonic && typeof newMnemonic === 'string' && newMnemonic.trim()) {
-        // Check if we're using a fallback/test mnemonic
-        const isFallbackMnemonic = newMnemonic === FALLBACK_MNEMONIC_12 || 
-                                    newMnemonic === FALLBACK_MNEMONIC_24;
-        
-        if (isFallbackMnemonic) {
-          // Warn user that this is a test mnemonic
-          Alert.alert(
-            '⚠️ Test Mnemonic Warning',
-            'You are using a test recovery phrase. DO NOT use this wallet for real funds! This phrase is publicly known and insecure.',
-            [{ text: 'I Understand', style: 'destructive' }]
-          );
-        }
-        
-        setGeneratedMnemonic(newMnemonic);
-      }
+
+      setGeneratedMnemonic(newMnemonic);
     } catch (error) {
-      console.error('Error generating mnemonic, using fallback:', error);
-      
-      // Show warning that we're using fallback
+      console.error('Error generating mnemonic:', error);
+      // Fail closed: never substitute a publicly-known test phrase.
+      // An empty mnemonic blocks wallet creation until generation succeeds.
+      setGeneratedMnemonic('');
       Alert.alert(
-        '⚠️ Fallback Mnemonic',
-        'Failed to generate secure mnemonic. Using test phrase. DO NOT use for real funds!',
-        [{ text: 'OK', style: 'destructive' }]
+        'Unable to Generate Recovery Phrase',
+        'Secure key generation failed, so no wallet was created. Please restart the app and try again.',
+        [{ text: 'OK' }]
       );
-      // Fallback is already set above
     }
   }, [wordCount]);
 
@@ -381,7 +361,7 @@ export default function WalletSetupScreen() {
       ]}
       showsVerticalScrollIndicator={false}
     >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backToDashboardButton}
         onPress={() => router.replace('/(tabs)')}
       >
@@ -389,7 +369,7 @@ export default function WalletSetupScreen() {
         <Text style={[styles.backToDashboardText, { color: theme.colors.text }]}>
           Back to Dashboard
         </Text>
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -435,7 +415,7 @@ export default function WalletSetupScreen() {
       </View>
 
       <View style={styles.options}>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.optionButton, { backgroundColor: theme.colors.primary }]}
           onPress={() => setMode('create')}
         >
@@ -444,9 +424,9 @@ export default function WalletSetupScreen() {
           <Text style={styles.optionButtonSubtext}>
             Generate a new Bitcoin wallet with recovery phrase
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.optionButton, { backgroundColor: theme.colors.surface }]}
           onPress={() => setMode('import')}
         >
@@ -457,7 +437,7 @@ export default function WalletSetupScreen() {
           <Text style={[styles.optionButtonSubtext, { color: theme.colors.textSecondary }]}>
             Restore wallet using your recovery phrase
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
 
       <View style={styles.termsContainer}>
@@ -502,13 +482,13 @@ export default function WalletSetupScreen() {
         Platform.OS === 'android' && { paddingBottom: 100 }
       ]}
     >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={handleBackFromCreate}
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -518,7 +498,7 @@ export default function WalletSetupScreen() {
           Select 12 or 24 word generation, enter your wallet name and select a color
         </Text>
         <View style={styles.wordCountSelector}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.wordCountButton, { 
               backgroundColor: theme.colors.surface,
               borderColor: theme.colors.border
@@ -530,14 +510,14 @@ export default function WalletSetupScreen() {
               {wordCount} words
             </Text>
             <ChevronDown color={theme.colors.text} size={16} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
         {showWordCountDropdown && (
           <View style={[styles.dropdownOverlay, { 
             backgroundColor: theme.colors.surface,
             borderColor: theme.colors.border
           }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.dropdownItem, wordCount === 12 && { backgroundColor: theme.colors.primary + '20' }]}
               onPress={() => {
                 setWordCount(12);
@@ -547,8 +527,8 @@ export default function WalletSetupScreen() {
             >
               <Text style={[styles.dropdownText, { color: theme.colors.text }]}>12 words</Text>
               {wordCount === 12 && <Check color={theme.colors.primary} size={16} />}
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               style={[styles.dropdownItem, wordCount === 24 && { backgroundColor: theme.colors.primary + '20' }]}
               onPress={() => {
                 setWordCount(24);
@@ -558,7 +538,7 @@ export default function WalletSetupScreen() {
             >
               <Text style={[styles.dropdownText, { color: theme.colors.text }]}>24 words</Text>
               {wordCount === 24 && <Check color={theme.colors.primary} size={16} />}
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         )}
       </View>
@@ -585,7 +565,7 @@ export default function WalletSetupScreen() {
         </Text>
         <View style={styles.colorPicker}>
           {WALLET_COLOR_PALETTE.map((colorOption) => (
-            <TouchableOpacity
+            <PressableOpacity
               key={colorOption.id}
               style={styles.colorOptionContainer}
               onPress={() => setSelectedColor(colorOption.base)}
@@ -600,7 +580,7 @@ export default function WalletSetupScreen() {
                   <Check color="white" size={20} />
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
 
@@ -630,7 +610,7 @@ export default function WalletSetupScreen() {
               </View>
             ))}
           </View>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.copyButton, { backgroundColor: theme.colors.primary }]}
             onPress={copyToClipboard}
             accessibilityRole="button"
@@ -639,7 +619,7 @@ export default function WalletSetupScreen() {
           >
             <Copy color="white" size={16} />
             <Text style={styles.copyButtonText}>Copy</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         <View style={[styles.backupWarning, { 
@@ -658,7 +638,7 @@ export default function WalletSetupScreen() {
         </View>
 
         <View style={styles.checkboxContainer}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setHasStoredPhrase(!hasStoredPhrase)}
             accessibilityRole="checkbox"
@@ -670,14 +650,14 @@ export default function WalletSetupScreen() {
             {hasStoredPhrase && (
               <Check color={theme.colors.primary} size={16} />
             )}
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
             I have securely stored my recovery phrase
           </Text>
         </View>
 
         <View style={styles.checkboxContainer}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.checkbox, { borderColor: theme.colors.border }]}
             onPress={() => setAcceptedTerms(!acceptedTerms)}
             accessibilityRole="checkbox"
@@ -689,7 +669,7 @@ export default function WalletSetupScreen() {
             {acceptedTerms && (
               <Check color={theme.colors.primary} size={16} />
             )}
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.checkboxText, { color: theme.colors.text }]}>
             I accept the{' '}
             <Text 
@@ -702,7 +682,7 @@ export default function WalletSetupScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: isCreateFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
@@ -715,16 +695,16 @@ export default function WalletSetupScreen() {
           }]}>
             {isLoading ? 'Creating...' : 'Confirm'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </ScrollView>
   );
@@ -741,7 +721,7 @@ export default function WalletSetupScreen() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={() => {
           console.log('Import back button pressed');
@@ -754,7 +734,7 @@ export default function WalletSetupScreen() {
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
@@ -787,7 +767,7 @@ export default function WalletSetupScreen() {
         </Text>
         <View style={styles.colorPicker}>
           {WALLET_COLOR_PALETTE.map((colorOption) => (
-            <TouchableOpacity
+            <PressableOpacity
               key={colorOption.id}
               style={styles.colorOptionContainer}
               onPress={() => setSelectedColor(colorOption.base)}
@@ -802,7 +782,7 @@ export default function WalletSetupScreen() {
                   <Check color="white" size={20} />
                 )}
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
 
@@ -811,7 +791,7 @@ export default function WalletSetupScreen() {
             <Text style={[styles.label, { color: theme.colors.text }]}>
               Recovery Phrase (12 or 24 words)
             </Text>
-            <TouchableOpacity 
+            <PressableOpacity 
               style={[styles.scanQrButton, { borderColor: theme.colors.border }]}
               onPress={() => {
                 if (Platform.OS === 'web') {
@@ -823,7 +803,7 @@ export default function WalletSetupScreen() {
             >
               <QrCode color={theme.colors.text} size={16} />
               <Text style={[styles.scanQrText, { color: theme.colors.text }]}>Scan QR</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           <TextInput
             style={[styles.textArea, { 
@@ -845,7 +825,7 @@ export default function WalletSetupScreen() {
           </Text>
         </View>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: isImportFormValid ? theme.colors.primary : theme.colors.primary + '40',
             opacity: isLoading ? 0.6 : 1
@@ -865,9 +845,9 @@ export default function WalletSetupScreen() {
           }]}>
             {isLoading ? 'Importing...' : 'Import Wallet'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
           accessibilityRole="link"
@@ -877,7 +857,7 @@ export default function WalletSetupScreen() {
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -955,13 +935,13 @@ export default function WalletSetupScreen() {
 
   const renderConfirmMode = () => (
     <ScrollView style={styles.content}>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.backButton}
         onPress={() => setMode('create')}
         activeOpacity={0.7}
       >
         <ArrowLeft color={theme.colors.text} size={24} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <View style={styles.header}>
         <View style={[styles.successIcon, { backgroundColor: theme.colors.primary + '20' }]}>
@@ -998,7 +978,7 @@ export default function WalletSetupScreen() {
           </View>
         ))}
 
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.submitButton, { 
             backgroundColor: theme.colors.primary,
             opacity: isLoading ? 0.6 : 1
@@ -1016,16 +996,16 @@ export default function WalletSetupScreen() {
           <Text style={styles.submitButtonText}>
             {isLoading ? 'Creating Wallet...' : 'Create Wallet'}
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
 
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.helpLinkContainer}
           onPress={() => openLink('https://www.bitsleuth.ai/glossary/passphrase')}
         >
           <Text style={[styles.helpLinkText, { color: theme.colors.primary }]}>
             What is a recovery phrase?
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
     </ScrollView>
   );

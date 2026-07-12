@@ -1,4 +1,5 @@
 import { secureAuthService } from '@/services/secure-auth-service';
+import { getPin as getSecurePin, savePin as saveSecurePin } from '@/services/secure-pin-service';
 import createContextHook from '@nkzw/create-context-hook';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -16,11 +17,11 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
   const lockTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const appStateRef = useRef<AppStateStatus>('active');
 
-  // Load stored PIN from AsyncStorage
+  // Load stored PIN from SecureStore (migrates any legacy plaintext PIN)
   const pinQuery = useQuery({
     queryKey: ['pin'],
     queryFn: async () => {
-      const pin = await AsyncStorage.getItem('pin');
+      const pin = await getSecurePin();
       return pin;
     },
   });
@@ -206,7 +207,7 @@ export const [AutoLockProvider, useAutoLock] = createContextHook(() => {
 
   const savePin = useCallback(async (pin: string) => {
     try {
-      await AsyncStorage.setItem('pin', pin);
+      await saveSecurePin(pin);
       setStoredPin(pin);
       console.log('✅ PIN saved successfully');
     } catch (error) {

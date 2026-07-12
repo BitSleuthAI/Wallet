@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import {
   View,
   Text,
   StyleSheet,
-  TouchableOpacity,
   ScrollView,
   Linking,
   Alert,
@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ChevronDown, ChevronRight, ArrowLeft, AlertTriangle, Bug } from 'lucide-react-native';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import crashlyticsService from '@/services/crashlytics-service';
@@ -29,11 +29,11 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
   defaultExpanded = false 
 }) => {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const { theme } = useWallet();
+  const { theme } = useTheme();
 
   return (
     <View style={[styles.dropdownContainer, { backgroundColor: theme.colors.surface }]}>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.dropdownHeader}
         onPress={() => setIsExpanded(!isExpanded)}
       >
@@ -45,7 +45,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
         ) : (
           <ChevronRight color={theme.colors.textSecondary} size={20} />
         )}
-      </TouchableOpacity>
+      </PressableOpacity>
       {isExpanded && (
         <View style={styles.dropdownContent}>
           {children}
@@ -56,7 +56,7 @@ const DropdownSection: React.FC<DropdownSectionProps> = ({
 };
 
 export default function AboutScreen() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
 
   const handleBack = () => {
     router.back();
@@ -82,13 +82,13 @@ export default function AboutScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             About BitSleuth Wallet
           </Text>
@@ -108,7 +108,16 @@ export default function AboutScreen() {
           </Text>
         </View>
 
-        <DropdownSection title="What's New in 1.2.2?" defaultExpanded={true}>
+        <DropdownSection title="What's New in 1.3.0?" defaultExpanded={true}>
+          <BulletPoint text="System Appearance: The app now follows your device's light/dark setting by default, with a manual override in Settings." />
+          <BulletPoint text="Redesigned Send Flow: A native review sheet shows the full transaction summary before sending, with a copyable transaction ID on success." />
+          <BulletPoint text="Complete History: Transaction history is no longer truncated for addresses with lots of activity." />
+          <BulletPoint text="Faster & Smoother: Fewer re-renders and network requests, virtualized lists, and lighter refresh behavior across the app." />
+          <BulletPoint text="Refined Look: A unified Bitcoin-orange theme with consistent buttons, press feedback, and animations." />
+          <BulletPoint text="Stronger Security: Your unlock PIN is now stored in the device's encrypted keystore." />
+        </DropdownSection>
+
+        <DropdownSection title="What's New in 1.2.2?">
           <BulletPoint text="Open Source Release: BitSleuth Wallet is now open source under the AGPL-3.0 license, with CI/CD, documentation, and community contribution support." />
           <BulletPoint text="Satoshi API Fee Fallback: Fee recommendations stay available even when the primary Esplora fee endpoint fails." />
           <BulletPoint text="Firebase Performance Monitoring: App performance tracking alongside crash reporting (no analytics)." />
@@ -178,7 +187,7 @@ export default function AboutScreen() {
               </Text>
               
               {/* Test Non-Fatal Error */}
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.testButton, { backgroundColor: theme.colors.primary + '20', borderColor: theme.colors.primary }]}
                 onPress={() => {
                   Alert.alert(
@@ -207,10 +216,10 @@ export default function AboutScreen() {
                 <Text style={[styles.testButtonText, { color: theme.colors.primary }]}>
                   Test Non-Fatal Error
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {/* Test Fatal Crash */}
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.testButton, { backgroundColor: '#EF4444' + '20', borderColor: '#EF4444' }]}
                 onPress={() => {
                   Alert.alert(
@@ -235,7 +244,7 @@ export default function AboutScreen() {
                 <Text style={[styles.testButtonText, { color: '#EF4444' }]}>
                   Test Fatal Crash
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
 
               {/* Crashlytics Status */}
               <View style={[styles.statusContainer, { backgroundColor: theme.colors.surface, borderColor: theme.colors.border }]}>

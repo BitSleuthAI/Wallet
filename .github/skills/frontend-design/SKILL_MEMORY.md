@@ -35,9 +35,39 @@ Action: [How SKILL.md should be updated, if at all]
 
 ---
 
-**Awaiting first feedback entry...**
+[2026-07-03] - SUCCESS - Impact: HIGH
+Context: Brand/color unification pass across the whole app (light-mode
+gradients, error boundary, toasts, skeletons, default wallet color) plus a
+new transaction review sheet and shared button primitive.
+Outcome: The app previously shipped two palettes at once — a Bitcoin-orange
+theme in constants/themes.ts and a legacy cyan/coral set hardcoded in
+components. Deriving every surface from theme tokens (and mirroring the
+dark-branch gradient structure in light mode) made light and dark feel like
+one product. System-appearance-driven theming (light/dark/system, default
+system) replaced the manual-only toggle.
+Learning: Hardcoded hex "hotspots" cluster in three places: loading/empty
+fallbacks copy-pasted across screens, error/warning cards, and orphaned
+"delight" components that were built against an older brand and never
+imported. A grep for the legacy hex values is a fast completeness check.
+Action: Emphasize "no raw hex where a theme token exists" and recommend a
+single ScreenLoading-style fallback component per app.
 
-When the frontend-design skill is used to create mobile UIs, outcomes should be recorded here. Track what works, what doesn't, and how mobile design thinking evolves.
+---
+
+[2026-07-03] - SUCCESS - Impact: MEDIUM
+Context: Interaction-polish follow-up: unified press feedback across the
+whole app and finished the animation-system consolidation.
+Outcome: Two-tier press-feedback system — AppButton (spring scale +
+haptics) for real CTAs, PressableOpacity (opacity dim) for rows and icon
+buttons — gives every tap target consistent feedback without redesigning
+bespoke layouts. Migrating the last legacy Animated code to Reanimated
+means one animation vocabulary (shared values + withTiming/withSpring)
+across splash, tab transitions, charts, and list rows.
+Learning: A mechanical drop-in wrapper (PressableOpacity) converts a large
+legacy surface safely; reserving the expressive primitive (AppButton) for
+deliberate CTAs keeps visual hierarchy meaningful.
+Action: Document the two-tier press-feedback convention as the default
+pattern for new screens.
 
 ---
 

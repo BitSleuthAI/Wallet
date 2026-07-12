@@ -1,28 +1,37 @@
+import { AppButton } from '@/components/AppButton';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { toast } from '@/components/Toast';
 import WalletSelector from '@/components/WalletSelector';
 import { ADDRESS_GENERATION_COOLDOWN_MS, GAP_LIMIT_WARNING_THRESHOLD } from '@/constants/cache';
-import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { platformStyles } from '@/constants/themes';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import { WalletsContext, useFeedback, useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, router } from 'expo-router';
 import { Copy, RefreshCw, Share as ShareIcon } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import {
     Alert,
-    Animated,
     Platform,
     SafeAreaView,
     Share,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import Animated, {
+    Easing,
+    cancelAnimation,
+    useAnimatedStyle,
+    useSharedValue,
+    withRepeat,
+    withTiming,
+} from 'react-native-reanimated';
 
 // Define Android-specific bottom padding for action buttons area
 const ANDROID_BOTTOM_PADDING = 120;
@@ -33,27 +42,28 @@ const walletService = loadWalletService([
   'clearAddressCache',
 ]);
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function ReceiveScreen() {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+  if (!walletData) {
+    return <ScreenLoading />;
   }
-  
-  return <ReceiveScreenContent walletContext={walletContext} />;
+
+  return <ReceiveScreenContent />;
 }
 
-// Main component with all hooks
-function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typeof useWallet> }) {
-  const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
-  const { currentWallet, generateNewAddress, theme, incrementUsageCount } = walletContext; // Context is guaranteed non-null by wrapper
-  const spinValue = useRef(new Animated.Value(0)).current;
+// Main component with all hooks. Narrow subscriptions: this screen renders no
+// polled data, so it stays idle across the 30s balance/tx/utxo refreshes.
+function ReceiveScreenContent() {
+  const { animatedStyle } = useTabAnimation(); // Receive tab
+  const { currentWallet } = useWallets();
+  const { generateNewAddress } = useWalletActions();
+  const { incrementUsageCount } = useFeedback();
+  const { theme } = useTheme();
+  const spinDeg = useSharedValue(0);
   
   // Initialize state hooks with empty string, will be loaded async
   const [currentAddress, setCurrentAddress] = useState<string>('');
@@ -129,33 +139,27 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
 
   // Spin animation for the refresh icon
   useEffect(() => {
-    let spinAnimation: Animated.CompositeAnimation | null = null;
-    
     if (isGeneratingAddress) {
-      spinAnimation = Animated.loop(
-        Animated.timing(spinValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        })
+      spinDeg.value = 0;
+      spinDeg.value = withRepeat(
+        withTiming(360, { duration: 1000, easing: Easing.linear }),
+        -1,
+        false
       );
-      spinAnimation.start();
     } else {
-      spinValue.setValue(0);
+      cancelAnimation(spinDeg);
+      spinDeg.value = 0;
     }
-    
+
     // Cleanup: stop the animation when component unmounts or isGeneratingAddress changes
     return () => {
-      if (spinAnimation) {
-        spinAnimation.stop();
-      }
+      cancelAnimation(spinDeg);
     };
-  }, [isGeneratingAddress, spinValue]);
+  }, [isGeneratingAddress, spinDeg]);
 
-  const spin = spinValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: ['0deg', '360deg'],
-  });
+  const spinStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${spinDeg.value}deg` }],
+  }));
 
   const hasValidAddress = currentAddress.trim().length > 0 && currentAddress !== 'No address available';
 
@@ -167,16 +171,13 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
     const now = Date.now();
     if (now - lastGenTime < ADDRESS_GENERATION_COOLDOWN_MS) {
       const waitTime = Math.ceil((ADDRESS_GENERATION_COOLDOWN_MS - (now - lastGenTime)) / 1000);
-      Alert.alert(
-        'Please Wait', 
-        `Please wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address.`
-      );
+      toast.info('Please wait', `Wait ${waitTime} second${waitTime > 1 ? 's' : ''} before generating another address`);
       return;
     }
-    
+
     if (!currentWallet) {
       console.error('❌ No current wallet available');
-      Alert.alert('Error', 'No wallet selected');
+      toast.error('No wallet selected');
       return;
     }
     
@@ -198,10 +199,14 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           walletService.clearAddressCache(currentWallet.xpub);
         }
 
+        toast.success('New address ready');
+
         // Check if user has generated many unused addresses (gap limit warning)
         const addressCount = result.wallet.addresses.length;
 
         if (addressCount >= GAP_LIMIT_WARNING_THRESHOLD) {
+          // Kept as an alert: the gap-limit explanation is too long for a toast
+          // and the user should read it before generating more addresses
           Alert.alert(
             'Address Limit Warning',
             `You have generated ${addressCount} addresses. For wallet recovery, Bitcoin wallets typically scan only the first 20 addresses without transactions. Consider using existing addresses or funding some addresses before generating more.`,
@@ -210,11 +215,11 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
         }
       } else {
         console.warn('⚠️ Address generation failed:', result.error);
-        Alert.alert('Warning', result.error || 'Address generation failed');
+        toast.warning('Address generation failed', result.error || undefined);
       }
     } catch (error) {
       console.error('❌ Unexpected error generating new address:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      toast.error('Something went wrong', 'Please try again');
     } finally {
       setIsGeneratingAddress(false);
       setLastGenTime(now); // Cooldown set after address generation attempt (regardless of success)
@@ -282,12 +287,12 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               Create or import a wallet to receive funds
             </Text>
-            <TouchableOpacity
-              style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
+            <AppButton
+              title="Setup Wallet"
               onPress={() => router.push('/wallet-setup')}
-            >
-              <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+              style={styles.setupButton}
+              testID="receive-setup-wallet-button"
+            />
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -357,67 +362,49 @@ function ReceiveScreenContent({ walletContext }: { walletContext: ReturnType<typ
           </View>
 
           {/* New Address Button */}
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'primary'),
-              styles.newAddressButton,
-              { 
-                alignSelf: 'center',
-              }
-            ]}
+          <AppButton
+            title={isGeneratingAddress ? 'Generating...' : 'New Address'}
+            icon={
+              <Animated.View style={spinStyle}>
+                <RefreshCw color="white" size={20} />
+              </Animated.View>
+            }
             onPress={() => {
               handleNewAddress();
               incrementUsageCount('receive_interaction');
             }}
             disabled={isGeneratingAddress}
-            activeOpacity={0.8}
-          >
-            <Animated.View style={{ transform: [{ rotate: spin }] }}>
-              <RefreshCw color="white" size={20} />
-            </Animated.View>
-            <Text style={styles.newAddressText}>
-              {isGeneratingAddress ? 'Generating...' : 'New Address'}
-            </Text>
-          </TouchableOpacity>
+            style={styles.newAddressButton}
+            testID="receive-new-address-button"
+          />
         </View>
         
         {/* Action Buttons - Positioned at bottom */}
         <View style={styles.bottomActionButtons}>
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.actionButton,
-            ]}
+          <AppButton
+            title="Copy"
+            variant="secondary"
+            icon={<Copy color={theme.colors.text} size={20} />}
             onPress={() => {
               handleCopy();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
-            activeOpacity={0.7}
-          >
-            <Copy color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Copy
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.actionButton,
-            ]}
+            style={styles.actionButton}
+            testID="receive-copy-button"
+          />
+          <AppButton
+            title="Share"
+            variant="secondary"
+            icon={<ShareIcon color={theme.colors.text} size={20} />}
             onPress={() => {
               handleShare();
               incrementUsageCount('receive_interaction');
             }}
             disabled={!currentAddress || currentAddress.length === 0}
-            activeOpacity={0.7}
-          >
-            <ShareIcon color={theme.colors.text} size={20} />
-            <Text style={[styles.actionButtonText, { color: theme.colors.text }]}>
-              Share
-            </Text>
-          </TouchableOpacity>
+            style={styles.actionButton}
+            testID="receive-share-button"
+          />
         </View>
         </Animated.View>
       </SafeAreaView>
@@ -470,20 +457,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   newAddressButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xxxl, // Increased from xxl
-    paddingVertical: platformStyles.spacing.lg, // Increased from md
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
+    alignSelf: 'center',
+    paddingHorizontal: platformStyles.spacing.xxxl,
+    borderRadius: platformStyles.borderRadius.xxl,
     marginBottom: platformStyles.spacing.xxxl,
-    ...platformStyles.buttonShadow,
-  },
-  newAddressText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.3,
   },
   bottomActionButtons: {
     flexDirection: 'row',
@@ -494,18 +471,7 @@ const styles = StyleSheet.create({
   },
   actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    ...platformStyles.shadow,
-  },
-  actionButtonText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
+    borderRadius: platformStyles.borderRadius.xl,
   },
   emptyState: {
     flex: 1,
@@ -527,15 +493,8 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   setupButton: {
-    paddingHorizontal: platformStyles.spacing.huge, // Increased from xxxl
-    paddingVertical: platformStyles.spacing.lg + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from large
-  },
-  setupButtonText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    letterSpacing: 0.3,
+    paddingHorizontal: platformStyles.spacing.huge,
+    borderRadius: platformStyles.borderRadius.xxl,
   },
   qrPlaceholder: {
     width: 240, // Increased from 220

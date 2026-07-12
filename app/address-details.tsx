@@ -1,8 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
-import { getAddressStats, getAddressTransactions } from '@/services/esplora-service';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletBalance, useWalletMeta, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
+import { getAddressStats, getAddressTransactionsPaginated } from '@/services/esplora-service';
 import { useQuery } from '@tanstack/react-query';
 import * as Clipboard from 'expo-clipboard';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
@@ -15,7 +17,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -49,7 +50,12 @@ interface Transaction {
 }
 
 export default function AddressDetailsScreen() {
-  const { theme, currentWallet, getAddressStatsCacheValue, setAddressStatsCache, priceQuery, selectedCurrency, getCurrencySymbol } = useWallet();
+  const { theme } = useTheme();
+  const { currentWallet } = useWallets();
+  const { getAddressStatsCacheValue, setAddressStatsCache } = useWalletMeta();
+  const { bitcoinPrice } = useWalletBalance();
+  const { selectedCurrency } = useWalletSettings();
+  const { getCurrencySymbol } = useWalletActions();
   const router = useRouter();
   const { address } = useLocalSearchParams<{ address: string }>();
   const [showCopiedModal, setShowCopiedModal] = useState(false);
@@ -88,7 +94,7 @@ export default function AddressDetailsScreen() {
       if (!address) return [];
       
       console.log('📜 Fetching address transactions using Esplora service...');
-      const result = await getAddressTransactions(address, currentWallet?.xpub);
+      const result = await getAddressTransactionsPaginated(address, currentWallet?.xpub);
       
       if (result.error || !result.data) {
         console.warn('❌ Address transactions fetch failed:', result.error);
@@ -169,8 +175,8 @@ export default function AddressDetailsScreen() {
   const formatFiat = (satoshis: number) => {
     // Use real exchange rate from wallet store based on selected currency
     const btcAmount = satoshis / 100000000;
-    // Get rate for selected currency from price query, fallback to USD if specific currency not available
-    const priceData = priceQuery?.data as any;
+    // Get rate for selected currency from price data, fallback to USD if specific currency not available
+    const priceData = bitcoinPrice as any;
     const rate = priceData?.[selectedCurrency]?.last || priceData?.USD?.last || 0;
     return rate > 0 ? (btcAmount * rate).toFixed(2) : '0.00';
   };
@@ -226,13 +232,13 @@ export default function AddressDetailsScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <View style={styles.headerContent}>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>Address</Text>
           </View>
@@ -242,12 +248,12 @@ export default function AddressDetailsScreen() {
         <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {/* Address Header */}
           <View style={styles.addressHeader}>
-            <TouchableOpacity onPress={copyAddress} style={styles.addressContainer}>
+            <PressableOpacity onPress={copyAddress} style={styles.addressContainer}>
               <Text style={[styles.addressText, { color: theme.colors.text }]}>
                 {truncateAddress(address)}
               </Text>
               <Copy size={16} color={theme.colors.textSecondary} style={styles.copyIcon} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.addressSubtitle, { color: theme.colors.textSecondary }]}> 
               {`Balance: ${formatBTC(balance)} BTC • ${processedTransactions.length} transactions`}
             </Text>
@@ -368,7 +374,7 @@ export default function AddressDetailsScreen() {
           animationType="fade"
           onRequestClose={() => setShowCopiedModal(false)}
         >
-          <TouchableOpacity 
+          <PressableOpacity 
             style={styles.modalOverlay} 
             activeOpacity={1}
             onPress={() => setShowCopiedModal(false)}
@@ -376,14 +382,14 @@ export default function AddressDetailsScreen() {
             <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Copied</Text>
               <Text style={[styles.modalSubtitle, { color: theme.colors.textSecondary }]}>Copied to clipboard</Text>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.modalButton, { borderTopColor: theme.colors.border }]}
                 onPress={() => setShowCopiedModal(false)}
               >
                 <Text style={[styles.modalButtonText, { color: theme.colors.primary }]}>OK</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
-          </TouchableOpacity>
+          </PressableOpacity>
         </Modal>
       </AndroidSafeContainer>
     </GradientBackground>

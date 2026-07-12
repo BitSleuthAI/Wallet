@@ -3,12 +3,12 @@
  * Uses BIP32 derivation and gap limit for proper address discovery
  */
 
-import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD } from '../constants/cache';
+import { ADDRESS_METADATA_CACHE_TTL_MS, ADDRESS_VERIFICATION_TIMEOUT_MS, ENABLE_ADDRESS_VERIFICATION_SAFEGUARD, WALLET_TRANSACTIONS_DISPLAY_LIMIT } from '../constants/cache';
 import type { Transaction, Wallet } from '../types/wallet';
 import { recordWalletAssociationsXpub } from './address-cache-service';
 import { loadBip32Module } from './bip32-loader';
 import { ensureECC } from './bitcoin-service';
-import { esploraGet, getAddressStats, getAddressTransactions, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
+import { esploraGet, getAddressStats, getAddressTransactionsPaginated, getAddressUTXOs, getBTCPrice, getCurrentBlockHeight } from './esplora-service';
 import { getCacheStats, loadTransactionCache } from './transaction-cache-service';
 
 // Import bip39 with better error handling
@@ -267,10 +267,59 @@ export async function discoverUsedAddresses(xpub: string, returnMetadata: boolea
   }
 }
 
+type WalletDataResult = { data: any | null; error: string | null };
+
+// Memoization for getWalletData: the balance, transactions, and UTXO queries in
+// wallet-store all call it independently on the same 30s poll cycle. Sharing
+// in-flight promises plus a TTL just under the poll interval collapses those
+// 3 pipeline runs into 1 without changing any query key or invalidation path.
+const WALLET_DATA_MEMO_TTL_MS = 25 * 1000;
+const walletDataInFlight = new Map<string, Promise<WalletDataResult>>();
+const walletDataMemo = new Map<string, { result: WalletDataResult; timestamp: number }>();
+
+// The "no transaction history" result comes from a completed, successful scan
+// of an empty wallet — memoizing it avoids rescanning 3x per poll. Real
+// failures (network, rate limit) are never memoized so retries stay immediate.
+function isMemoizableResult(result: WalletDataResult): boolean {
+  return !result.error || result.error.includes('no transaction history');
+}
+
+/** Drops memoized wallet data so the next getWalletData call hits the network (used by pull-to-refresh). */
+export function clearWalletDataMemo(): void {
+  walletDataInFlight.clear();
+  walletDataMemo.clear();
+}
+
+export async function getWalletData(xpub: string): Promise<WalletDataResult> {
+  const cached = walletDataMemo.get(xpub);
+  if (cached && Date.now() - cached.timestamp < WALLET_DATA_MEMO_TTL_MS) {
+    return cached.result;
+  }
+
+  const inFlight = walletDataInFlight.get(xpub);
+  if (inFlight) {
+    return inFlight;
+  }
+
+  const promise = fetchWalletDataUncached(xpub)
+    .then(result => {
+      if (isMemoizableResult(result)) {
+        walletDataMemo.set(xpub, { result, timestamp: Date.now() });
+      }
+      return result;
+    })
+    .finally(() => {
+      walletDataInFlight.delete(xpub);
+    });
+
+  walletDataInFlight.set(xpub, promise);
+  return promise;
+}
+
 /**
  * Get comprehensive wallet data using address discovery
  */
-export async function getWalletData(xpub: string): Promise<{ data: any | null; error: string | null }> {
+async function fetchWalletDataUncached(xpub: string): Promise<WalletDataResult> {
   try {
     console.log(`🔄 Getting wallet data for xpub: ${xpub.substring(0, 20)}...`);
     
@@ -311,22 +360,21 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     // Sequential processing avoids race conditions and 429 errors
     const allTxs = new Map<string, any>();
     const utxos: any[] = [];
-    const addressInfos: any[] = [];
+    let activeAddressCount = 0;
 
-    // Process addresses with parallelized API calls per address
-    // Rate limiting is handled at the request queue level in esplora-service
+    // Process addresses with parallelized API calls per address.
+    // Rate limiting is handled at the request queue level in esplora-service.
+    // Note: no per-address /address/{addr} stats call — the wallet balance is
+    // computed from UTXOs below, and address activity is derivable from the
+    // txs response (which discovery just fetched, so this read is a cache hit).
     for (let idx = 0; idx < usedAddresses.length; idx++) {
       const address = usedAddresses[idx];
       try {
         console.log(`📊 Processing address ${idx + 1}/${usedAddresses.length}: ${address.substring(0, 10)}...`);
 
-        // OPTIMIZATION: Fetch UTXOs, transactions, and stats in parallel
-        // These are independent requests for the same address
-        // Rate limiting is enforced by the request queue, not here
-        const [utxosResult, txsResult, statsResult] = await Promise.all([
+        const [utxosResult, txsResult] = await Promise.all([
           getAddressUTXOs(address, xpub),
-          getAddressTransactions(address, xpub),
-          getAddressStats(address, xpub)
+          getAddressTransactionsPaginated(address, xpub)
         ]);
 
           if (txsResult.data && Array.isArray(txsResult.data)) {
@@ -334,6 +382,9 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
             // Note: Caching is now handled transparently in esploraGet
             for (const tx of txsResult.data) {
               allTxs.set(tx.txid, tx);
+            }
+            if (txsResult.data.length > 0) {
+              activeAddressCount++;
             }
           }
 
@@ -348,10 +399,10 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
           if (utxosResult.data && Array.isArray(utxosResult.data)) {
             utxosResult.data.forEach((utxo: any) => {
               // Include all UTXO fields needed for transactions
-              utxos.push({ 
-                txid: utxo.txid, 
-                vout: utxo.vout, 
-                address, 
+              utxos.push({
+                txid: utxo.txid,
+                vout: utxo.vout,
+                address,
                 value: utxo.value,
                 status: utxo.status || { confirmed: false },
                 scriptPubKey: utxo.scriptpubkey
@@ -359,16 +410,8 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
             });
           }
 
-        if (statsResult.data && statsResult.data.chain_stats?.tx_count > 0) {
-          addressInfos.push({
-            address,
-            n_tx: statsResult.data.chain_stats.tx_count,
-            balance: statsResult.data.chain_stats.funded_txo_sum - statsResult.data.chain_stats.spent_txo_sum,
-          });
-        }
+        // No additional delay needed - rate limiting handled by request queue
 
-        // No additional delay needed - rate limiting handled by request queue (1000-1200ms per request)
-        
       } catch (error) {
         console.warn(`⚠️ Failed to process address ${address}:`, error);
       }
@@ -531,9 +574,9 @@ export async function getWalletData(xpub: string): Promise<{ data: any | null; e
     const walletData = {
       balanceBTC,
       balanceUSD: balanceBTC * btcPrice,
-      transactions: transactions.slice(0, 50), // Limit to 50 most recent
+      transactions: transactions.slice(0, WALLET_TRANSACTIONS_DISPLAY_LIMIT), // Most recent first; history list is virtualized
       usedAddresses,
-      addressCount: addressInfos.length,
+      addressCount: activeAddressCount,
       utxoCount: utxos.length,
       utxos, // Include full UTXO array for automatic polling updates
     };

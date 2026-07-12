@@ -1,15 +1,26 @@
-import { darkTheme, lightTheme } from '@/constants/themes';
-import { FRESH_LAUNCH_THRESHOLD_MS, REACT_QUERY_GC_TIME } from '@/constants/cache';
+import { REACT_QUERY_GC_TIME } from '@/constants/cache';
 import { clearCacheForWalletXpub, clearEmptyUTXOCaches } from '@/services/address-cache-service';
 import { getBTCPrice } from '@/services/esplora-service';
 import { clearAllCache } from '@/services/transaction-cache-service';
-import { clearAddressCache, getWalletData } from '@/services/wallet-service';
+import { clearAddressCache, clearWalletDataMemo, getWalletData } from '@/services/wallet-service';
 import { getPersistedBalance, getPersistedTransactions, getPersistedUTXOs, persistWalletData, clearPersistedWalletData, clearAllPersistedWalletData } from '@/services/wallet-persistence-service';
-import { FeeSettings, FiatCurrency, Theme, Transaction, UTXO, Wallet } from '@/types/wallet';
-import createContextHook from '@nkzw/create-context-hook';
+import { useTheme } from '@/hooks/theme-store';
+import {
+  ActionsContext,
+  AddressesContext,
+  BalanceContext,
+  CoinControlContext,
+  FeedbackContext,
+  SettingsContext,
+  TransactionsContext,
+  UtxosContext,
+  WalletMetaContext,
+  WalletsContext,
+} from '@/hooks/wallet-contexts';
+import { FeeSettings, FiatCurrency, Transaction, UTXO, Wallet } from '@/types/wallet';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, AppState, AppStateStatus } from 'react-native';
 import Constants from 'expo-constants';
 
@@ -202,10 +213,17 @@ const feeSettingsMapsEqual = (a: Record<string, FeeSettings>, b: Record<string, 
   return true;
 };
 
-export const [WalletProvider, useWallet] = createContextHook(() => {
+// The store body: every query, mutation, and piece of state the app's wallet
+// layer owns. It runs exactly once, inside WalletProvider below; its memoized
+// slices are published through separate churn-domain contexts so components
+// can subscribe to only the data they render.
+function useWalletStoreState() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [currentWalletId, setCurrentWalletId] = useState<string | null>(null);
-  const [theme, setTheme] = useState<Theme>(lightTheme);
+  // Theme lives in its own low-churn context (hooks/theme-store.tsx) so
+  // theme-only consumers don't re-render on wallet data polls; it is
+  // re-exported here to keep the existing useWallet() API intact.
+  const { theme, toggleTheme, setThemeMode } = useTheme();
   const [selectedCurrency, setSelectedCurrency] = useState<FiatCurrency>('USD');
   const [hideBalance, setHideBalance] = useState<boolean>(false);
   const [autoLockTimeout, setAutoLockTimeout] = useState<number>(15);
@@ -346,28 +364,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         const currentVersion = Constants.expoConfig?.version || '1.0.0'; // fallback to 1.0.0 if unable to read
         console.log('📱 Current app version:', currentVersion);
         
-        // Check stored version and last launch timestamp
+        // Check stored version
         const storedVersion = await AsyncStorage.getItem('app_version');
-        const lastLaunchTimestamp = await AsyncStorage.getItem('last_launch_timestamp');
         console.log('💾 Stored app version:', storedVersion);
-        console.log('💾 Last launch timestamp:', lastLaunchTimestamp);
-        
+
         // Detect if app was updated (version changed)
         const isAppUpdate = storedVersion !== null && storedVersion !== currentVersion;
-        
-        // Detect if this is a fresh app launch (check if significant time has passed)
-        const timeSinceLastLaunch = lastLaunchTimestamp 
-          ? Date.now() - parseInt(lastLaunchTimestamp, 10)
-          : Infinity;
-        const isFreshLaunch = timeSinceLastLaunch > FRESH_LAUNCH_THRESHOLD_MS;
-        
-        // Clear caches on app update OR fresh launch to ensure data freshness
-        if (isAppUpdate || isFreshLaunch) {
-          if (isAppUpdate) {
-            console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
-          } else {
-            console.log(`🔄 Fresh app launch detected (time since last launch: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
-          }
+
+        // Wipe caches only on app update (cache formats may have changed).
+        // Ordinary cold starts no longer wipe: every affected cache already
+        // self-expires within <=5 minutes (address metadata 2m, txids/stats
+        // 5m, utxos 2m) and confirmed transaction bodies are immutable, so
+        // startup is fast and correctness is guaranteed by the TTLs.
+        if (isAppUpdate) {
+          console.log('🔄 App update detected! Old version:', storedVersion, '→ New version:', currentVersion);
           console.log('🧹 Clearing all cached wallet data to ensure fresh sync...');
           
           // Get all wallets to clear their caches
@@ -401,9 +411,9 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         } else if (storedVersion === null) {
           console.log('🆕 First launch or version not tracked yet');
         } else {
-          console.log(`✅ Recent launch - using cached data (time since last: ${Math.round(timeSinceLastLaunch / 1000)} seconds)`);
+          console.log('✅ Same app version - using cached data (per-key TTLs keep it fresh)');
         }
-        
+
         // Update stored version and launch timestamp
         await AsyncStorage.setItem('app_version', currentVersion);
         await AsyncStorage.setItem('last_launch_timestamp', Date.now().toString());
@@ -540,22 +550,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     gcTime: Infinity,
   });
 
-  // Load theme from storage
-  const themeQuery = useQuery({
-    queryKey: ['theme'],
-    queryFn: async () => {
-      try {
-        const stored = await AsyncStorage.getItem('theme');
-        return stored === 'dark' ? darkTheme : lightTheme;
-      } catch (err) {
-        console.warn('Failed to load theme:', err);
-        return lightTheme;
-      }
-    },
-    staleTime: Infinity,
-    gcTime: Infinity,
-  });
-
   // Load currency from storage
   const currencyQuery = useQuery({
     queryKey: ['currency'],
@@ -670,12 +664,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       setCoinControlFrozenState(coinControlFrozenQuery.data);
     }
   }, [coinControlFrozenQuery.data]);
-
-  useEffect(() => {
-    if (themeQuery.data !== undefined) {
-      setTheme(themeQuery.data);
-    }
-  }, [themeQuery.data]);
 
   useEffect(() => {
     if (currencyQuery.data !== undefined) {
@@ -907,7 +895,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedBalances[currentWallet.id] || 0 : 0,
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduce retries to avoid hammering the API on iOS
     retryDelay: 15000, // Longer delay between retries
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1006,7 +994,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedTransactions[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch incoming/outgoing transactions
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API on iOS
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1056,8 +1044,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       }
     },
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
-    refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch new addresses
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchInterval: 60 * 1000, // Address discovery is the most expensive call; new addresses only appear after user action or new txs
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1157,7 +1145,7 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     placeholderData: currentWallet?.id ? persistedUtxos[currentWallet.id] || [] : [],
     enabled: !!currentWallet && !!currentWallet.xpub && cryptoReady && isWalletDataHydrated,
     refetchInterval: 30 * 1000, // Auto-refresh every 30 seconds to catch UTXO changes
-    refetchIntervalInBackground: true, // Continue polling even when component is not focused
+    refetchIntervalInBackground: false, // Pause polling while backgrounded; refetchOnWindowFocus catches up on foreground
     retry: 1, // Reduced retries to avoid hammering the API
     retryDelay: 15000, // Fixed 15 second delay
     staleTime: 0, // Always consider data stale to ensure refetchInterval works correctly
@@ -1264,19 +1252,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     },
   });
   const { mutate: saveCurrentWalletId } = saveCurrentWalletIdMutation;
-
-  // Save theme mutation
-  useMutation({
-    mutationFn: async (isDark: boolean) => {
-      const newTheme = isDark ? darkTheme : lightTheme;
-      await AsyncStorage.setItem('theme', isDark ? 'dark' : 'light');
-      return newTheme;
-    },
-    onSuccess: (newTheme) => {
-      setTheme(newTheme);
-      queryClient.invalidateQueries({ queryKey: ['theme'] });
-    },
-  });
 
   // Save currency mutation
   const saveCurrencyMutation = useMutation({
@@ -1847,7 +1822,10 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const refreshData = useCallback(async () => {
     try {
       console.log('🔄 Refreshing wallet data...');
-      
+
+      // Drop the getWalletData memo so the refetch below hits the network
+      clearWalletDataMemo();
+
       // Clear mock/test data
       await AsyncStorage.multiRemove([
         'mock_data', 'test_data', 'sample_data', 'dummy_data',
@@ -1855,44 +1833,18 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
         'sample_balance', 'sample_transactions', 'test_balance', 'test_transactions'
       ]);
 
-      // Clear ALL wallet-related caches and data to force completely fresh data
+      // Clear only the load-bearing caches for THIS wallet. These are the
+      // layers that would otherwise short-circuit the refetch below:
+      // - clearCacheForWalletXpub: persistent per-address txids/stats/utxos
+      //   (the address→txid list is what gates incoming-tx detection)
+      // - clearAddressCache: the in-memory discovery metadata (which
+      //   addresses get scanned at all)
+      // Other wallets' caches and the global tx-body cache stay intact —
+      // confirmed transaction bodies are immutable and never go stale.
       if (currentWallet?.xpub) {
-        console.log('🔄 Clearing ALL wallet data and caches...');
-        
-        // Clear address cache (both persistent and in-memory)
         await clearCacheForWalletXpub(currentWallet.xpub);
         clearAddressCache(currentWallet.xpub);
-        console.log('✅ Address cache cleared');
-        
-        // Clear empty UTXO caches that might be blocking fresh fetches
-        await clearEmptyUTXOCaches();
-        console.log('✅ Empty UTXO caches cleared');
-        
-        // Clear transaction cache to ensure fresh transaction data
-        await clearAllCache();
-        console.log('✅ Transaction cache cleared');
-        
-        // Clear ALL wallet-related AsyncStorage keys to ensure no stale data
-        const keysToRemove = [
-          // Address cache keys (constructed directly from xpub)
-          `addr_cache_${currentWallet.xpub}`,
-          `addr_wallet_${currentWallet.xpub}`,
-          `wallet_addrs_${currentWallet.xpub}`,
-          `wallet_txids_${currentWallet.xpub}`,
-          // Transaction cache keys
-          'tx_cache_confirmed',
-          'tx_cache_unconfirmed',
-          // General cache keys that might contain wallet data
-          // (Removed duplicate mock/test data keys already cleared earlier)
-        ];
-        
-        if (keysToRemove.length > 0) {
-          console.log(`🗑️ Removing ${keysToRemove.length} additional cache keys...`);
-          await AsyncStorage.multiRemove(keysToRemove);
-          console.log('✅ Additional cache keys cleared');
-        }
-        
-        console.log('✅ Complete wallet data refresh prepared');
+        console.log('✅ Wallet caches cleared for refresh');
       }
 
       // Invalidate and refetch React Query caches
@@ -2076,6 +2028,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       const allKeys = await AsyncStorage.getAllKeys();
       console.log('📋 Found AsyncStorage keys:', allKeys);
 
+      clearWalletDataMemo();
+
       // Clear all persisted wallet data before clearing AsyncStorage
       await clearAllPersistedWalletData();
       
@@ -2088,12 +2042,20 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       } catch (e) {
         console.warn('Failed to delete mnemonics from secure storage:', e);
       }
-      
+
+      // The PIN lives in SecureStore, which AsyncStorage.clear() below doesn't touch
+      try {
+        const { deletePin } = await import('@/services/secure-pin-service');
+        await deletePin();
+      } catch (e) {
+        console.warn('Failed to delete PIN from secure storage:', e);
+      }
+
       await AsyncStorage.clear();
 
       setWallets([]);
       setCurrentWalletId(null);
-      setTheme(lightTheme);
+      setThemeMode('system');
       setSelectedCurrency('USD');
       setHideBalance(false);
       setAutoLockTimeout(15);
@@ -2226,11 +2188,13 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
   const balanceData = useMemo(() => {
     const balance = balanceQuery.data ?? lastBalanceRef.current ?? 0;
 
+    // Note: only granular priceQuery fields belong here — putting the query
+    // object itself in the value/deps would give this memo a new identity on
+    // every store render, making BalanceContext churn for all its readers.
     return {
       balance,
       balanceUSD: balance * (priceQuery.data?.usd || 0),
       bitcoinPrice: priceQuery.data,
-      priceQuery,
       isLoadingBalance: balanceQuery.isLoading && lastBalanceRef.current === null,
       isRefreshingBalance: balanceQuery.isFetching && lastBalanceRef.current !== null,
       isLoadingPrice: priceQuery.isLoading,
@@ -2239,7 +2203,8 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
       balanceError: balanceQuery.error,
       priceError: priceQuery.error,
     };
-  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error, priceQuery]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [balanceQuery.data, balanceQuery.isLoading, balanceQuery.isFetching, balanceQuery.error, priceQuery.data, priceQuery.isLoading, priceQuery.error]);
 
   const stableTransactions = transactionsQuery.data ?? lastTransactionsRef.current;
   useEffect(() => {
@@ -2300,13 +2265,6 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     getCurrentFeeSettings,
     setFeeSettings,
   }), [theme, selectedCurrency, hideBalance, autoLockTimeout, feeSettings, feeSettingsLoading, getCurrentFeeSettings, setFeeSettings]);
-
-  // Theme toggle function
-  const toggleTheme = useCallback(() => {
-    const newTheme = theme === lightTheme ? darkTheme : lightTheme;
-    setTheme(newTheme);
-    AsyncStorage.setItem('theme', theme === lightTheme ? 'dark' : 'light');
-  }, [theme]);
 
   // Set currency function
   const setCurrency = useCallback((currency: FiatCurrency) => {
@@ -2545,22 +2503,15 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     }
   }, []);
 
-  // Memoize the final returned object to prevent unnecessary re-renders
-  const walletStoreData = useMemo(() => ({
-    ...walletData,
-    ...balanceData,
-    ...transactionData,
-    ...addressesData,
-    ...utxosData,
-    ...settingsData,
-    ...actionsData,
-    coinControl: coinControlData,
-    ...feedbackData,
+  // Loose fields that don't belong to any data slice
+  const metaData = useMemo(() => ({
     isCreatingWallet: saveWalletsMutation.isPending,
     setAddressStatsCache,
     getAddressStatsCacheValue,
     getMnemonic, // Helper to retrieve mnemonic from secure storage
-  }), [
+  }), [saveWalletsMutation.isPending, setAddressStatsCache, getAddressStatsCacheValue, getMnemonic]);
+
+  return {
     walletData,
     balanceData,
     transactionData,
@@ -2570,11 +2521,41 @@ export const [WalletProvider, useWallet] = createContextHook(() => {
     actionsData,
     coinControlData,
     feedbackData,
-    saveWalletsMutation.isPending,
-    setAddressStatsCache,
-    getAddressStatsCacheValue,
-    getMnemonic,
-  ]);
+    metaData,
+  };
+}
 
-  return walletStoreData;
-});
+export type WalletStoreSlices = ReturnType<typeof useWalletStoreState>;
+
+export function WalletProvider({ children }: { children: ReactNode }) {
+  const s = useWalletStoreState();
+
+  // Each slice is an already-memoized object from the store body, so a
+  // context only notifies its readers when that slice actually changed.
+  // `children` identity is stable (created in app/_layout.tsx), so React
+  // bails out of re-rendering the subtree except for context readers.
+  return (
+    <WalletsContext.Provider value={s.walletData}>
+      <BalanceContext.Provider value={s.balanceData}>
+        <TransactionsContext.Provider value={s.transactionData}>
+          <AddressesContext.Provider value={s.addressesData}>
+            <UtxosContext.Provider value={s.utxosData}>
+              <SettingsContext.Provider value={s.settingsData}>
+                <ActionsContext.Provider value={s.actionsData}>
+                  <CoinControlContext.Provider value={s.coinControlData}>
+                    <FeedbackContext.Provider value={s.feedbackData}>
+                      <WalletMetaContext.Provider value={s.metaData}>
+                        {children}
+                      </WalletMetaContext.Provider>
+                    </FeedbackContext.Provider>
+                  </CoinControlContext.Provider>
+                </ActionsContext.Provider>
+              </SettingsContext.Provider>
+            </UtxosContext.Provider>
+          </AddressesContext.Provider>
+        </TransactionsContext.Provider>
+      </BalanceContext.Provider>
+    </WalletsContext.Provider>
+  );
+}
+

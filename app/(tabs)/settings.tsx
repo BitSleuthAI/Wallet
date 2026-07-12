@@ -1,10 +1,13 @@
+import { ScreenLoading } from '@/components/ScreenLoading';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import { WalletsContext, useWalletActions, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { APP_VERSION } from '@/constants/app-version';
 
@@ -31,17 +34,17 @@ import {
     Scale,
     Settings,
     Shield,
+    Smartphone,
     Sun,
     UserX,
     Wallet,
     X
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
     Alert,
     Modal,
     Platform,
-    Animated as RNAnimated,
     SafeAreaView,
     ScrollView,
     StyleSheet,
@@ -55,26 +58,27 @@ import ReanimatedAnimated, {
     withSpring,
 } from 'react-native-reanimated';
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function SettingsScreen() {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+  if (!walletData) {
+    return <ScreenLoading />;
   }
-  
+
   return <SettingsScreenContent />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. Narrow subscriptions: settings renders no
+// polled data, so it stays idle across the 30s balance/tx/utxo refreshes.
 function SettingsScreenContent() {
-  const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
-  const { theme, toggleTheme, logoutAndEraseWallet, currentWallet, wallets, switchWallet, selectedCurrency, setCurrency, getCurrencyName, hideBalance, setHideBalanceSetting } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { animatedStyle } = useTabAnimation(); // Settings tab
+  const { currentWallet, wallets } = useWallets();
+  const { toggleTheme, logoutAndEraseWallet, switchWallet, setCurrency, getCurrencyName, setHideBalanceSetting } = useWalletActions();
+  const { selectedCurrency, hideBalance } = useWalletSettings();
+  const { theme, themeMode, setThemeMode } = useTheme();
   const { autoLockTimeout, setAutoLockTimeout } = useAutoLock();
   
   // Initialize all state hooks
@@ -176,7 +180,7 @@ function SettingsScreenContent() {
     showDivider?: boolean;
   }) => (
     <>
-      <TouchableOpacity
+      <PressableOpacity
         style={styles.settingItem}
         onPress={() => {
           if (onPress) {
@@ -201,7 +205,7 @@ function SettingsScreenContent() {
           )}
         </View>
         {rightElement || (onPress && <ChevronRight color={theme.colors.textSecondary} size={20} />)}
-      </TouchableOpacity>
+      </PressableOpacity>
       {showDivider && (
         <View style={[styles.divider, { backgroundColor: theme.colors.border }]} />
       )}
@@ -236,7 +240,7 @@ function SettingsScreenContent() {
           }} 
         />
         
-        <RNAnimated.View style={[styles.animatedContainer, animatedStyle]}>
+        <ReanimatedAnimated.View style={[styles.animatedContainer, animatedStyle]}>
         <ScrollView 
           style={styles.scrollView} 
           contentContainerStyle={styles.scrollContent}
@@ -307,6 +311,24 @@ function SettingsScreenContent() {
                   onValueChange={setHideBalanceSetting}
                   theme={theme}
                   testID="hide-balance-switch"
+                />
+              </View>
+            }
+            />
+
+            <SettingItem
+              icon={Smartphone}
+              title="Match System Appearance"
+              subtitle="Follow your device's light/dark setting"
+              rightElement={
+              <View style={styles.themeToggle}>
+                <ThemedSwitch
+                  value={themeMode === 'system'}
+                  onValueChange={(followSystem) =>
+                    setThemeMode(followSystem ? 'system' : (theme.isDark ? 'dark' : 'light'))
+                  }
+                  theme={theme}
+                  testID="system-theme-switch"
                 />
               </View>
             }
@@ -435,32 +457,31 @@ function SettingsScreenContent() {
             </View>
           </AnimatedTouchable>
         </ScrollView>
-      </RNAnimated.View>
+      </ReanimatedAnimated.View>
 
       {/* Currency Selection Modal */}
       <Modal
         visible={showCurrencyModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowCurrencyModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Currency
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowCurrencyModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
               {(['USD', 'EUR', 'GBP'] as FiatCurrency[]).map((currency) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={currency}
                   style={[
                     styles.currencyItem,
@@ -469,6 +490,7 @@ function SettingsScreenContent() {
                     },
                   ]}
                   onPress={() => {
+                    HapticService.light();
                     setCurrency(currency);
                     setShowCurrencyModal(false);
                   }}
@@ -484,32 +506,30 @@ function SettingsScreenContent() {
                   {selectedCurrency === currency && (
                     <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
 
       {/* Auto-Lock Selection Modal */}
       <Modal
         visible={showAutoLockModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowAutoLockModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Auto-Lock Timer
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowAutoLockModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
@@ -520,7 +540,7 @@ function SettingsScreenContent() {
                 { value: 60, label: '1 hour' },
                 { value: -1, label: 'Never' },
               ].map((option) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={option.value}
                   style={[
                     styles.currencyItem,
@@ -530,6 +550,7 @@ function SettingsScreenContent() {
                   ]}
                   onPress={async () => {
                     try {
+                      HapticService.light();
                       await setAutoLockTimeout(option.value);
                       setShowAutoLockModal(false);
                     } catch (error) {
@@ -552,37 +573,35 @@ function SettingsScreenContent() {
                   {autoLockTimeout === option.value && (
                     <View style={[styles.selectedIndicator, { backgroundColor: theme.colors.primary }]} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
 
       {/* Wallet Selection Modal */}
       <Modal
         visible={showWalletModal}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={() => setShowWalletModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
-            <View style={styles.modalHeader}>
+          <View style={[styles.modalContent, { backgroundColor: theme.colors.background }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: theme.colors.border }]}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
                 Select Wallet
               </Text>
-              <TouchableOpacity
+              <PressableOpacity
                 onPress={() => setShowWalletModal(false)}
                 style={styles.modalCloseButton}
               >
                 <X color={theme.colors.textSecondary} size={24} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             
             <ScrollView style={styles.currencyList}>
               {wallets.map((wallet) => (
-                <TouchableOpacity
+                <PressableOpacity
                   key={wallet.id}
                   style={[
                     styles.walletItem,
@@ -591,6 +610,7 @@ function SettingsScreenContent() {
                     },
                   ]}
                   onPress={() => {
+                    HapticService.light();
                     switchWallet(wallet.id);
                     setShowWalletModal(false);
                   }}
@@ -610,11 +630,10 @@ function SettingsScreenContent() {
                   {currentWallet?.id === wallet.id && (
                     <Check color={theme.colors.primary} size={20} />
                   )}
-                </TouchableOpacity>
+                </PressableOpacity>
               ))}
             </ScrollView>
           </View>
-        </View>
       </Modal>
     </SafeAreaView>
     </GradientBackground>
@@ -735,25 +754,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF', // Always white on colored logout button
     letterSpacing: 0.5, // Increased from 0.3
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased from 0.5
-    justifyContent: 'flex-end',
-  },
   modalContent: {
-    borderTopLeftRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    borderTopRightRadius: platformStyles.borderRadius.xxxl,
-    paddingTop: platformStyles.spacing.xxl, // Increased from xl
-    maxHeight: '70%',
+    flex: 1,
+    paddingTop: platformStyles.spacing.xxl,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: platformStyles.spacing.xxl, // Increased from xl
-    paddingBottom: platformStyles.spacing.xxl, // Increased from xl
+    paddingHorizontal: platformStyles.spacing.xxl,
+    paddingBottom: platformStyles.spacing.xxl,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
   },
   modalTitle: {
     fontSize: 24, // Increased from 21

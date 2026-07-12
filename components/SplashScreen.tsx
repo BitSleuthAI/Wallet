@@ -1,13 +1,19 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect } from 'react';
 import {
-  Animated,
   Platform,
   StatusBar,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import { APP_VERSION } from '@/constants/app-version';
 
@@ -15,56 +21,40 @@ interface SplashScreenProps {
   onAnimationComplete?: () => void;
 }
 
+// Sequence timing: logo entrance (600ms) -> text fade (800ms) -> hold (1500ms)
+const LOGO_DURATION_MS = 600;
+const TEXT_DURATION_MS = 800;
+const HOLD_DURATION_MS = 1500;
+
 export default function SplashScreen({ onAnimationComplete }: SplashScreenProps) {
-  const logoScale = useRef(new Animated.Value(0)).current;
-  const logoOpacity = useRef(new Animated.Value(0)).current;
-  const textOpacity = useRef(new Animated.Value(0)).current;
-  const magnifyingGlassScale = useRef(new Animated.Value(0)).current;
+  const logoOpacity = useSharedValue(0);
+  const textOpacity = useSharedValue(0);
+  const magnifyingGlassScale = useSharedValue(0);
 
   useEffect(() => {
-    const startAnimation = () => {
-      // Reset values
-      logoScale.setValue(0);
-      logoOpacity.setValue(0);
-      textOpacity.setValue(0);
-      magnifyingGlassScale.setValue(0);
+    // Magnifying glass entrance with bounce, logo fade in parallel
+    magnifyingGlassScale.value = withSpring(1, { damping: 9, stiffness: 60, mass: 1 });
+    logoOpacity.value = withTiming(1, { duration: LOGO_DURATION_MS });
 
-      // Create animation sequence
-      const animationSequence = Animated.sequence([
-        // Magnifying glass entrance with bounce
-        Animated.parallel([
-          Animated.spring(magnifyingGlassScale, {
-            toValue: 1,
-            tension: 20,
-            friction: 7,
-            useNativeDriver: true,
-          }),
-          Animated.timing(logoOpacity, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: true,
-          }),
-        ]),
-        // Text fade in
-        Animated.timing(textOpacity, {
-          toValue: 1,
-          duration: 800,
-          useNativeDriver: true,
-        }),
-        // Hold for a moment
-        Animated.delay(1500),
-      ]);
+    // Text fade in after the logo settles
+    textOpacity.value = withDelay(LOGO_DURATION_MS, withTiming(1, { duration: TEXT_DURATION_MS }));
 
-      animationSequence.start(() => {
-        // Animation complete, trigger callback
-        if (onAnimationComplete) {
-          onAnimationComplete();
-        }
-      });
-    };
+    // Completion is scheduled on the JS side for deterministic timing
+    const completeTimeout = setTimeout(() => {
+      onAnimationComplete?.();
+    }, LOGO_DURATION_MS + TEXT_DURATION_MS + HOLD_DURATION_MS);
 
-    startAnimation();
-  }, [onAnimationComplete, logoOpacity, logoScale, magnifyingGlassScale, textOpacity]);
+    return () => clearTimeout(completeTimeout);
+  }, [onAnimationComplete, logoOpacity, magnifyingGlassScale, textOpacity]);
+
+  const logoStyle = useAnimatedStyle(() => ({
+    opacity: logoOpacity.value,
+    transform: [{ scale: magnifyingGlassScale.value }],
+  }));
+
+  const textStyle = useAnimatedStyle(() => ({
+    opacity: textOpacity.value,
+  }));
 
   return (
     <View style={styles.container}>
@@ -80,15 +70,7 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
         {/* Main content container */}
         <View style={styles.content}>
           {/* Magnifying Glass Logo Container */}
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              {
-                opacity: logoOpacity,
-                transform: [{ scale: magnifyingGlassScale }],
-              },
-            ]}
-          >
+          <Animated.View style={[styles.logoContainer, logoStyle]}>
             {/* Static Magnifying Glass Logo - Exact replica of the provided image */}
             <Svg width={180} height={180} viewBox="0 0 24 24">
               {/* Main magnifying glass circle */}
@@ -112,17 +94,17 @@ export default function SplashScreen({ onAnimationComplete }: SplashScreenProps)
           </Animated.View>
 
           {/* App name */}
-          <Animated.View style={{ opacity: textOpacity }}>
+          <Animated.View style={textStyle}>
             <Text style={styles.appName}>BitSleuth</Text>
           </Animated.View>
 
           {/* App tagline */}
-          <Animated.View style={{ opacity: textOpacity }}>
+          <Animated.View style={textStyle}>
             <Text style={styles.appTagline}>secure • private • trusted</Text>
           </Animated.View>
 
           {/* Version and description */}
-          <Animated.View style={[styles.versionContainer, { opacity: textOpacity }]}>
+          <Animated.View style={[styles.versionContainer, textStyle]}>
             <Text style={styles.versionText}>{`v${APP_VERSION}`}</Text>
             <Text style={styles.walletText}>Bitcoin Wallet</Text>
           </Animated.View>

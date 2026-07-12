@@ -48,39 +48,30 @@ export const GradientBackground: React.FC<GradientBackgroundProps> = ({
           return [theme.colors.background, theme.colors.surface, theme.colors.background];
       }
     } else {
-      // Light mode - ensure gradients end with solid white at bottom for tab bar consistency
+      // Light mode mirrors the dark branch: soft system-grey background with a
+      // subtle warm glow, ending in solid surface white for tab bar consistency
       switch (variant) {
         case 'primary':
-          // Beautiful coral gradient that fades to solid white at bottom
-          return [
-            '#FFE5DB',  // Light peach
-            '#FFD4C4',  // Soft coral
-            '#FFF5F0',  // Very light peach
-            '#FFFFFF',  // Pure white at bottom for tab bar
-          ];
+          return [theme.colors.background, theme.colors.surface, theme.colors.surface];
         case 'secondary':
-          return [
-            '#FFE5DB',
-            '#FFDDD2',
-            '#FFFFFF', // Pure white at bottom
-          ];
+          return [theme.colors.surfaceDark, theme.colors.surface, theme.colors.surface];
         case 'accent':
           return [
-            '#FFC3AD',
-            '#FFD4C4',
-            '#FFFFFF', // Pure white at bottom
+            `${theme.colors.glowPrimary}`,
+            theme.colors.background,
+            theme.colors.surface, // End with solid surface for tab bar
           ];
         case 'subtle':
-          return ['#FFF5F0', '#FFE5DB', '#FFFFFF'];
+          return [theme.colors.background, theme.colors.surface, theme.colors.surface];
         case 'glow':
           return [
-            '#FFE5DB',
-            '#FFC3AD',
-            '#FFF5F0',
-            '#FFFFFF', // Pure white at bottom
+            theme.colors.background,
+            `${theme.colors.glowPrimary}`,
+            `${theme.colors.glowSecondary}`,
+            theme.colors.surface, // End with solid surface for tab bar
           ];
         default:
-          return ['#FFE5DB', '#FFD4C4', '#FFFFFF'];
+          return [theme.colors.background, theme.colors.surface, theme.colors.surface];
       }
     }
   }, [theme.isDark, theme.colors.background, theme.colors.surface, theme.colors.surfaceDark, theme.colors.glowPrimary, theme.colors.glowSecondary, variant]);

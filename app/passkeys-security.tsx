@@ -1,8 +1,9 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { secureAuthService, SecuritySettings } from '@/services/secure-auth-service';
 import { securityGuard } from '@/services/security-guard-service';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -20,12 +21,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
 export default function PasskeysSecurityScreen() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   const { biometricEnabled, enableBiometric, disableBiometric } = useAutoLock();
   const [biometricAvailable, setBiometricAvailable] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -190,13 +190,13 @@ export default function PasskeysSecurityScreen() {
           
           {/* Custom Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.backButton}
               onPress={handleBack}
               testID="back-button"
             >
               <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Biometric Authentication
           </Text>
@@ -224,13 +224,13 @@ export default function PasskeysSecurityScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Biometric Authentication
           </Text>
@@ -260,7 +260,7 @@ export default function PasskeysSecurityScreen() {
               Authentication Settings
             </Text>
             
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.biometricItem, { backgroundColor: theme.colors.surface }]}
               onPress={handleToggleBiometric}
             >
@@ -284,7 +284,7 @@ export default function PasskeysSecurityScreen() {
                   { transform: [{ translateX: biometricEnabled ? 20 : 2 }] }
                 ]} />
               </View>
-            </TouchableOpacity>
+            </PressableOpacity>
 
             <View style={[styles.settingItem, { backgroundColor: theme.colors.surface, marginTop: 12 }]}>
               <View style={styles.settingContent}>
@@ -295,7 +295,7 @@ export default function PasskeysSecurityScreen() {
                   {Platform.OS === 'android' ? 'Biometric' : 'Face ID/Touch ID'} required before sending funds
                 </Text>
               </View>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.toggle, { backgroundColor: securitySettings.requireBiometricForTransactions ? theme.colors.primary : theme.colors.textSecondary + '40' }]}
                 onPress={() => handleSecuritySettingChange('requireBiometricForTransactions', !securitySettings.requireBiometricForTransactions)}
               >
@@ -303,7 +303,7 @@ export default function PasskeysSecurityScreen() {
                   styles.toggleThumb,
                   { transform: [{ translateX: securitySettings.requireBiometricForTransactions ? 20 : 2 }] }
                 ]} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
         )}

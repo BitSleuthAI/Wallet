@@ -1,6 +1,7 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft } from 'lucide-react-native';
 import React from 'react';
@@ -9,12 +10,11 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
 export default function LegalDisclaimerScreen() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
 
   const Section = ({ title, children }: { title: string; children: React.ReactNode }) => (
     <View style={styles.section}>
@@ -51,13 +51,13 @@ export default function LegalDisclaimerScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Legal Disclaimer
           </Text>
@@ -138,11 +138,11 @@ export default function LegalDisclaimerScreen() {
             <Text style={[styles.paragraph, { color: theme.colors.text }]}>
               If you have questions about this Disclaimer, please contact us:
             </Text>
-            <TouchableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
+            <PressableOpacity onPress={() => Linking.openURL('mailto:hello@bitsleuth.ai')}>
               <Text style={[styles.contactEmail, { color: theme.colors.primary }]}>
                 📧 hello@bitsleuth.ai
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </Section>
 
           <View style={styles.footer}>

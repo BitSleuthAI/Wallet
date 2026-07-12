@@ -1,7 +1,9 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletBalance, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { getTransactionDetails } from '@/services/esplora-service';
 import { Transaction, Wallet } from '@/types/wallet';
 import * as Clipboard from 'expo-clipboard';
@@ -19,7 +21,6 @@ import {
     ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -101,7 +102,11 @@ interface ExtendedTransactionDetails extends Omit<Transaction, 'status'> {
 
 export default function TransactionExplorerScreen() {
   const { txid } = useLocalSearchParams<{ txid: string }>();
-  const { theme, transactions, bitcoinPrice, currentWallet, formatCurrency } = useWallet();
+  const { theme } = useTheme();
+  const { transactions } = useWalletTransactions();
+  const { bitcoinPrice } = useWalletBalance();
+  const { currentWallet } = useWallets();
+  const { formatCurrency } = useWalletActions();
   const lastDetailsRef = useRef<Record<string, Transaction>>({});
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [explorerData, setExplorerData] = useState<TransactionExplorerData | null>(null);
@@ -213,13 +218,13 @@ export default function TransactionExplorerScreen() {
           
           {/* Custom Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
               testID="back-button"
             >
               <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
               Transaction
             </Text>
@@ -246,13 +251,13 @@ export default function TransactionExplorerScreen() {
           
           {/* Custom Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.backButton}
               onPress={() => router.back()}
               testID="back-button"
             >
               <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
               Transaction
             </Text>
@@ -284,13 +289,13 @@ export default function TransactionExplorerScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Transaction
           </Text>
@@ -311,14 +316,14 @@ export default function TransactionExplorerScreen() {
               Broadcasted on {formatDate(explorerData.timestamp)}
             </Text>
           </View>
-          <TouchableOpacity 
+          <PressableOpacity 
             style={styles.txidContainer}
             onPress={() => copyToClipboard(explorerData.txid)}
           >
             <Text style={[styles.txid, { color: theme.colors.textSecondary }]} numberOfLines={2}>
               {explorerData.txid}
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {/* Summary Card */}
@@ -469,7 +474,7 @@ export default function TransactionExplorerScreen() {
           </Text>
           
           {explorerData.inputs.map((input, index) => (
-            <TouchableOpacity 
+            <PressableOpacity 
               key={index}
               style={styles.addressRow}
               onPress={() => copyToClipboard(input.address)}
@@ -480,7 +485,7 @@ export default function TransactionExplorerScreen() {
               <Text style={[styles.addressValue, { color: theme.colors.text }]}>
                 {input.value.toFixed(8)}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
 
@@ -491,7 +496,7 @@ export default function TransactionExplorerScreen() {
           </Text>
           
           {explorerData.outputs.map((output, index) => (
-            <TouchableOpacity 
+            <PressableOpacity 
               key={index}
               style={styles.addressRow}
               onPress={() => copyToClipboard(output.address)}
@@ -502,7 +507,7 @@ export default function TransactionExplorerScreen() {
               <Text style={[styles.addressValue, { color: theme.colors.text }]}>
                 {output.value.toFixed(8)}
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           ))}
         </View>
         </ScrollView>

@@ -80,6 +80,22 @@ export async function getCachedAddressTxIds(address: string): Promise<string[] |
   }
 }
 
+/**
+ * Read the persisted txid list ignoring its TTL. Used by paginated tx
+ * fetching to reassemble already-fetched deep history (confirmed bodies are
+ * cached permanently, so a stale txid list still points at valid data).
+ */
+export async function getCachedAddressTxIdsAnyAge(address: string): Promise<string[] | null> {
+  try {
+    const raw = await AsyncStorage.getItem(KEY_TXIDS(address));
+    const { data } = hydrateCacheEntry<string[]>(raw, 0); // ttl 0 → no expiry check
+    return Array.isArray(data) ? data : null;
+  } catch (error) {
+    console.warn('Failed to read cached address txids (any age):', error);
+    return null;
+  }
+}
+
 export async function setCachedAddressTxIds(address: string, txids: string[], xpubHint?: string): Promise<void> {
   try {
     const uniqueTxids = unique(txids);

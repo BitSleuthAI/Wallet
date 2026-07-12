@@ -1,15 +1,16 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext, useWalletActions, useWallets } from '@/hooks/wallet-contexts';
 import { Wallet } from '@/types/wallet';
 import { Check, ChevronDown } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useContext, useState } from 'react';
 import {
     FlatList,
     Modal,
     SafeAreaView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -18,21 +19,25 @@ interface WalletSelectorProps {
   onWalletChange?: (wallet: Wallet) => void;
 }
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletSelector({ label, onWalletChange }: WalletSelectorProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
+
   return <WalletSelectorContent label={label} onWalletChange={onWalletChange} />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. Narrow subscriptions: none of these slices
+// change on the 30s data polls, so this component stays idle between them.
 function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
-  const { wallets, currentWallet, switchWallet, theme } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { wallets, currentWallet } = useWallets();
+  const { switchWallet } = useWalletActions();
+  const { theme } = useTheme();
   
   // Initialize state hooks
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -51,7 +56,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
     const isSelected = item.id === currentWallet?.id;
     
     return (
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.walletItem,
           {
@@ -82,7 +87,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
         {isSelected && (
           <Check color={theme.colors.primary} size={20} />
         )}
-      </TouchableOpacity>
+      </PressableOpacity>
     );
   };
 
@@ -96,7 +101,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
         {label}
       </Text>
       
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.selector,
           {
@@ -117,7 +122,7 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
           </Text>
         </View>
         <ChevronDown color={theme.colors.textSecondary} size={20} />
-      </TouchableOpacity>
+      </PressableOpacity>
 
       <Modal
         visible={isModalVisible}
@@ -130,14 +135,14 @@ function WalletSelectorContent({ label, onWalletChange }: WalletSelectorProps) {
             <Text style={[styles.modalTitle, { color: theme.colors.text }]}>
               Select Wallet
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.closeButton}
               onPress={() => setIsModalVisible(false)}
             >
               <Text style={[styles.closeButtonText, { color: theme.colors.primary }]}>
                 Done
               </Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
           
           <FlatList

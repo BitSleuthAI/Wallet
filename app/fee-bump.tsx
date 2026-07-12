@@ -1,7 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { AppButton } from '@/components/AppButton';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletMeta, useWalletSettings, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { feeEstimationService } from '@/services/fee-service';
 import { cancelTransaction, performRBF, validateRBFTransaction } from '@/services/rbf-service';
 import { Transaction } from '@/types/wallet';
@@ -16,7 +19,6 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
 
@@ -28,7 +30,11 @@ type FeeOption = {
 
 export default function FeeBumpScreen() {
   const { txid, mode } = useLocalSearchParams<{ txid: string; mode?: 'rbf' | 'cpfp' }>();
-  const { theme, transactions, currentWallet, feeSettings, getMnemonic } = useWallet();
+  const { theme } = useTheme();
+  const { transactions } = useWalletTransactions();
+  const { currentWallet } = useWallets();
+  const { feeSettings } = useWalletSettings();
+  const { getMnemonic } = useWalletMeta();
   const [transaction, setTransaction] = useState<Transaction | null>(null);
   const [feeOptions, setFeeOptions] = useState<FeeOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<string>('Fast');
@@ -531,7 +537,7 @@ export default function FeeBumpScreen() {
             <ActivityIndicator color={theme.colors.primary} size="small" />
           ) : (
             feeOptions.map((option) => (
-              <TouchableOpacity
+              <PressableOpacity
                 key={option.label}
                 style={[
                   styles.feeOption,
@@ -564,12 +570,12 @@ export default function FeeBumpScreen() {
                     <Check color={theme.colors.primary} size={20} />
                   )}
                 </View>
-              </TouchableOpacity>
+              </PressableOpacity>
             ))
           )}
           
           {/* Custom Fee Option */}
-          <TouchableOpacity
+          <PressableOpacity
             style={[
               styles.feeOption,
               selectedOption === 'Custom' && {
@@ -610,7 +616,7 @@ export default function FeeBumpScreen() {
                 sat/b
               </Text>
             </View>
-          </TouchableOpacity>
+          </PressableOpacity>
           
           {/* Custom Fee Validation Feedback */}
           {selectedOption === 'Custom' && customFeeRate && (
@@ -659,25 +665,17 @@ export default function FeeBumpScreen() {
 
         {/* Bottom Actions */}
         <View style={[styles.bottomActions, { backgroundColor: theme.colors.surface + 'F0', borderTopColor: theme.colors.border }]}>
-        <TouchableOpacity
-          style={[
-            styles.actionButton,
-            styles.bumpButton,
-            { backgroundColor: theme.colors.primary },
-            (!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
-          ]}
+        <AppButton
+          title="Bump Fee"
           onPress={handleCreateRBF}
-          disabled={!isValidFeeRate() || !canReplace || isValidating || isBumpingFee || isCancelling}
-        >
-          {isBumpingFee ? (
-            <ActivityIndicator color="white" size="small" />
-          ) : (
-            <Text style={styles.bumpButtonText}>Bump Fee</Text>
-          )}
-        </TouchableOpacity>
+          disabled={!isValidFeeRate() || !canReplace || isValidating || isCancelling}
+          loading={isBumpingFee}
+          style={styles.bumpFeeButton}
+          testID="bump-fee-button"
+        />
         
         {!isCPFPMode && (
-          <TouchableOpacity
+          <PressableOpacity
             style={[
               styles.cancelButton,
               (!canReplace || isValidating || isBumpingFee || isCancelling) && { opacity: 0.5 }
@@ -690,14 +688,14 @@ export default function FeeBumpScreen() {
             ) : (
               <Text style={[styles.cancelButtonText, { color: theme.colors.error }]}>Cancel Transaction</Text>
             )}
-          </TouchableOpacity>
+          </PressableOpacity>
         )}
         
-        <TouchableOpacity style={styles.detailsButton}>
+        <PressableOpacity style={styles.detailsButton}>
           <Text style={[styles.detailsButtonText, { color: theme.colors.textSecondary }]}>
             details
           </Text>
-        </TouchableOpacity>
+        </PressableOpacity>
         </View>
       </AndroidSafeContainer>
     </GradientBackground>
@@ -896,20 +894,8 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     marginTop: platformStyles.spacing.sm,
   },
-  actionButton: {
-    paddingVertical: platformStyles.spacing.md,
-    paddingHorizontal: platformStyles.spacing.xl,
-    borderRadius: platformStyles.borderRadius.medium,
-    alignItems: 'center',
+  bumpFeeButton: {
     marginBottom: platformStyles.spacing.md,
-  },
-  bumpButton: {
-    // Styles for bump fee button
-  },
-  bumpButtonText: {
-    color: 'white',
-    ...platformStyles.typography.bodyLarge,
-    fontWeight: '600',
   },
   cancelButton: {
     paddingVertical: platformStyles.spacing.md,

@@ -1,22 +1,33 @@
 /**
  * Cache Configuration Constants
- * 
+ *
  * These constants control cache behavior across the app.
  * Centralizing them ensures consistency and easier maintenance.
  */
 
 /**
- * Fresh Launch Threshold
- * 
- * The app will clear all caches if this amount of time has passed since the last launch.
- * This ensures physical devices get fresh data even when the app version hasn't changed.
- * 
- * Recommended values:
- * - 5 minutes (production): Good balance between fresh data and performance
- * - 1 minute (testing): Faster cache invalidation for debugging
- * - 15 minutes (low-bandwidth): Less frequent refreshes to save data
+ * Esplora pagination
+ *
+ * /address/{addr}/txs returns up to ~50 mempool txs plus the first 25
+ * confirmed txs; deeper confirmed history is fetched page-by-page via
+ * /address/{addr}/txs/chain/{last_seen_txid} (25 confirmed txs per page).
  */
-export const FRESH_LAUNCH_THRESHOLD_MS = 5 * 60 * 1000; // 5 minutes
+export const ESPLORA_CONFIRMED_PAGE_SIZE = 25;
+
+/** Max continuation pages fetched per address per scan (6 pages ≈ 150 extra confirmed txs, ~175 total). */
+export const MAX_TX_CHAIN_PAGES_PER_ADDRESS = 6;
+
+/**
+ * Session-cache TTL for /txs/chain pages. Pages are keyed by last_seen_txid,
+ * so their contents are immutable confirmed history — long TTL is safe.
+ * (A deep reorg could theoretically invalidate a page; page 1 is always
+ * refetched on txid-list expiry, which covers the reorg-prone chain tip.)
+ */
+export const TX_CHAIN_PAGE_TTL_MS = 24 * 60 * 60 * 1000;
+
+/** Cap on the merged wallet transaction list (the history screen is a virtualized FlatList). */
+export const WALLET_TRANSACTIONS_DISPLAY_LIMIT = 300;
+
 
 /**
  * Address Cache TTLs

@@ -4,15 +4,21 @@
  */
 
 import {
+  ESPLORA_CONFIRMED_PAGE_SIZE,
+  MAX_TX_CHAIN_PAGES_PER_ADDRESS,
+  TX_CHAIN_PAGE_TTL_MS,
+} from '../constants/cache';
+import {
   getCachedAddressStats,
   getCachedAddressTransactions,
+  getCachedAddressTxIdsAnyAge,
   getCachedAddressUTXOs,
   setCachedAddressStats,
   setCachedAddressTxIds,
   setCachedAddressUTXOs
 } from './address-cache-service';
 import { reliableFetch } from './networking-polyfill';
-import { cacheTransaction, cacheTransactions, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
+import { cacheTransaction, cacheTransactions, getCachedTransaction, getCachedTransactionIds, loadTransactionCache } from './transaction-cache-service';
 
 const BLOCKSTREAM_API_BASE = 'https://blockstream.info/api';
 const MEMPOOL_SPACE_API_BASE = 'https://mempool.space/api';
@@ -433,7 +439,21 @@ async function fetchJsonXHR(url: string, options?: RequestInit, timeoutMs: numbe
  * - Caches confirmed transactions permanently
  * - Caches unconfirmed transactions for 2 minutes
  */
-export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpubHint?: string): Promise<any> {
+export async function esploraGet(
+  path: string,
+  cacheTtlMs: number = 600000,
+  xpubHint?: string,
+  opts?: {
+    /**
+     * For /address/{addr}/txs requests: skip the cached-list short-circuit
+     * and return the raw API page WITHOUT merging in cached bodies. Used by
+     * paginated fetching, which derives its continuation cursor from the
+     * last confirmed tx of the page — a merged response could put an
+     * arbitrarily old cached tx there and silently skip history.
+     */
+    rawAddressTxs?: boolean;
+  }
+): Promise<any> {
   // Load transaction cache if not already loaded
   await loadTransactionCache();
   
@@ -449,6 +469,7 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   // - Bech32 (bc1q...): starts with bc1q, 42-62 chars, bech32
   // - Bech32m (bc1p...): starts with bc1p, 62 chars, bech32m
   const addressTxMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs$/);
+  const addressTxChainMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/txs\/chain\/([a-f0-9]{64})$/);
   const addressStatsMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})$/);
   const addressUtxoMatch = path.match(/^\/address\/((?:[13]|bc1)[a-zA-HJ-NP-Z0-9]{25,62})\/utxo$/);
   
@@ -469,7 +490,8 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
   }
   
   // For bulk address requests, check cache and filter out what we already have
-  if (addressTxMatch) {
+  // (raw mode skips this — its caller checked the cache before deciding to paginate)
+  if (addressTxMatch && !opts?.rawAddressTxs) {
     // If we already have cached transactions for this address, return them immediately
     const address = addressTxMatch[1];
     const cachedAddressTxs = await getCachedAddressTransactions(address);
@@ -580,7 +602,9 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
         // Create deduplication key from path to avoid duplicate concurrent requests
         // Timeout: 30s for slow networks/large responses (balance of reliability vs UX)
         // Note: UI should show loading states for operations >5s
-        const dedupeKey = `esplora:${path}`;
+        // Raw address-tx requests get their own dedupe key so they never
+        // receive a merged response from a concurrent plain /txs request
+        const dedupeKey = opts?.rawAddressTxs ? `esplora:${path}:raw` : `esplora:${path}`;
         const data = await requestQueue.enqueue(() => fetchJson(url, {}, 30000), dedupeKey);
         
         console.log(`✅ Success from ${base} for ${path}`);
@@ -635,32 +659,45 @@ export async function esploraGet(path: string, cacheTtlMs: number = 600000, xpub
               await setCachedAddressTxIds(currentAddress, txidsFromApi, xpubHint);
             }
 
-            const allCachedTxs: any[] = [];
-            if (currentAddress) {
-              for (const txid of cachedTxIds) {
-                const cached = getCachedTransaction(txid);
-                // Only include cached transactions that:
-                // 1. Exist in cache
-                // 2. Are NOT in the fresh API response (to avoid duplicates)
-                // 3. Belong to the current address (check inputs and outputs)
-                if (cached && !data.find(tx => tx.txid === txid)) {
-                  // Check if this transaction belongs to the current address
-                  const belongsToAddress = 
-                    cached.vin?.some((input: any) => input.prevout?.scriptpubkey_address === currentAddress) ||
-                    cached.vout?.some((output: any) => output.scriptpubkey_address === currentAddress);
-                  
-                  if (belongsToAddress) {
-                    allCachedTxs.push(cached);
+            // Raw mode returns the unmerged API page (the caller derives its
+            // pagination cursor from it); merged mode augments with cached txs
+            if (!opts?.rawAddressTxs) {
+              const allCachedTxs: any[] = [];
+              if (currentAddress) {
+                for (const txid of cachedTxIds) {
+                  const cached = getCachedTransaction(txid);
+                  // Only include cached transactions that:
+                  // 1. Exist in cache
+                  // 2. Are NOT in the fresh API response (to avoid duplicates)
+                  // 3. Belong to the current address (check inputs and outputs)
+                  if (cached && !data.find(tx => tx.txid === txid)) {
+                    // Check if this transaction belongs to the current address
+                    const belongsToAddress =
+                      cached.vin?.some((input: any) => input.prevout?.scriptpubkey_address === currentAddress) ||
+                      cached.vout?.some((output: any) => output.scriptpubkey_address === currentAddress);
+
+                    if (belongsToAddress) {
+                      allCachedTxs.push(cached);
+                    }
                   }
                 }
               }
+
+              if (allCachedTxs.length > 0) {
+                console.log(`📦 Merged ${allCachedTxs.length} additional cached transactions for address`);
+                // Return merged data: fresh API data + cached transactions not in API response
+                return [...data, ...allCachedTxs];
+              }
             }
-            
-            if (allCachedTxs.length > 0) {
-              console.log(`📦 Merged ${allCachedTxs.length} additional cached transactions for address`);
-              // Return merged data: fresh API data + cached transactions not in API response
-              return [...data, ...allCachedTxs];
+          } else if (addressTxChainMatch && Array.isArray(data)) {
+            // Confirmed-history continuation page: cache the tx bodies
+            // (permanent once confirmed) and the immutable page itself.
+            // The paginated caller owns the combined txid list — never
+            // write setCachedAddressTxIds here.
+            if (data.length > 0) {
+              await cacheTransactions(data);
             }
+            setCachedData(cacheKey, data, cacheTtlMs);
           } else if (addressStatsMatch) {
             const address = addressStatsMatch[1];
             await setCachedAddressStats(address, data, xpubHint);
@@ -832,6 +869,115 @@ export async function getAddressTransactions(address: string, xpubHint?: string)
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
     console.error(`❌ Failed to get address transactions:`, message);
+    return { data: null, error: message };
+  }
+}
+
+/**
+ * Get an address's transactions with confirmed-history pagination.
+ *
+ * /address/{addr}/txs returns at most ~50 mempool + 25 confirmed txs; this
+ * walks /address/{addr}/txs/chain/{last_seen_txid} continuation pages (25
+ * confirmed each, newest-first) up to MAX_TX_CHAIN_PAGES_PER_ADDRESS.
+ *
+ * Efficiency contract:
+ * - Fresh combined txid-list cache (< TXIDS_TTL_MS): zero network requests.
+ * - Expired list: page 1 is refetched; pagination early-stops as soon as a
+ *   full page consists entirely of already-cached txs (confirmed history
+ *   only prepends, so everything deeper was covered by a previous scan),
+ *   and the deeper history is reassembled from the permanent body cache.
+ * - A mid-pagination failure returns the partial result (strictly better
+ *   than the pre-pagination behavior of always truncating at page 1).
+ */
+export async function getAddressTransactionsPaginated(address: string, xpubHint?: string): Promise<{ data: any[] | null; error: string | null }> {
+  try {
+    // 1. Fresh combined-list cache hit → zero network requests
+    const cached = await getCachedAddressTransactions(address);
+    if (cached !== null) {
+      console.log(`📦 Address txs cache hit for ${address.substring(0, 10)}...: ${cached.length} txs (paginated)`);
+      return { data: cached, error: null };
+    }
+
+    // 2. Txids known from any previous scan (TTL ignored) — used for
+    //    early-stop and for reassembling deep history without refetching
+    const staleTxids = (await getCachedAddressTxIdsAnyAge(address)) ?? [];
+
+    // 3. Page 1, raw (no cached-body merge — the cursor must come from the
+    //    actual API page). Bodies + page-1 txid list are cached internally.
+    const first = await esploraGet(`/address/${address}/txs`, 300000, xpubHint, { rawAddressTxs: true });
+    const page1: any[] = Array.isArray(first) ? first : [];
+    const all: any[] = [...page1];
+    const seen = new Set<string>(page1.map((t: any) => t.txid));
+
+    const isConfirmed = (t: any) =>
+      t.status?.confirmed === true || (t.status?.block_height !== undefined && t.status?.block_height !== null);
+    const confirmedPage1 = page1.filter(isConfirmed);
+    let cursor: string | null = confirmedPage1.length > 0 ? confirmedPage1[confirmedPage1.length - 1].txid : null;
+    let lastPageConfirmedCount = confirmedPage1.length;
+
+    // 4. Sequential continuation pages (each esploraGet flows through the
+    //    rate-limited RequestQueue)
+    for (let page = 0; page < MAX_TX_CHAIN_PAGES_PER_ADDRESS; page++) {
+      if (!cursor || lastPageConfirmedCount < ESPLORA_CONFIRMED_PAGE_SIZE) {
+        break; // confirmed history exhausted
+      }
+
+      let chainPage: any[];
+      try {
+        const res = await esploraGet(`/address/${address}/txs/chain/${cursor}`, TX_CHAIN_PAGE_TTL_MS, xpubHint);
+        chainPage = Array.isArray(res) ? res : [];
+      } catch (e: any) {
+        if (e?.message?.includes('Not found')) {
+          chainPage = []; // provider treats end-of-history as 404
+        } else {
+          console.warn(`⚠️ Tx pagination stopped early for ${address.substring(0, 10)}... at chain page ${page + 1}:`, e?.message);
+          break; // partial result: pages 1..N-1 plus cache reassembly below
+        }
+      }
+      if (chainPage.length === 0) break;
+
+      // Early-stop check BEFORE consuming the page: a full page of
+      // already-cached txs means every deeper tx was covered by a
+      // previous scan (confirmed history only prepends)
+      const allKnown = chainPage.length >= ESPLORA_CONFIRMED_PAGE_SIZE &&
+        chainPage.every((t: any) => getCachedTransaction(t.txid) !== null);
+
+      for (const tx of chainPage) {
+        if (!seen.has(tx.txid)) {
+          seen.add(tx.txid);
+          all.push(tx);
+        }
+      }
+      lastPageConfirmedCount = chainPage.length; // chain pages are all confirmed
+      cursor = chainPage[chainPage.length - 1]?.txid ?? null;
+
+      if (allKnown) {
+        console.log(`📦 Early stop: full page of cached txs for ${address.substring(0, 10)}...`);
+        break;
+      }
+    }
+
+    // 5. Reassemble deeper history fetched by a previous scan: confirmed
+    //    bodies are cached permanently, expired unconfirmed correctly drop out
+    for (const txid of staleTxids) {
+      if (seen.has(txid)) continue;
+      const body = getCachedTransaction(txid);
+      if (body) {
+        seen.add(txid);
+        all.push(body);
+      }
+    }
+
+    // 6. Persist the combined txid list with a fresh timestamp (overwrites
+    //    the page-1-only list esploraGet wrote in step 3), making step 1 a
+    //    pure cache hit for the next TXIDS_TTL_MS
+    await setCachedAddressTxIds(address, all.map((t: any) => t.txid), xpubHint);
+
+    console.log(`📜 Paginated txs for ${address.substring(0, 10)}...: ${all.length} total`);
+    return { data: all, error: null };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error(`❌ Failed to get paginated address transactions:`, message);
     return { data: null, error: message };
   }
 }

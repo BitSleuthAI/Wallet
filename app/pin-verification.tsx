@@ -2,12 +2,12 @@ import React from 'react';
 import { SafeAreaView, Platform, View } from 'react-native';
 import { Stack, router } from 'expo-router';
 import PinVerificationScreen from '@/components/PinVerificationScreen';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { GradientBackground } from '@/components/GradientBackground';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function PinVerificationRoute() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   const insets = useSafeAreaInsets();
 
   const handleSuccess = () => {

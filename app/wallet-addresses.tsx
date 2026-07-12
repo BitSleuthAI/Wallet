@@ -1,4 +1,6 @@
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWallets } from '@/hooks/wallet-contexts';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { transformAddressDataForUI, type AddressInfo } from '@/utils/address-transform';
 import { loadWalletService } from '@/utils/wallet-service-loader';
 import { useQuery } from '@tanstack/react-query';
@@ -8,17 +10,16 @@ import { ArrowLeft, Copy, ExternalLink, Info, RefreshCw } from 'lucide-react-nat
 import React, { useMemo, useState } from 'react';
 import {
     ActivityIndicator,
-    Alert,
+    FlatList,
     Platform,
-    ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
+import { toast } from '@/components/Toast';
 import { platformStyles } from '@/constants/themes';
 
 // Load wallet service using shared utility
@@ -29,10 +30,8 @@ const walletService = loadWalletService([
 ]);
 
 export default function WalletAddressesScreen() {
-  const {
-    theme,
-    currentWallet,
-  } = useWallet();
+  const { theme } = useTheme();
+  const { currentWallet } = useWallets();
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<'receiving' | 'change'>('receiving');
   const [generatingAddresses, setGeneratingAddresses] = useState<boolean>(false);
@@ -118,10 +117,10 @@ export default function WalletAddressesScreen() {
   const copyToClipboard = async (address: string) => {
     try {
       await Clipboard.setStringAsync(address);
-      Alert.alert('Copied', 'Address copied to clipboard');
+      toast.success('Copied!', 'Address copied to clipboard');
     } catch (error) {
       console.error('Failed to copy address:', error);
-      Alert.alert('Error', 'Failed to copy address');
+      toast.error('Copy failed', 'Could not copy address to clipboard');
     }
   };
 
@@ -136,11 +135,11 @@ export default function WalletAddressesScreen() {
       if (currentWallet?.xpub && walletService.clearAddressCache) {
         walletService.clearAddressCache(currentWallet.xpub);
       }
-      
+
       await addressesQuery.refetch();
     } catch (error) {
       console.error('Failed to refresh addresses:', error);
-      Alert.alert('Error', 'Failed to refresh addresses');
+      toast.error('Refresh failed', 'Could not refresh addresses');
     } finally {
       setGeneratingAddresses(false);
     }
@@ -151,7 +150,7 @@ export default function WalletAddressesScreen() {
   };
 
   const AddressItem = ({ addressInfo }: { addressInfo: AddressInfo }) => (
-    <TouchableOpacity
+    <PressableOpacity
       style={[styles.addressItem, { backgroundColor: theme.colors.surface }]}
       onPress={() => openAddressDetails(addressInfo.address)}
       activeOpacity={0.7}
@@ -218,7 +217,7 @@ export default function WalletAddressesScreen() {
           Balance: {formatBalance(addressInfo.balance)} BTC
         </Text>
         <View style={styles.actionButtons}>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={(e) => {
               e.stopPropagation();
               copyToClipboard(addressInfo.address);
@@ -226,8 +225,8 @@ export default function WalletAddressesScreen() {
             style={styles.actionButton}
           >
             <Copy color={theme.colors.textSecondary} size={16} />
-          </TouchableOpacity>
-          <TouchableOpacity
+          </PressableOpacity>
+          <PressableOpacity
             onPress={(e) => {
               e.stopPropagation();
               openAddressDetails(addressInfo.address);
@@ -235,10 +234,10 @@ export default function WalletAddressesScreen() {
             style={styles.actionButton}
           >
             <ExternalLink color={theme.colors.primary} size={16} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 
   const TabButton = ({ 
@@ -250,7 +249,7 @@ export default function WalletAddressesScreen() {
     isActive: boolean; 
     onPress: () => void; 
   }) => (
-    <TouchableOpacity
+    <PressableOpacity
       style={[
         styles.tabButton,
         {
@@ -270,7 +269,7 @@ export default function WalletAddressesScreen() {
       ]}>
         {title}
       </Text>
-    </TouchableOpacity>
+    </PressableOpacity>
   );
 
   return (
@@ -284,17 +283,17 @@ export default function WalletAddressesScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             View Addresses
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={refreshAddresses}
             style={styles.refreshButton}
             disabled={generatingAddresses}
@@ -303,7 +302,7 @@ export default function WalletAddressesScreen() {
               color={generatingAddresses ? theme.colors.textSecondary : theme.colors.primary} 
               size={20} 
             />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {/* Tab Navigation */}
@@ -320,19 +319,20 @@ export default function WalletAddressesScreen() {
           />
         </View>
         
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
-        {addressesQuery.isLoading && addressData.length === 0 ? (
-          <View style={styles.loadingState}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-              Generating addresses...
-            </Text>
-          </View>
-        ) : addressData.length > 0 ? (
-          <>
+        <FlatList
+          style={styles.scrollView}
+          data={addressData}
+          keyExtractor={(addressInfo) => addressInfo.address}
+          renderItem={({ item }) => <AddressItem addressInfo={item} />}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={7}
+          removeClippedSubviews
+          ListHeaderComponent={addressData.length > 0 ? (
             <View style={styles.infoContainer}>
               <Text style={[styles.infoText, { color: theme.colors.textSecondary }]}>
-                {selectedTab === 'receiving' 
+                {selectedTab === 'receiving'
                   ? `Receiving addresses (m/84\'/0\'/0\'/0/x) - Following BIP44 gap limit: all used + up to 20 unused. Showing ${addressData.length} addresses.`
                   : `Change addresses (m/84\'/0\'/0\'/1/x) - Following BIP44 gap limit: all used + up to 20 unused. Showing ${addressData.length} addresses.`}
               </Text>
@@ -355,10 +355,25 @@ export default function WalletAddressesScreen() {
                 </View>
               </View>
             </View>
-            {addressData.map((addressInfo, index) => (
-              <AddressItem key={`${addressInfo.type}-${addressInfo.index}-${index}-${addressInfo.address.slice(-8)}`} addressInfo={addressInfo} />
-            ))}
-            
+          ) : null}
+          ListEmptyComponent={addressesQuery.isLoading ? (
+            <View style={styles.loadingState}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+                Generating addresses...
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+                {addressesQuery.error
+                  ? 'Failed to generate addresses. Please try again.'
+                  : 'No addresses found'}
+              </Text>
+            </View>
+          )}
+          ListFooterComponent={addressData.length > 0 ? (
+          <>
             {/* Gap Limit Info */}
             <View style={styles.gapLimitInfo}>
               <Text style={[styles.gapLimitText, { color: theme.colors.textSecondary }]}>
@@ -421,16 +436,8 @@ export default function WalletAddressesScreen() {
               </View>
             </View>
           </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
-              {addressesQuery.error 
-                ? 'Failed to generate addresses. Please try again.'
-                : 'No addresses found'}
-            </Text>
-          </View>
-        )}
-        </ScrollView>
+          ) : null}
+        />
       </AndroidSafeContainer>
     </GradientBackground>
   );

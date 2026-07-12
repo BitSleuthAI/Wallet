@@ -1,8 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useCoinControl, useWalletActions, useWalletUtxos, useWallets } from '@/hooks/wallet-contexts';
 import type { UTXO } from '@/types/wallet';
 import { Stack, useRouter } from 'expo-router';
 import {
@@ -19,12 +21,11 @@ import {
 } from 'lucide-react-native';
 import React, { useMemo, useState } from 'react';
 import {
+    FlatList,
     Platform,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View
 } from 'react-native';
 
@@ -32,14 +33,13 @@ type SortOption = 'value' | 'confirmations' | 'age' | 'address';
 type FilterOption = 'all' | 'confirmed' | 'unconfirmed' | 'frozen' | 'unfrozen';
 
 export default function CoinControlScreen() {
-  const { 
-    theme, 
-    currentWallet, 
-    coinControl,
-    utxos: walletUtxos,
-    isLoadingUtxos,
-    refreshData,
-  } = useWallet();
+  // Narrow subscriptions: sheds balance/transaction/price churn while keeping
+  // the UTXO and coin-control slices this screen actually renders
+  const { currentWallet } = useWallets();
+  const coinControl = useCoinControl();
+  const { utxos: walletUtxos, isLoadingUtxos } = useWalletUtxos();
+  const { refreshData } = useWalletActions();
+  const { theme } = useTheme();
   const router = useRouter();
   const [selectedUtxos, setSelectedUtxos] = useState<Set<string>>(new Set());
   const [sortBy, setSortBy] = useState<SortOption>('value');
@@ -321,7 +321,7 @@ export default function CoinControlScreen() {
           <View style={styles.utxoActions}>
             {/* Freeze Button */}
             <View style={styles.actionGroup}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.freezeButton, 
                   { 
@@ -336,7 +336,7 @@ export default function CoinControlScreen() {
                   color={utxo.frozen ? theme.colors.secondary : theme.colors.textSecondary} 
                   size={16} 
                 />
-              </TouchableOpacity>
+              </PressableOpacity>
               <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
                 {utxo.frozen ? 'Frozen' : 'Freeze'}
               </Text>
@@ -344,7 +344,7 @@ export default function CoinControlScreen() {
             
             {/* Select Button */}
             <View style={styles.actionGroup}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[
                   styles.selectButton,
                   {
@@ -360,7 +360,7 @@ export default function CoinControlScreen() {
                 ) : (
                   <Circle color={theme.colors.textSecondary} size={20} />
                 )}
-              </TouchableOpacity>
+              </PressableOpacity>
               <Text style={[styles.actionLabel, { color: theme.colors.textSecondary }]}>
                 {isSelected ? 'Selected' : 'Select'}
               </Text>
@@ -375,7 +375,7 @@ export default function CoinControlScreen() {
     <View style={[styles.filterContainer, { backgroundColor: theme.colors.surface }]}>
       <View style={styles.filterRow}>
         <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Sort by:</Text>
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.filterButton, { borderColor: theme.colors.border }]}
           onPress={() => {
             if (sortBy === 'value') {
@@ -392,9 +392,9 @@ export default function CoinControlScreen() {
           {sortBy === 'value' && (
             sortAscending ? <ChevronUp size={16} color={theme.colors.primary} /> : <ChevronDown size={16} color={theme.colors.primary} />
           )}
-        </TouchableOpacity>
+        </PressableOpacity>
         
-        <TouchableOpacity
+        <PressableOpacity
           style={[styles.filterButton, { borderColor: theme.colors.border }]}
           onPress={() => {
             if (sortBy === 'confirmations') {
@@ -411,13 +411,13 @@ export default function CoinControlScreen() {
           {sortBy === 'confirmations' && (
             sortAscending ? <ChevronUp size={16} color={theme.colors.primary} /> : <ChevronDown size={16} color={theme.colors.primary} />
           )}
-        </TouchableOpacity>
+        </PressableOpacity>
       </View>
       
       <View style={styles.filterRow}>
         <Text style={[styles.filterLabel, { color: theme.colors.text }]}>Filter:</Text>
         {(['all', 'confirmed', 'unconfirmed', 'frozen', 'unfrozen'] as FilterOption[]).map((filter) => (
-          <TouchableOpacity
+          <PressableOpacity
             key={filter}
             style={[
               styles.filterButton,
@@ -431,7 +431,7 @@ export default function CoinControlScreen() {
             <Text style={[styles.filterButtonText, { color: filterBy === filter ? theme.colors.primary : theme.colors.textSecondary }]}>
               {filter.charAt(0).toUpperCase() + filter.slice(1)}
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         ))}
       </View>
       
@@ -463,31 +463,31 @@ export default function CoinControlScreen() {
       <AndroidSafeContainer style={styles.container}>
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Coin Control
           </Text>
           <View style={{ flexDirection: 'row' }}>
-            <TouchableOpacity
+            <PressableOpacity
               onPress={() => setShowFilters(!showFilters)}
               style={styles.headerButton}
               testID="toggle-filters"
             >
               <Filter color={theme.colors.primary} size={20} />
-            </TouchableOpacity>
-            <TouchableOpacity
+            </PressableOpacity>
+            <PressableOpacity
               onPress={applySelection}
               style={styles.headerButton}
               testID="apply-coin-selection"
             >
               <Text style={{ color: theme.colors.primary, fontWeight: '600' }}>Apply</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
         {/* Summary Stats */}
@@ -525,34 +525,41 @@ export default function CoinControlScreen() {
       {/* Action Buttons */}
       {selectedUtxos.size > 0 && (
         <View style={[styles.actionBar, { backgroundColor: theme.colors.surface }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.actionBarButton, { backgroundColor: theme.colors.primary }]}
             onPress={freezeSelectedUtxos}
           >
             <Snowflake color="white" size={16} />
             <Text style={styles.actionBarButtonText}>Freeze</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.actionBarButton, { backgroundColor: theme.colors.secondary }]}
             onPress={unfreezeSelectedUtxos}
           >
             <Zap color="white" size={16} />
             <Text style={styles.actionBarButtonText}>Unfreeze</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[styles.actionBarButton, { backgroundColor: theme.colors.error }]}
             onPress={deselectAllUtxos}
           >
             <Text style={styles.actionBarButtonText}>Clear</Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
       )}
       
       {/* UTXO List */}
-      <ScrollView
+      <FlatList
         style={styles.scrollView}
+        data={filteredAndSortedUtxos}
+        keyExtractor={(utxo: UTXO) => `${utxo.txid}:${utxo.vout}`}
+        renderItem={({ item }) => <UtxoItem utxo={item} />}
+        initialNumToRender={10}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -560,14 +567,35 @@ export default function CoinControlScreen() {
             tintColor={theme.colors.primary}
           />
         }
-      >
-        {isLoading ? (
+        ListHeaderComponent={filteredAndSortedUtxos.length > 0 ? (
+          <View style={styles.quickActions}>
+            <Text style={[{ marginRight: 12, fontWeight: '600' }, { color: theme.colors.text }]}>
+              {selectedUtxos.size} selected
+            </Text>
+            <PressableOpacity
+              style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
+              onPress={selectAllUtxos}
+            >
+              <CheckCircle color={theme.colors.primary} size={16} />
+              <Text style={[styles.quickActionText, { color: theme.colors.primary }]}>Select All</Text>
+            </PressableOpacity>
+
+            <PressableOpacity
+              style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
+              onPress={deselectAllUtxos}
+            >
+              <Circle color={theme.colors.textSecondary} size={16} />
+              <Text style={[styles.quickActionText, { color: theme.colors.textSecondary }]}>Deselect All</Text>
+            </PressableOpacity>
+          </View>
+        ) : null}
+        ListEmptyComponent={isLoading ? (
           <View style={styles.loadingContainer}>
             <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
               Loading UTXOs...
             </Text>
           </View>
-        ) : filteredAndSortedUtxos.length === 0 ? (
+        ) : (
           <View style={styles.emptyContainer}>
             <Coins color={theme.colors.textSecondary} size={48} />
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>
@@ -577,69 +605,40 @@ export default function CoinControlScreen() {
               {filterBy === 'all' ? 'Your wallet has no unspent outputs' : `No UTXOs match the current filter: ${filterBy}`}
             </Text>
           </View>
-        ) : (
-          <>
-            {/* Quick Actions */}
-            <View style={styles.quickActions}>
-              <Text style={[{ marginRight: 12, fontWeight: '600' }, { color: theme.colors.text }]}>
-                {selectedUtxos.size} selected
-              </Text>
-              <TouchableOpacity
-                style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
-                onPress={selectAllUtxos}
-              >
-                <CheckCircle color={theme.colors.primary} size={16} />
-                <Text style={[styles.quickActionText, { color: theme.colors.primary }]}>Select All</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.quickActionButton, { borderColor: theme.colors.border }]}
-                onPress={deselectAllUtxos}
-              >
-                <Circle color={theme.colors.textSecondary} size={16} />
-                <Text style={[styles.quickActionText, { color: theme.colors.textSecondary }]}>Deselect All</Text>
-              </TouchableOpacity>
-            </View>
-            
-            {/* UTXO Items */}
-            {filteredAndSortedUtxos.map((utxo: UTXO) => (
-              <UtxoItem key={`${utxo.txid}:${utxo.vout}`} utxo={utxo} />
-            ))}
-            
-            {/* Coin Control Educational Section */}
-            <View style={[styles.educationCard, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.educationHeader}>
-                <View style={[styles.educationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
-                  <Info color={theme.colors.primary} size={20} />
-                </View>
-                <Text style={[styles.educationTitle, { color: theme.colors.text }]}>
-                  How Coin Control Works
-                </Text>
-              </View>
-              <Text style={[styles.educationText, { color: theme.colors.textSecondary }]}>
-                Coin control gives you precise control over which UTXOs (Unspent Transaction Outputs) to use in transactions:
-              </Text>
-              <View style={styles.educationFeatures}>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate &quot;coin&quot; that can be spent
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Privacy:</Text> Avoid linking different Bitcoin sources together
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Frozen UTXOs:</Text> Temporarily prevent UTXOs from being automatically selected
-                </Text>
-                <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
-                  • <Text style={{ fontWeight: '600' }}>Change Management:</Text> Control how much Bitcoin you send back to yourself
-                </Text>
-              </View>
-            </View>
-          </>
         )}
-      </ScrollView>
+        ListFooterComponent={filteredAndSortedUtxos.length > 0 ? (
+          <View style={[styles.educationCard, { backgroundColor: theme.colors.surface }]}>
+            <View style={styles.educationHeader}>
+              <View style={[styles.educationIcon, { backgroundColor: theme.colors.primary + '20' }]}>
+                <Info color={theme.colors.primary} size={20} />
+              </View>
+              <Text style={[styles.educationTitle, { color: theme.colors.text }]}>
+                How Coin Control Works
+              </Text>
+            </View>
+            <Text style={[styles.educationText, { color: theme.colors.textSecondary }]}>
+              Coin control gives you precise control over which UTXOs (Unspent Transaction Outputs) to use in transactions:
+            </Text>
+            <View style={styles.educationFeatures}>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>UTXOs:</Text> Each Bitcoin you receive creates a separate &quot;coin&quot; that can be spent
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Selection:</Text> Choose specific UTXOs to include in your transaction
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Privacy:</Text> Avoid linking different Bitcoin sources together
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Frozen UTXOs:</Text> Temporarily prevent UTXOs from being automatically selected
+              </Text>
+              <Text style={[styles.educationFeature, { color: theme.colors.textSecondary }]}>
+                • <Text style={{ fontWeight: '600' }}>Change Management:</Text> Control how much Bitcoin you send back to yourself
+              </Text>
+            </View>
+          </View>
+        ) : null}
+      />
       </AndroidSafeContainer>
     </GradientBackground>
   );
