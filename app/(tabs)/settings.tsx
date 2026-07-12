@@ -74,7 +74,7 @@ export default function SettingsScreen() {
 // Main component with all hooks. Narrow subscriptions: settings renders no
 // polled data, so it stays idle across the 30s balance/tx/utxo refreshes.
 function SettingsScreenContent() {
-  const { animatedStyle } = useTabAnimation(3); // Settings tab = index 3
+  const { animatedStyle } = useTabAnimation(); // Settings tab
   const { currentWallet, wallets } = useWallets();
   const { toggleTheme, logoutAndEraseWallet, switchWallet, setCurrency, getCurrencyName, setHideBalanceSetting } = useWalletActions();
   const { selectedCurrency, hideBalance } = useWalletSettings();

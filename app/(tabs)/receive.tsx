@@ -58,7 +58,7 @@ export default function ReceiveScreen() {
 // Main component with all hooks. Narrow subscriptions: this screen renders no
 // polled data, so it stays idle across the 30s balance/tx/utxo refreshes.
 function ReceiveScreenContent() {
-  const { animatedStyle } = useTabAnimation(2); // Receive tab = index 2
+  const { animatedStyle } = useTabAnimation(); // Receive tab
   const { currentWallet } = useWallets();
   const { generateNewAddress } = useWalletActions();
   const { incrementUsageCount } = useFeedback();

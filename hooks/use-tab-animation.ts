@@ -7,7 +7,7 @@ import { useAnimatedStyle, useSharedValue, withSpring, withTiming } from 'react-
  * time the tab regains focus. Returns a Reanimated style — wrap the screen
  * content in Reanimated's <Animated.View style={[..., animatedStyle]}>.
  */
-export const useTabAnimation = (tabIndex: number) => {
+export const useTabAnimation = () => {
   const opacity = useSharedValue(1);
   const translateY = useSharedValue(0);
   const isInitialMount = useRef(true);

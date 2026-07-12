@@ -69,7 +69,7 @@ export default function WalletScreen() {
 // Main component with all hooks. This screen legitimately renders balance and
 // transactions (keeps that churn) but sheds address/utxo/feedback-state churn.
 function WalletScreenContent() {
-  const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
+  const { animatedStyle } = useTabAnimation(); // Wallet tab
   const { wallets, currentWallet, currentWalletId, isLoading } = useWallets();
   const { balance, balanceUSD, bitcoinPrice, hasBalanceError, hasPriceError } = useWalletBalance();
   const { transactions, hasTransactionsError } = useWalletTransactions();

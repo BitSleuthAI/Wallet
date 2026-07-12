@@ -66,7 +66,7 @@ export default function SendScreen() {
 // Main component with all hooks. Narrow subscriptions: the form no longer
 // re-renders mid-typing when unrelated slices (transactions, addresses) poll.
 function SendScreenContent() {
-  const { animatedStyle } = useTabAnimation(1);
+  const { animatedStyle } = useTabAnimation(); // Send tab
   const { currentWallet } = useWallets();
   const { balance, bitcoinPrice: walletBitcoinPrice } = useWalletBalance();
   const coinControl = useCoinControl();
