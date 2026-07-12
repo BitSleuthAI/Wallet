@@ -9,6 +9,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-07-12
+
+### Added
+- **System appearance support**: the app now follows the device light/dark setting by default, with a manual override in Settings. Existing users keep their saved theme.
+- **Native transaction review sheet**: sending Bitcoin now shows a proper review form sheet (amount, recipient, fee breakdown, RBF status, irreversibility warning) and a success state with a copyable transaction ID, replacing the previous alert dialogs.
+- **Complete transaction history**: confirmed history is now fetched with pagination, so addresses with deep history no longer show a truncated transaction list.
+- **Shared UI primitives**: `AppButton` (spring press + haptics) for primary actions and `PressableOpacity` for general tap targets.
+
+### Changed
+- **Rendering performance**: the wallet store was split into focused subscriptions so screens only re-render for the data they display, eliminating app-wide re-renders on the 30-second refresh cycle.
+- **Network efficiency**: wallet data is fetched once per refresh instead of several times over, with one request per address; pull-to-refresh and cold starts no longer discard healthy caches.
+- Balance chart and transaction lists optimized (memoization + virtualization) for smoother scrolling.
+- Unified the app on the Bitcoin-orange theme; light and dark mode now share one visual system.
+- Settings and edit-wallet pickers presented as native form sheets.
+- Consolidated on a single animation system (Reanimated).
+
+### Fixed
+- Wallet setup no longer falls back to a publicly-known test recovery phrase if secure key generation fails — it now fails closed.
+
+### Security
+- The unlock PIN is now stored in the device's encrypted keystore (`expo-secure-store`) instead of plain storage, with an automatic one-time migration for existing users.
+
 ## [1.2.2] - 2026-06-10
 
 ### Added

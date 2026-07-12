@@ -108,7 +108,16 @@ export default function AboutScreen() {
           </Text>
         </View>
 
-        <DropdownSection title="What's New in 1.2.2?" defaultExpanded={true}>
+        <DropdownSection title="What's New in 1.3.0?" defaultExpanded={true}>
+          <BulletPoint text="System Appearance: The app now follows your device's light/dark setting by default, with a manual override in Settings." />
+          <BulletPoint text="Redesigned Send Flow: A native review sheet shows the full transaction summary before sending, with a copyable transaction ID on success." />
+          <BulletPoint text="Complete History: Transaction history is no longer truncated for addresses with lots of activity." />
+          <BulletPoint text="Faster & Smoother: Fewer re-renders and network requests, virtualized lists, and lighter refresh behavior across the app." />
+          <BulletPoint text="Refined Look: A unified Bitcoin-orange theme with consistent buttons, press feedback, and animations." />
+          <BulletPoint text="Stronger Security: Your unlock PIN is now stored in the device's encrypted keystore." />
+        </DropdownSection>
+
+        <DropdownSection title="What's New in 1.2.2?">
           <BulletPoint text="Open Source Release: BitSleuth Wallet is now open source under the AGPL-3.0 license, with CI/CD, documentation, and community contribution support." />
           <BulletPoint text="Satoshi API Fee Fallback: Fee recommendations stay available even when the primary Esplora fee endpoint fails." />
           <BulletPoint text="Firebase Performance Monitoring: App performance tracking alongside crash reporting (no analytics)." />
