@@ -1,10 +1,11 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { BalanceContext, useWalletActions } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
-import { Transaction } from '@/types/wallet';
+import { BitcoinPrice, Theme, Transaction } from '@/types/wallet';
 import { router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, CheckCircle, Clock, DollarSign, Zap } from 'lucide-react-native';
-import React, { useCallback, useEffect } from 'react';
+import React, { useCallback, useContext, useEffect } from 'react';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   Easing,
@@ -23,20 +24,45 @@ interface TransactionItemProps {
   index?: number;
 }
 
-// Wrapper component that checks for context availability
-export default function TransactionItem({ transaction, index = 0 }: TransactionItemProps) {
-  const walletContext = useWallet();
+interface TransactionItemContentProps extends TransactionItemProps {
+  theme: Theme;
+  bitcoinPrice: BitcoinPrice | null | undefined;
+  hasPriceError: boolean;
+  formatCurrency: (amount: number, showSymbol?: boolean) => string;
+}
 
-  if (!walletContext) {
+// Thin wrapper subscribes to only the balance/price and actions slices; the
+// memoized content below re-renders only when its own props actually change,
+// so list rows stay idle during the 30s wallet data polls.
+export default function TransactionItem({ transaction, index = 0 }: TransactionItemProps) {
+  const balanceData = useContext(BalanceContext);
+  const { formatCurrency } = useWalletActions();
+  const { theme } = useTheme();
+
+  if (!balanceData) {
     return null;
   }
 
-  return <TransactionItemContent transaction={transaction} index={index} />;
+  return (
+    <TransactionItemContent
+      transaction={transaction}
+      index={index}
+      theme={theme}
+      bitcoinPrice={balanceData.bitcoinPrice}
+      hasPriceError={balanceData.hasPriceError}
+      formatCurrency={formatCurrency}
+    />
+  );
 }
 
-function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps) {
-  const { theme, bitcoinPrice, hasPriceError, formatCurrency } = useWallet()!;
-
+const TransactionItemContent = React.memo(function TransactionItemContent({
+  transaction,
+  index = 0,
+  theme,
+  bitcoinPrice,
+  hasPriceError,
+  formatCurrency,
+}: TransactionItemContentProps) {
   const isReceived = transaction.type === 'received';
   const amountUSD = !hasPriceError && bitcoinPrice?.usd ? transaction.amount * bitcoinPrice.usd : 0;
 
@@ -117,8 +143,9 @@ function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps
     return theme.colors.warning;
   };
 
-  // Staggered entrance animation
-  const enteringAnimation = FadeInDown.delay(index * 60).duration(400).springify().damping(15);
+  // Staggered entrance animation, capped so long lists don't queue
+  // multi-second delays as rows mount during scrolling
+  const enteringAnimation = FadeInDown.delay(Math.min(index, 8) * 60).duration(400).springify().damping(15);
 
   return (
     <Animated.View entering={enteringAnimation}>
@@ -233,7 +260,7 @@ function TransactionItemContent({ transaction, index = 0 }: TransactionItemProps
       </AnimatedTouchable>
     </Animated.View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

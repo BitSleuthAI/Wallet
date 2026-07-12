@@ -1,11 +1,13 @@
 import { platformStyles } from '@/constants/themes';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { getWalletGradient } from '@/constants/wallet-colors';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext, useWalletActions, useWalletBalance, useWalletSettings, useWallets } from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet, getWalletTypeDisplayName } from '@/types/wallet';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Edit3, MoreHorizontal, Trash2 } from 'lucide-react-native';
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useContext, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -18,8 +20,8 @@ import Animated, {
 const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
 const AnimatedLinearGradient = Animated.createAnimatedComponent(LinearGradient);
 
-// Default gradient colors for fallback
-const DEFAULT_GRADIENT = ['#6366F1', '#8B5CF6'] as const;
+// Default gradient colors for fallback - Bitcoin orange, matching the brand
+const DEFAULT_GRADIENT = ['#FFAB40', '#F7931A'] as const;
 
 interface WalletCardProps {
   wallet?: Wallet;
@@ -28,11 +30,12 @@ interface WalletCardProps {
   onEdit?: (wallet: Wallet) => void;
 }
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletCard({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
 
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
 
@@ -40,7 +43,12 @@ export default function WalletCard({ wallet, isActive = false, onPress, onEdit }
 }
 
 function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: WalletCardProps) {
-  const { currentWallet, balance, balanceUSD, hasBalanceError, hasPriceError, formatCurrency, hideBalance, deleteWallet, theme } = useWallet()!;
+  // Narrow subscriptions: keeps genuine balance churn, sheds tx/utxo/feedback churn
+  const { currentWallet } = useWallets();
+  const { balance, balanceUSD, hasBalanceError, hasPriceError } = useWalletBalance();
+  const { formatCurrency, deleteWallet } = useWalletActions();
+  const { hideBalance } = useWalletSettings();
+  const { theme } = useTheme();
 
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const [menuPosition, setMenuPosition] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
@@ -211,7 +219,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
               </View>
             </View>
           </View>
-          <TouchableOpacity
+          <PressableOpacity
             ref={menuButtonRef}
             style={styles.menuButton}
             onPress={handleMenuPress}
@@ -219,7 +227,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             testID="wallet-menu-button"
           >
             <MoreHorizontal color="white" size={22} />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         <View style={styles.balanceContainer}>
@@ -261,7 +269,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
         animationType="fade"
         onRequestClose={() => setShowMenu(false)}
       >
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.modalOverlay}
           activeOpacity={1}
           onPress={() => setShowMenu(false)}
@@ -272,7 +280,7 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
             left: menuPosition.x,
             backgroundColor: theme.colors.surface,
           }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.menuItem}
               onPress={handleEditPress}
               testID="edit-wallet-button"
@@ -281,22 +289,22 @@ function WalletCardContent({ wallet, isActive = false, onPress, onEdit }: Wallet
                 <Edit3 color={theme.colors.primary} size={16} />
               </View>
               <Text style={[styles.menuText, { color: theme.colors.text }]}>Edit</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
 
             <View style={[styles.menuDivider, { backgroundColor: theme.colors.border }]} />
 
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.menuItem}
               onPress={handleDeletePress}
               testID="delete-wallet-button"
             >
-              <View style={[styles.menuIconContainer, { backgroundColor: '#FF3B3015' }]}>
-                <Trash2 color="#FF3B30" size={16} />
+              <View style={[styles.menuIconContainer, { backgroundColor: theme.colors.error + '15' }]}>
+                <Trash2 color={theme.colors.error} size={16} />
               </View>
-              <Text style={[styles.menuText, { color: '#FF3B30' }]}>Delete</Text>
-            </TouchableOpacity>
+              <Text style={[styles.menuText, { color: theme.colors.error }]}>Delete</Text>
+            </PressableOpacity>
           </View>
-        </TouchableOpacity>
+        </PressableOpacity>
       </Modal>
     </AnimatedTouchable>
   );

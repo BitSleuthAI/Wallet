@@ -1,54 +1,55 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { platformStyles } from '@/constants/themes';
+import { useTheme } from '@/hooks/theme-store';
 import { Link, Stack } from "expo-router";
 import { ArrowLeft, Bot } from 'lucide-react-native';
-import { StyleSheet, Text, TouchableOpacity, View, useColorScheme } from "react-native";
+import { StyleSheet, Text, View } from "react-native";
 
 export default function NotFoundScreen() {
-  const colorScheme = useColorScheme();
-  const isDark = colorScheme === 'dark';
-  
+  const { theme } = useTheme();
+
   return (
-    <View style={[styles.container, { backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5' }]}>
-      <Stack.Screen 
-        options={{ 
+    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <Stack.Screen
+        options={{
           headerShown: false
-        }} 
+        }}
       />
       <AndroidSafeContainer style={styles.safeArea}>
         <View style={styles.content}>
           <View style={[
-            styles.card, 
-            { 
-              backgroundColor: isDark ? '#2a2a2a' : '#ffffff',
-              borderColor: isDark ? '#3a3a3a' : '#e0e0e0'
+            styles.card,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border
             }
           ]}>
             <View style={[
               styles.iconContainer,
-              { backgroundColor: '#8B5CF6' }
+              { backgroundColor: theme.colors.primary }
             ]}>
-              <Bot color="#2a2a2a" size={48} strokeWidth={2} />
+              <Bot color="#FFFFFF" size={48} strokeWidth={2} />
             </View>
-            
-            <Text style={[styles.title, { color: isDark ? '#ffffff' : '#1a1a1a' }]}>
+
+            <Text style={[styles.title, { color: theme.colors.text }]}>
               404 - Page Not Found
             </Text>
-            
-            <Text style={[styles.description, { color: isDark ? '#a0a0a0' : '#666666' }]}>
+
+            <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
               Oh sleuth!!! It seems BitSleuth bot got lost in the digital ether. The page you&apos;re looking for might have been moved or never existed.
             </Text>
 
             <Link href="/" asChild>
-              <TouchableOpacity 
+              <PressableOpacity
                 style={[
                   styles.button,
-                  { backgroundColor: '#8B5CF6' }
+                  { backgroundColor: theme.colors.primary }
                 ]}
               >
-                <ArrowLeft color="#2a2a2a" size={20} strokeWidth={2.5} />
+                <ArrowLeft color="#FFFFFF" size={20} strokeWidth={2.5} />
                 <Text style={styles.buttonText}>Return to Dashboard</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </Link>
           </View>
         </View>
@@ -114,6 +115,6 @@ const styles = StyleSheet.create({
   buttonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#2a2a2a',
+    color: '#FFFFFF',
   },
 });

@@ -1,5 +1,8 @@
 import PinVerificationScreen from '@/components/PinVerificationScreen';
-import { useWallet } from '@/hooks/wallet-store';
+import { AppButton } from '@/components/AppButton';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletMeta, useWallets } from '@/hooks/wallet-contexts';
 import { Stack, router } from 'expo-router';
 import { AlertTriangle, ArrowLeft, Eye, X } from 'lucide-react-native';
 import React, { useEffect, useState } from 'react';
@@ -9,7 +12,6 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -17,7 +19,9 @@ import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 import { GradientBackground } from '@/components/GradientBackground';
 
 export default function ViewRecoveryPhrase() {
-  const { currentWallet, theme, getMnemonic } = useWallet();
+  const { currentWallet } = useWallets();
+  const { theme } = useTheme();
+  const { getMnemonic } = useWalletMeta();
   const [isRevealed, setIsRevealed] = useState(false);
   const [isPinVerified, setIsPinVerified] = useState<boolean>(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
@@ -188,13 +192,13 @@ export default function ViewRecoveryPhrase() {
       
       {/* Custom Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.backButton}
           onPress={handleBack}
           testID="back-button"
         >
           <ArrowLeft size={24} color={theme.colors.text} />
-        </TouchableOpacity>
+        </PressableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           Recovery Phrase
         </Text>
@@ -246,14 +250,13 @@ export default function ViewRecoveryPhrase() {
 
         {/* Reveal Button */}
         {!isRevealed && (
-          <TouchableOpacity
-            style={[styles.revealButton, { backgroundColor: theme.colors.primary }]}
+          <AppButton
+            title="Reveal Recovery Phrase"
+            icon={<Eye size={20} color="white" />}
             onPress={handleReveal}
+            style={styles.revealButton}
             testID="reveal-button"
-          >
-            <Eye size={20} color="white" />
-            <Text style={[styles.revealText, { color: 'white' }]}>Reveal Recovery Phrase</Text>
-          </TouchableOpacity>
+          />
         )}
 
         {/* Warning Section */}
@@ -282,26 +285,26 @@ export default function ViewRecoveryPhrase() {
           <View style={[styles.modalContent, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Security Warning</Text>
-              <TouchableOpacity onPress={handleCancelModal} style={styles.closeButton}>
+              <PressableOpacity onPress={handleCancelModal} style={styles.closeButton}>
                 <X size={24} color={theme.colors.textSecondary} />
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
             <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
               Make sure no one is watching your screen. Your recovery phrase gives full access to your wallet.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity
+              <PressableOpacity
                 style={[styles.modalButton, { backgroundColor: theme.colors.error }]}
                 onPress={handleConfirmModal}
               >
                 <Text style={styles.modalButtonText}>I Understand</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+              </PressableOpacity>
+              <PressableOpacity
                 style={[styles.modalButton, { backgroundColor: theme.colors.border }]}
                 onPress={handleCancelModal}
               >
                 <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
         </View>
@@ -413,17 +416,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   revealButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 12,
     marginBottom: 30,
-    gap: 8,
-  },
-  revealText: {
-    fontSize: 16,
-    fontWeight: '600',
   },
   warningContainer: {
     // backgroundColor and borderColor will be set dynamically via theme

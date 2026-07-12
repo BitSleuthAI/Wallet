@@ -1,5 +1,5 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
 import { HapticService } from '@/services/haptic-service';
 import { CheckCircle, Info, AlertTriangle, XCircle } from 'lucide-react-native';
 import React, { useCallback, useEffect, useState } from 'react';
@@ -64,8 +64,7 @@ const ICON_MAP = {
 };
 
 function ToastItem({ item, onDismiss }: { item: ToastMessage; onDismiss: (id: string) => void }) {
-  const walletContext = useWallet();
-  const theme = walletContext?.theme;
+  const { theme } = useTheme();
 
   const translateY = useSharedValue(-100);
   const opacity = useSharedValue(0);
@@ -99,17 +98,17 @@ function ToastItem({ item, onDismiss }: { item: ToastMessage; onDismiss: (id: st
   }));
 
   const Icon = ICON_MAP[item.type];
-  const iconColor = item.type === 'success' ? (theme?.colors.success || '#10B981')
-    : item.type === 'error' ? (theme?.colors.error || '#EF4444')
-    : item.type === 'warning' ? (theme?.colors.warning || '#F59E0B')
-    : (theme?.colors.primary || '#F7931A');
+  const iconColor = item.type === 'success' ? theme.colors.success
+    : item.type === 'error' ? theme.colors.error
+    : item.type === 'warning' ? theme.colors.warning
+    : theme.colors.primary;
 
   return (
     <Animated.View
       style={[
         styles.toastItem,
         {
-          backgroundColor: theme?.isDark ? '#1F1F33' : '#FFFFFF',
+          backgroundColor: theme.isDark ? theme.colors.surface : '#FFFFFF',
           borderLeftColor: iconColor,
         },
         animatedStyle,
@@ -119,11 +118,11 @@ function ToastItem({ item, onDismiss }: { item: ToastMessage; onDismiss: (id: st
         <Icon color={iconColor} size={20} />
       </View>
       <View style={styles.textContainer}>
-        <Text style={[styles.title, { color: theme?.colors.text || '#18181B' }]} numberOfLines={1}>
+        <Text style={[styles.title, { color: theme.colors.text }]} numberOfLines={1}>
           {item.title}
         </Text>
-        {item.message && (
-          <Text style={[styles.message, { color: theme?.colors.textSecondary || '#8E8E93' }]} numberOfLines={2}>
+        {!!item.message && (
+          <Text style={[styles.message, { color: theme.colors.textSecondary }]} numberOfLines={2}>
             {item.message}
           </Text>
         )}

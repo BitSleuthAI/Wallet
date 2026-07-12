@@ -1,7 +1,8 @@
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { WalletsContext } from '@/hooks/wallet-contexts';
 import { getLiquidGlassTint, getThinMaterialTint, getUltraThinMaterialTint, isIOS } from '@/utils/platform';
 import { BlurView } from 'expo-blur';
-import React from 'react';
+import React, { useContext } from 'react';
 import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 
 export type LiquidGlassVariant = 'chrome' | 'thin' | 'ultraThin';
@@ -52,15 +53,14 @@ export function LiquidGlassView({
   style,
   children,
 }: LiquidGlassViewProps) {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+  const { theme } = useTheme();
+
   // Safety check: if context is not available yet, return null
-  if (!walletContext) {
+  if (!walletData) {
     return null;
   }
-  
-  const { theme } = walletContext;
-  
+
   // Get the appropriate tint based on variant and theme
   const getTint = () => {
     switch (variant) {

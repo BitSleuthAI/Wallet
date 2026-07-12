@@ -8,6 +8,11 @@ export type WalletColorOption = {
 // Beautiful gradient color palette for wallets
 export const WALLET_COLOR_PALETTE: WalletColorOption[] = [
   {
+    id: 'bitcoin',
+    base: '#F7931A',
+    gradient: ['#FFAB40', '#F7931A', '#E07B00'], // Bitcoin orange gradient
+  },
+  {
     id: 'cyan',
     base: '#26F5FE',
     gradient: ['#4DFFFF', '#26F5FE', '#00BCD4'], // Bright cyan to teal
@@ -35,7 +40,7 @@ export const WALLET_COLOR_PALETTE: WalletColorOption[] = [
   {
     id: 'coral',
     base: '#FF8A65',
-    gradient: ['#FFAB91', '#FF8A65', '#FF7043'], // Coral gradient (matches light theme)
+    gradient: ['#FFAB91', '#FF8A65', '#FF7043'], // Coral gradient
   },
   {
     id: 'pink',
@@ -92,5 +97,5 @@ export function getWalletGradient(baseColor: string): [string, string, string] {
 // Get just the base colors for simple color pickers
 export const WALLET_COLORS = WALLET_COLOR_PALETTE.map(c => c.base);
 
-// Default wallet color - now cyan to match new dark theme
-export const DEFAULT_WALLET_COLOR = WALLET_COLOR_PALETTE[0].base; // '#26F5FE'
+// Default wallet color - Bitcoin orange, matching the app's brand primary
+export const DEFAULT_WALLET_COLOR = WALLET_COLOR_PALETTE[0].base; // '#F7931A'

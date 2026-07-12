@@ -1,16 +1,18 @@
 import TransactionItem from '@/components/TransactionItem';
-import { useWallet } from '@/hooks/wallet-store';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletActions, useWalletTransactions, useWallets } from '@/hooks/wallet-contexts';
 import { Transaction } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
-import React from 'react';
+import React, { useCallback } from 'react';
 import {
     ActivityIndicator,
+    FlatList,
+    ListRenderItemInfo,
     RefreshControl,
-    ScrollView,
     StyleSheet,
     Text,
-    TouchableOpacity,
     View,
 } from 'react-native';
 
@@ -18,18 +20,23 @@ import { GradientBackground } from '@/components/GradientBackground';
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
 
 export default function TransactionHistoryScreen() {
-  const { 
-    theme, 
-    transactions, 
-    isLoadingTransactions, 
-    hasTransactionsError,
-    refreshData,
-    currentWallet
-  } = useWallet();
+  const { theme } = useTheme();
+  const { transactions, isLoadingTransactions, hasTransactionsError } = useWalletTransactions();
+  const { refreshData } = useWalletActions();
+  const { currentWallet } = useWallets();
 
   const handleRefresh = async () => {
     await refreshData();
   };
+
+  const keyExtractor = useCallback((transaction: Transaction) => transaction.txid, []);
+
+  const renderTransaction = useCallback(
+    ({ item, index }: ListRenderItemInfo<Transaction>) => (
+      <TransactionItem transaction={item} index={index} />
+    ),
+    []
+  );
 
   const EmptyState = () => (
     <View style={styles.emptyContainer}>
@@ -77,21 +84,24 @@ export default function TransactionHistoryScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Transaction History
           </Text>
           <View style={styles.headerSpacer} />
         </View>
       
-      <ScrollView 
+      <FlatList
         style={styles.scrollView}
+        data={transactions}
+        keyExtractor={keyExtractor}
+        renderItem={renderTransaction}
         refreshControl={
           <RefreshControl
             refreshing={isLoadingTransactions}
@@ -101,52 +111,37 @@ export default function TransactionHistoryScreen() {
           />
         }
         showsVerticalScrollIndicator={false}
-      >
-        {/* Content Header */}
-        <View style={styles.contentHeader}>
-          <Text style={[styles.contentHeaderTitle, { color: theme.colors.text }]}>
-            All Transactions
-          </Text>
-          <Text style={[styles.contentHeaderSubtitle, { color: theme.colors.textSecondary }]}>
-            {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
-          </Text>
-        </View>
-
-        {/* Loading State */}
-        {isLoadingTransactions && transactions.length === 0 && (
-          <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
-              Loading transactions...
+        contentContainerStyle={styles.listContent}
+        initialNumToRender={12}
+        maxToRenderPerBatch={10}
+        windowSize={7}
+        removeClippedSubviews
+        ListHeaderComponent={
+          <View style={styles.contentHeader}>
+            <Text style={[styles.contentHeaderTitle, { color: theme.colors.text }]}>
+              All Transactions
+            </Text>
+            <Text style={[styles.contentHeaderSubtitle, { color: theme.colors.textSecondary }]}>
+              {transactions.length} transaction{transactions.length !== 1 ? 's' : ''}
             </Text>
           </View>
-        )}
-
-        {/* Error State */}
-        {hasTransactionsError && transactions.length === 0 && !isLoadingTransactions && (
-          <ErrorState />
-        )}
-
-        {/* Empty State */}
-        {!isLoadingTransactions && !hasTransactionsError && transactions.length === 0 && (
-          <EmptyState />
-        )}
-
-        {/* Transaction List */}
-        {transactions.length > 0 && (
-          <View style={styles.transactionsList}>
-            {transactions.map((transaction: Transaction, index: number) => (
-              <TransactionItem
-                key={`${transaction.txid}-${index}`}
-                transaction={transaction}
-              />
-            ))}
-          </View>
-        )}
-
-        {/* Bottom spacing */}
-        <View style={styles.bottomSpacing} />
-      </ScrollView>
+        }
+        ListEmptyComponent={
+          isLoadingTransactions ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text style={[styles.loadingText, { color: theme.colors.textSecondary }]}>
+                Loading transactions...
+              </Text>
+            </View>
+          ) : hasTransactionsError ? (
+            <ErrorState />
+          ) : (
+            <EmptyState />
+          )
+        }
+        ListFooterComponent={<View style={styles.bottomSpacing} />}
+      />
       </AndroidSafeContainer>
     </GradientBackground>
   );
@@ -226,7 +221,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 22,
   },
-  transactionsList: {
+  listContent: {
     paddingHorizontal: 16,
     paddingBottom: 20,
   },

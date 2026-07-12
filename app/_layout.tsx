@@ -1,5 +1,6 @@
 // CRITICAL: Polyfills must be imported first, before any other imports
 import '../polyfills';
+import { PressableOpacity } from '@/components/PressableOpacity';
 
 // CRITICAL: Crypto must be initialized before any ECC libs
 import { initializeCrypto } from '../services/crypto-polyfill';
@@ -13,8 +14,9 @@ import SplashScreen from '@/components/SplashScreen';
 import { ToastProvider } from '@/components/Toast';
 import { platformStyles } from '@/constants/themes';
 import { AutoLockProvider, useAutoLock } from '@/hooks/auto-lock-store';
+import { ThemeProvider, useTheme } from '@/hooks/theme-store';
 import { useSplashScreen } from '@/hooks/use-splash-screen';
-import { WalletProvider, useWallet } from '@/hooks/wallet-store';
+import { WalletProvider } from '@/hooks/wallet-store';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import { LinearGradient } from 'expo-linear-gradient';
@@ -22,7 +24,7 @@ import { Stack, router } from 'expo-router';
 import * as ExpoSplashScreen from 'expo-splash-screen';
 import { AlertCircle, ArrowLeft } from 'lucide-react-native';
 import React, { Component, ReactNode, useEffect, useState } from 'react';
-import { Appearance, Platform, StyleSheet, Text, TouchableOpacity, View, NativeEventSubscription, NativeModules } from 'react-native';
+import { Appearance, Platform, StyleSheet, Text, View, NativeEventSubscription, NativeModules } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
@@ -108,17 +110,18 @@ class ErrorBoundary extends Component<
       // Use color scheme from state (reactive to changes)
       const isDark = this.state.colorScheme === 'dark';
       
-      // Theme-aware colors
+      // Brand palette, hardcoded because this boundary renders outside providers
+      // (values mirror lightTheme/darkTheme in constants/themes.ts)
       const colors = {
-        background: isDark ? '#0A0A0F' : '#FEFEFE',
-        surface: isDark ? '#1F1F33' : '#FFFFFF',
-        text: isDark ? '#F7FAFC' : '#1A1A1A',
-        textSecondary: isDark ? '#A0AEC0' : '#6B7280',
-        border: isDark ? '#2D3748' : '#FFE5DB',
-        gradientStart: isDark ? '#26F5FE' : '#FF8A65',
-        gradientEnd: isDark ? '#00BCD4' : '#FF6B6B',
-        iconBg: isDark ? '#252538' : '#FFF5F2',
-        iconColor: isDark ? '#26F5FE' : '#FF8A65',
+        background: isDark ? '#09090B' : '#F2F2F7',
+        surface: isDark ? '#18181B' : '#FFFFFF',
+        text: isDark ? '#FAFAFA' : '#18181B',
+        textSecondary: isDark ? '#A1A1AA' : '#8E8E93',
+        border: isDark ? '#27272A' : '#E5E5EA',
+        gradientStart: '#F7931A',
+        gradientEnd: '#FFAB40',
+        iconBg: isDark ? '#27272A' : '#FFF3E0',
+        iconColor: '#F7931A',
       };
       
       return (
@@ -139,7 +142,7 @@ class ErrorBoundary extends Component<
               The app encountered an error. You can try again, or if the issue persists, please force close and restart BitSleuth Wallet.
             </Text>
             
-            <TouchableOpacity
+            <PressableOpacity
               style={errorStyles.buttonContainer}
               onPress={() => {
                 this.setState({ hasError: false });
@@ -155,7 +158,7 @@ class ErrorBoundary extends Component<
               >
                 <Text style={errorStyles.buttonText}>Try Again</Text>
               </LinearGradient>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </View>
       );
@@ -234,7 +237,7 @@ const rootStyles = StyleSheet.create({
 });
 
 function AppContent() {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   
   return (
     <Stack 
@@ -263,13 +266,13 @@ function AppContent() {
         gestureEnabled: true,
         animation: Platform.OS === 'ios' ? 'slide_from_right' : 'fade_from_bottom',
         headerLeft: () => (
-          <TouchableOpacity
+          <PressableOpacity
             style={rootStyles.headerBackButton}
             onPress={() => router.back()}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
           >
             <ArrowLeft size={24} color={theme.colors.text} strokeWidth={2.5} />
-          </TouchableOpacity>
+          </PressableOpacity>
         ),
       }}
     >
@@ -352,13 +355,15 @@ function RootLayoutNav() {
   
   return (
     <ErrorBoundary key={key}>
-      <WalletProvider>
-        <AutoLockProvider>
-          <ToastProvider>
-            <AppWithSplash />
-          </ToastProvider>
-        </AutoLockProvider>
-      </WalletProvider>
+      <ThemeProvider>
+        <WalletProvider>
+          <AutoLockProvider>
+            <ToastProvider>
+              <AppWithSplash />
+            </ToastProvider>
+          </AutoLockProvider>
+        </WalletProvider>
+      </ThemeProvider>
     </ErrorBoundary>
   );
 }

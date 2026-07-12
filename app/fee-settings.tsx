@@ -1,8 +1,10 @@
 import { AndroidSafeContainer } from '@/components/AndroidSafeContainer';
+import { PressableOpacity } from '@/components/PressableOpacity';
 import { GradientBackground } from '@/components/GradientBackground';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
+import { useTheme } from '@/hooks/theme-store';
+import { useWalletSettings } from '@/hooks/wallet-contexts';
 import { feeEstimationService } from '@/services/fee-service';
 import type { FeeEstimate } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
@@ -26,7 +28,6 @@ import {
     StyleSheet,
     Text,
     TextInput,
-    TouchableOpacity,
     View
 } from 'react-native';
 
@@ -43,7 +44,8 @@ interface FeeSettings {
 }
 
 export default function FeeSettingsScreen() {
-  const { theme, feeSettings, setFeeSettings } = useWallet();
+  const { theme } = useTheme();
+  const { feeSettings, setFeeSettings } = useWalletSettings();
   const [feeEstimates, setFeeEstimates] = useState<FeeEstimate | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
@@ -143,7 +145,7 @@ export default function FeeSettingsScreen() {
     const estimatedCost = estimateTransactionCost(info.rate);
     
     return (
-      <TouchableOpacity
+      <PressableOpacity
         style={[
           styles.presetCard,
           {
@@ -205,7 +207,7 @@ export default function FeeSettingsScreen() {
             </Text>
           </View>
         </View>
-      </TouchableOpacity>
+      </PressableOpacity>
     );
   };
 
@@ -280,9 +282,9 @@ export default function FeeSettingsScreen() {
     
     const getCongestionColor = () => {
       switch (congestion) {
-        case 'low': return '#10B981'; // Green
-        case 'medium': return '#F59E0B'; // Yellow
-        case 'high': return '#EF4444'; // Red
+        case 'low': return theme.colors.success;
+        case 'medium': return theme.colors.warning;
+        case 'high': return theme.colors.error;
         default: return theme.colors.textSecondary;
       }
     };
@@ -333,13 +335,13 @@ export default function FeeSettingsScreen() {
           
           {/* Custom Header */}
           <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-            <TouchableOpacity
+            <PressableOpacity
               style={styles.backButton}
               onPress={handleBack}
               testID="back-button"
             >
               <ArrowLeft size={24} color={theme.colors.text} />
-            </TouchableOpacity>
+            </PressableOpacity>
             <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
               Fee Settings
             </Text>
@@ -368,17 +370,17 @@ export default function FeeSettingsScreen() {
         
         {/* Custom Header */}
         <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-          <TouchableOpacity
+          <PressableOpacity
             style={styles.backButton}
             onPress={handleBack}
             testID="back-button"
           >
             <ArrowLeft size={24} color={theme.colors.text} />
-          </TouchableOpacity>
+          </PressableOpacity>
           <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
             Fee Settings
           </Text>
-          <TouchableOpacity
+          <PressableOpacity
             onPress={refreshFeeEstimates}
             disabled={refreshing}
             style={styles.refreshButton}
@@ -388,7 +390,7 @@ export default function FeeSettingsScreen() {
               size={20} 
               style={refreshing ? { transform: [{ rotate: '180deg' }] } : undefined}
             />
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
         
         <ScrollView style={styles.scrollView}>
@@ -452,7 +454,7 @@ export default function FeeSettingsScreen() {
             </Text>
           </View>
           
-          <TouchableOpacity
+          <PressableOpacity
             style={[
               styles.customFeeButton,
               {
@@ -482,7 +484,7 @@ export default function FeeSettingsScreen() {
             ]}>
               Use Custom Rate
             </Text>
-          </TouchableOpacity>
+          </PressableOpacity>
         </View>
 
         {/* Advanced Settings */}

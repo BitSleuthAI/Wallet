@@ -1,6 +1,7 @@
 import { platformStyles } from '@/constants/themes';
-import { useWallet } from '@/hooks/wallet-store';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { useTheme } from '@/hooks/theme-store';
+import { getPin as getSecurePin } from '@/services/secure-pin-service';
 import * as Haptics from 'expo-haptics';
 import { ArrowLeft, Delete } from 'lucide-react-native';
 import React, { useCallback, useMemo, useState } from 'react';
@@ -8,7 +9,6 @@ import {
     Platform,
     StyleSheet,
     Text,
-    TouchableOpacity,
     Vibration,
     View,
 } from 'react-native';
@@ -26,7 +26,7 @@ export default function PinVerificationScreen({
   onSuccess,
   onBack,
 }: PinVerificationScreenProps) {
-  const { theme } = useWallet();
+  const { theme } = useTheme();
   const [pin, setPin] = useState<string>('');
   const [error, setError] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -45,7 +45,7 @@ export default function PinVerificationScreen({
   const verifyPin = useCallback(async (enteredPin: string) => {
     setIsLoading(true);
     try {
-      const storedPin = await AsyncStorage.getItem('pin');
+      const storedPin = await getSecurePin();
       
       if (storedPin === enteredPin) {
         // Trigger success haptic feedback asynchronously
@@ -151,7 +151,7 @@ export default function PinVerificationScreen({
               
               if (item === 'delete') {
                 return (
-                  <TouchableOpacity
+                  <PressableOpacity
                     key={itemIndex}
                     style={[
                       styles.numberButton,
@@ -162,12 +162,12 @@ export default function PinVerificationScreen({
                     activeOpacity={0.6}
                   >
                     <Delete size={24} color="#FFFFFF" />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 );
               }
               
               return (
-                <TouchableOpacity
+                <PressableOpacity
                   key={itemIndex}
                   style={[
                     styles.numberButton,
@@ -178,7 +178,7 @@ export default function PinVerificationScreen({
                   activeOpacity={0.6}
                 >
                   <Text style={styles.numberText}>{item}</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               );
             })}
           </View>
@@ -191,13 +191,13 @@ export default function PinVerificationScreen({
     <View style={styles.container}>
       {/* Header */}
       <View style={[styles.header, { borderBottomColor: theme.colors.border }]}>
-        <TouchableOpacity
+        <PressableOpacity
           style={styles.backButton}
           onPress={onBack}
           testID="back-button"
         >
           <ArrowLeft size={24} color={theme.colors.text} />
-        </TouchableOpacity>
+        </PressableOpacity>
         <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
           {title}
         </Text>

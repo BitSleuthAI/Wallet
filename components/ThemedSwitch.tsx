@@ -34,17 +34,11 @@ interface ThemedSwitchProps {
  * ThemedSwitch component
  * 
  * A consistent toggle switch across the app with theme-aware colors:
- * 
- * Light Mode:
- * - Track OFF: Light grey (#E5E7EB)
- * - Track ON: Orange (theme.colors.primary)
- * - Thumb: White (#FFFFFF)
- * 
- * Dark Mode:
- * - Track OFF: Darker grey (#374151)
- * - Track ON: Bright teal/cyan (theme.colors.primary)
- * - Thumb: White (#FFFFFF)
- * 
+ *
+ * - Track OFF: Light grey (#E5E7EB) in light mode, darker grey (#374151) in dark mode
+ * - Track ON: Bitcoin orange (theme.colors.primary)
+ * - Thumb: White (#FFFFFF) for maximum contrast
+ *
  * Consistent behavior across iOS, Android, and Web platforms.
  */
 export function ThemedSwitch({
@@ -56,7 +50,7 @@ export function ThemedSwitch({
 }: ThemedSwitchProps) {
   // Consistent colors across all toggles
   const trackColorOff = theme.isDark ? '#374151' : '#E5E7EB'; // Slightly darker grey for dark mode, light grey for light mode
-  const trackColorOn = theme.colors.primary; // Orange in light mode, cyan in dark mode
+  const trackColorOn = theme.colors.primary;
   const thumbColor = '#FFFFFF'; // Always white for maximum contrast
   
   if (Platform.OS === 'web') {

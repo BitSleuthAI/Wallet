@@ -1,24 +1,34 @@
 import FeedbackPopup from '@/components/FeedbackPopup';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { AppButton } from '@/components/AppButton';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground, GradientCard } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import BalanceChart from '@/components/PriceChart';
 import { HomeScreenSkeleton } from '@/components/SkeletonLoader';
 import TransactionItem from '@/components/TransactionItem';
 import WalletCard from '@/components/WalletCard';
-import { createButtonStyle, platformStyles } from '@/constants/themes';
+import { platformStyles } from '@/constants/themes';
 import { WALLET_COLOR_PALETTE } from '@/constants/wallet-colors';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import {
+  WalletsContext,
+  useFeedback,
+  useWalletActions,
+  useWalletBalance,
+  useWalletSettings,
+  useWalletTransactions,
+  useWallets,
+} from '@/hooks/wallet-contexts';
 import { HapticService } from '@/services/haptic-service';
 import { Wallet } from '@/types/wallet';
-import { isIOS26OrHigher } from '@/utils/platform';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack, router } from 'expo-router';
 import { ArrowDownLeft, ArrowUpRight, Check, Eye, EyeOff, Plus, TrendingUp, WifiOff, X } from 'lucide-react-native';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
-  Animated,
   FlatList,
   Modal,
   Platform,
@@ -28,9 +38,9 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
 type TimePeriod = '1D' | '1W' | '1M' | '1Y' | 'All';
 
@@ -43,50 +53,36 @@ const WALLET_CARD_WIDTH = 340;
 const WALLET_CARD_MARGIN = 16;
 const CARD_SNAP_INTERVAL = WALLET_CARD_WIDTH + WALLET_CARD_MARGIN; // 356px
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function WalletScreen() {
-  const walletContext = useWallet();
-  
+  const walletData = useContext(WalletsContext);
+
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+  if (!walletData) {
+    return <ScreenLoading />;
   }
-  
+
   return <WalletScreenContent />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. This screen legitimately renders balance and
+// transactions (keeps that churn) but sheds address/utxo/feedback-state churn.
 function WalletScreenContent() {
-  const { animatedStyle } = useTabAnimation(0); // Wallet tab = index 0
+  const { animatedStyle } = useTabAnimation(); // Wallet tab
+  const { wallets, currentWallet, currentWalletId, isLoading } = useWallets();
+  const { balance, balanceUSD, bitcoinPrice, hasBalanceError, hasPriceError } = useWalletBalance();
+  const { transactions, hasTransactionsError } = useWalletTransactions();
+  const { switchWallet, editWallet, refreshData, formatCurrency, setHideBalanceSetting } = useWalletActions();
+  const { hideBalance } = useWalletSettings();
   const {
-    wallets,
-    currentWallet,
-    currentWalletId,
-    switchWallet,
-    editWallet,
-    balance,
-    balanceUSD,
-    bitcoinPrice,
-    transactions,
-    theme,
-    refreshData,
-    hasBalanceError,
-    hasTransactionsError,
-    hasPriceError,
-    isLoading,
-    formatCurrency,
-    hideBalance,
-    setHideBalanceSetting,
     shouldShowFeedbackPrompt,
     markFeedbackPromptShown,
     markFeedbackPromptDismissed,
     markFeedbackSubmitted,
     incrementUsageCount,
-  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  } = useFeedback();
+  const { theme } = useTheme();
   
   // Initialize all state hooks
   const [refreshing, setRefreshing] = useState(false);
@@ -196,7 +192,7 @@ function WalletScreenContent() {
   const renderCarouselItem = useCallback(({ item }: { item: CarouselItem }) => {
     if (item.type === 'add') {
       return (
-        <TouchableOpacity 
+        <PressableOpacity 
           style={[
             styles.addWalletCard, 
             { 
@@ -213,7 +209,7 @@ function WalletScreenContent() {
             <Plus color="white" size={24} />
           </View>
           <Text style={[styles.addWalletText, { color: theme.colors.primary }]}>Add new wallet</Text>
-        </TouchableOpacity>
+        </PressableOpacity>
       );
     }
     return (
@@ -262,12 +258,12 @@ function WalletScreenContent() {
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
               Create or import a wallet to get started
             </Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => router.push('/wallet-setup')}
             >
               <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -351,8 +347,13 @@ function WalletScreenContent() {
             snapToInterval={CARD_SNAP_INTERVAL}
             snapToAlignment="start"
             data={walletDataForList}
-            keyExtractor={(item, index) => `${item.type}-${index}`}
+            keyExtractor={(item) => item.type === 'wallet' ? item.wallet.id : 'add'}
             renderItem={renderCarouselItem}
+            getItemLayout={(_, index) => ({
+              length: CARD_SNAP_INTERVAL,
+              offset: CARD_SNAP_INTERVAL * index,
+              index,
+            })}
             contentContainerStyle={styles.carouselContent}
             removeClippedSubviews={true}
             maxToRenderPerBatch={3}
@@ -391,17 +392,17 @@ function WalletScreenContent() {
                 <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
                   Bitcoin APIs are temporarily unavailable. Your wallet is safe.
                 </Text>
-                <TouchableOpacity 
+                <PressableOpacity 
                   style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
                   onPress={refreshData}
                 >
                   <Text style={styles.retryButtonText}>Retry</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               </View>
             ) : (
               <>
                 <View style={styles.balanceContainer}>
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[styles.eyeButton, { backgroundColor: theme.colors.background }]}
                     onPress={() => {
                       HapticService.light();
@@ -414,7 +415,7 @@ function WalletScreenContent() {
                     ) : (
                       <Eye color={theme.colors.textSecondary} size={20} />
                     )}
-                  </TouchableOpacity>
+                  </PressableOpacity>
                   <Text style={[styles.mainBalance, { color: theme.colors.text }]}>
                     {hideBalance ? '••••••••' : (hasPriceError ? `${balance.toFixed(8)} BTC` : formatCurrency(balanceUSD))}
                   </Text>
@@ -445,7 +446,7 @@ function WalletScreenContent() {
         ]}>
           <View style={styles.periodSelectorInner}>
             {(['1D', '1W', '1M', '1Y', 'All'] as TimePeriod[]).map((period) => (
-              <TouchableOpacity
+              <PressableOpacity
                 key={period}
                 style={[
                   styles.periodButton,
@@ -474,7 +475,7 @@ function WalletScreenContent() {
                 ]}>
                   {period}
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             ))}
           </View>
         </LiquidGlassView>
@@ -492,35 +493,27 @@ function WalletScreenContent() {
 
         {/* Action Buttons */}
         <View style={styles.actionButtons}>
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'primary'),
-              styles.sendButton,
-            ]}
+          <AppButton
+            title="Send"
+            icon={<ArrowUpRight color="white" size={20} />}
             onPress={() => {
               HapticService.medium();
               router.push('/(tabs)/send');
             }}
-            activeOpacity={0.85}
-          >
-            <ArrowUpRight color="white" size={20} />
-            <Text style={styles.actionButtonText}>Send</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              createButtonStyle(theme, 'secondary'),
-              styles.receiveButton,
-            ]}
+            style={styles.actionButton}
+            testID="home-send-button"
+          />
+          <AppButton
+            title="Receive"
+            variant="secondary"
+            icon={<ArrowDownLeft color={theme.colors.text} size={20} />}
             onPress={() => {
               HapticService.medium();
               router.push('/(tabs)/receive');
             }}
-            activeOpacity={0.85}
-          >
-            <ArrowDownLeft color={theme.colors.text} size={20} />
-            <Text style={[styles.receiveButtonText, { color: theme.colors.text }]}>Receive</Text>
-          </TouchableOpacity>
+            style={styles.actionButton}
+            testID="home-receive-button"
+          />
         </View>
 
         {/* Recent Transactions */}
@@ -536,11 +529,11 @@ function WalletScreenContent() {
               Recent Transactions
             </Text>
             <View style={styles.transactionsHeaderActions}>
-              <TouchableOpacity onPress={() => router.push('/transaction-history')}>
+              <PressableOpacity onPress={() => router.push('/transaction-history')}>
                 <Text style={[styles.viewAllText, { color: theme.colors.primary }]}>
                   View All
                 </Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           </View>
 
@@ -553,12 +546,12 @@ function WalletScreenContent() {
               <Text style={[styles.errorSubtitle, { color: theme.colors.textSecondary }]}>
                 Bitcoin APIs are temporarily unavailable. Your transactions are safe.
               </Text>
-              <TouchableOpacity 
+              <PressableOpacity 
                 style={[styles.retryButton, { backgroundColor: theme.colors.primary }]}
                 onPress={refreshData}
               >
                 <Text style={styles.retryButtonText}>Retry</Text>
-              </TouchableOpacity>
+              </PressableOpacity>
             </View>
           ) : transactions.length === 0 ? (
             <View style={styles.emptyTransactionsContainer}>
@@ -582,155 +575,82 @@ function WalletScreenContent() {
       {/* Edit Wallet Modal */}
       <Modal
         visible={!!editingWallet}
-        transparent
         animationType="slide"
+        presentationStyle="formSheet"
         onRequestClose={handleCancelEdit}
       >
-        {isIOS26OrHigher() ? (
-          <LiquidGlassView variant="ultraThin" intensity={95} style={styles.modalOverlay}>
-            <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.editModalHeader}>
-                <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-                <TouchableOpacity onPress={handleCancelEdit}>
-                  <X color={theme.colors.textSecondary} size={24} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.editModalContent}>
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
-                <TextInput
-                  style={[styles.editInput, { 
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text 
-                  }]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter wallet name"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  underlineColorAndroid="transparent"
-                />
-                
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
-                <View style={styles.colorPicker}>
-                  {WALLET_COLOR_PALETTE.map((colorOption) => {
-                    const gradientColors = colorOption.gradient;
-                    return (
-                      <TouchableOpacity
-                        key={colorOption.id}
-                        style={[
-                          styles.colorOption,
-                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
-                        ]}
-                        onPress={() => setEditColor(colorOption.base)}
-                      >
-                        <LinearGradient
-                          colors={gradientColors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.colorGradient}
-                        />
-                        {editColor === colorOption.base && (
-                          <View style={styles.colorCheckmark}>
-                            <Check color="white" size={16} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-              
-              <View style={styles.editModalActions}>
-                <TouchableOpacity
-                  style={[styles.editCancelButton, { borderColor: theme.colors.border }]}
-                  onPress={handleCancelEdit}
-                >
-                  <Text style={[styles.editCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.editSaveButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleSaveEdit}
-                >
-                  <Text style={styles.editSaveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </LiquidGlassView>
-        ) : (
-          <View style={styles.modalOverlay}>
-            <View style={[styles.editModal, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.editModalHeader}>
-                <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
-                <TouchableOpacity onPress={handleCancelEdit}>
-                  <X color={theme.colors.textSecondary} size={24} />
-                </TouchableOpacity>
-              </View>
-              
-              <View style={styles.editModalContent}>
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
-                <TextInput
-                  style={[styles.editInput, { 
-                    backgroundColor: theme.colors.background,
-                    borderColor: theme.colors.border,
-                    color: theme.colors.text 
-                  }]}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder="Enter wallet name"
-                  placeholderTextColor={theme.colors.textSecondary}
-                  underlineColorAndroid="transparent"
-                />
-                
-                <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
-                <View style={styles.colorPicker}>
-                  {WALLET_COLOR_PALETTE.map((colorOption) => {
-                    const gradientColors = colorOption.gradient;
-                    return (
-                      <TouchableOpacity
-                        key={colorOption.id}
-                        style={[
-                          styles.colorOption,
-                          editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
-                        ]}
-                        onPress={() => setEditColor(colorOption.base)}
-                      >
-                        <LinearGradient
-                          colors={gradientColors}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 1 }}
-                          style={styles.colorGradient}
-                        />
-                        {editColor === colorOption.base && (
-                          <View style={styles.colorCheckmark}>
-                            <Check color="white" size={16} />
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-              
-              <View style={styles.editModalActions}>
-                <TouchableOpacity
-                  style={[styles.editCancelButton, { borderColor: theme.colors.border }]}
-                  onPress={handleCancelEdit}
-                >
-                  <Text style={[styles.editCancelText, { color: theme.colors.textSecondary }]}>Cancel</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={[styles.editSaveButton, { backgroundColor: theme.colors.primary }]}
-                  onPress={handleSaveEdit}
-                >
-                  <Text style={styles.editSaveText}>Save</Text>
-                </TouchableOpacity>
-              </View>
+        <View style={[styles.editModal, { backgroundColor: theme.colors.background }]}>
+          <View style={styles.editModalHeader}>
+            <Text style={[styles.editModalTitle, { color: theme.colors.text }]}>Edit Wallet</Text>
+            <PressableOpacity onPress={handleCancelEdit}>
+              <X color={theme.colors.textSecondary} size={24} />
+            </PressableOpacity>
+          </View>
+
+          <View style={styles.editModalContent}>
+            <Text style={[styles.editLabel, { color: theme.colors.text }]}>Wallet Name</Text>
+            <TextInput
+              style={[styles.editInput, {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+                color: theme.colors.text
+              }]}
+              value={editName}
+              onChangeText={setEditName}
+              placeholder="Enter wallet name"
+              placeholderTextColor={theme.colors.textSecondary}
+              underlineColorAndroid="transparent"
+            />
+
+            <Text style={[styles.editLabel, { color: theme.colors.text }]}>Color</Text>
+            <View style={styles.colorPicker}>
+              {WALLET_COLOR_PALETTE.map((colorOption) => {
+                const gradientColors = colorOption.gradient;
+                return (
+                  <PressableOpacity
+                    key={colorOption.id}
+                    style={[
+                      styles.colorOption,
+                      editColor === colorOption.base && { ...styles.selectedColor, borderColor: theme.colors.primary }
+                    ]}
+                    onPress={() => {
+                      HapticService.light();
+                      setEditColor(colorOption.base);
+                    }}
+                  >
+                    <LinearGradient
+                      colors={gradientColors}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.colorGradient}
+                    />
+                    {editColor === colorOption.base && (
+                      <View style={styles.colorCheckmark}>
+                        <Check color="white" size={16} />
+                      </View>
+                    )}
+                  </PressableOpacity>
+                );
+              })}
             </View>
           </View>
-        )}
+
+          <View style={styles.editModalActions}>
+            <AppButton
+              title="Cancel"
+              variant="secondary"
+              onPress={handleCancelEdit}
+              style={styles.editActionButton}
+              testID="edit-wallet-cancel"
+            />
+            <AppButton
+              title="Save"
+              onPress={handleSaveEdit}
+              style={styles.editActionButton}
+              testID="edit-wallet-save"
+            />
+          </View>
+        </View>
       </Modal>
       
       {/* Feedback Popup */}
@@ -893,36 +813,9 @@ const styles = StyleSheet.create({
     marginTop: platformStyles.spacing.xxxl, // Increased from xxl
     gap: platformStyles.spacing.lg,
   },
-  sendButton: {
+  actionButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
-    ...platformStyles.buttonShadow,
-  },
-  receiveButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: platformStyles.spacing.lg + 2, // Increased
-    borderRadius: platformStyles.borderRadius.xxl, // Increased from xl
-    ...platformStyles.shadow,
-  },
-  actionButtonText: {
-    color: 'white',
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
-  },
-  receiveButtonText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    marginLeft: 10, // Increased from 8
-    letterSpacing: 0.2,
+    borderRadius: platformStyles.borderRadius.xxl,
   },
   transactionsSection: {
     marginTop: platformStyles.spacing.xl,
@@ -1065,27 +958,14 @@ const styles = StyleSheet.create({
     fontWeight: '600', // Increased from 500
     letterSpacing: 0.2,
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)', // Increased opacity from 0.5 for better focus
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-  },
   editModal: {
-    width: '100%',
-    maxWidth: 420, // Increased from 400
-    borderRadius: platformStyles.borderRadius.xxxl, // Increased from xxl
-    padding: 0,
-    ...platformStyles.cardShadow,
+    flex: 1,
   },
   editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    padding: platformStyles.spacing.xxl,
   },
   editModalTitle: {
     fontSize: 22, // Increased from 19
@@ -1145,36 +1025,11 @@ const styles = StyleSheet.create({
   },
   editModalActions: {
     flexDirection: 'row',
-    padding: platformStyles.spacing.xxl, // Increased from xl
-    gap: platformStyles.spacing.lg, // Increased from md
+    padding: platformStyles.spacing.xxl,
+    gap: platformStyles.spacing.lg,
   },
-  editCancelButton: {
+  editActionButton: {
     flex: 1,
-    paddingVertical: platformStyles.spacing.md + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    borderWidth: 2, // Increased from 1.5
-    alignItems: 'center',
-    // borderColor will be set dynamically via theme.colors.border
-  },
-  editCancelText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '600', // Increased from 500
-    letterSpacing: 0.2,
-    // color will be set dynamically via theme.colors.textSecondary
-  },
-  editSaveButton: {
-    flex: 1,
-    paddingVertical: platformStyles.spacing.md + 4, // Increased
-    borderRadius: platformStyles.borderRadius.xl, // Increased from large
-    // backgroundColor will be set dynamically via theme.colors.primary
-    alignItems: 'center',
-    ...platformStyles.buttonShadow,
-  },
-  editSaveText: {
-    fontSize: 18, // Increased from 17
-    fontWeight: '700', // Increased from 600
-    color: 'white',
-    letterSpacing: 0.3,
   },
   chartContainer: {
     marginTop: platformStyles.spacing.xl,

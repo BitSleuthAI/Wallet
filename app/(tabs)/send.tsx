@@ -1,22 +1,41 @@
+import { AppButton } from '@/components/AppButton';
+import { PressableOpacity } from '@/components/PressableOpacity';
+import { ScreenLoading } from '@/components/ScreenLoading';
 import { GradientBackground } from '@/components/GradientBackground';
 import { LiquidGlassView } from '@/components/LiquidGlassView';
 import QRScanner from '@/components/QRScanner';
 import { ThemedSwitch } from '@/components/ThemedSwitch';
+import {
+  TransactionReviewDetails,
+  TransactionReviewSheet,
+  TransactionSuccessDetails,
+} from '@/components/TransactionReviewSheet';
 import WalletSelector from '@/components/WalletSelector';
-import { createButtonStyle, createInputStyle, platformStyles } from '@/constants/themes';
+import { createInputStyle, platformStyles } from '@/constants/themes';
 import { useAutoLock } from '@/hooks/auto-lock-store';
+import { useTheme } from '@/hooks/theme-store';
 import { useTabAnimation } from '@/hooks/use-tab-animation';
-import { useWallet } from '@/hooks/wallet-store';
+import {
+  WalletsContext,
+  useCoinControl,
+  useFeedback,
+  useWalletActions,
+  useWalletBalance,
+  useWalletMeta,
+  useWalletSettings,
+  useWalletUtxos,
+  useWallets,
+} from '@/hooks/wallet-contexts';
 import { isValidBitcoinAddress, sendTransaction } from '@/services/bitcoin-service';
 import { feeEstimationService } from '@/services/fee-service';
 import { HapticService } from '@/services/haptic-service';
 import type { UTXO } from '@/types/wallet';
 import { Stack, router } from 'expo-router';
 import { AlertCircle, ArrowUpRight, CheckCircle, ChevronRight, Coins, QrCode } from 'lucide-react-native';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Animated,
+  KeyboardAvoidingView,
   Modal,
   Platform,
   SafeAreaView,
@@ -24,48 +43,39 @@ import {
   StyleSheet,
   Text,
   TextInput,
-  TouchableOpacity,
   View,
 } from 'react-native';
+import Animated from 'react-native-reanimated';
 
-// Wrapper component that checks for context availability
+// Wrapper component that checks for context availability. Subscribes only to
+// the low-churn wallets slice so the gate itself doesn't re-render on polls.
 export default function SendScreen() {
   if (__DEV__) {
     console.log('🔍 Send screen: Component mounted/rendered');
   }
-  const walletContext = useWallet();
+  const walletData = useContext(WalletsContext);
 
   // Safety check: if context is not available yet, show loading
-  if (!walletContext) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#0A0A0F' }}>
-        <Text style={{ color: '#fff' }}>Loading...</Text>
-      </View>
-    );
+  if (!walletData) {
+    return <ScreenLoading />;
   }
 
   return <SendScreenContent />;
 }
 
-// Main component with all hooks
+// Main component with all hooks. Narrow subscriptions: the form no longer
+// re-renders mid-typing when unrelated slices (transactions, addresses) poll.
 function SendScreenContent() {
-  const { animatedStyle } = useTabAnimation(1);
-  const {
-    currentWallet,
-    balance,
-    theme,
-    coinControl,
-    selectedCurrency,
-    getCurrencySymbol,
-    bitcoinPrice: walletBitcoinPrice,
-    feeSettings,
-    setFeeSettings,
-    feeSettingsLoading,
-    incrementUsageCount,
-    utxos: walletUtxos,
-    refreshData,
-    getMnemonic,
-  } = useWallet()!; // Non-null assertion is safe here because wrapper checked
+  const { animatedStyle } = useTabAnimation(); // Send tab
+  const { currentWallet } = useWallets();
+  const { balance, bitcoinPrice: walletBitcoinPrice } = useWalletBalance();
+  const coinControl = useCoinControl();
+  const { selectedCurrency, feeSettings, setFeeSettings, feeSettingsLoading } = useWalletSettings();
+  const { getCurrencySymbol, refreshData } = useWalletActions();
+  const { incrementUsageCount } = useFeedback();
+  const { utxos: walletUtxos } = useWalletUtxos();
+  const { getMnemonic } = useWalletMeta();
+  const { theme } = useTheme();
   const { authenticateForTransactionEnhanced, isEnhancedSecurityRequired } = useAutoLock();
 
   // Initialize all state hooks
@@ -92,6 +102,9 @@ function SendScreenContent() {
     isValid: boolean;
     message: string | null;
   }>({ isValid: true, message: null });
+  const [reviewDetails, setReviewDetails] = useState<TransactionReviewDetails | null>(null);
+  const [successDetails, setSuccessDetails] = useState<TransactionSuccessDetails | null>(null);
+  const [showReviewSheet, setShowReviewSheet] = useState(false);
 
   // Memoize computed values from feeSettings to prevent unnecessary re-renders
   const selectedFeeType = useMemo(() =>
@@ -538,25 +551,29 @@ function SendScreenContent() {
       }
 
       console.log('🚀 Starting real Bitcoin transaction send process...');
-      const truncatedAddress = recipientAddress.substring(0, 20) + '...';
-      console.log('Transaction details:', {
-        from: currentWallet?.name,
-        to: truncatedAddress,
-        amount: amountInBTC,
-        feeRate,
-        enableRBF,
-        network: 'mainnet',
-        enhancedSecurity: isEnhancedSecurityRequired
-      });
+      if (__DEV__) {
+        const truncatedAddress = recipientAddress.substring(0, 20) + '...';
+        console.log('Transaction details:', {
+          from: currentWallet?.name,
+          to: truncatedAddress,
+          amount: amountInBTC,
+          feeRate,
+          enableRBF,
+          network: 'mainnet',
+          enhancedSecurity: isEnhancedSecurityRequired
+        });
+      }
 
       // Send the real transaction
       const selected = availableUtxos.filter(u => selectedUtxoIds.includes(`${u.txid}:${u.vout}`));
 
       // Validate wallet addresses and current index
-      console.log('🔍 Wallet validation - addresses count:', currentWallet.addresses?.length || 0);
-      console.log('🔍 Wallet validation - current address index:', currentWallet.currentAddressIndex);
-      console.log('🔍 Wallet validation - available UTXOs count:', availableUtxos.length);
-      console.log('🔍 Wallet validation - selected UTXOs count:', selected.length);
+      if (__DEV__) {
+        console.log('🔍 Wallet validation - addresses count:', currentWallet.addresses?.length || 0);
+        console.log('🔍 Wallet validation - current address index:', currentWallet.currentAddressIndex);
+        console.log('🔍 Wallet validation - available UTXOs count:', availableUtxos.length);
+        console.log('🔍 Wallet validation - selected UTXOs count:', selected.length);
+      }
 
       if (!currentWallet.addresses || currentWallet.addresses.length === 0) {
         console.error('❌ No addresses available in wallet');
@@ -581,21 +598,23 @@ function SendScreenContent() {
       const currentAddress = currentWallet.addresses[currentWallet.currentAddressIndex];
       const addressIndex = currentWallet.currentAddressIndex;
 
-      console.log('🔍 Using current address:', currentAddress.substring(0, 10) + '...');
-      console.log('🔍 Send screen: Wallet addresses being passed to sendTransaction:', currentWallet.addresses.length);
-      console.log('🔍 Send screen: availableUtxos.length:', availableUtxos.length);
-      console.log('🔍 Send screen: selected.length:', selected.length);
-      console.log('🔍 Send screen: availableUtxos details:', availableUtxos.map(u => ({
-        txid: u.txid.substring(0, 10) + '...',
-        vout: u.vout,
-        value: u.value,
-        address: u.address?.substring(0, 10) + '...',
-        addressIndex: u.addressIndex,
-        frozen: u.frozen
-      })));
-      console.log('🔍 Send screen: selectedUtxoIds:', selectedUtxoIds);
-      console.log('🔍 Send screen: coinControl.getWalletUtxos result:', coinControl.getWalletUtxos(currentWallet.id));
-      console.log('🔍 Send screen: coinControl.isUtxosLoading result:', coinControl.isUtxosLoading(currentWallet.id));
+      if (__DEV__) {
+        console.log('🔍 Using current address:', currentAddress.substring(0, 10) + '...');
+        console.log('🔍 Send screen: Wallet addresses being passed to sendTransaction:', currentWallet.addresses.length);
+        console.log('🔍 Send screen: availableUtxos.length:', availableUtxos.length);
+        console.log('🔍 Send screen: selected.length:', selected.length);
+        console.log('🔍 Send screen: availableUtxos details:', availableUtxos.map(u => ({
+          txid: u.txid.substring(0, 10) + '...',
+          vout: u.vout,
+          value: u.value,
+          address: u.address?.substring(0, 10) + '...',
+          addressIndex: u.addressIndex,
+          frozen: u.frozen
+        })));
+        console.log('🔍 Send screen: selectedUtxoIds:', selectedUtxoIds);
+        console.log('🔍 Send screen: coinControl.getWalletUtxos result:', coinControl.getWalletUtxos(currentWallet.id));
+        console.log('🔍 Send screen: coinControl.isUtxosLoading result:', coinControl.isUtxosLoading(currentWallet.id));
+      }
 
       // If no UTXOs are selected via coin control, automatically select the most efficient UTXOs
       let utxosToUse: UTXO[];
@@ -610,14 +629,16 @@ function SendScreenContent() {
         }
 
         utxosToUse = unfrozenSelected;
-        console.log('🔍 Send screen: Using manually selected unfrozen UTXOs:', utxosToUse.length);
-        if (unfrozenSelected.length < selected.length) {
-          console.log('🔍 Send screen: Filtered out', selected.length - unfrozenSelected.length, 'frozen/unconfirmed UTXOs');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Using manually selected unfrozen UTXOs:', utxosToUse.length);
+          if (unfrozenSelected.length < selected.length) {
+            console.log('🔍 Send screen: Filtered out', selected.length - unfrozenSelected.length, 'frozen/unconfirmed UTXOs');
+          }
         }
       } else {
         // Automatic UTXO selection: choose confirmed UTXOs (not frozen) - BlueWallet approach
         const unfrozenUtxos = availableUtxos.filter(utxo => !utxo.frozen && utxo.status?.confirmed);
-        console.log('🔍 Send screen: Available confirmed unfrozen UTXOs:', unfrozenUtxos.length);
+        if (__DEV__) console.log('🔍 Send screen: Available confirmed unfrozen UTXOs:', unfrozenUtxos.length);
 
         if (unfrozenUtxos.length === 0) {
           console.warn('⚠️ No confirmed unfrozen UTXOs available for automatic selection');
@@ -632,9 +653,11 @@ function SendScreenContent() {
         const estimatedFeeSatoshis = Math.floor((estimatedFee || 0.0001) * 1e8);
         const totalNeeded = amountSatoshis + estimatedFeeSatoshis;
 
-        console.log('🔍 Send screen: Amount needed:', amountSatoshis, 'sats');
-        console.log('🔍 Send screen: Estimated fee:', estimatedFeeSatoshis, 'sats');
-        console.log('🔍 Send screen: Total needed:', totalNeeded, 'sats');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Amount needed:', amountSatoshis, 'sats');
+          console.log('🔍 Send screen: Estimated fee:', estimatedFeeSatoshis, 'sats');
+          console.log('🔍 Send screen: Total needed:', totalNeeded, 'sats');
+        }
 
         // Greedy selection: pick UTXOs until we have enough - BlueWallet approach
         const selectedUtxos: UTXO[] = [];
@@ -655,39 +678,28 @@ function SendScreenContent() {
         }
 
         utxosToUse = selectedUtxos;
-        console.log('🔍 Send screen: Automatically selected', utxosToUse.length, 'UTXOs');
-        console.log('🔍 Send screen: Total selected value:', totalSelected, 'sats');
-        console.log('🔍 Send screen: Change amount:', totalSelected - totalNeeded, 'sats');
-        console.log('🔍 Send screen: Sample selected UTXO:', utxosToUse[0] ? {
-          txid: utxosToUse[0].txid.substring(0, 10) + '...',
-          vout: utxosToUse[0].vout,
-          value: utxosToUse[0].value,
-          address: utxosToUse[0].address?.substring(0, 10) + '...'
-        } : 'No UTXOs');
+        if (__DEV__) {
+          console.log('🔍 Send screen: Automatically selected', utxosToUse.length, 'UTXOs');
+          console.log('🔍 Send screen: Total selected value:', totalSelected, 'sats');
+          console.log('🔍 Send screen: Change amount:', totalSelected - totalNeeded, 'sats');
+          console.log('🔍 Send screen: Sample selected UTXO:', utxosToUse[0] ? {
+            txid: utxosToUse[0].txid.substring(0, 10) + '...',
+            vout: utxosToUse[0].vout,
+            value: utxosToUse[0].value,
+            address: utxosToUse[0].address?.substring(0, 10) + '...'
+          } : 'No UTXOs');
+        }
       }
 
-      console.log('🔍 Send screen: UTXOs to use for transaction:', utxosToUse.length);
-
-      // If we have UTXOs available, use them directly instead of fetching fresh
-      if (utxosToUse.length > 0) {
-        console.log('✅ Using pre-loaded UTXOs for transaction (automatic selection)');
-      } else {
-        console.log('⚠️ No UTXOs available in send screen, will let sendTransaction fetch fresh data');
-      }
-      console.log('🔍 Available UTXOs:', availableUtxos.length);
-      console.log('🔍 Selected UTXOs:', selected.length);
-      console.log('🔍 Sample UTXO:', utxosToUse[0] ? {
-        txid: utxosToUse[0].txid.substring(0, 10) + '...',
-        vout: utxosToUse[0].vout,
-        value: utxosToUse[0].value,
-        address: utxosToUse[0].address?.substring(0, 10) + '...'
-      } : 'No UTXOs');
-
-      // Debug: Check if we're passing UTXOs to sendTransaction
-      if (utxosToUse.length > 0) {
-        console.log('✅ Send screen: Passing', utxosToUse.length, 'UTXOs to sendTransaction');
-      } else {
-        console.log('⚠️ Send screen: No UTXOs to pass to sendTransaction, will let it fetch fresh');
+      if (__DEV__) {
+        console.log('🔍 Send screen: UTXOs to use for transaction:', utxosToUse.length);
+        console.log('🔍 Available UTXOs:', availableUtxos.length);
+        console.log('🔍 Selected UTXOs:', selected.length);
+        if (utxosToUse.length > 0) {
+          console.log('✅ Send screen: Passing', utxosToUse.length, 'UTXOs to sendTransaction');
+        } else {
+          console.log('⚠️ Send screen: No UTXOs to pass to sendTransaction, will let it fetch fresh');
+        }
       }
 
       const result = await sendTransaction(
@@ -705,58 +717,16 @@ function SendScreenContent() {
       console.log('✅ Real Bitcoin transaction sent successfully:', result);
       HapticService.transactionSuccess();
 
-      // Show success message with transaction details
-      const feeFiat = bitcoinPrice && bitcoinPrice > 0 ? (result.fee * bitcoinPrice).toFixed(2) : 'N/A';
-      const amountFiat = bitcoinPrice && bitcoinPrice > 0 ? (amountInBTC * bitcoinPrice).toFixed(2) : 'N/A';
-
-      const amountBTC = amountInBTC.toFixed(8);
-      const feeBTC = result.fee.toFixed(8);
-      const feeRateText = feeRate.toString();
-
-      const successMessage = `Your Bitcoin transaction has been broadcast to the mainnet network.\n\n` +
-        `Transaction ID: ${result.txid}\n\n` +
-        `Amount: ${amountBTC} BTC (${getCurrencySymbol()}${amountFiat})\n` +
-        `Fee: ${feeBTC} BTC (${getCurrencySymbol()}${feeFiat})\n` +
-        `Fee Rate: ${feeRateText} sat/vB\n\n` +
-        `The transaction will appear in your wallet once it receives confirmations. ` +
-        `This typically takes 10-60 minutes depending on network congestion.`;
-
       // Refresh transaction history and balance to show the new transaction
       console.log('🔄 Refreshing wallet data after successful transaction...');
       await refreshData();
 
-      Alert.alert(
-        'Transaction Broadcast Successfully! 🎉',
-        successMessage,
-        [{
-          text: 'View Transaction',
-          onPress: () => {
-            // Clear form
-            setRecipientAddress('');
-            setAmount('');
-            setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: null });
-
-            // Navigate directly to transaction explorer with the txid
-            router.push({
-              pathname: '/transaction-explorer',
-              params: { txid: result.txid },
-            });
-          }
-        }, {
-          text: 'Done',
-          onPress: () => {
-            // Clear form
-            setRecipientAddress('');
-            setAmount('');
-            setEstimatedFee(null);
-            setAddressValidation({ isValid: false, message: null });
-
-            // Navigate to home to see updated balance
-            router.push('/');
-          }
-        }]
-      );
+      // Flip the review sheet to its success state (copyable txid + actions)
+      setSuccessDetails({
+        txid: result.txid,
+        amountBTC: `${amountInBTC.toFixed(8)} BTC`,
+        feeBTC: `${result.fee.toFixed(8)} BTC`,
+      });
 
     } catch (error) {
       console.error('❌ Error sending Bitcoin transaction:', error);
@@ -809,26 +779,15 @@ function SendScreenContent() {
 
       // Convert amount to BTC for display
       let amountInBTC: number;
-      let displayAmount: string;
 
       if (isAmountInBTC) {
         amountInBTC = parseFloat(amount);
-        const btcText = `${amount} BTC`;
-        displayAmount = btcText;
-        if (bitcoinPrice && bitcoinPrice > 0) {
-          const fiatValue = (amountInBTC * bitcoinPrice).toFixed(2);
-          const fiatDisplay = ` (${getCurrencySymbol()}${fiatValue})`;
-          displayAmount += fiatDisplay;
-        }
       } else {
         if (!bitcoinPrice || bitcoinPrice <= 0) {
           Alert.alert('Error', 'Unable to get current Bitcoin price. Please try again.');
           return;
         }
         amountInBTC = parseFloat(amount) / bitcoinPrice;
-        const btcAmount = amountInBTC.toFixed(8);
-        const fiatBtcText = `${getCurrencySymbol()}${amount} (${btcAmount} BTC)`;
-        displayAmount = fiatBtcText;
       }
 
       // Validate amount
@@ -868,75 +827,90 @@ function SendScreenContent() {
         }
       }
 
-      // Format fee display
-      const feeDisplay = estimatedFee ? (() => {
-        const feeAmount = estimatedFee.toFixed(8);
-        const feeText = `${feeAmount} BTC`;
-        return feeText;
-      })() : 'Calculating...';
-      const feeFiatDisplay = estimatedFee && bitcoinPrice && bitcoinPrice > 0 ? (() => {
-        const fiatAmount = (estimatedFee * bitcoinPrice).toFixed(2);
-        const fiatText = ` (${getCurrencySymbol()}${fiatAmount})`;
-        return fiatText;
-      })() : '';
+      // Open the native review sheet with the full transaction summary
+      const amountFiat = bitcoinPrice && bitcoinPrice > 0
+        ? `${getCurrencySymbol()}${(amountInBTC * bitcoinPrice).toFixed(2)}`
+        : null;
+      const feeFiat = estimatedFee && bitcoinPrice && bitcoinPrice > 0
+        ? `${getCurrencySymbol()}${(estimatedFee * bitcoinPrice).toFixed(2)}`
+        : null;
 
-      // Show comprehensive transaction review
-      const feeDisplayText = feeFiatDisplay ? (() => {
-        const combinedText = `${feeDisplay}${feeFiatDisplay}`;
-        return combinedText;
-      })() : feeDisplay;
-
-      const recipientPreview = recipientAddress.slice(0, 30);
-      const feeRateText = feeRate.toString();
-      const rbfStatus = enableRBF ? 'Enabled' : 'Disabled';
-
-      const reviewMessage = `You are about to send a REAL Bitcoin transaction on MAINNET:\n\n` +
-        `📤 Send: ${displayAmount}\n` +
-        `📍 To: ${recipientPreview}...\n\n` +
-        `💰 Network Fee: ${feeDisplayText}\n` +
-        `⚡ Fee Rate: ${feeRateText} sat/vB\n` +
-        `🔄 RBF: ${rbfStatus}\n\n` +
-        `⚠️ WARNING: This transaction cannot be reversed once broadcast!`;
-
-      Alert.alert(
-        '⚠️ Review Bitcoin Transaction',
-        reviewMessage,
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Send Bitcoin',
-            style: 'destructive',
-            onPress: async () => {
-              // Calculate amount for authentication
-              const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
-
-              // Always use enhanced security service to ensure MFA enforcement
-              console.log('🔐 Checking if biometric authentication is required before final confirmation...');
-
-              const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
-
-              if (requireBiometricAuth) {
-                const biometricSuccess = await authenticateForTransactionEnhanced(true);
-
-                if (!biometricSuccess) {
-                  Alert.alert(
-                    'Biometric Required',
-                    'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
-                    [{ text: 'OK' }]
-                  );
-                  return;
-                }
-              }
-
-              handleSendTransaction();
-            }
-          },
-        ]
-      );
+      setReviewDetails({
+        amountBTC: `${amountInBTC.toFixed(8)} BTC`,
+        amountFiat,
+        recipient: recipientAddress.trim(),
+        feeBTC: estimatedFee ? `${estimatedFee.toFixed(8)} BTC` : 'Calculating...',
+        feeFiat,
+        feeRate,
+        timeEstimate: getTimeEstimateForFeeRate(feeRate),
+        rbfEnabled: enableRBF,
+        totalBTC: `${(amountInBTC + (estimatedFee || 0)).toFixed(8)} BTC`,
+      });
+      setSuccessDetails(null);
+      setShowReviewSheet(true);
     } catch (error) {
       console.error('Error reviewing transaction:', error);
       Alert.alert('Error', 'Failed to review transaction. Please try again.');
     }
+  };
+
+  // Confirm handler for the review sheet. The biometric gate below is the
+  // same sequence the old Alert confirmation ran before handleSendTransaction.
+  const handleConfirmSend = async () => {
+    // Calculate amount for authentication
+    const amountInBTC = isAmountInBTC ? parseFloat(amount) : (bitcoinPrice && bitcoinPrice > 0 ? parseFloat(amount) / bitcoinPrice : 0);
+
+    // Always use enhanced security service to ensure MFA enforcement
+    console.log('🔐 Checking if biometric authentication is required before final confirmation...');
+
+    const requireBiometricAuth = await isEnhancedSecurityRequired(amountInBTC);
+
+    if (requireBiometricAuth) {
+      const biometricSuccess = await authenticateForTransactionEnhanced(true);
+
+      if (!biometricSuccess) {
+        Alert.alert(
+          'Biometric Required',
+          'Biometric authentication is required to send funds. Please complete biometric verification and try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+    }
+
+    handleSendTransaction();
+  };
+
+  const closeSheetAndClearForm = () => {
+    setShowReviewSheet(false);
+    setReviewDetails(null);
+    setSuccessDetails(null);
+    setRecipientAddress('');
+    setAmount('');
+    setEstimatedFee(null);
+    setAddressValidation({ isValid: false, message: null });
+  };
+
+  const handleViewTransaction = () => {
+    const txid = successDetails?.txid;
+    closeSheetAndClearForm();
+    if (txid) {
+      router.push({
+        pathname: '/transaction-explorer',
+        params: { txid },
+      });
+    }
+  };
+
+  const handleDoneAfterSend = () => {
+    closeSheetAndClearForm();
+    router.push('/');
+  };
+
+  const handleCancelReview = () => {
+    if (isLoading) return;
+    setShowReviewSheet(false);
+    setReviewDetails(null);
   };
 
   const getTimeEstimateForFeeRate = useCallback((rate: number): string => {
@@ -973,12 +947,12 @@ function SendScreenContent() {
           <View style={styles.emptyState}>
             <Text style={[styles.emptyTitle, { color: theme.colors.text }]}>No Wallet Found</Text>
             <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>Create or import a wallet to send funds</Text>
-            <TouchableOpacity
+            <PressableOpacity
               style={[styles.setupButton, { backgroundColor: theme.colors.primary }]}
               onPress={() => router.push('/wallet-setup')}
             >
               <Text style={styles.setupButtonText}>Setup Wallet</Text>
-            </TouchableOpacity>
+            </PressableOpacity>
           </View>
         </SafeAreaView>
       </GradientBackground>
@@ -1018,10 +992,15 @@ function SendScreenContent() {
         />
 
         <Animated.View style={[styles.animatedContainer, animatedStyle]}>
+          <KeyboardAvoidingView
+            style={styles.keyboardAvoiding}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          >
           <ScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.content}>
               {/* From Section */}
@@ -1044,7 +1023,7 @@ function SendScreenContent() {
                     multiline
                     underlineColorAndroid="transparent"
                   />
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={styles.qrCodeButton}
                     onPress={() => {
                       setShowQRScanner(true);
@@ -1052,7 +1031,7 @@ function SendScreenContent() {
                     }}
                   >
                     <QrCode color={theme.colors.primary} size={24} />
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </View>
 
                 {/* Address Validation Indicator */}
@@ -1060,13 +1039,13 @@ function SendScreenContent() {
                   <View style={styles.validationContainer}>
                     {addressValidation.isValid ? (
                       <View style={styles.validationRow}>
-                        <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                        <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>{addressValidation.message}</Text>
+                        <CheckCircle color={theme.colors.success} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.success }]}>{addressValidation.message}</Text>
                       </View>
                     ) : (
                       <View style={styles.validationRow}>
-                        <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                        <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>{addressValidation.message}</Text>
+                        <AlertCircle color={theme.colors.error} size={16} />
+                        <Text style={[styles.validationText, { color: theme.colors.error }]}>{addressValidation.message}</Text>
                       </View>
                     )}
                   </View>
@@ -1121,13 +1100,13 @@ function SendScreenContent() {
                   );
                 })()}
 
-                <TouchableOpacity
+                <PressableOpacity
                   onPress={handleSendMax}
                   style={styles.sendMaxButton}
                   activeOpacity={0.7}
                 >
                   <Text style={[styles.sendMaxText, { color: theme.colors.primary }]}>Send Max</Text>
-                </TouchableOpacity>
+                </PressableOpacity>
               </View>
 
               {/* Fee Section */}
@@ -1152,7 +1131,7 @@ function SendScreenContent() {
                 </View>
 
                 <View style={styles.feeButtons}>
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1173,9 +1152,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'slow' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.economyFee || 1)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1196,9 +1175,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'normal' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.halfHourFee || 5)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1219,9 +1198,9 @@ function SendScreenContent() {
                     <Text style={[styles.feeButtonSubtext, { color: selectedFeeType === 'fast' ? 'white' : theme.colors.textSecondary }]}>
                       {(feeEstimates?.fastestFee || 15)} sat/vB
                     </Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
 
-                  <TouchableOpacity
+                  <PressableOpacity
                     style={[
                       styles.feeButton,
                       {
@@ -1253,7 +1232,7 @@ function SendScreenContent() {
                       styles.feeButtonText,
                       { color: selectedFeeType === 'custom' ? 'white' : theme.colors.text }
                     ]}>Custom</Text>
-                  </TouchableOpacity>
+                  </PressableOpacity>
                 </View>
 
                 {/* Custom Fee Input */}
@@ -1324,15 +1303,15 @@ function SendScreenContent() {
                       <View style={styles.validationContainer}>
                         {customFeeValidation.isValid ? (
                           <View style={styles.validationRow}>
-                            <CheckCircle color={theme.colors.success || '#10B981'} size={16} />
-                            <Text style={[styles.validationText, { color: theme.colors.success || '#10B981' }]}>
+                            <CheckCircle color={theme.colors.success} size={16} />
+                            <Text style={[styles.validationText, { color: theme.colors.success }]}>
                               {customFeeValidation.message}
                             </Text>
                           </View>
                         ) : (
                           <View style={styles.validationRow}>
-                            <AlertCircle color={theme.colors.error || '#EF4444'} size={16} />
-                            <Text style={[styles.validationText, { color: theme.colors.error || '#EF4444' }]}>
+                            <AlertCircle color={theme.colors.error} size={16} />
+                            <Text style={[styles.validationText, { color: theme.colors.error }]}>
                               {customFeeValidation.message}
                             </Text>
                           </View>
@@ -1407,7 +1386,7 @@ function SendScreenContent() {
                   backgroundColor: theme.colors.surface,
                 }
               ]}>
-                <TouchableOpacity
+                <PressableOpacity
                   style={styles.coinControlSection}
                   onPress={() => {
                     router.push('/coin-control');
@@ -1440,32 +1419,21 @@ function SendScreenContent() {
                     </Text>
                     <ChevronRight color={theme.colors.textSecondary} size={20} />
                   </View>
-                </TouchableOpacity>
+                </PressableOpacity>
               </LiquidGlassView>
 
               {/* Review Button */}
-              <TouchableOpacity
-                style={[
-                  createButtonStyle(theme, 'primary'),
-                  styles.reviewButton,
-                  (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && {
-                    ...styles.reviewButtonDisabled,
-                    backgroundColor: theme.isDark ? theme.colors.surfaceDark : theme.colors.border
-                  }
-                ]}
+              <AppButton
+                title={isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
                 onPress={handleReviewTransaction}
-                disabled={!recipientAddress || !amount || isLoading || !addressValidation.isValid}
-                activeOpacity={0.8}
-              >
-                <Text style={[
-                  styles.reviewButtonText,
-                  (!recipientAddress || !amount || isLoading || !addressValidation.isValid) && styles.reviewButtonTextDisabled
-                ]}>
-                  {isLoading ? 'Broadcasting Transaction...' : 'Review & Send Bitcoin'}
-                </Text>
-              </TouchableOpacity>
+                disabled={!recipientAddress || !amount || !addressValidation.isValid}
+                loading={isLoading}
+                style={styles.reviewButton}
+                testID="review-send-button"
+              />
             </View>
           </ScrollView>
+          </KeyboardAvoidingView>
         </Animated.View>
 
         {/* QR Scanner Modal */}
@@ -1479,6 +1447,18 @@ function SendScreenContent() {
             onClose={() => setShowQRScanner(false)}
           />
         </Modal>
+
+        {/* Transaction Review / Success Sheet */}
+        <TransactionReviewSheet
+          visible={showReviewSheet}
+          details={reviewDetails}
+          success={successDetails}
+          sending={isLoading}
+          onConfirm={handleConfirmSend}
+          onCancel={handleCancelReview}
+          onViewTransaction={handleViewTransaction}
+          onDone={handleDoneAfterSend}
+        />
       </SafeAreaView>
     </GradientBackground>
   );
@@ -1743,6 +1723,9 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
   },
+  keyboardAvoiding: {
+    flex: 1,
+  },
   reviewButton: {
     marginTop: platformStyles.spacing.xl,
     marginBottom: platformStyles.spacing.xxxl,
@@ -1750,20 +1733,6 @@ const styles = StyleSheet.create({
     borderRadius: platformStyles.borderRadius.large,
     alignItems: 'center',
     ...platformStyles.buttonShadow,
-  },
-  reviewButtonDisabled: {
-    // backgroundColor will be set dynamically via theme.colors.border
-    shadowOpacity: 0,
-    elevation: 0,
-    opacity: 0.5,
-  },
-  reviewButtonText: {
-    color: 'white',
-    fontSize: 19,
-    fontWeight: '600',
-  },
-  reviewButtonTextDisabled: {
-    color: '#6B7280',
   },
   emptyState: {
     flex: 1,
